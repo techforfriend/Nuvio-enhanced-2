@@ -14,6 +14,7 @@ import com.nuvio.app.features.plugins.runtime.network.UrlBridge
 import com.nuvio.app.features.plugins.runtime.wasm.WasmBridge
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
@@ -25,6 +26,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.generic_unknown
+import org.jetbrains.compose.resources.getString
 
 private const val PLUGIN_TIMEOUT_MS = 60_000L
 
@@ -226,7 +230,7 @@ internal object PluginRuntime {
                 }?.takeIf { it.isNotEmpty() }
 
                 PluginRuntimeResult(
-                    title = item.stringOrNull("title") ?: item.stringOrNull("name") ?: "Unknown",
+                    title = item.stringOrNull("title") ?: item.stringOrNull("name") ?: runBlocking { getString(Res.string.generic_unknown) },
                     name = item.stringOrNull("name"),
                     url = url,
                     quality = item.stringOrNull("quality"),
