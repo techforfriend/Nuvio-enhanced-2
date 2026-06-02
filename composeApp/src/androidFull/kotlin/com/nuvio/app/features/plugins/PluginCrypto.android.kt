@@ -8,10 +8,8 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import javax.crypto.Cipher
 import javax.crypto.Mac
-import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.IvParameterSpec
-import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -19,13 +17,14 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 private val secureRandom = SecureRandom()
 
 internal fun pluginGetRandomValues(length: Int): ByteArray {
+    require(length >= 0) { "Random byte length must be non-negative" }
     val bytes = ByteArray(length)
     secureRandom.nextBytes(bytes)
     return bytes
 }
 
 internal fun pluginDigest(algorithm: String, data: ByteArray): ByteArray {
-    return MessageDigest.getInstance(algorithm.uppercase()).digest(data)
+    return MessageDigest.getInstance(normalizeDigestAlgorithm(algorithm)).digest(data)
 }
 
 internal fun pluginPbkdf2(
@@ -35,13 +34,10 @@ internal fun pluginPbkdf2(
     keySizeBits: Int,
     algorithm: String,
 ): ByteArray {
-    val prfAlgo = when (algorithm.uppercase()) {
-        "SHA256", "HMACSHA256" -> "HmacSHA256"
-        "SHA1", "HMACSHA1" -> "HmacSHA1"
-        "SHA512", "HMACSHA512" -> "HmacSHA512"
-        "MD5", "HMACMD5" -> "HmacMD5"
-        else -> "HmacSHA256"
-    }
+    require(iterations > 0) { "PBKDF2 iterations must be positive" }
+    require(keySizeBits > 0 && keySizeBits % 8 == 0) { "PBKDF2 key size must be a positive byte-aligned bit length" }
+
+    val prfAlgo = normalizeHmacAlgorithm(algorithm)
     val mac = Mac.getInstance(prfAlgo)
     mac.init(SecretKeySpec(password, prfAlgo))
     
@@ -91,13 +87,11 @@ internal fun pluginAesEncrypt(
     iv: ByteArray,
     data: ByteArray,
 ): ByteArray {
-    val normalizedMode = when (mode.uppercase()) {
-        "AES-CBC", "CBC" -> "AES/CBC/PKCS5Padding"
-        "AES-GCM", "GCM" -> "AES/GCM/NoPadding"
-        "AES-ECB", "ECB" -> "AES/ECB/PKCS5Padding"
-        else -> "AES/CBC/PKCS5Padding"
+    val normalizedMode = normalizeAesTransformation(mode)
+    requireValidAesKey(key)
+    if (!normalizedMode.contains("ECB")) {
+        require(iv.isNotEmpty()) { "AES mode $mode requires an IV" }
     }
-
     val cipher = Cipher.getInstance(normalizedMode)
     val keySpec = SecretKeySpec(key, "AES")
     
@@ -120,13 +114,11 @@ internal fun pluginAesDecrypt(
     iv: ByteArray,
     data: ByteArray,
 ): ByteArray {
-    val normalizedMode = when (mode.uppercase()) {
-        "AES-CBC", "CBC" -> "AES/CBC/PKCS5Padding"
-        "AES-GCM", "GCM" -> "AES/GCM/NoPadding"
-        "AES-ECB", "ECB" -> "AES/ECB/PKCS5Padding"
-        else -> "AES/CBC/PKCS5Padding"
+    val normalizedMode = normalizeAesTransformation(mode)
+    requireValidAesKey(key)
+    if (!normalizedMode.contains("ECB")) {
+        require(iv.isNotEmpty()) { "AES mode $mode requires an IV" }
     }
-
     val cipher = Cipher.getInstance(normalizedMode)
     val keySpec = SecretKeySpec(key, "AES")
     
@@ -178,21 +170,66 @@ internal fun pluginDigestHex(algorithm: String, data: String): String {
     }
 }
 
-internal fun pluginHmacHex(algorithm: String, key: String, data: String): String {
-    val normalized = when (algorithm.uppercase()) {
-        "SHA1" -> "HmacSHA1"
-        "SHA256" -> "HmacSHA256"
-        "SHA512" -> "HmacSHA512"
-        "MD5" -> "HmacMD5"
-        else -> error("Unsupported HMAC algorithm: $algorithm")
-    }
+internal fun pluginHmac(algorithm: String, key: ByteArray, data: ByteArray): ByteArray {
+    val normalized = normalizeHmacAlgorithm(algorithm)
     val mac = Mac.getInstance(normalized)
-    mac.init(SecretKeySpec(key.encodeToByteArray(), normalized))
-    val digest = mac.doFinal(data.encodeToByteArray())
+    mac.init(SecretKeySpec(key, normalized))
+    return mac.doFinal(data)
+}
+
+internal fun pluginHmacHex(algorithm: String, key: String, data: String): String {
+    val digest = pluginHmac(algorithm, key.encodeToByteArray(), data.encodeToByteArray())
     return digest.joinToString(separator = "") { byte ->
         byte.toUByte().toString(16).padStart(2, '0')
     }
 }
+
+private fun normalizeDigestAlgorithm(algorithm: String): String {
+    return when (algorithm.normalizedAlgorithmToken()) {
+        "MD5" -> "MD5"
+        "SHA1" -> "SHA-1"
+        "SHA256" -> "SHA-256"
+        "SHA384" -> "SHA-384"
+        "SHA512" -> "SHA-512"
+        else -> error("Unsupported digest algorithm: $algorithm")
+    }
+}
+
+private fun normalizeHmacAlgorithm(algorithm: String): String {
+    return when (algorithm.normalizedAlgorithmToken().removePrefix("HMAC")) {
+        "MD5" -> "HmacMD5"
+        "SHA1" -> "HmacSHA1"
+        "SHA256" -> "HmacSHA256"
+        "SHA384" -> "HmacSHA384"
+        "SHA512" -> "HmacSHA512"
+        else -> error("Unsupported HMAC algorithm: $algorithm")
+    }
+}
+
+private fun normalizeAesTransformation(mode: String): String {
+    val normalized = mode.normalizedAlgorithmToken()
+    val noPadding = normalized.contains("NOPADDING")
+    val padding = if (noPadding) "NoPadding" else "PKCS5Padding"
+    return when {
+        normalized.contains("GCM") -> "AES/GCM/NoPadding"
+        normalized.contains("ECB") -> "AES/ECB/$padding"
+        normalized.contains("CBC") -> "AES/CBC/$padding"
+        else -> "AES/CBC/$padding"
+    }
+}
+
+private fun requireValidAesKey(key: ByteArray) {
+    require(key.size == 16 || key.size == 24 || key.size == 32) {
+        "AES key must be 16, 24, or 32 bytes"
+    }
+}
+
+private fun String.normalizedAlgorithmToken(): String =
+    uppercase()
+        .replace("-", "")
+        .replace("_", "")
+        .replace("/", "")
+        .replace(" ", "")
 
 @OptIn(ExperimentalEncodingApi::class)
 internal fun pluginBase64Encode(data: String): String =

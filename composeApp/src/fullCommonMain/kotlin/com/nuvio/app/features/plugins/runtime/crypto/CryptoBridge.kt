@@ -9,8 +9,10 @@ import com.nuvio.app.features.plugins.pluginBase64Encode
 import com.nuvio.app.features.plugins.pluginBase64Decode
 import com.nuvio.app.features.plugins.pluginUtf8ToHex
 import com.nuvio.app.features.plugins.pluginHexToUtf8
+import com.nuvio.app.features.plugins.pluginHexToByteArray
 import com.nuvio.app.features.plugins.pluginGetRandomValues
 import com.nuvio.app.features.plugins.pluginDigest
+import com.nuvio.app.features.plugins.pluginHmac
 import com.nuvio.app.features.plugins.pluginPbkdf2
 import com.nuvio.app.features.plugins.pluginAesDecrypt
 import com.nuvio.app.features.plugins.pluginAesEncrypt
@@ -19,71 +21,63 @@ import com.nuvio.app.features.plugins.pluginVerify
 
 internal class CryptoBridge : HostModule {
     override fun register(runtime: QuickJs) {
-        // --- Binary-Safe Bridges (New) ---
-        
-        runtime.function("__crypto_get_random_values") { args ->
+        // Hex transport keeps binary data stable across the QuickJS/native bridge.
+        runtime.function("__crypto_get_random_values_hex") { args ->
             val length = (args.getOrNull(0) as? Number)?.toInt() ?: 0
-            runCatching {
-                pluginGetRandomValues(length)
-            }.getOrElse { ByteArray(0) }
+            pluginGetRandomValues(length).toHexString()
         }
 
-        runtime.function("__crypto_digest_raw") { args ->
+        runtime.function("__crypto_digest_hex_raw") { args ->
             val algorithm = args.getOrNull(0)?.toString() ?: "SHA256"
-            val data = args.getOrNull(1) as? ByteArray ?: ByteArray(0)
-            runCatching {
-                pluginDigest(algorithm, data)
-            }.getOrElse { ByteArray(0) }
+            val data = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+            pluginDigest(algorithm, data).toHexString()
         }
 
-        runtime.function("__crypto_pbkdf2_raw") { args ->
-            val password = args.getOrNull(0) as? ByteArray ?: ByteArray(0)
-            val salt = args.getOrNull(1) as? ByteArray ?: ByteArray(0)
+        runtime.function("__crypto_hmac_hex_raw") { args ->
+            val algorithm = args.getOrNull(0)?.toString() ?: "SHA256"
+            val key = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+            val data = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
+            pluginHmac(algorithm, key, data).toHexString()
+        }
+
+        runtime.function("__crypto_pbkdf2_hex") { args ->
+            val password = pluginHexToByteArray(args.getOrNull(0)?.toString() ?: "")
+            val salt = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
             val iterations = (args.getOrNull(2) as? Number)?.toInt() ?: 1000
             val keySizeBits = (args.getOrNull(3) as? Number)?.toInt() ?: 256
             val algorithm = args.getOrNull(4)?.toString() ?: "SHA256"
-            runCatching {
-                pluginPbkdf2(password, salt, iterations, keySizeBits, algorithm)
-            }.getOrElse { ByteArray(0) }
+            pluginPbkdf2(password, salt, iterations, keySizeBits, algorithm).toHexString()
         }
 
-        runtime.function("__crypto_aes_encrypt_raw") { args ->
+        runtime.function("__crypto_aes_encrypt_hex") { args ->
             val mode = args.getOrNull(0)?.toString() ?: "AES-CBC"
-            val key = args.getOrNull(1) as? ByteArray ?: ByteArray(0)
-            val iv = args.getOrNull(2) as? ByteArray ?: ByteArray(0)
-            val data = args.getOrNull(3) as? ByteArray ?: ByteArray(0)
-            runCatching {
-                pluginAesEncrypt(mode, key, iv, data)
-            }.getOrElse { ByteArray(0) }
+            val key = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+            val iv = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
+            val data = pluginHexToByteArray(args.getOrNull(3)?.toString() ?: "")
+            pluginAesEncrypt(mode, key, iv, data).toHexString()
         }
 
-        runtime.function("__crypto_aes_decrypt_raw") { args ->
+        runtime.function("__crypto_aes_decrypt_hex") { args ->
             val mode = args.getOrNull(0)?.toString() ?: "AES-CBC"
-            val key = args.getOrNull(1) as? ByteArray ?: ByteArray(0)
-            val iv = args.getOrNull(2) as? ByteArray ?: ByteArray(0)
-            val data = args.getOrNull(3) as? ByteArray ?: ByteArray(0)
-            runCatching {
-                pluginAesDecrypt(mode, key, iv, data)
-            }.getOrElse { ByteArray(0) }
+            val key = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+            val iv = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
+            val data = pluginHexToByteArray(args.getOrNull(3)?.toString() ?: "")
+            pluginAesDecrypt(mode, key, iv, data).toHexString()
         }
 
-        runtime.function("__crypto_sign_raw") { args ->
+        runtime.function("__crypto_sign_hex") { args ->
             val algorithm = args.getOrNull(0)?.toString() ?: ""
-            val privateKey = args.getOrNull(1) as? ByteArray ?: ByteArray(0)
-            val data = args.getOrNull(2) as? ByteArray ?: ByteArray(0)
-            runCatching {
-                pluginSign(algorithm, privateKey, data)
-            }.getOrElse { ByteArray(0) }
+            val privateKey = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+            val data = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
+            pluginSign(algorithm, privateKey, data).toHexString()
         }
 
-        runtime.function("__crypto_verify_raw") { args ->
+        runtime.function("__crypto_verify_hex") { args ->
             val algorithm = args.getOrNull(0)?.toString() ?: ""
-            val publicKey = args.getOrNull(1) as? ByteArray ?: ByteArray(0)
-            val signature = args.getOrNull(2) as? ByteArray ?: ByteArray(0)
-            val data = args.getOrNull(3) as? ByteArray ?: ByteArray(0)
-            runCatching {
-                pluginVerify(algorithm, publicKey, signature, data)
-            }.getOrDefault(false)
+            val publicKey = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+            val signature = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
+            val data = pluginHexToByteArray(args.getOrNull(3)?.toString() ?: "")
+            pluginVerify(algorithm, publicKey, signature, data)
         }
 
         // --- Legacy Hex/String Bridges (Backward Compatibility) ---
@@ -134,3 +128,8 @@ internal class CryptoBridge : HostModule {
         }
     }
 }
+
+private fun ByteArray.toHexString(): String =
+    joinToString(separator = "") { byte ->
+        byte.toUByte().toString(16).padStart(2, '0')
+    }
