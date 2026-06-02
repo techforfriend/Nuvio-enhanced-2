@@ -22,7 +22,8 @@ internal fun pluginGetRandomValues(length: Int): ByteArray {
     if (length == 0) return ByteArray(0)
     val bytes = ByteArray(length)
     @OptIn(ExperimentalForeignApi::class)
-    SecRandomCopyBytes(kSecRandomDefault, length.toULong(), bytes.refTo(0))
+    val status = SecRandomCopyBytes(kSecRandomDefault, length.toULong(), bytes.refTo(0))
+    require(status == 0) { "Failed to generate secure random bytes: status $status" }
     return bytes
 }
 
@@ -34,6 +35,7 @@ internal fun pluginDigest(algorithm: String, data: ByteArray): ByteArray {
             "MD5" -> CC_MD5_DIGEST_LENGTH.toInt()
             "SHA1" -> CC_SHA1_DIGEST_LENGTH.toInt()
             "SHA256" -> CC_SHA256_DIGEST_LENGTH.toInt()
+            "SHA384" -> CC_SHA384_DIGEST_LENGTH.toInt()
             "SHA512" -> CC_SHA512_DIGEST_LENGTH.toInt()
             else -> error("Unsupported digest algorithm: $algorithm")
         },
@@ -48,6 +50,7 @@ internal fun pluginDigest(algorithm: String, data: ByteArray): ByteArray {
                 "MD5" -> CC_MD5(dataPtr, data.size.toUInt(), outputPtr)
                 "SHA1" -> CC_SHA1(dataPtr, data.size.toUInt(), outputPtr)
                 "SHA256" -> CC_SHA256(dataPtr, data.size.toUInt(), outputPtr)
+                "SHA384" -> CC_SHA384(dataPtr, data.size.toUInt(), outputPtr)
                 "SHA512" -> CC_SHA512(dataPtr, data.size.toUInt(), outputPtr)
             }
         }
@@ -403,6 +406,7 @@ internal fun pluginDigestHex(algorithm: String, data: String): String {
             "MD5" -> CC_MD5_DIGEST_LENGTH.toInt()
             "SHA1" -> CC_SHA1_DIGEST_LENGTH.toInt()
             "SHA256" -> CC_SHA256_DIGEST_LENGTH.toInt()
+            "SHA384" -> CC_SHA384_DIGEST_LENGTH.toInt()
             "SHA512" -> CC_SHA512_DIGEST_LENGTH.toInt()
             else -> error("Unsupported digest algorithm: $algorithm")
         },
@@ -417,6 +421,7 @@ internal fun pluginDigestHex(algorithm: String, data: String): String {
                 "MD5" -> CC_MD5(dataPtr, input.size.toUInt(), outputPtr)
                 "SHA1" -> CC_SHA1(dataPtr, input.size.toUInt(), outputPtr)
                 "SHA256" -> CC_SHA256(dataPtr, input.size.toUInt(), outputPtr)
+                "SHA384" -> CC_SHA384(dataPtr, input.size.toUInt(), outputPtr)
                 "SHA512" -> CC_SHA512(dataPtr, input.size.toUInt(), outputPtr)
             }
         }
@@ -461,6 +466,7 @@ private fun normalizeDigestAlgorithm(algorithm: String): String {
         "MD5" -> "MD5"
         "SHA1" -> "SHA1"
         "SHA256" -> "SHA256"
+        "SHA384" -> "SHA384"
         "SHA512" -> "SHA512"
         else -> error("Unsupported digest algorithm: $algorithm")
     }
@@ -480,6 +486,7 @@ private fun normalizeHmacAlgorithm(algorithm: String) =
         "MD5" -> kCCHmacAlgMD5 to CC_MD5_DIGEST_LENGTH.toInt()
         "SHA1" -> kCCHmacAlgSHA1 to CC_SHA1_DIGEST_LENGTH.toInt()
         "SHA256" -> kCCHmacAlgSHA256 to CC_SHA256_DIGEST_LENGTH.toInt()
+        "SHA384" -> kCCHmacAlgSHA384 to CC_SHA384_DIGEST_LENGTH.toInt()
         "SHA512" -> kCCHmacAlgSHA512 to CC_SHA512_DIGEST_LENGTH.toInt()
         else -> error("Unsupported HMAC algorithm: $algorithm")
     }
