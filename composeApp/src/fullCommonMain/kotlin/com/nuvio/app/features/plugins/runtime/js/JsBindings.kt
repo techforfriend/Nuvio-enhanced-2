@@ -365,22 +365,22 @@ internal object JsBindings {
             algo: { SHA256: 'SHA256' },
             MD5: function(m) { 
                 var bytes = __normalizeWordArrayInput(m);
-                var res = typeof __crypto_digest_raw !== 'undefined' ? __crypto_digest_raw('MD5', bytes) : new Uint8Array(0);
+                var res = typeof __crypto_digest_raw !== 'undefined' ? __crypto_digest_raw('MD5', bytes.buffer) : new Uint8Array(0);
                 return __bytesToWordArray(res);
             },
             SHA1: function(m) { 
                 var bytes = __normalizeWordArrayInput(m);
-                var res = typeof __crypto_digest_raw !== 'undefined' ? __crypto_digest_raw('SHA1', bytes) : new Uint8Array(0);
+                var res = typeof __crypto_digest_raw !== 'undefined' ? __crypto_digest_raw('SHA1', bytes.buffer) : new Uint8Array(0);
                 return __bytesToWordArray(res);
             },
             SHA256: function(m) { 
                 var bytes = __normalizeWordArrayInput(m);
-                var res = typeof __crypto_digest_raw !== 'undefined' ? __crypto_digest_raw('SHA256', bytes) : new Uint8Array(0);
+                var res = typeof __crypto_digest_raw !== 'undefined' ? __crypto_digest_raw('SHA256', bytes.buffer) : new Uint8Array(0);
                 return __bytesToWordArray(res);
             },
             SHA512: function(m) { 
                 var bytes = __normalizeWordArrayInput(m);
-                var res = typeof __crypto_digest_raw !== 'undefined' ? __crypto_digest_raw('SHA512', bytes) : new Uint8Array(0);
+                var res = typeof __crypto_digest_raw !== 'undefined' ? __crypto_digest_raw('SHA512', bytes.buffer) : new Uint8Array(0);
                 return __bytesToWordArray(res);
             },
             PBKDF2: function(pass, salt, options) {
@@ -390,7 +390,7 @@ internal object JsBindings {
                 var iter = options.iterations || 1000;
                 var kSize = options.keySize || (256/32);
                 var algo = options.hasher === CryptoJS.algo.SHA256 ? 'SHA256' : 'SHA1';
-                var resBytes = typeof __crypto_pbkdf2_raw !== 'undefined' ? __crypto_pbkdf2_raw(pBytes, sBytes, iter, kSize * 32, algo) : new Uint8Array(0);
+                var resBytes = typeof __crypto_pbkdf2_raw !== 'undefined' ? __crypto_pbkdf2_raw(pBytes.buffer, sBytes.buffer, iter, kSize * 32, algo) : new Uint8Array(0);
                 return __bytesToWordArray(resBytes);
             },
             AES: {
@@ -400,7 +400,7 @@ internal object JsBindings {
                     var kBytes = __wordArrayToBytes(key);
                     var ivBytes = options.iv ? __wordArrayToBytes(options.iv) : new Uint8Array(0);
                     var mode = options.mode || 'AES-CBC';
-                    var resBytes = typeof __crypto_aes_encrypt_raw !== 'undefined' ? __crypto_aes_encrypt_raw(mode, kBytes, ivBytes, data) : new Uint8Array(0);
+                    var resBytes = typeof __crypto_aes_encrypt_raw !== 'undefined' ? __crypto_aes_encrypt_raw(mode, kBytes.buffer, ivBytes.buffer, data.buffer) : new Uint8Array(0);
                     var wa = __bytesToWordArray(resBytes);
                     return {
                         ciphertext: wa,
@@ -415,7 +415,7 @@ internal object JsBindings {
                     var kBytes = __wordArrayToBytes(key);
                     var ivBytes = options.iv ? __wordArrayToBytes(options.iv) : new Uint8Array(0);
                     var mode = options.mode || 'AES-CBC';
-                    var resBytes = typeof __crypto_aes_decrypt_raw !== 'undefined' ? __crypto_aes_decrypt_raw(mode, kBytes, ivBytes, data) : new Uint8Array(0);
+                    var resBytes = typeof __crypto_aes_decrypt_raw !== 'undefined' ? __crypto_aes_decrypt_raw(mode, kBytes.buffer, ivBytes.buffer, data.buffer) : new Uint8Array(0);
                     var plain = new TextDecoder().decode(resBytes);
                     return { toString: function(enc) { return plain; } };
                 }
@@ -427,35 +427,35 @@ internal object JsBindings {
             subtle: {
                 digest: async function(algo, data) {
                     var bytes = __toUint8Array(data);
-                    var res = typeof __crypto_digest_raw !== 'undefined' ? __crypto_digest_raw(algo.name || algo, bytes) : new Uint8Array(0);
+                    var res = typeof __crypto_digest_raw !== 'undefined' ? __crypto_digest_raw(algo.name || algo, bytes.buffer) : new Uint8Array(0);
                     return __toUint8Array(res).buffer;
                 },
                 importKey: async function(fmt, data, algo, ext, use) { return { _raw: data, _algo: algo }; },
                 deriveBits: async function(params, key, len) {
                     var pBytes = __toUint8Array(key._raw);
                     var sBytes = __toUint8Array(params.salt);
-                    var res = typeof __crypto_pbkdf2_raw !== 'undefined' ? __crypto_pbkdf2_raw(pBytes, sBytes, params.iterations, len, params.hash) : new Uint8Array(0);
+                    var res = typeof __crypto_pbkdf2_raw !== 'undefined' ? __crypto_pbkdf2_raw(pBytes.buffer, sBytes.buffer, params.iterations, len, params.hash) : new Uint8Array(0);
                     return __toUint8Array(res).buffer;
                 },
                 encrypt: async function(params, key, data) {
                     var kBytes = __toUint8Array(key._raw);
                     var ivBytes = __toUint8Array(params.iv || new Uint8Array(0));
                     var dBytes = __toUint8Array(data);
-                    var res = typeof __crypto_aes_encrypt_raw !== 'undefined' ? __crypto_aes_encrypt_raw(params.name, kBytes, ivBytes, dBytes) : new Uint8Array(0);
+                    var res = typeof __crypto_aes_encrypt_raw !== 'undefined' ? __crypto_aes_encrypt_raw(params.name, kBytes.buffer, ivBytes.buffer, dBytes.buffer) : new Uint8Array(0);
                     return __toUint8Array(res).buffer;
                 },
                 decrypt: async function(params, key, data) {
                     var kBytes = __toUint8Array(key._raw);
                     var ivBytes = __toUint8Array(params.iv || new Uint8Array(0));
                     var dBytes = __toUint8Array(data);
-                    var res = typeof __crypto_aes_decrypt_raw !== 'undefined' ? __crypto_aes_decrypt_raw(params.name, kBytes, ivBytes, dBytes) : new Uint8Array(0);
+                    var res = typeof __crypto_aes_decrypt_raw !== 'undefined' ? __crypto_aes_decrypt_raw(params.name, kBytes.buffer, ivBytes.buffer, dBytes.buffer) : new Uint8Array(0);
                     return __toUint8Array(res).buffer;
                 },
                 sign: async function(algo, key, data) {
                     var algoName = typeof algo === 'string' ? algo : (algo.name || '');
                     var kBytes = __toUint8Array(key._raw);
                     var dBytes = __toUint8Array(data);
-                    var res = typeof __crypto_sign_raw !== 'undefined' ? __crypto_sign_raw(algoName, kBytes, dBytes) : new Uint8Array(0);
+                    var res = typeof __crypto_sign_raw !== 'undefined' ? __crypto_sign_raw(algoName, kBytes.buffer, dBytes.buffer) : new Uint8Array(0);
                     return __toUint8Array(res).buffer;
                 },
                 verify: async function(algo, key, sig, data) {
@@ -463,7 +463,7 @@ internal object JsBindings {
                     var kBytes = __toUint8Array(key._raw);
                     var sBytes = __toUint8Array(sig);
                     var dBytes = __toUint8Array(data);
-                    return typeof __crypto_verify_raw !== 'undefined' ? __crypto_verify_raw(algoName, kBytes, sBytes, dBytes) : false;
+                    return typeof __crypto_verify_raw !== 'undefined' ? __crypto_verify_raw(algoName, kBytes.buffer, sBytes.buffer, dBytes.buffer) : false;
                 }
             },
             getRandomValues: function(arr) {
