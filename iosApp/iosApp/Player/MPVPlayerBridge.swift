@@ -88,6 +88,7 @@ struct PluginSubtitle {
         )
     }
     func setPlaybackSpeed(speed: Float) { playerVC?.setSpeed(speed) }
+    func setMuted(muted: Bool) { playerVC?.setMuted(muted) }
     func setResizeMode(mode: Int32) { playerVC?.setResize(Int(mode)) }
 
     // Audio tracks
@@ -552,6 +553,11 @@ final class MPVPlayerViewController: UIViewController {
         guard mpv != nil else { return }
         var s = Double(speed)
         mpv_set_property(mpv, "speed", MPV_FORMAT_DOUBLE, &s)
+    }
+
+    func setMuted(_ muted: Bool) {
+        guard mpv != nil else { return }
+        setFlag("mute", muted)
     }
 
     func setResize(_ mode: Int) {
