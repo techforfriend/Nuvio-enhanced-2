@@ -143,6 +143,7 @@ object PlayerSubtitleCueParser {
                 if (body.isBlank()) null else SubtitleSyncCue(start, body)
             }
             .sortedBy { it.startTimeMs }
+            .toList()
 
     private fun parseCueStart(timingLine: String): Long? {
         val startPart = timingLine.substringBefore("-->").trim()
