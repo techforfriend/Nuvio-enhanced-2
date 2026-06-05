@@ -18,8 +18,10 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -70,6 +72,7 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.nuvio.app.isIos
+import com.nuvio.app.core.ui.notifyNativeProfileSwitcherPopupDismissed
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
@@ -139,8 +142,8 @@ fun ProfileSwitcherTab(
         if (profile.pinEnabled) {
             pinProfile = profile
         } else {
-            onProfileSelected(profile)
             showPopup = false
+            onProfileSelected(profile)
         }
     }
 
@@ -326,6 +329,186 @@ fun ProfileSwitcherTab(
                                         ProfileRepository.verifyPin(profile.profileIndex, pin)
                                     },
                                 )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NativeProfileSwitcherPopup(
+    visible: Boolean,
+    isSwitchingProfile: Boolean,
+    onDismissRequest: () -> Unit,
+    onProfileSelected: (NuvioProfile) -> Unit,
+    onAddProfileRequested: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
+    val activeProfile = profileState.activeProfile
+    val profiles = profileState.profiles
+    val avatars by AvatarRepository.avatars.collectAsStateWithLifecycle()
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+
+    var showPopup by remember { mutableStateOf(false) }
+    var popupVisible by remember { mutableStateOf(false) }
+    var pinProfile by remember { mutableStateOf<NuvioProfile?>(null) }
+
+    LaunchedEffect(Unit) {
+        AvatarRepository.fetchAvatars()
+        AvatarRepository.refreshAvatars()
+    }
+
+    LaunchedEffect(visible, isSwitchingProfile, profiles.isNotEmpty()) {
+        if (visible && !isSwitchingProfile) {
+            if (profiles.isNotEmpty()) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                showPopup = true
+            } else {
+                onDismissRequest()
+                showPopup = false
+            }
+        } else {
+            showPopup = false
+        }
+    }
+
+    fun chooseProfile(profile: NuvioProfile) {
+        if (profile.pinEnabled) {
+            pinProfile = profile
+        } else {
+            showPopup = false
+            onDismissRequest()
+            onProfileSelected(profile)
+        }
+    }
+
+    val popupAlpha = remember { Animatable(0f) }
+    val popupScale = remember { Animatable(0.5f) }
+    val popupTranslateY = remember { Animatable(40f) }
+
+    LaunchedEffect(showPopup) {
+        if (showPopup) {
+            popupVisible = true
+            launch { popupAlpha.animateTo(1f, tween(220, easing = FastOutSlowInEasing)) }
+            launch {
+                popupScale.animateTo(
+                    1f,
+                    spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium,
+                    ),
+                )
+            }
+            launch {
+                popupTranslateY.animateTo(
+                    0f,
+                    spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium,
+                    ),
+                )
+            }
+        } else if (popupVisible) {
+            notifyNativeProfileSwitcherPopupDismissed()
+            launch { popupAlpha.animateTo(0f, tween(180, easing = FastOutSlowInEasing)) }
+            launch { popupScale.animateTo(0.85f, tween(200, easing = FastOutSlowInEasing)) }
+            launch {
+                popupTranslateY.animateTo(30f, tween(200, easing = FastOutSlowInEasing))
+                popupVisible = false
+                pinProfile = null
+            }
+        }
+    }
+
+    BoxWithConstraints(modifier = modifier) {
+        val anchorWidth = maxWidth / 4
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .fillMaxHeight()
+                .width(anchorWidth),
+        ) {
+            if (popupVisible && profiles.isNotEmpty() && !isSwitchingProfile) {
+                Popup(
+                    alignment = Alignment.BottomCenter,
+                    offset = IntOffset(0, with(density) { -84.dp.roundToPx() }),
+                    properties = PopupProperties(focusable = true),
+                    onDismissRequest = onDismissRequest,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .imePadding()
+                            .graphicsLayer {
+                                alpha = popupAlpha.value
+                                scaleX = popupScale.value
+                                scaleY = popupScale.value
+                                translationY = popupTranslateY.value
+                            }
+                            .shadow(16.dp, RoundedCornerShape(28.dp))
+                            .background(
+                                MaterialTheme.colorScheme.surfaceContainerHigh,
+                                RoundedCornerShape(28.dp),
+                            )
+                            .padding(16.dp),
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.Top,
+                            ) {
+                                profiles.forEachIndexed { index, profile ->
+                                    PopupProfileBubble(
+                                        profile = profile,
+                                        avatars = avatars,
+                                        isActive = profile.profileIndex == activeProfile?.profileIndex,
+                                        isSelected = pinProfile?.profileIndex == profile.profileIndex,
+                                        delayMs = index * 50,
+                                        onBoundsChanged = {},
+                                        onClick = { chooseProfile(profile) },
+                                    )
+                                }
+
+                                if (profiles.size < 4) {
+                                    PopupAddProfileBubble(
+                                        delayMs = profiles.size * 50,
+                                        onClick = {
+                                            showPopup = false
+                                            onDismissRequest()
+                                            onAddProfileRequested()
+                                        },
+                                    )
+                                }
+                            }
+
+                            AnimatedVisibility(
+                                visible = pinProfile != null,
+                                enter = expandVertically(
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioLowBouncy,
+                                        stiffness = Spring.StiffnessMediumLow,
+                                    ),
+                                ) + fadeIn(tween(200)),
+                                exit = shrinkVertically(tween(150)) + fadeOut(tween(100)),
+                            ) {
+                                pinProfile?.let { profile ->
+                                    InlinePinEntry(
+                                        profileName = profile.name,
+                                        onVerified = {
+                                            showPopup = false
+                                            onDismissRequest()
+                                            onProfileSelected(profile)
+                                        },
+                                        onCancel = { pinProfile = null },
+                                        verifyPin = { pin ->
+                                            ProfileRepository.verifyPin(profile.profileIndex, pin)
+                                        },
+                                    )
+                                }
                             }
                         }
                     }

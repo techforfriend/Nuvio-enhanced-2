@@ -253,7 +253,7 @@ private enum NuvioNativeTabIcon {
     }
 }
 
-final class RootComposeViewController: UIViewController, UITabBarDelegate {
+final class RootComposeViewController: UIViewController, UITabBarDelegate, UIGestureRecognizerDelegate {
     private enum NativeTab: String, CaseIterable {
         case home = "Home"
         case search = "Search"
@@ -269,13 +269,26 @@ final class RootComposeViewController: UIViewController, UITabBarDelegate {
             }
         }
 
-        var title: String {
+        var titleKey: String {
+            switch self {
+            case .home: return "NuvioNativeTabTitleHome"
+            case .search: return "NuvioNativeTabTitleSearch"
+            case .library: return "NuvioNativeTabTitleLibrary"
+            case .settings: return "NuvioNativeTabTitleProfile"
+            }
+        }
+
+        var fallbackTitle: String {
             switch self {
             case .home: return "Home"
             case .search: return "Search"
             case .library: return "Library"
             case .settings: return "Profile"
             }
+        }
+
+        func localizedTitle(defaults: UserDefaults = .standard) -> String {
+            defaults.string(forKey: titleKey)?.trimmingCharacters(in: .whitespacesAndNewlines).nonEmpty ?? fallbackTitle
         }
 
         var iconImage: UIImage {
@@ -301,6 +314,7 @@ final class RootComposeViewController: UIViewController, UITabBarDelegate {
     private static let nativeProfileAvatarColorKey = "NuvioNativeProfileAvatarColor"
     private static let nativeProfileAvatarURLKey = "NuvioNativeProfileAvatarURL"
     private static let nativeProfileAvatarBackgroundColorKey = "NuvioNativeProfileAvatarBackgroundColor"
+    private static let nativeProfileSwitcherPopupDismissedNotification = Notification.Name("NuvioNativeProfileSwitcherPopupDismissed")
     private static let nativeTabChromeDidChangeNotification = Notification.Name("NuvioNativeTabChromeDidChange")
 
     private let contentController: UIViewController
@@ -309,6 +323,9 @@ final class RootComposeViewController: UIViewController, UITabBarDelegate {
     private var tabBarHeightConstraint: NSLayoutConstraint?
     private var userDefaultsObserver: NSObjectProtocol?
     private var tabChromeObserver: NSObjectProtocol?
+    private var profileSwitcherPopupObserver: NSObjectProtocol?
+    private var profileLongPressRecognizer: UILongPressGestureRecognizer?
+    private var suppressNextProfileSelection = false
     private var profileAvatarImageURL: String?
     private var profileAvatarImageTask: URLSessionDataTask?
     private var profileAvatarImage: UIImage?
@@ -355,6 +372,9 @@ final class RootComposeViewController: UIViewController, UITabBarDelegate {
         if let tabChromeObserver {
             NotificationCenter.default.removeObserver(tabChromeObserver)
         }
+        if let profileSwitcherPopupObserver {
+            NotificationCenter.default.removeObserver(profileSwitcherPopupObserver)
+        }
         profileAvatarImageTask?.cancel()
     }
 
@@ -365,8 +385,26 @@ final class RootComposeViewController: UIViewController, UITabBarDelegate {
 
     func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
         guard let tab = NativeTab(tag: item.tag) else { return }
-        UserDefaults.standard.set(tab.rawValue, forKey: Self.nativeSelectedTabKey)
-        NativeTabBridgeKt.nativeTabSelect(tabName: tab.rawValue)
+        if tab == .settings && suppressNextProfileSelection {
+            suppressNextProfileSelection = false
+            restoreNativeTabFocus(to: currentNativeSelectedTab)
+            return
+        }
+        selectNativeTab(tab)
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        gestureRecognizer === profileLongPressRecognizer
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        if gestureRecognizer === profileLongPressRecognizer {
+            return nativeTab(at: touch.location(in: tabBar)) == .settings
+        }
+        return true
     }
 
     override var childForHomeIndicatorAutoHidden: UIViewController? {
@@ -441,13 +479,19 @@ final class RootComposeViewController: UIViewController, UITabBarDelegate {
         tabBar.translatesAutoresizingMaskIntoConstraints = false
         tabBar.items = NativeTab.allCases.map { tab in
             let item = UITabBarItem(
-                title: tab.title,
+                title: tab.localizedTitle(),
                 image: tab.iconImage,
                 selectedImage: tab.iconImage
             )
             item.tag = tab.tag
             return item
         }
+        let longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleNativeProfileTabLongPress(_:)))
+        longPressRecognizer.delegate = self
+        longPressRecognizer.minimumPressDuration = 0.45
+        longPressRecognizer.cancelsTouchesInView = true
+        tabBar.addGestureRecognizer(longPressRecognizer)
+        profileLongPressRecognizer = longPressRecognizer
         tabBar.selectedItem = tabBar.items?.first
         applyNativeTabBarAppearance()
         tabBar.alpha = 0
@@ -479,6 +523,14 @@ final class RootComposeViewController: UIViewController, UITabBarDelegate {
             queue: .main
         ) { [weak self] _ in
             self?.syncNativeTabChrome(animated: true)
+        }
+
+        profileSwitcherPopupObserver = NotificationCenter.default.addObserver(
+            forName: Self.nativeProfileSwitcherPopupDismissedNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.suppressNextProfileSelection = false
         }
     }
 
@@ -525,9 +577,70 @@ final class RootComposeViewController: UIViewController, UITabBarDelegate {
     }
 
     private func syncSelectedNativeTab() {
+        tabBar.selectedItem = tabBar.items?.first(where: { $0.tag == currentNativeSelectedTab.tag })
+    }
+
+    @objc private func handleNativeProfileTabLongPress(_ recognizer: UILongPressGestureRecognizer) {
+        guard recognizer.state == .began else { return }
+
+        suppressNextProfileSelection = true
+        let tabToRestore = currentNativeSelectedTab
+        cancelNativeTabTracking()
+        DispatchQueue.main.async { [weak self] in
+            self?.restoreNativeTabFocus(to: tabToRestore)
+            NativeTabBridgeKt.nativeProfileTabLongPress()
+        }
+    }
+
+    private var currentNativeSelectedTab: NativeTab {
         let rawValue = UserDefaults.standard.string(forKey: Self.nativeSelectedTabKey) ?? NativeTab.home.rawValue
-        let selectedTab = NativeTab(rawValue: rawValue) ?? .home
-        tabBar.selectedItem = tabBar.items?.first(where: { $0.tag == selectedTab.tag })
+        return NativeTab(rawValue: rawValue) ?? .home
+    }
+
+    private func nativeTab(at point: CGPoint) -> NativeTab? {
+        guard tabBar.bounds.contains(point), tabBar.bounds.width > 0 else { return nil }
+        let tabs = NativeTab.allCases
+        let rawIndex = Int((point.x / tabBar.bounds.width) * CGFloat(tabs.count))
+        let clampedIndex = min(max(rawIndex, 0), tabs.count - 1)
+        return tabs[clampedIndex]
+    }
+
+    private func selectNativeTab(_ tab: NativeTab) {
+        tabBar.selectedItem = tabBar.items?.first(where: { $0.tag == tab.tag })
+        UserDefaults.standard.set(tab.rawValue, forKey: Self.nativeSelectedTabKey)
+        NativeTabBridgeKt.nativeTabSelect(tabName: tab.rawValue)
+    }
+
+    private func restoreNativeTabFocus(to tab: NativeTab) {
+        guard let item = tabBar.items?.first(where: { $0.tag == tab.tag }) else { return }
+        UserDefaults.standard.set(tab.rawValue, forKey: Self.nativeSelectedTabKey)
+        NativeTabBridgeKt.nativeTabSelect(tabName: tab.rawValue)
+
+        tabBar.cancelControlTrackingRecursively()
+
+        let restoreDuration: TimeInterval = 0.24
+        UIView.animate(
+            withDuration: restoreDuration,
+            delay: 0,
+            options: [.beginFromCurrentState, .allowUserInteraction, .curveEaseInOut]
+        ) {
+            self.tabBar.selectedItem = item
+            self.tabBar.layoutIfNeeded()
+        }
+    }
+
+    private func cancelNativeTabTracking() {
+        tabBar.cancelControlTrackingRecursively()
+        tabBar.gestureRecognizers?.forEach { recognizer in
+            guard recognizer !== profileLongPressRecognizer else { return }
+            recognizer.isEnabled = false
+            recognizer.isEnabled = true
+        }
+        tabBar.isUserInteractionEnabled = false
+        DispatchQueue.main.async { [weak self] in
+            self?.tabBar.cancelControlTrackingRecursively()
+            self?.tabBar.isUserInteractionEnabled = true
+        }
     }
 
     private func applyNativeTabBarAppearance() {
@@ -535,6 +648,7 @@ final class RootComposeViewController: UIViewController, UITabBarDelegate {
             UIColor(red: 0.96, green: 0.96, blue: 0.96, alpha: 1)
         let unselected = UIColor(red: 150 / 255, green: 156 / 255, blue: 163 / 255, alpha: 1)
 
+        updateNativeTabTitles()
         refreshProfileAvatarImageIfNeeded()
         updateNativeTabImages(accent: accent)
 
@@ -563,6 +677,13 @@ final class RootComposeViewController: UIViewController, UITabBarDelegate {
             guard let tab = NativeTab(tag: item.tag) else { return }
             item.image = nativeTabImage(for: tab, selected: false, accent: accent)
             item.selectedImage = nativeTabImage(for: tab, selected: true, accent: accent)
+        }
+    }
+
+    private func updateNativeTabTitles() {
+        tabBar.items?.forEach { item in
+            guard let tab = NativeTab(tag: item.tag) else { return }
+            item.title = tab.localizedTitle()
         }
     }
 
@@ -627,6 +748,22 @@ private extension UIColor {
             blue: CGFloat(rgb & 0xFF) / 255,
             alpha: 1
         )
+    }
+}
+
+private extension String {
+    var nonEmpty: String? {
+        isEmpty ? nil : self
+    }
+}
+
+private extension UIView {
+    func cancelControlTrackingRecursively() {
+        if let control = self as? UIControl {
+            control.cancelTracking(with: nil)
+            control.isHighlighted = false
+        }
+        subviews.forEach { $0.cancelControlTrackingRecursively() }
     }
 }
 

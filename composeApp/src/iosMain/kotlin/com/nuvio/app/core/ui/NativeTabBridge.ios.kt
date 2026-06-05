@@ -9,10 +9,15 @@ private const val liquidGlassNativeTabBarEnabledKey = "NuvioLiquidGlassNativeTab
 private const val nativeTabBarVisibleKey = "NuvioNativeTabBarVisible"
 private const val nativeSelectedTabKey = "NuvioNativeSelectedTab"
 private const val nativeTabAccentColorKey = "NuvioNativeTabAccentColor"
+private const val nativeTabTitleHomeKey = "NuvioNativeTabTitleHome"
+private const val nativeTabTitleSearchKey = "NuvioNativeTabTitleSearch"
+private const val nativeTabTitleLibraryKey = "NuvioNativeTabTitleLibrary"
+private const val nativeTabTitleProfileKey = "NuvioNativeTabTitleProfile"
 private const val nativeProfileNameKey = "NuvioNativeProfileName"
 private const val nativeProfileAvatarColorKey = "NuvioNativeProfileAvatarColor"
 private const val nativeProfileAvatarUrlKey = "NuvioNativeProfileAvatarURL"
 private const val nativeProfileAvatarBackgroundColorKey = "NuvioNativeProfileAvatarBackgroundColor"
+private const val nativeProfileSwitcherPopupDismissedNotification = "NuvioNativeProfileSwitcherPopupDismissed"
 private const val nativeTabChromeDidChangeNotification = "NuvioNativeTabChromeDidChange"
 
 internal actual fun isLiquidGlassNativeTabBarSupported(): Boolean {
@@ -38,6 +43,19 @@ internal actual fun publishNativeTabAccentColor(hexColor: String) {
     notifyNativeTabChromeChanged()
 }
 
+internal actual fun publishNativeTabTitles(
+    home: String,
+    search: String,
+    library: String,
+    profile: String,
+) {
+    publishString(nativeTabTitleHomeKey, home)
+    publishString(nativeTabTitleSearchKey, search)
+    publishString(nativeTabTitleLibraryKey, library)
+    publishString(nativeTabTitleProfileKey, profile)
+    notifyNativeTabChromeChanged()
+}
+
 internal actual fun publishNativeProfileTabIcon(
     name: String?,
     avatarColorHex: String?,
@@ -49,6 +67,13 @@ internal actual fun publishNativeProfileTabIcon(
     publishString(nativeProfileAvatarUrlKey, avatarImageUrl)
     publishString(nativeProfileAvatarBackgroundColorKey, avatarBackgroundColorHex)
     notifyNativeTabChromeChanged()
+}
+
+internal actual fun notifyNativeProfileSwitcherPopupDismissed() {
+    NSNotificationCenter.defaultCenter.postNotificationName(
+        nativeProfileSwitcherPopupDismissedNotification,
+        null,
+    )
 }
 
 private fun publishBool(key: String, value: Boolean) {

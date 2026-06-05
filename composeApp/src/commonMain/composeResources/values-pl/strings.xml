@@ -508,7 +508,7 @@
     <string name="settings_appearance_app_language_sheet_title">Wybierz język</string>
     <string name="settings_appearance_continue_watching_description">Pokaż, ukryj i stylizuj półkę Kontynuuj oglądanie.</string>
     <string name="settings_appearance_liquid_glass">Liquid Glass</string>
-    <string name="settings_appearance_liquid_glass_description">Użyj natywnego paska kart iPhone na iOS 26 i nowszych. Szybkie przełączanie profili z paska kart jest niedostępne, gdy ta opcja jest włączona.</string>
+    <string name="settings_appearance_liquid_glass_description">Użyj natywnego paska kart iPhone na iOS 26 i nowszych.</string>
     <string name="settings_appearance_poster_customization_description">Dostosuj szerokość i zaokrąglenie rogów kart plakatów.</string>
     <string name="settings_appearance_section_display">WYŚWIETLANIE</string>
     <string name="settings_appearance_section_home">EKRAN GŁÓWNY</string>
