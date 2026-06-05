@@ -43,14 +43,7 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
             )
         }
     }
-}
 
-struct PluginSubtitle {
-    val url: String
-    val language: String
-    val name: String?
-    val headers: [String: String]?
-}
     func play() { playerVC?.playPlayback() }
     func pause() { playerVC?.pausePlayback() }
     func seekTo(positionMs: Int64) { playerVC?.seekToMs(positionMs) }
@@ -196,6 +189,13 @@ struct PluginSubtitle {
         }
         return headers
     }
+}
+
+struct PluginSubtitle {
+    let url: String
+    let language: String
+    let name: String?
+    let headers: [String: String]?
 }
 
 // MARK: - Track Info
@@ -453,10 +453,9 @@ final class MPVPlayerViewController: UIViewController {
             }
         }
 
-        // Add external subtitles
         for subtitle in request.subtitles {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                self?.command("sub-add", args: [subtitle.url, "auto", subtitle.name ?? subtitle.language, subtitle.language], checkForErrors: false)
+                self?.addSubtitle(subtitle, mode: "auto")
             }
         }
     }
@@ -596,6 +595,26 @@ final class MPVPlayerViewController: UIViewController {
     func addSubtitleUrl(_ url: String) {
         guard mpv != nil else { return }
         command("sub-add", args: [url, "select"])
+    }
+
+    private func addSubtitle(_ subtitle: PluginSubtitle, mode: String) {
+        guard mpv != nil else { return }
+        let subtitleHeaders = sanitizeRequestHeaders(subtitle.headers ?? [:])
+        let previousHeaders = activeRequestHeaders
+
+        if !subtitleHeaders.isEmpty {
+            applyRequestHeaders(previousHeaders.merging(subtitleHeaders) { _, subtitleValue in subtitleValue })
+        }
+
+        command(
+            "sub-add",
+            args: [subtitle.url, mode, subtitle.name ?? subtitle.language, subtitle.language],
+            checkForErrors: false
+        )
+
+        if !subtitleHeaders.isEmpty {
+            applyRequestHeaders(previousHeaders)
+        }
     }
 
     func removeExternalSubtitles() {
