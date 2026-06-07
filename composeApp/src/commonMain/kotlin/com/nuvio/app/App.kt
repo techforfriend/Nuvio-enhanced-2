@@ -1191,6 +1191,7 @@ private fun MainAppContent(
                     type = section.type,
                     catalogId = section.catalogId,
                     supportsPagination = section.supportsPagination,
+                    genre = section.genre,
                 ),
             )
         }
