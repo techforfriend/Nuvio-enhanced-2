@@ -164,7 +164,7 @@ internal fun pluginAesEncrypt(
                             }
                             
                             val tagBytes = ByteArray(16)
-                            val tagLengthVar = alloc<kotlinx.cinterop.size_tVar>()
+                            val tagLengthVar = alloc<platform.posix.size_tVar>()
                             tagLengthVar.value = 16UL
                             
                             tagBytes.usePinned { pinnedTag ->
@@ -199,7 +199,7 @@ internal fun pluginAesEncrypt(
     var finalData: ByteArray? = null
     
     memScoped {
-        val dataOutMoved = alloc<kotlinx.cinterop.size_tVar>()
+        val dataOutMoved = alloc<platform.posix.size_tVar>()
         
         var options = 0U
         if (isEcb) {
@@ -310,7 +310,7 @@ internal fun pluginAesDecrypt(
                                     }
                                 }
                                 
-                                val tagLengthVar = alloc<kotlinx.cinterop.size_tVar>()
+                                val tagLengthVar = alloc<platform.posix.size_tVar>()
                                 tagLengthVar.value = 16UL
                                 
                                 val finalStatus = CCCryptorGCMFinal(
@@ -343,7 +343,7 @@ internal fun pluginAesDecrypt(
     var finalData: ByteArray? = null
     
     memScoped {
-        val dataOutMoved = alloc<kotlinx.cinterop.size_tVar>()
+        val dataOutMoved = alloc<platform.posix.size_tVar>()
         
         var options = 0U
         if (isEcb) {
@@ -472,6 +472,7 @@ private fun normalizeDigestAlgorithm(algorithm: String): String {
     }
 }
 
+@OptIn(ExperimentalForeignApi::class)
 private fun normalizePbkdf2Prf(algorithm: String) =
     when (algorithm.normalizedAlgorithmToken().removePrefix("HMAC")) {
         "SHA1" -> kCCPRFHmacAlgSHA1
@@ -481,6 +482,7 @@ private fun normalizePbkdf2Prf(algorithm: String) =
         else -> error("Unsupported PBKDF2 hash algorithm: $algorithm")
     }
 
+@OptIn(ExperimentalForeignApi::class)
 private fun normalizeHmacAlgorithm(algorithm: String) =
     when (algorithm.normalizedAlgorithmToken().removePrefix("HMAC")) {
         "MD5" -> kCCHmacAlgMD5 to CC_MD5_DIGEST_LENGTH.toInt()

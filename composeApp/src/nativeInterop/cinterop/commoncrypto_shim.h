@@ -7,6 +7,7 @@ enum {
   CC_MD5_DIGEST_LENGTH = 16,
   CC_SHA1_DIGEST_LENGTH = 20,
   CC_SHA256_DIGEST_LENGTH = 32,
+  CC_SHA384_DIGEST_LENGTH = 48,
   CC_SHA512_DIGEST_LENGTH = 64,
 };
 
@@ -21,6 +22,7 @@ typedef enum {
 unsigned char *CC_MD5(const void *data, CC_LONG len, unsigned char *md);
 unsigned char *CC_SHA1(const void *data, CC_LONG len, unsigned char *md);
 unsigned char *CC_SHA256(const void *data, CC_LONG len, unsigned char *md);
+unsigned char *CC_SHA384(const void *data, CC_LONG len, unsigned char *md);
 unsigned char *CC_SHA512(const void *data, CC_LONG len, unsigned char *md);
 
 void CCHmac(
@@ -48,7 +50,7 @@ enum {
 
 int CCKeyDerivationPBKDF(
     CCPBKDFAlgorithm algorithm,
-    const char *password,
+    const void *password,
     size_t passwordLen,
     const uint8_t *salt,
     size_t saltLen,
