@@ -151,7 +151,7 @@ actual fun PlatformPlayerSurface(
         if (!sourceAudioUrl.isNullOrBlank()) {
             val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory)
             val videoSource = mediaSourceFactory.createMediaSource(videoMediaItem)
-            val audioSource = mediaSourceFactory.createMediaSource(MediaItem.fromUri(sourceAudioUrl))
+            val audioSource = mediaSourceFactory.createMediaSource(playbackMediaItemFromUrl(sourceAudioUrl))
             val mergedSource = MergingMediaSource(videoSource, audioSource)
             if (startPositionMs != null) {
                 setMediaSource(mergedSource, startPositionMs.coerceAtLeast(0L))
@@ -230,10 +230,6 @@ actual fun PlatformPlayerSurface(
         }
 
         player.apply {
-            val mediaItemBuilder = MediaItem.Builder()
-                .setUri(Uri.parse(sourceUrl))
-                .setMediaId(sourceUrl)
-
             val subtitleConfigs = externalSubtitles.mapNotNull { subtitle ->
                 val mimeType = resolveSubtitleMimeType(subtitle.url, subtitle.headers)
                 MediaItem.SubtitleConfiguration.Builder(Uri.parse(subtitle.url))
@@ -244,11 +240,17 @@ actual fun PlatformPlayerSurface(
                     .build()
             }
 
-            if (subtitleConfigs.isNotEmpty()) {
-                mediaItemBuilder.setSubtitleConfigurations(subtitleConfigs)
-            }
-
-            val videoMediaItem = mediaItemBuilder.build()
+            val videoMediaItem = playbackMediaItemFromUrl(
+                url = sourceUrl,
+                responseHeaders = sanitizedSourceResponseHeaders,
+            ).buildUpon()
+                .setMediaId(sourceUrl)
+                .apply {
+                    if (subtitleConfigs.isNotEmpty()) {
+                        setSubtitleConfigurations(subtitleConfigs)
+                    }
+                }
+                .build()
 
             setPlaybackMediaItem(
                 videoMediaItem = videoMediaItem,
