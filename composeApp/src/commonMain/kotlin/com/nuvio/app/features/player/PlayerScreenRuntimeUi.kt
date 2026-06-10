@@ -35,6 +35,11 @@ import kotlin.math.roundToInt
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
+private val EmptyPlayerControlsState = PlayerControlsState()
+private val IgnorePlayerControlsAction: (PlayerControlsAction) -> Boolean = { false }
+private val IgnorePlayerControlsEvent: (String, Double) -> Boolean = { _, _ -> false }
+private val IgnorePlayerControlsScrub: (Long) -> Boolean = { false }
+
 @Composable
 internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
     val runtime = this
@@ -106,225 +111,229 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
     val openingOverlayWanted = playerSettingsUiState.showLoadingOverlay &&
         !initialLoadCompleted &&
         errorMessage == null
-    val episodeText = if (seasonNumber != null && episodeNumber != null && !episodeTitle.isNullOrBlank()) {
-        stringResource(
-            Res.string.compose_player_episode_title_format,
-            seasonNumber,
-            episodeNumber,
-            episodeTitle.orEmpty(),
-        )
-    } else {
-        ""
-    }
-    val allFilterLabel = stringResource(Res.string.collections_tab_all)
-    val playingLabel = stringResource(Res.string.compose_player_playing)
-    val sourceFilters = buildPlayerControlFilters(
-        allLabel = allFilterLabel,
-        selectedFilter = null,
-    )
-    val sourceItems = buildPlayerControlSourceItems()
-    val episodeItems = buildPlayerControlEpisodeItems()
-    val episodeSeasons = buildPlayerControlSeasonItems(episodeItems)
-    val episodeStreamFilters = buildPlayerControlEpisodeStreamFilters(
-        allLabel = allFilterLabel,
-        selectedFilter = null,
-    )
-    val episodeStreamItems = buildPlayerControlEpisodeStreamItems()
-    val playerControlAddonSubtitles = buildPlayerControlAddonSubtitleItems()
-    val playerControlAutoSyncCues = buildPlayerControlSubtitleCueItems()
-    val themeColors = MaterialTheme.nuvio.colors
-    val selectedEpisodeLabel = episodeStreamsPanelState.selectedEpisode?.let { selected ->
-        val selectedCode = selected.playerControlsEpisodeCode()
-        buildString {
-            append(selectedCode)
-            if (selected.title.isNotBlank()) {
-                if (isNotEmpty()) append(" • ")
-                append(selected.title)
-            }
-        }
-    }.orEmpty()
-    val nativeSkipInterval = activeSkipInterval.takeIf { initialLoadCompleted && !pausedOverlayVisible }
-    val nextEpisodeForControls = nextEpisodeInfo.takeIf { isSeries && showNextEpisodeCard }
-    val nextEpisodeStatus = when {
-        nextEpisodeForControls == null -> ""
-        !nextEpisodeForControls.hasAired && !nextEpisodeForControls.unairedMessage.isNullOrBlank() ->
-            nextEpisodeForControls.unairedMessage.orEmpty()
-        nextEpisodeAutoPlaySearching -> stringResource(Res.string.player_next_episode_finding_source)
-        !nextEpisodeAutoPlaySourceName.isNullOrBlank() && nextEpisodeAutoPlayCountdown != null ->
-            stringResource(
-                Res.string.player_next_episode_playing_via_countdown,
-                nextEpisodeAutoPlaySourceName.orEmpty(),
-                nextEpisodeAutoPlayCountdown ?: 0,
-            )
-        else -> ""
-    }
-    val playerControlsState = PlayerControlsState(
-        title = title,
-        episodeText = episodeText,
-        streamTitle = activeStreamTitle,
-        providerName = activeProviderName,
-        pauseOverlayWatchingLabel = stringResource(Res.string.compose_player_youre_watching),
-        pauseOverlayLogo = logo,
-        pauseOverlayEpisodeInfo = if (seasonNumber != null && episodeNumber != null) {
-            stringResource(Res.string.compose_player_episode_code_full, seasonNumber, episodeNumber)
-        } else {
-            activeProviderName
-        },
-        pauseOverlayEpisodeTitle = activeEpisodeTitle.orEmpty(),
-        pauseOverlayDescription = (pauseDescription ?: activeStreamSubtitle).orEmpty(),
-        resizeModeLabel = stringResource(resizeMode.labelRes),
-        playbackSpeedLabel = formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed),
-        subtitlesLabel = stringResource(Res.string.compose_player_subs),
-        audioLabel = stringResource(Res.string.compose_player_audio),
-        sourcesLabel = stringResource(Res.string.compose_player_sources),
-        episodesLabel = stringResource(Res.string.compose_player_episodes),
-        externalPlayerLabel = stringResource(Res.string.streams_open_external_player),
-        playLabel = stringResource(Res.string.detail_btn_play),
-        pauseLabel = stringResource(Res.string.compose_action_pause),
-        closeLabel = stringResource(Res.string.compose_player_close),
-        lockLabel = stringResource(Res.string.compose_player_lock_controls),
-        unlockLabel = stringResource(Res.string.compose_player_unlock_controls),
-        submitIntroLabel = stringResource(Res.string.submit_intro_action),
-        videoSettingsLabel = stringResource(Res.string.player_action_video_settings),
-        tapToUnlockLabel = stringResource(Res.string.compose_player_tap_to_unlock),
-        playbackErrorTitle = stringResource(Res.string.compose_player_playback_error),
-        playbackErrorMessage = errorMessage.orEmpty(),
-        playbackErrorActionLabel = stringResource(Res.string.compose_player_go_back),
-        sourcesPanelTitle = stringResource(Res.string.compose_player_panel_sources),
-        episodesPanelTitle = stringResource(Res.string.compose_player_panel_episodes),
-        streamsPanelTitle = stringResource(Res.string.compose_player_panel_streams),
-        allFilterLabel = allFilterLabel,
-        reloadLabel = stringResource(Res.string.compose_action_reload),
-        backLabel = stringResource(Res.string.action_back),
-        panelCloseLabel = stringResource(Res.string.action_close),
-        cancelLabel = stringResource(Res.string.action_cancel),
-        playingLabel = playingLabel,
-        noStreamsLabel = stringResource(Res.string.compose_player_no_streams_found),
-        noEpisodesLabel = stringResource(Res.string.compose_player_no_episodes_available),
-        submitIntroPanelTitle = stringResource(Res.string.submit_intro_title),
-        submitIntroSegmentTypeLabel = stringResource(Res.string.submit_intro_segment_type_label),
-        submitIntroSegmentIntroLabel = stringResource(Res.string.submit_intro_segment_intro),
-        submitIntroSegmentRecapLabel = stringResource(Res.string.submit_intro_segment_recap),
-        submitIntroSegmentOutroLabel = stringResource(Res.string.submit_intro_segment_outro),
-        submitIntroStartTimeLabel = stringResource(Res.string.submit_intro_start_time_label),
-        submitIntroEndTimeLabel = stringResource(Res.string.submit_intro_end_time_label),
-        submitIntroCaptureLabel = stringResource(Res.string.submit_intro_capture_button),
-        submitIntroSubmitLabel = stringResource(Res.string.submit_intro_button_submit),
-        p2pConsentTitle = stringResource(Res.string.p2p_consent_title),
-        p2pConsentBody = stringResource(Res.string.p2p_consent_body),
-        p2pConsentEnableLabel = stringResource(Res.string.p2p_consent_enable),
-        p2pConsentCancelLabel = stringResource(Res.string.p2p_consent_cancel),
-        subtitlesPanelTitle = stringResource(Res.string.compose_player_subtitles),
-        subtitleBuiltInTabLabel = stringResource(Res.string.compose_player_built_in),
-        subtitleAddonsTabLabel = stringResource(Res.string.addon_title),
-        subtitleStyleTabLabel = stringResource(Res.string.compose_player_style),
-        noneLabel = stringResource(Res.string.compose_player_none),
-        fetchSubtitlesLabel = stringResource(Res.string.compose_player_fetch_subtitles),
-        subtitleDelayLabel = stringResource(Res.string.compose_player_subtitle_delay),
-        resetLabel = stringResource(Res.string.compose_player_reset),
-        autoSyncLabel = stringResource(Res.string.compose_player_auto_sync),
-        reloadSmallLabel = stringResource(Res.string.compose_player_reload),
-        captureLineLabel = stringResource(Res.string.compose_player_capture_line),
-        selectAddonSubtitleFirstLabel = stringResource(Res.string.compose_player_select_addon_subtitle_first),
-        loadingSubtitleLinesLabel = stringResource(Res.string.compose_player_loading_lines),
-        fontSizeLabel = stringResource(Res.string.compose_player_font_size),
-        outlineLabel = stringResource(Res.string.compose_player_outline),
-        boldLabel = stringResource(Res.string.compose_player_bold),
-        bottomOffsetLabel = stringResource(Res.string.compose_player_bottom_offset),
-        colorLabel = stringResource(Res.string.compose_player_color),
-        textOpacityLabel = stringResource(Res.string.compose_player_text_opacity),
-        outlineColorLabel = stringResource(Res.string.compose_player_outline_color),
-        resetDefaultsLabel = stringResource(Res.string.compose_player_reset_defaults),
-        onLabel = stringResource(Res.string.compose_action_on),
-        offLabel = stringResource(Res.string.compose_action_off),
-        themeAccentColor = themeColors.accent.toCssColorString(),
-        themeAccentStrongColor = themeColors.accentStrong.toCssColorString(),
-        themeOnAccentColor = themeColors.onAccent.toCssColorString(),
-        themeFocusColor = themeColors.focusRing.toCssColorString(),
-        themeSelectedSurfaceColor = themeColors.accent.copy(alpha = 0.24f).toCssColorString(),
-        themeSelectedSurfaceHoverColor = themeColors.accent.copy(alpha = 0.34f).toCssColorString(),
-        themeSelectedRingColor = themeColors.accent.copy(alpha = 0.35f).toCssColorString(),
-        themeTimelineFillColor = themeColors.playerTimelineFill.toCssColorString(),
-        themeTimelineTrackColor = themeColors.playerTimelineTrack.toCssColorString(),
-        themeBufferingColor = themeColors.playerBuffering.toCssColorString(),
-        themeBufferingTrackColor = themeColors.playerBuffering.copy(alpha = 0.28f).toCssColorString(),
-        themeControlForegroundColor = themeColors.playerControlsForeground.toCssColorString(),
-        isPlaying = playbackSnapshot.isPlaying,
-        isLoading = playbackSnapshot.isLoading,
-        isLocked = playerControlsLocked,
-        lockedOverlayVisible = lockedOverlayVisible,
-        controlsVisible = controlsVisible && !playerControlsLocked,
-        parentalWarnings = parentalWarnings,
-        showParentalGuide = showParentalGuide,
-        showSubmitIntro = isSeries &&
-            playerSettingsUiState.introSubmitEnabled &&
-            playerSettingsUiState.introDbApiKey.isNotBlank() &&
-            !activeSubmitIntroImdbId().isNullOrBlank(),
-        showVideoSettings = isIos,
-        showSources = activeVideoId != null,
-        showEpisodes = isSeries,
-        showExternalPlayer = args.onOpenInExternalPlayer != null,
-        durationMs = playbackSnapshot.durationMs,
-        positionMs = displayedPositionMs,
-        sourceIsLoading = sourceStreamsState.isAnyLoading,
-        sourceFilters = sourceFilters,
-        sourceItems = sourceItems,
-        episodeItems = episodeItems,
-        episodeSeasons = episodeSeasons,
-        episodeStreamsVisible = episodeStreamsPanelState.showStreams,
-        episodeStreamsIsLoading = episodeStreamsRepoState.isAnyLoading,
-        selectedEpisodeLabel = selectedEpisodeLabel,
-        episodeStreamFilters = episodeStreamFilters,
-        episodeStreamItems = episodeStreamItems,
-        submitIntroSegmentType = submitIntroSegmentType,
-        submitIntroStartTime = submitIntroStartTimeStr,
-        submitIntroEndTime = submitIntroEndTimeStr,
-        isSubmitIntroSubmitting = isSubmitIntroSubmitting,
-        submitIntroStatusMessage = submitIntroStatusMessage.orEmpty(),
-        showP2pConsent = playerControlsPendingP2pSwitch != null,
-        subtitleActiveTab = activeSubtitleTab.name,
-        addonSubtitleItems = playerControlAddonSubtitles,
-        isLoadingAddonSubtitles = isLoadingAddonSubtitles,
-        selectedAddonSubtitleId = selectedAddonSubtitleId.orEmpty(),
-        useCustomSubtitles = useCustomSubtitles,
-        subtitleStyle = subtitleStyle,
-        subtitleDelayMs = subtitleDelayMs,
-        hasSelectedAddonSubtitle = selectedAddonSubtitle != null,
-        subtitleAutoSyncCapturedPositionMs = subtitleAutoSyncState.capturedPositionMs ?: -1L,
-        subtitleAutoSyncCues = playerControlAutoSyncCues,
-        subtitleAutoSyncIsLoading = subtitleAutoSyncState.isLoading,
-        subtitleAutoSyncErrorMessage = subtitleAutoSyncState.errorMessage.orEmpty(),
-        closeModalsToken = playerControlsCloseModalsToken,
-        showOpeningOverlay = openingOverlayWanted,
-        openingArtwork = background ?: poster,
-        openingLogo = logo,
-        openingTitle = title,
-        openingMessage = p2pInitialLoadingMessage,
-        openingProgress = p2pInitialLoadingProgress,
-        skipPromptVisible = nativeSkipInterval != null && !playerControlsLocked,
-        skipPromptLabel = skipPromptLabel(nativeSkipInterval?.type),
-        skipPromptStartMs = ((nativeSkipInterval?.startTime ?: 0.0) * 1000).toLong().coerceAtLeast(0L),
-        skipPromptEndMs = ((nativeSkipInterval?.endTime ?: 0.0) * 1000).toLong().coerceAtLeast(0L),
-        skipPromptDismissed = skipIntervalDismissed,
-        nextEpisodeVisible = nextEpisodeForControls != null && !playerControlsLocked,
-        nextEpisodeHeaderLabel = stringResource(Res.string.player_next_episode),
-        nextEpisodeTitle = nextEpisodeForControls?.let {
+    val playerControlsState = if (isDesktop) {
+        val episodeText = if (seasonNumber != null && episodeNumber != null && !episodeTitle.isNullOrBlank()) {
             stringResource(
                 Res.string.compose_player_episode_title_format,
-                it.season,
-                it.episode,
-                it.title,
+                seasonNumber,
+                episodeNumber,
+                episodeTitle.orEmpty(),
             )
-        }.orEmpty(),
-        nextEpisodeThumbnail = nextEpisodeForControls?.thumbnail.orEmpty(),
-        nextEpisodeStatus = nextEpisodeStatus,
-        nextEpisodeActionLabel = if (nextEpisodeForControls?.hasAired == true) {
-            stringResource(Res.string.detail_btn_play)
         } else {
-            stringResource(Res.string.player_next_episode_unaired)
-        },
-        nextEpisodePlayable = nextEpisodeForControls?.hasAired == true,
-    )
+            ""
+        }
+        val allFilterLabel = stringResource(Res.string.collections_tab_all)
+        val playingLabel = stringResource(Res.string.compose_player_playing)
+        val sourceFilters = buildPlayerControlFilters(
+            allLabel = allFilterLabel,
+            selectedFilter = null,
+        )
+        val sourceItems = buildPlayerControlSourceItems()
+        val episodeItems = buildPlayerControlEpisodeItems()
+        val episodeSeasons = buildPlayerControlSeasonItems(episodeItems)
+        val episodeStreamFilters = buildPlayerControlEpisodeStreamFilters(
+            allLabel = allFilterLabel,
+            selectedFilter = null,
+        )
+        val episodeStreamItems = buildPlayerControlEpisodeStreamItems()
+        val playerControlAddonSubtitles = buildPlayerControlAddonSubtitleItems()
+        val playerControlAutoSyncCues = buildPlayerControlSubtitleCueItems()
+        val themeColors = MaterialTheme.nuvio.colors
+        val selectedEpisodeLabel = episodeStreamsPanelState.selectedEpisode?.let { selected ->
+            val selectedCode = selected.playerControlsEpisodeCode()
+            buildString {
+                append(selectedCode)
+                if (selected.title.isNotBlank()) {
+                    if (isNotEmpty()) append(" • ")
+                    append(selected.title)
+                }
+            }
+        }.orEmpty()
+        val nativeSkipInterval = activeSkipInterval.takeIf { initialLoadCompleted && !pausedOverlayVisible }
+        val nextEpisodeForControls = nextEpisodeInfo.takeIf { isSeries && showNextEpisodeCard }
+        val nextEpisodeStatus = when {
+            nextEpisodeForControls == null -> ""
+            !nextEpisodeForControls.hasAired && !nextEpisodeForControls.unairedMessage.isNullOrBlank() ->
+                nextEpisodeForControls.unairedMessage.orEmpty()
+            nextEpisodeAutoPlaySearching -> stringResource(Res.string.player_next_episode_finding_source)
+            !nextEpisodeAutoPlaySourceName.isNullOrBlank() && nextEpisodeAutoPlayCountdown != null ->
+                stringResource(
+                    Res.string.player_next_episode_playing_via_countdown,
+                    nextEpisodeAutoPlaySourceName.orEmpty(),
+                    nextEpisodeAutoPlayCountdown ?: 0,
+                )
+            else -> ""
+        }
+        PlayerControlsState(
+            title = title,
+            episodeText = episodeText,
+            streamTitle = activeStreamTitle,
+            providerName = activeProviderName,
+            pauseOverlayWatchingLabel = stringResource(Res.string.compose_player_youre_watching),
+            pauseOverlayLogo = logo,
+            pauseOverlayEpisodeInfo = if (seasonNumber != null && episodeNumber != null) {
+                stringResource(Res.string.compose_player_episode_code_full, seasonNumber, episodeNumber)
+            } else {
+                activeProviderName
+            },
+            pauseOverlayEpisodeTitle = activeEpisodeTitle.orEmpty(),
+            pauseOverlayDescription = (pauseDescription ?: activeStreamSubtitle).orEmpty(),
+            resizeModeLabel = stringResource(resizeMode.labelRes),
+            playbackSpeedLabel = formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed),
+            subtitlesLabel = stringResource(Res.string.compose_player_subs),
+            audioLabel = stringResource(Res.string.compose_player_audio),
+            sourcesLabel = stringResource(Res.string.compose_player_sources),
+            episodesLabel = stringResource(Res.string.compose_player_episodes),
+            externalPlayerLabel = stringResource(Res.string.streams_open_external_player),
+            playLabel = stringResource(Res.string.detail_btn_play),
+            pauseLabel = stringResource(Res.string.compose_action_pause),
+            closeLabel = stringResource(Res.string.compose_player_close),
+            lockLabel = stringResource(Res.string.compose_player_lock_controls),
+            unlockLabel = stringResource(Res.string.compose_player_unlock_controls),
+            submitIntroLabel = stringResource(Res.string.submit_intro_action),
+            videoSettingsLabel = stringResource(Res.string.player_action_video_settings),
+            tapToUnlockLabel = stringResource(Res.string.compose_player_tap_to_unlock),
+            playbackErrorTitle = stringResource(Res.string.compose_player_playback_error),
+            playbackErrorMessage = errorMessage.orEmpty(),
+            playbackErrorActionLabel = stringResource(Res.string.compose_player_go_back),
+            sourcesPanelTitle = stringResource(Res.string.compose_player_panel_sources),
+            episodesPanelTitle = stringResource(Res.string.compose_player_panel_episodes),
+            streamsPanelTitle = stringResource(Res.string.compose_player_panel_streams),
+            allFilterLabel = allFilterLabel,
+            reloadLabel = stringResource(Res.string.compose_action_reload),
+            backLabel = stringResource(Res.string.action_back),
+            panelCloseLabel = stringResource(Res.string.action_close),
+            cancelLabel = stringResource(Res.string.action_cancel),
+            playingLabel = playingLabel,
+            noStreamsLabel = stringResource(Res.string.compose_player_no_streams_found),
+            noEpisodesLabel = stringResource(Res.string.compose_player_no_episodes_available),
+            submitIntroPanelTitle = stringResource(Res.string.submit_intro_title),
+            submitIntroSegmentTypeLabel = stringResource(Res.string.submit_intro_segment_type_label),
+            submitIntroSegmentIntroLabel = stringResource(Res.string.submit_intro_segment_intro),
+            submitIntroSegmentRecapLabel = stringResource(Res.string.submit_intro_segment_recap),
+            submitIntroSegmentOutroLabel = stringResource(Res.string.submit_intro_segment_outro),
+            submitIntroStartTimeLabel = stringResource(Res.string.submit_intro_start_time_label),
+            submitIntroEndTimeLabel = stringResource(Res.string.submit_intro_end_time_label),
+            submitIntroCaptureLabel = stringResource(Res.string.submit_intro_capture_button),
+            submitIntroSubmitLabel = stringResource(Res.string.submit_intro_button_submit),
+            p2pConsentTitle = stringResource(Res.string.p2p_consent_title),
+            p2pConsentBody = stringResource(Res.string.p2p_consent_body),
+            p2pConsentEnableLabel = stringResource(Res.string.p2p_consent_enable),
+            p2pConsentCancelLabel = stringResource(Res.string.p2p_consent_cancel),
+            subtitlesPanelTitle = stringResource(Res.string.compose_player_subtitles),
+            subtitleBuiltInTabLabel = stringResource(Res.string.compose_player_built_in),
+            subtitleAddonsTabLabel = stringResource(Res.string.addon_title),
+            subtitleStyleTabLabel = stringResource(Res.string.compose_player_style),
+            noneLabel = stringResource(Res.string.compose_player_none),
+            fetchSubtitlesLabel = stringResource(Res.string.compose_player_fetch_subtitles),
+            subtitleDelayLabel = stringResource(Res.string.compose_player_subtitle_delay),
+            resetLabel = stringResource(Res.string.compose_player_reset),
+            autoSyncLabel = stringResource(Res.string.compose_player_auto_sync),
+            reloadSmallLabel = stringResource(Res.string.compose_player_reload),
+            captureLineLabel = stringResource(Res.string.compose_player_capture_line),
+            selectAddonSubtitleFirstLabel = stringResource(Res.string.compose_player_select_addon_subtitle_first),
+            loadingSubtitleLinesLabel = stringResource(Res.string.compose_player_loading_lines),
+            fontSizeLabel = stringResource(Res.string.compose_player_font_size),
+            outlineLabel = stringResource(Res.string.compose_player_outline),
+            boldLabel = stringResource(Res.string.compose_player_bold),
+            bottomOffsetLabel = stringResource(Res.string.compose_player_bottom_offset),
+            colorLabel = stringResource(Res.string.compose_player_color),
+            textOpacityLabel = stringResource(Res.string.compose_player_text_opacity),
+            outlineColorLabel = stringResource(Res.string.compose_player_outline_color),
+            resetDefaultsLabel = stringResource(Res.string.compose_player_reset_defaults),
+            onLabel = stringResource(Res.string.compose_action_on),
+            offLabel = stringResource(Res.string.compose_action_off),
+            themeAccentColor = themeColors.accent.toCssColorString(),
+            themeAccentStrongColor = themeColors.accentStrong.toCssColorString(),
+            themeOnAccentColor = themeColors.onAccent.toCssColorString(),
+            themeFocusColor = themeColors.focusRing.toCssColorString(),
+            themeSelectedSurfaceColor = themeColors.accent.copy(alpha = 0.24f).toCssColorString(),
+            themeSelectedSurfaceHoverColor = themeColors.accent.copy(alpha = 0.34f).toCssColorString(),
+            themeSelectedRingColor = themeColors.accent.copy(alpha = 0.35f).toCssColorString(),
+            themeTimelineFillColor = themeColors.playerTimelineFill.toCssColorString(),
+            themeTimelineTrackColor = themeColors.playerTimelineTrack.toCssColorString(),
+            themeBufferingColor = themeColors.playerBuffering.toCssColorString(),
+            themeBufferingTrackColor = themeColors.playerBuffering.copy(alpha = 0.28f).toCssColorString(),
+            themeControlForegroundColor = themeColors.playerControlsForeground.toCssColorString(),
+            isPlaying = playbackSnapshot.isPlaying,
+            isLoading = playbackSnapshot.isLoading,
+            isLocked = playerControlsLocked,
+            lockedOverlayVisible = lockedOverlayVisible,
+            controlsVisible = controlsVisible && !playerControlsLocked,
+            parentalWarnings = parentalWarnings,
+            showParentalGuide = showParentalGuide,
+            showSubmitIntro = isSeries &&
+                playerSettingsUiState.introSubmitEnabled &&
+                playerSettingsUiState.introDbApiKey.isNotBlank() &&
+                !activeSubmitIntroImdbId().isNullOrBlank(),
+            showVideoSettings = isIos,
+            showSources = activeVideoId != null,
+            showEpisodes = isSeries,
+            showExternalPlayer = args.onOpenInExternalPlayer != null,
+            durationMs = playbackSnapshot.durationMs,
+            positionMs = displayedPositionMs,
+            sourceIsLoading = sourceStreamsState.isAnyLoading,
+            sourceFilters = sourceFilters,
+            sourceItems = sourceItems,
+            episodeItems = episodeItems,
+            episodeSeasons = episodeSeasons,
+            episodeStreamsVisible = episodeStreamsPanelState.showStreams,
+            episodeStreamsIsLoading = episodeStreamsRepoState.isAnyLoading,
+            selectedEpisodeLabel = selectedEpisodeLabel,
+            episodeStreamFilters = episodeStreamFilters,
+            episodeStreamItems = episodeStreamItems,
+            submitIntroSegmentType = submitIntroSegmentType,
+            submitIntroStartTime = submitIntroStartTimeStr,
+            submitIntroEndTime = submitIntroEndTimeStr,
+            isSubmitIntroSubmitting = isSubmitIntroSubmitting,
+            submitIntroStatusMessage = submitIntroStatusMessage.orEmpty(),
+            showP2pConsent = playerControlsPendingP2pSwitch != null,
+            subtitleActiveTab = activeSubtitleTab.name,
+            addonSubtitleItems = playerControlAddonSubtitles,
+            isLoadingAddonSubtitles = isLoadingAddonSubtitles,
+            selectedAddonSubtitleId = selectedAddonSubtitleId.orEmpty(),
+            useCustomSubtitles = useCustomSubtitles,
+            subtitleStyle = subtitleStyle,
+            subtitleDelayMs = subtitleDelayMs,
+            hasSelectedAddonSubtitle = selectedAddonSubtitle != null,
+            subtitleAutoSyncCapturedPositionMs = subtitleAutoSyncState.capturedPositionMs ?: -1L,
+            subtitleAutoSyncCues = playerControlAutoSyncCues,
+            subtitleAutoSyncIsLoading = subtitleAutoSyncState.isLoading,
+            subtitleAutoSyncErrorMessage = subtitleAutoSyncState.errorMessage.orEmpty(),
+            closeModalsToken = playerControlsCloseModalsToken,
+            showOpeningOverlay = openingOverlayWanted,
+            openingArtwork = background ?: poster,
+            openingLogo = logo,
+            openingTitle = title,
+            openingMessage = p2pInitialLoadingMessage,
+            openingProgress = p2pInitialLoadingProgress,
+            skipPromptVisible = nativeSkipInterval != null && !playerControlsLocked,
+            skipPromptLabel = skipPromptLabel(nativeSkipInterval?.type),
+            skipPromptStartMs = ((nativeSkipInterval?.startTime ?: 0.0) * 1000).toLong().coerceAtLeast(0L),
+            skipPromptEndMs = ((nativeSkipInterval?.endTime ?: 0.0) * 1000).toLong().coerceAtLeast(0L),
+            skipPromptDismissed = skipIntervalDismissed,
+            nextEpisodeVisible = nextEpisodeForControls != null && !playerControlsLocked,
+            nextEpisodeHeaderLabel = stringResource(Res.string.player_next_episode),
+            nextEpisodeTitle = nextEpisodeForControls?.let {
+                stringResource(
+                    Res.string.compose_player_episode_title_format,
+                    it.season,
+                    it.episode,
+                    it.title,
+                )
+            }.orEmpty(),
+            nextEpisodeThumbnail = nextEpisodeForControls?.thumbnail.orEmpty(),
+            nextEpisodeStatus = nextEpisodeStatus,
+            nextEpisodeActionLabel = if (nextEpisodeForControls?.hasAired == true) {
+                stringResource(Res.string.detail_btn_play)
+            } else {
+                stringResource(Res.string.player_next_episode_unaired)
+            },
+            nextEpisodePlayable = nextEpisodeForControls?.hasAired == true,
+        )
+    } else {
+        EmptyPlayerControlsState
+    }
     val gestureCallbacks = rememberSurfaceGestureCallbacks()
 
     Box(
@@ -368,15 +377,31 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
                 resizeMode = resizeMode,
                 initialPositionMs = activeInitialPositionMs.takeIf { isDesktop } ?: 0L,
                 playerControlsState = playerControlsState,
-                onPlayerControlsAction = { action -> handlePlayerControlsAction(action) },
-                onPlayerControlsEvent = { type, value -> handlePlayerControlsEvent(type, value) },
-                onPlayerControlsScrubChange = { positionMs ->
-                    handlePlayerControlsScrubChange(positionMs)
-                    true
+                onPlayerControlsAction = if (isDesktop) {
+                    { action -> handlePlayerControlsAction(action) }
+                } else {
+                    IgnorePlayerControlsAction
                 },
-                onPlayerControlsScrubFinished = { positionMs ->
-                    handlePlayerControlsScrubFinished(positionMs)
-                    true
+                onPlayerControlsEvent = if (isDesktop) {
+                    { type, value -> handlePlayerControlsEvent(type, value) }
+                } else {
+                    IgnorePlayerControlsEvent
+                },
+                onPlayerControlsScrubChange = if (isDesktop) {
+                    { positionMs ->
+                        handlePlayerControlsScrubChange(positionMs)
+                        true
+                    }
+                } else {
+                    IgnorePlayerControlsScrub
+                },
+                onPlayerControlsScrubFinished = if (isDesktop) {
+                    { positionMs ->
+                        handlePlayerControlsScrubFinished(positionMs)
+                        true
+                    }
+                } else {
+                    IgnorePlayerControlsScrub
                 },
                 onControllerReady = { controller ->
                     playerController = controller
