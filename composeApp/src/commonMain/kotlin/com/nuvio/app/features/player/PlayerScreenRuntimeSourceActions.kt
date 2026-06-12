@@ -212,7 +212,6 @@ internal fun PlayerScreenRuntime.switchToP2pEpisodeStream(
     activeTorrentFileIdx = stream.p2pFileIdx
     activeTorrentFilename = stream.behaviorHints.filename
     activeTorrentTrackers = stream.p2pTrackers
-    activeSourceIdentityKey = stream.playerSourceIdentityKey()
     applyEpisodeStreamMetadata(stream, episode, resume)
 }
 
@@ -441,6 +440,7 @@ private fun PlayerScreenRuntime.applyEpisodeStreamMetadata(
     episode: MetaVideo,
     resume: EpisodeResume,
 ) {
+    activeSourceIdentityKey = stream.playerSourceIdentityKey()
     activeStreamTitle = stream.streamLabel
     activeStreamSubtitle = stream.streamSubtitle
     activeProviderName = stream.addonName
