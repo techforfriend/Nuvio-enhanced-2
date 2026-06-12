@@ -16,8 +16,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.Proxy
-import java.io.ByteArrayOutputStream
-import java.io.InputStream
 import kotlin.text.Charsets
 import java.util.concurrent.TimeUnit
 
@@ -88,8 +86,6 @@ private val addonHttpClient = OkHttpClient.Builder()
     .build()
 
 private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
-private const val maxRawResponseBodyBytes = 1024 * 1024
-private const val truncationSuffix = "\n...[truncated]"
 
 private fun requestAllowsBody(method: String): Boolean =
     when (method.uppercase()) {
@@ -104,51 +100,6 @@ private fun Map<String, String>.withoutAcceptEncoding(): Map<String, String> =
 
 private fun Map<String, String>.getHeaderIgnoreCase(name: String): String? =
     entries.firstOrNull { (key, _) -> key.equals(name, ignoreCase = true) }?.value
-
-private data class LimitedReadResult(
-    val bytes: ByteArray,
-    val truncated: Boolean,
-)
-
-private fun readAtMostBytes(stream: InputStream, maxBytes: Int): LimitedReadResult {
-    val out = ByteArrayOutputStream(minOf(maxBytes, 16 * 1024))
-    val buffer = ByteArray(8 * 1024)
-    var remaining = maxBytes
-    var truncated = false
-
-    while (remaining > 0) {
-        val read = stream.read(buffer, 0, minOf(buffer.size, remaining))
-        if (read <= 0) break
-        out.write(buffer, 0, read)
-        remaining -= read
-    }
-
-    if (remaining == 0) {
-        truncated = stream.read() != -1
-    }
-
-    return LimitedReadResult(out.toByteArray(), truncated)
-}
-
-private fun readResponseBodyLimited(body: ResponseBody?): String {
-    if (body == null) return ""
-    val charset = body.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
-    val readResult = body.byteStream().use { stream ->
-        readAtMostBytes(stream, maxRawResponseBodyBytes)
-    }
-
-    val decoded = try {
-        String(readResult.bytes, charset)
-    } catch (_: Exception) {
-        String(readResult.bytes, Charsets.UTF_8)
-    }
-
-    return if (readResult.truncated) {
-        decoded + truncationSuffix
-    } else {
-        decoded
-    }
-}
 
 private fun readResponseBody(body: ResponseBody?): String {
     if (body == null) return ""
@@ -277,7 +228,7 @@ actual suspend fun httpRequestRaw(
                 status = response.code,
                 statusText = response.message,
                 url = response.request.url.toString(),
-                body = readResponseBodyLimited(response.body),
+                body = readResponseBody(response.body),
                 headers = response.headers.toMultimap().mapValues { (_, values) ->
                     values.joinToString(",")
                 }.mapKeys { (name, _) ->
