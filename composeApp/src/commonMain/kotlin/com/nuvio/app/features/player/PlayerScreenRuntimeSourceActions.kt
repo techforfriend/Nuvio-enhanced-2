@@ -112,6 +112,7 @@ internal fun PlayerScreenRuntime.switchToP2pSourceStream(stream: StreamItem) {
     activeSourceAudioUrl = null
     activeSourceHeaders = emptyMap()
     activeSourceResponseHeaders = emptyMap()
+    activeStreamType = null
     activeTorrentInfoHash = infoHash
     activeTorrentFileIdx = stream.fileIdx
     activeTorrentFilename = stream.behaviorHints.filename
@@ -153,6 +154,7 @@ internal fun PlayerScreenRuntime.switchToP2pEpisodeStream(
     activeSourceAudioUrl = null
     activeSourceHeaders = emptyMap()
     activeSourceResponseHeaders = emptyMap()
+    activeStreamType = null
     activeTorrentInfoHash = infoHash
     activeTorrentFileIdx = stream.fileIdx
     activeTorrentFilename = stream.behaviorHints.filename
@@ -186,7 +188,11 @@ internal fun PlayerScreenRuntime.switchToSource(stream: StreamItem) {
         return
     }
     val url = stream.playableDirectUrl ?: return
-    if (url == activeSourceUrl) return
+    val sourceIdentityKey = stream.playerSourceIdentityKey()
+    if (url == activeSourceUrl) {
+        activeSourceIdentityKey = sourceIdentityKey ?: activeSourceIdentityKey
+        return
+    }
     val currentPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
     flushWatchProgress()
     stopActiveP2pStream()
@@ -198,6 +204,8 @@ internal fun PlayerScreenRuntime.switchToSource(stream: StreamItem) {
     activeSourceAudioUrl = null
     activeSourceHeaders = sanitizePlaybackHeaders(stream.behaviorHints.proxyHeaders?.request)
     activeSourceResponseHeaders = sanitizePlaybackResponseHeaders(stream.behaviorHints.proxyHeaders?.response)
+    activeStreamType = stream.streamType
+    activeSourceIdentityKey = sourceIdentityKey
     activeStreamTitle = stream.streamLabel
     activeStreamSubtitle = stream.streamSubtitle
     activeProviderName = stream.addonName
@@ -244,6 +252,7 @@ internal fun PlayerScreenRuntime.switchToEpisodeStream(stream: StreamItem, episo
     activeSourceAudioUrl = null
     activeSourceHeaders = sanitizePlaybackHeaders(stream.behaviorHints.proxyHeaders?.request)
     activeSourceResponseHeaders = sanitizePlaybackResponseHeaders(stream.behaviorHints.proxyHeaders?.response)
+    activeStreamType = stream.streamType
     applyEpisodeStreamMetadata(stream, episode, resume)
 }
 
@@ -271,6 +280,8 @@ internal fun PlayerScreenRuntime.switchToDownloadedEpisode(downloadItem: Downloa
     activeSourceAudioUrl = null
     activeSourceHeaders = emptyMap()
     activeSourceResponseHeaders = emptyMap()
+    activeStreamType = null
+    activeSourceIdentityKey = null
     activeStreamTitle = downloadItem.streamTitle.ifBlank {
         episode.title.ifBlank { title }
     }
@@ -416,5 +427,6 @@ private fun PlayerScreenRuntime.saveDirectStreamForReuse(
         filename = stream.behaviorHints.filename,
         videoSize = stream.behaviorHints.videoSize,
         bingeGroup = stream.behaviorHints.bingeGroup,
+        streamType = stream.streamType,
     )
 }

@@ -18,6 +18,7 @@ data class StreamItem(
     val addonName: String,
     val addonId: String,
     val addonLogo: String? = null,
+    val streamType: String? = null,
     val behaviorHints: StreamBehaviorHints = StreamBehaviorHints(),
     val clientResolve: StreamClientResolve? = null,
     val debridCacheStatus: StreamDebridCacheStatus? = null,
@@ -88,6 +89,9 @@ data class StreamBadge(
     val textColor: String = "",
     val borderColor: String = "",
 )
+
+fun normalizeStreamType(raw: String?): String? =
+    raw?.trim()?.lowercase()?.takeIf { it.isNotBlank() }
 
 private fun String?.isMagnetLink(): Boolean =
     this?.trimStart()?.startsWith("magnet:", ignoreCase = true) == true
