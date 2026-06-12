@@ -76,7 +76,12 @@ internal fun com.nuvio.app.features.debrid.DebridApiResponse<com.nuvio.app.featu
     type: CloudLibraryItemType,
 ): List<CloudLibraryItem> {
     if (!isSuccessful || body?.success == false) {
-        throw IllegalStateException(body?.detail ?: body?.error ?: rawBody.takeIf { it.isNotBlank() })
+        throw IllegalStateException(
+            body?.detail
+                ?: body?.error
+                ?: rawBody.takeIf { it.isNotBlank() }
+                ?: "Torbox request failed (HTTP $status).",
+        )
     }
     val envelope = body
         ?: throw IllegalStateException("Unexpected response from Torbox (HTTP $status).")
