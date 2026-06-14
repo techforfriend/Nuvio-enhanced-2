@@ -58,7 +58,7 @@ fun DetailActionButtons(
     modifier: Modifier = Modifier,
     playLabel: String = stringResource(Res.string.action_play),
     secondaryActions: List<DetailSecondaryAction> = emptyList(),
-    actionsMenuLabel: String = "More actions",
+    actionsMenuLabel: String = stringResource(Res.string.details_actions_menu_label),
     isTablet: Boolean = false,
     onPlayClick: () -> Unit = {},
     onPlayLongClick: (() -> Unit)? = null,
