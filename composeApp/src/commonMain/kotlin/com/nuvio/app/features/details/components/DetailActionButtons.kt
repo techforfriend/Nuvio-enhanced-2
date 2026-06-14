@@ -42,6 +42,7 @@ import com.nuvio.app.core.ui.AppIconResource
 import com.nuvio.app.core.ui.appIconPainter
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_play
+import nuvio.composeapp.generated.resources.details_actions_menu_label
 import org.jetbrains.compose.resources.stringResource
 
 data class DetailSecondaryAction(
