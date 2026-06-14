@@ -210,13 +210,8 @@ object StreamsRepository {
 
         // Initialise loading placeholders
         val installedAddonOrder = streamAddons.map { it.addonName }
-        val warmedAddonGroups = AddonStreamWarmupRepository
-            .cachedGroups(type = type, videoId = videoId, season = season, episode = episode)
-            .orEmpty()
-            .associateBy { it.addonId }
-        val warmedAddonIds = warmedAddonGroups.keys
         val initialGroups = StreamAutoPlaySelector.orderAddonStreams(streamAddons.map { addon ->
-            warmedAddonGroups[addon.addonId] ?: AddonStreamGroup(
+            AddonStreamGroup(
                 addonName = addon.addonName,
                 addonId = addon.addonId,
                 streams = emptyList(),
@@ -242,13 +237,12 @@ object StreamsRepository {
         )
 
         activeJob = scope.launch {
-            val pendingStreamAddons = streamAddons.filterNot { it.addonId in warmedAddonIds }
             val completions = Channel<StreamLoadCompletion>(capacity = Channel.BUFFERED)
             val pluginRemainingByAddonId = pluginProviderGroups
                 .associate { it.addonId to it.scrapers.size }
                 .toMutableMap()
             val pluginFirstErrorByAddonId = mutableMapOf<String, String>()
-            val totalTasks = pendingStreamAddons.size +
+            val totalTasks = streamAddons.size +
                 pluginProviderGroups.sumOf { it.scrapers.size }
 
             val installedAddonNames = installedAddonOrder.toSet()
@@ -439,7 +433,7 @@ object StreamsRepository {
                 null
             }
 
-            pendingStreamAddons.forEach { addon ->
+            streamAddons.forEach { addon ->
                 launch {
                     val url = buildAddonResourceUrl(
                         manifestUrl = addon.manifest.transportUrl,
