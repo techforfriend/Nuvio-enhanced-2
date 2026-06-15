@@ -15,11 +15,7 @@ import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.plugins.PluginRepository
 import com.nuvio.app.features.plugins.pluginContentId
 import com.nuvio.app.features.plugins.PluginsUiState
-import com.nuvio.app.features.plugins.PluginRepositoryItem
-import com.nuvio.app.features.plugins.PluginRuntimeResult
-import com.nuvio.app.features.plugins.PluginScraper
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -29,7 +25,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.runBlocking
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
 import kotlinx.coroutines.launch
@@ -210,13 +205,8 @@ object StreamsRepository {
 
         // Initialise loading placeholders
         val installedAddonOrder = streamAddons.map { it.addonName }
-        val warmedAddonGroups = AddonStreamWarmupRepository
-            .cachedGroups(type = type, videoId = videoId, season = season, episode = episode)
-            .orEmpty()
-            .associateBy { it.addonId }
-        val warmedAddonIds = warmedAddonGroups.keys
         val initialGroups = StreamAutoPlaySelector.orderAddonStreams(streamAddons.map { addon ->
-            warmedAddonGroups[addon.addonId] ?: AddonStreamGroup(
+            AddonStreamGroup(
                 addonName = addon.addonName,
                 addonId = addon.addonId,
                 streams = emptyList(),
@@ -242,13 +232,12 @@ object StreamsRepository {
         )
 
         activeJob = scope.launch {
-            val pendingStreamAddons = streamAddons.filterNot { it.addonId in warmedAddonIds }
             val completions = Channel<StreamLoadCompletion>(capacity = Channel.BUFFERED)
             val pluginRemainingByAddonId = pluginProviderGroups
                 .associate { it.addonId to it.scrapers.size }
                 .toMutableMap()
             val pluginFirstErrorByAddonId = mutableMapOf<String, String>()
-            val totalTasks = pendingStreamAddons.size +
+            val totalTasks = streamAddons.size +
                 pluginProviderGroups.sumOf { it.scrapers.size }
 
             val installedAddonNames = installedAddonOrder.toSet()
@@ -439,7 +428,7 @@ object StreamsRepository {
                 null
             }
 
-            pendingStreamAddons.forEach { addon ->
+            streamAddons.forEach { addon ->
                 launch {
                     val url = buildAddonResourceUrl(
                         manifestUrl = addon.manifest.transportUrl,
@@ -810,7 +799,6 @@ object StreamsRepository {
         _uiState.update { it.copy(showDirectAutoPlayOverlay = visible, overlayMessage = message) }
     }
 }
-
 private data class InstalledStreamAddonTarget(
     val addonName: String,
     val addonId: String,

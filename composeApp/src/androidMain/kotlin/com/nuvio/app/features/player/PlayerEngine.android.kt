@@ -61,6 +61,7 @@ import androidx.media3.ui.PlayerView
 import androidx.media3.ui.SubtitleView
 import androidx.media3.ui.CaptionStyleCompat
 import com.nuvio.app.R
+import com.nuvio.app.features.streams.normalizeStreamType
 import io.github.peerless2012.ass.media.widget.AssSubtitleView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -81,17 +82,12 @@ actual fun PlatformPlayerSurface(
     sourceHeaders: Map<String, String>,
     sourceResponseHeaders: Map<String, String>,
     externalSubtitles: List<com.nuvio.app.features.streams.StreamSubtitle>,
+    streamType: String?,
     useYoutubeChunkedPlayback: Boolean,
     modifier: Modifier,
     playWhenReady: Boolean,
     resizeMode: PlayerResizeMode,
-    initialPositionMs: Long,
     useNativeController: Boolean,
-    playerControlsState: PlayerControlsState,
-    onPlayerControlsAction: (PlayerControlsAction) -> Boolean,
-    onPlayerControlsEvent: (String, Double) -> Boolean,
-    onPlayerControlsScrubChange: (Long) -> Boolean,
-    onPlayerControlsScrubFinished: (Long) -> Boolean,
     onControllerReady: (PlayerEngineController) -> Unit,
     onSnapshot: (PlayerPlaybackSnapshot) -> Unit,
     onError: (String?) -> Unit,
@@ -113,6 +109,9 @@ actual fun PlatformPlayerSurface(
     val sanitizedSourceResponseHeaders = remember(sourceResponseHeaders) {
         sanitizePlaybackResponseHeaders(sourceResponseHeaders)
     }
+    val normalizedStreamType = remember(streamType) {
+        normalizeStreamType(streamType)
+    }
     val useLibass = playerSettings.useLibass
     val libassRenderType = runCatching {
         LibassRenderType.valueOf(playerSettings.libassRenderType)
@@ -122,6 +121,7 @@ actual fun PlatformPlayerSurface(
         sourceAudioUrl.orEmpty(),
         sanitizedSourceHeaders,
         sanitizedSourceResponseHeaders,
+        normalizedStreamType.orEmpty(),
         useYoutubeChunkedPlayback,
     )
     var subtitleDelayMs by remember(playerSourceKey) { mutableStateOf(0) }
@@ -131,6 +131,33 @@ actual fun PlatformPlayerSurface(
     var decoderPriorityOverride by remember(playerSourceKey) { mutableStateOf<Int?>(null) }
     var fallbackStartPositionMs by remember(playerSourceKey) { mutableStateOf<Long?>(null) }
     val effectiveDecoderPriority = decoderPriorityOverride ?: playerSettings.decoderPriority
+
+    val initialMediaItem = remember(playerSourceKey, externalSubtitles) {
+        val subtitleConfigs = externalSubtitles.mapNotNull { subtitle ->
+            val mimeType = resolveSubtitleMimeType(subtitle.url, subtitle.headers)
+            MediaItem.SubtitleConfiguration.Builder(Uri.parse(subtitle.url))
+                .setMimeType(mimeType)
+                .setLanguage(subtitle.language)
+                .setLabel(subtitle.name ?: subtitle.language)
+                .setRoleFlags(C.ROLE_FLAG_SUBTITLE)
+                .build()
+        }
+        playbackMediaItemFromUrl(
+            url = sourceUrl,
+            responseHeaders = sanitizedSourceResponseHeaders,
+            streamType = normalizedStreamType,
+        ).buildUpon()
+            .setMediaId(sourceUrl)
+            .apply {
+                if (subtitleConfigs.isNotEmpty()) {
+                    setSubtitleConfigurations(subtitleConfigs)
+                }
+            }
+            .build()
+    }
+
+    var resolvedMediaItem by remember(playerSourceKey) { mutableStateOf(initialMediaItem) }
+    var probeAttempted by remember(playerSourceKey) { mutableStateOf(false) }
 
     val extractorsFactory = remember {
         DefaultExtractorsFactory()
@@ -176,6 +203,7 @@ actual fun PlatformPlayerSurface(
         sourceAudioUrl,
         sanitizedSourceHeaders,
         sanitizedSourceResponseHeaders,
+        normalizedStreamType,
         useYoutubeChunkedPlayback,
         effectiveDecoderPriority,
     ) {
@@ -235,36 +263,13 @@ actual fun PlatformPlayerSurface(
                 .build()
         }
 
-        player.apply {
-            val subtitleConfigs = externalSubtitles.mapNotNull { subtitle ->
-                val mimeType = resolveSubtitleMimeType(subtitle.url, subtitle.headers)
-                MediaItem.SubtitleConfiguration.Builder(Uri.parse(subtitle.url))
-                    .setMimeType(mimeType)
-                    .setLanguage(subtitle.language)
-                    .setLabel(subtitle.name ?: subtitle.language)
-                    .setRoleFlags(C.ROLE_FLAG_SUBTITLE)
-                    .build()
-            }
+        player
+    }
 
-            val videoMediaItem = playbackMediaItemFromUrl(
-                url = sourceUrl,
-                responseHeaders = sanitizedSourceResponseHeaders,
-            ).buildUpon()
-                .setMediaId(sourceUrl)
-                .apply {
-                    if (subtitleConfigs.isNotEmpty()) {
-                        setSubtitleConfigurations(subtitleConfigs)
-                    }
-                }
-                .build()
-
-            setPlaybackMediaItem(
-                videoMediaItem = videoMediaItem,
-                startPositionMs = fallbackStartPositionMs,
-            )
-            prepare()
-            this.playWhenReady = playWhenReady
-        }
+    LaunchedEffect(exoPlayer, resolvedMediaItem) {
+        val mediaItem = resolvedMediaItem ?: return@LaunchedEffect
+        exoPlayer.setPlaybackMediaItem(mediaItem, fallbackStartPositionMs)
+        exoPlayer.prepare()
     }
 
     val pendingSubtitleTrackIndex = remember { mutableListOf<Int>() }
@@ -289,25 +294,69 @@ actual fun PlatformPlayerSurface(
             exoPlayer.pause()
         }
 
+        fun reportPlayerError(error: PlaybackException) {
+            if (
+                playerSettings.decoderPriority == DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON &&
+                effectiveDecoderPriority != DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER &&
+                error.isDecoderFailure()
+            ) {
+                Log.w(
+                    TAG,
+                    "Decoder failure (${error.errorCodeName}); retrying with app decoders",
+                    error,
+                )
+                fallbackStartPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+                decoderPriorityOverride = DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+                latestOnError.value(null)
+                return
+            }
+            latestOnError.value(error.localizedMessage ?: runBlocking { getString(Res.string.player_unable_to_play_stream) })
+        }
+
         val listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 syncPlayerViewKeepScreenOn()
-                if (
-                    playerSettings.decoderPriority == DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON &&
-                    effectiveDecoderPriority != DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER &&
-                    error.isDecoderFailure()
-                ) {
-                    Log.w(
-                        TAG,
-                        "Decoder failure (${error.errorCodeName}); retrying with app decoders",
-                        error,
-                    )
-                    fallbackStartPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
-                    decoderPriorityOverride = DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
-                    latestOnError.value(null)
+
+                val isSourceError = error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW ||
+                        error.errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED ||
+                        error.cause?.toString()?.contains("UnrecognizedInputFormatException") == true
+
+                if (isSourceError && !probeAttempted) {
+                    probeAttempted = true
+                    coroutineScope.launch {
+                        val probedMime = withContext(Dispatchers.IO) {
+                            probeMimeType(sourceUrl, sanitizedSourceHeaders)
+                        }
+                        if (probedMime != null) {
+                            Log.d(TAG, "Playback failed with source error. Probed MIME type: $probedMime. Retrying...")
+                            resolvedMediaItem = MediaItem.Builder()
+                                .setUri(sourceUrl)
+                                .setMimeType(probedMime)
+                                .setMediaId(sourceUrl)
+                                .apply {
+                                    val subtitleConfigs = externalSubtitles.mapNotNull { subtitle ->
+                                        val mimeType = resolveSubtitleMimeType(subtitle.url, subtitle.headers)
+                                        MediaItem.SubtitleConfiguration.Builder(Uri.parse(subtitle.url))
+                                            .setMimeType(mimeType)
+                                            .setLanguage(subtitle.language)
+                                            .setLabel(subtitle.name ?: subtitle.language)
+                                            .setRoleFlags(C.ROLE_FLAG_SUBTITLE)
+                                            .build()
+                                    }
+                                    if (subtitleConfigs.isNotEmpty()) {
+                                        setSubtitleConfigurations(subtitleConfigs)
+                                    }
+                                }
+                                .build()
+                            latestOnError.value(null)
+                            return@launch
+                        }
+                        reportPlayerError(error)
+                    }
                     return
                 }
-                latestOnError.value(error.localizedMessage ?: runBlocking { getString(Res.string.player_unable_to_play_stream) })
+
+                reportPlayerError(error)
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
