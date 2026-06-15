@@ -25,6 +25,7 @@ data class PlayerLaunch(
     val sourceAudioUrl: String? = null,
     val sourceHeaders: Map<String, String> = emptyMap(),
     val sourceResponseHeaders: Map<String, String> = emptyMap(),
+    val streamType: String? = null,
     val logo: String? = null,
     val poster: String? = null,
     val background: String? = null,
@@ -48,7 +49,6 @@ data class PlayerLaunch(
     val torrentTrackers: List<String> = emptyList(),
     val initialPositionMs: Long = 0L,
     val initialProgressFraction: Float? = null,
-    val returnStreamLaunchId: Long? = null,
 )
 
 object PlayerLaunchStore {
@@ -144,6 +144,15 @@ enum class IosHardwareDecoderMode(
     Auto("auto", "Auto"),
     VideoToolbox("videotoolbox", "VideoToolbox"),
     Off("no", "Off"),
+}
+
+enum class IosAudioOutputMode(
+    val mpvValue: String,
+    val label: String,
+) {
+    Auto("avfoundation,audiounit,", "Auto"),
+    AvFoundation("avfoundation", "AVFoundation"),
+    AudioUnit("audiounit", "AudioUnit"),
 }
 
 @Composable

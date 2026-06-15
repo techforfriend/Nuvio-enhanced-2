@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Close
@@ -43,6 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.nuvio.app.core.ui.NuvioTokens
+import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.isIos
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -85,10 +86,12 @@ internal fun settingsSearchEntries(
     val accountCategory = stringResource(SettingsCategory.Account.labelRes)
     val generalCategory = stringResource(SettingsCategory.General.labelRes)
     val aboutCategory = stringResource(SettingsCategory.About.labelRes)
+    val advancedCategory = stringResource(SettingsCategory.Advanced.labelRes)
 
     val accountPage = stringResource(Res.string.compose_settings_page_account)
     val traktPage = stringResource(Res.string.compose_settings_page_trakt)
     val layoutPage = stringResource(Res.string.compose_settings_page_appearance)
+    val advancedPage = stringResource(Res.string.compose_settings_page_advanced)
     val contentDiscoveryPage = stringResource(Res.string.compose_settings_page_content_discovery)
     val downloadsPage = stringResource(Res.string.compose_settings_root_downloads_title)
     val playbackPage = stringResource(Res.string.compose_settings_page_playback)
@@ -206,6 +209,14 @@ internal fun settingsSearchEntries(
         title = layoutPage,
         description = stringResource(Res.string.compose_settings_root_appearance_description),
         icon = Icons.Rounded.Palette,
+    )
+    addPage(
+        page = SettingsPage.Advanced,
+        key = "advanced",
+        title = advancedPage,
+        description = stringResource(Res.string.compose_settings_root_advanced_description),
+        category = advancedCategory,
+        icon = Icons.Rounded.Tune,
     )
     addPage(
         page = SettingsPage.ContentDiscovery,
@@ -368,6 +379,26 @@ internal fun settingsSearchEntries(
         section = stringResource(Res.string.settings_appearance_section_display),
         icon = Icons.Rounded.Language,
     )
+    addRow(
+        page = SettingsPage.Advanced,
+        key = "remember-last-profile",
+        title = stringResource(Res.string.settings_advanced_remember_last_profile),
+        description = stringResource(Res.string.settings_advanced_remember_last_profile_description),
+        pageLabel = advancedPage,
+        section = stringResource(Res.string.settings_advanced_section_startup),
+        category = advancedCategory,
+        icon = Icons.Rounded.Tune,
+    )
+    addRow(
+        page = SettingsPage.Advanced,
+        key = "clear-cw-cache",
+        title = stringResource(Res.string.settings_advanced_clear_cw_cache),
+        description = stringResource(Res.string.settings_advanced_clear_cw_cache_subtitle),
+        pageLabel = advancedPage,
+        section = stringResource(Res.string.settings_advanced_section_cache),
+        category = advancedCategory,
+        icon = Icons.Rounded.Tune,
+    )
     addPage(
         page = SettingsPage.ContinueWatching,
         key = "continue-watching",
@@ -434,9 +465,27 @@ internal fun settingsSearchEntries(
     val playbackNextEpisode = stringResource(Res.string.settings_playback_section_next_episode)
     addRow(
         page = SettingsPage.Streams,
+        key = "stream-addon-logo",
+        title = stringResource(Res.string.settings_stream_addon_logo_title),
+        description = stringResource(Res.string.settings_stream_addon_logo_description),
+        pageLabel = streamsPage,
+        section = stringResource(Res.string.settings_stream_display_section),
+        icon = Icons.Rounded.Style,
+    )
+    addRow(
+        page = SettingsPage.Streams,
         key = "stream-size-badges",
         title = stringResource(Res.string.settings_stream_size_badges_title),
         description = stringResource(Res.string.settings_stream_size_badges_description),
+        pageLabel = streamsPage,
+        section = stringResource(Res.string.settings_stream_badges_section),
+        icon = Icons.Rounded.Style,
+    )
+    addRow(
+        page = SettingsPage.Streams,
+        key = "stream-badge-position",
+        title = stringResource(Res.string.settings_stream_badge_position_title),
+        description = stringResource(Res.string.settings_stream_badge_position_description),
         pageLabel = streamsPage,
         section = stringResource(Res.string.settings_stream_badges_section),
         icon = Icons.Rounded.Style,
@@ -474,6 +523,11 @@ internal fun settingsSearchEntries(
                 "hold-to-speed",
                 stringResource(Res.string.settings_playback_hold_to_speed),
                 stringResource(Res.string.settings_playback_hold_to_speed_description),
+            ),
+            PlaybackSearchRow(
+                "touch-gestures",
+                stringResource(Res.string.settings_playback_touch_gestures),
+                stringResource(Res.string.settings_playback_touch_gestures_description),
             ),
             PlaybackSearchRow("hold-speed", stringResource(Res.string.settings_playback_hold_speed)),
         ),
@@ -779,6 +833,7 @@ internal fun settingsSearchEntries(
         PlaybackSearchRow("trakt-watch-progress", stringResource(Res.string.trakt_watch_progress_title), stringResource(Res.string.trakt_watch_progress_subtitle)),
         PlaybackSearchRow("trakt-continue-watching-window", stringResource(Res.string.trakt_continue_watching_window), stringResource(Res.string.trakt_continue_watching_subtitle)),
         PlaybackSearchRow("trakt-comments", stringResource(Res.string.settings_trakt_comments), stringResource(Res.string.settings_trakt_comments_description)),
+        PlaybackSearchRow("trakt-more-like-this-source", stringResource(Res.string.trakt_more_like_this_source_title), stringResource(Res.string.trakt_more_like_this_source_subtitle)),
     ).forEach { row ->
         addRow(
             page = SettingsPage.TraktAuthentication,
@@ -934,12 +989,12 @@ private fun SettingsSearchRevealItem(
     AnimatedVisibility(
         visibleState = visibleState,
         enter = expandVertically(
-            animationSpec = tween(durationMillis = 220),
+            animationSpec = tween(durationMillis = NuvioTokens.Motion.normalMillis),
             expandFrom = Alignment.Top,
         ) + fadeIn(
-            animationSpec = tween(durationMillis = 180),
+            animationSpec = tween(durationMillis = NuvioTokens.Motion.fastMillis),
         ) + slideInVertically(
-            animationSpec = tween(durationMillis = 220),
+            animationSpec = tween(durationMillis = NuvioTokens.Motion.normalMillis),
             initialOffsetY = { -it / 4 },
         ),
     ) {
@@ -952,17 +1007,18 @@ private fun SettingsSearchField(
     query: String,
     onQueryChange: (String) -> Unit,
 ) {
+    val tokens = MaterialTheme.nuvio
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
-        shape = RoundedCornerShape(14.dp),
+        shape = tokens.shapes.compactCard,
         leadingIcon = {
             Icon(
                 imageVector = Icons.Rounded.Search,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = tokens.colors.textMuted,
             )
         },
         trailingIcon = if (query.isNotBlank()) {
@@ -971,7 +1027,7 @@ private fun SettingsSearchField(
                     Icon(
                         imageVector = Icons.Rounded.Close,
                         contentDescription = stringResource(Res.string.compose_search_clear),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = tokens.colors.textMuted,
                     )
                 }
             }
@@ -981,23 +1037,24 @@ private fun SettingsSearchField(
         placeholder = {
             Text(
                 text = stringResource(Res.string.settings_search_placeholder),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = tokens.colors.textMuted,
                 style = MaterialTheme.typography.bodyLarge,
             )
         },
-        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = tokens.colors.textPrimary),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.outline,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            cursorColor = MaterialTheme.colorScheme.primary,
+            focusedBorderColor = tokens.colors.borderFocus,
+            unfocusedBorderColor = tokens.colors.borderDefault,
+            focusedContainerColor = tokens.colors.surfaceCard,
+            unfocusedContainerColor = tokens.colors.surfaceCard,
+            cursorColor = tokens.colors.accent,
         ),
     )
 }
 
 @Composable
 private fun SettingsSearchEmptyState(isTablet: Boolean) {
+    val tokens = MaterialTheme.nuvio
     SettingsSection(
         title = stringResource(Res.string.settings_search_results_section),
         isTablet = isTablet,
@@ -1011,7 +1068,7 @@ private fun SettingsSearchEmptyState(isTablet: Boolean) {
                 Text(
                     text = stringResource(Res.string.settings_search_empty),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = tokens.colors.textPrimary,
                     fontWeight = FontWeight.Medium,
                 )
             }

@@ -344,6 +344,8 @@
     <string name="compose_player_font_size_value">%1$dsp</string>
     <string name="compose_player_lock_controls">Lock player controls</string>
     <string name="compose_player_loading_lines">Loading subtitle lines...</string>
+    <string name="compose_player_no_subtitle_lines_found">No subtitle lines found</string>
+    <string name="compose_player_subtitle_lines_load_error">Unable to load subtitle lines</string>
     <string name="compose_player_no_audio_tracks_available">No audio tracks available</string>
     <string name="compose_player_no_episodes_available">No episodes available</string>
     <string name="compose_player_no_streams_found">No streams found</string>
@@ -404,6 +406,7 @@
     <string name="compose_settings_category_general">General</string>
     <string name="compose_settings_page_account">Account</string>
     <string name="compose_settings_page_addons">Addons</string>
+    <string name="compose_settings_page_advanced">Advanced</string>
     <string name="compose_settings_page_appearance">Layout</string>
     <string name="compose_settings_page_content_discovery">Content &amp; Discovery</string>
     <string name="compose_settings_page_continue_watching">Continue Watching</string>
@@ -425,6 +428,8 @@
     <string name="compose_settings_root_about_section">ABOUT</string>
     <string name="compose_settings_root_account_description">Account and sync status</string>
     <string name="compose_settings_root_account_section">ACCOUNT</string>
+    <string name="compose_settings_root_advanced_description">Startup and profile behavior.</string>
+    <string name="compose_settings_root_advanced_section">ADVANCED</string>
     <string name="compose_settings_root_appearance_description">Home structure and poster styles</string>
     <string name="compose_settings_root_check_updates_description">Download latest release</string>
     <string name="compose_settings_root_check_updates_title">Check for updates</string>
@@ -441,6 +446,13 @@
     <string name="settings_search_empty">No settings found.</string>
     <string name="settings_search_placeholder">Search settings...</string>
     <string name="settings_search_results_section">RESULTS</string>
+    <string name="settings_advanced_section_startup">STARTUP</string>
+    <string name="settings_advanced_section_cache">CACHE</string>
+    <string name="settings_advanced_remember_last_profile">Remember Last Profile</string>
+    <string name="settings_advanced_remember_last_profile_description">Remember last selected profile at startup</string>
+    <string name="settings_advanced_clear_cw_cache">Clear Continue Watching Cache</string>
+    <string name="settings_advanced_clear_cw_cache_subtitle">Remove cached Continue Watching data and refresh watch progress</string>
+    <string name="settings_advanced_clear_cw_cache_done">Cache cleared</string>
     <string name="settings_licenses_attributions_section_app">APP LICENSE</string>
     <string name="settings_licenses_attributions_section_data">DATA &amp; SERVICES</string>
     <string name="settings_licenses_attributions_section_playback">PLAYBACK LICENSE</string>
@@ -671,9 +683,22 @@
     <string name="settings_stream_badges_section">Fusion Style</string>
     <string name="settings_stream_size_badges_title">Size badges</string>
     <string name="settings_stream_size_badges_description">Show file size badges in stream results and player source panels.</string>
+    <string name="settings_stream_addon_logo_title">Addon logo</string>
+    <string name="settings_stream_addon_logo_description">Show addon logo and name next to stream sources.</string>
+    <string name="settings_stream_display_section">Display</string>
+    <string name="settings_stream_badge_position_title">Badge position</string>
+    <string name="settings_stream_badge_position_description">Choose whether Fusion and size badges appear above or below stream cards.</string>
+    <string name="settings_stream_badge_position_dialog_title">Badge position</string>
+    <string name="settings_stream_badge_position_dialog_description">Select where stream badges appear on stream cards.</string>
+    <string name="settings_stream_badge_position_top">Top</string>
+    <string name="settings_stream_badge_position_bottom">Bottom</string>
     <string name="settings_stream_badge_urls_title">Fusion badge URLs</string>
     <string name="settings_stream_badge_urls_description">Import up to %1$d Fusion-style stream badge JSON URLs. Each URL can be updated or deleted separately.</string>
     <string name="settings_stream_badge_urls_search_description">Manage imported Fusion-style stream badge JSON URLs.</string>
+    <string name="settings_stream_badge_import_failed">Badge import failed.</string>
+    <string name="settings_stream_badge_enter_url">Enter a badge JSON URL.</string>
+    <string name="settings_stream_badge_url_scheme_invalid">Badge URL must start with http:// or https://.</string>
+    <string name="settings_stream_badge_import_limit">You can import up to %1$d badge URLs.</string>
     <string name="settings_fusion_badges_summary">%1$d/%2$d URLs, %3$d active Fusion badges</string>
     <string name="settings_fusion_badges_empty">No Fusion badge URLs imported.</string>
     <string name="settings_fusion_badge_url_label">Fusion badge JSON URL</string>
@@ -821,6 +846,8 @@
     <string name="settings_playback_hold_speed">Hold Speed</string>
     <string name="settings_playback_hold_to_speed">Hold To Speed</string>
     <string name="settings_playback_hold_to_speed_description">Long-press anywhere on the player surface to temporarily boost playback speed.</string>
+    <string name="settings_playback_touch_gestures">Touch Gestures</string>
+    <string name="settings_playback_touch_gestures_description">Allow swipes and double-taps on the player surface to seek, adjust brightness, or adjust volume.</string>
     <string name="settings_playback_invalid_regex_pattern">Invalid regex pattern</string>
     <string name="settings_playback_last_link_cache_duration">Last Link Cache Duration</string>
     <string name="settings_playback_map_dv7_to_hevc">DV7 - HEVC Fallback</string>
@@ -998,6 +1025,12 @@
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
     <string name="trakt_watch_progress_trakt_selected">Watch progress source set to Trakt</string>
     <string name="trakt_watch_progress_nuvio_selected">Watch progress source set to Nuvio Sync</string>
+    <string name="trakt_more_like_this_source_title">More Like This source</string>
+    <string name="trakt_more_like_this_source_subtitle">Choose where recommendations come from on detail pages</string>
+    <string name="trakt_more_like_this_source_dialog_title">More Like This source</string>
+    <string name="trakt_more_like_this_source_dialog_subtitle">Select the source for recommendations shown on detail pages.</string>
+    <string name="trakt_more_like_this_source_trakt">Trakt</string>
+    <string name="trakt_more_like_this_source_tmdb">TMDB</string>
     <string name="trakt_continue_watching_window">Continue Watching Window</string>
     <string name="trakt_continue_watching_subtitle">Trakt history considered for continue watching</string>
     <string name="trakt_cw_window_title">Continue Watching Window</string>
@@ -1119,10 +1152,13 @@
     <string name="app_exit_title">Exit app</string>
     <string name="catalog_empty_message">This catalog did not return any items.</string>
     <string name="catalog_empty_title">No titles found</string>
+    <string name="details_actions_menu_label">More actions</string>
     <string name="details_check_connection">Check your Wi-Fi or mobile data connection and try again.</string>
     <string name="details_director">Director</string>
     <string name="details_failed_to_load">Failed to load</string>
     <string name="details_more_like_this">More Like This</string>
+    <string name="detail_more_like_this_powered_by_tmdb">Powered by TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">Powered by Trakt</string>
     <string name="details_seasons">Seasons</string>
     <string name="details_series_missing_numbers">This addon returned videos for the series, but none included season or episode numbers.</string>
     <string name="details_series_no_metadata">This addon did not provide episode metadata for this series.</string>
@@ -1360,6 +1396,16 @@
     <string name="trakt_sign_in_complete_failed">Failed to complete Trakt sign in</string>
     <string name="trakt_user_fallback">Trakt user</string>
     <string name="trakt_watchlist">Watchlist</string>
+    <!-- Trakt library sync errors -->
+    <string name="trakt_error_authorization_expired">Trakt authorization expired</string>
+    <string name="trakt_error_list_not_found">Trakt list not found</string>
+    <string name="trakt_error_list_limit_reached">Trakt list limit reached</string>
+    <string name="trakt_error_rate_limit_reached">Trakt rate limit reached</string>
+    <string name="trakt_error_request_failed">Trakt request failed</string>
+    <string name="trakt_error_add_watchlist_failed">Failed to add to Trakt watchlist</string>
+    <string name="trakt_error_add_list_failed">Failed to add to Trakt list</string>
+    <string name="trakt_error_missing_ids">Missing compatible Trakt IDs</string>
+    <string name="trakt_error_empty_response">Empty response body</string>
     <string name="tmdb_sources_api_key_required">Add a TMDB API key in Settings to use TMDB sources.</string>
     <string name="tmdb_sources_collection_fallback_title">TMDB Collection %1$d</string>
     <string name="tmdb_sources_collection_not_found">TMDB collection not found</string>
@@ -1560,6 +1606,12 @@
     <string name="settings_playback_ios_display_color_hint_desc">Let mpv target the active display color space by default.</string>
     <string name="settings_playback_ios_target_primaries">Target primaries</string>
     <string name="settings_playback_ios_target_transfer">Target transfer</string>
+    <!-- Playback settings iOS audio output -->
+    <string name="settings_playback_ios_audio_output_section">iOS audio output</string>
+    <string name="settings_playback_ios_audio_output">Audio output</string>
+    <string name="settings_playback_ios_audio_output_auto_desc">Try AVFoundation first, then fall back to AudioUnit.</string>
+    <string name="settings_playback_ios_audio_output_avfoundation_desc">Experimental support for Spatial Audio and multichannel output.</string>
+    <string name="settings_playback_ios_audio_output_audiounit_desc">Use the legacy AudioUnit output.</string>
     <!-- Debrid Result Management section -->
     <string name="settings_debrid_section_result_management">Result Management</string>
     <string name="settings_debrid_max_results">Max results</string>
@@ -1660,6 +1712,7 @@
     <string name="submit_intro_capture">Capture</string>
     <!-- iOS advanced playback -->
     <string name="settings_playback_ios_hw_decoder_dialog">Hardware decoder</string>
+    <string name="settings_playback_ios_audio_output_dialog">Audio output</string>
     <string name="settings_playback_ios_target_primaries_dialog">Target primaries</string>
     <string name="settings_playback_ios_target_transfer_dialog">Target transfer</string>
     <!-- Collection editor -->
@@ -1826,6 +1879,7 @@
     <string name="p2p_consent_body">This stream uses peer-to-peer (P2P) technology. By enabling P2P, you acknowledge and agree that:\n\n• Your IP address will be visible to other peers in the network\n• You are solely responsible for the content you access\n• You confirm you have the legal right to stream this content in your jurisdiction\n• Nuvio does not host, distribute, or control any P2P content\n• Nuvio bears no liability for any legal consequences arising from your use of P2P streaming\n\nYou use this feature entirely at your own risk. P2P can be disabled anytime in Settings.</string>
     <string name="p2p_consent_enable">Enable P2P</string>
     <string name="p2p_consent_cancel">Cancel</string>
+    <string name="p2p_error_unknown">Unknown torrent error</string>
     <string name="settings_p2p_title">P2P Streaming</string>
     <string name="settings_p2p_subtitle">Allow peer-to-peer (torrent) streams</string>
     <string name="settings_p2p_hide_stats_title">Hide torrent stats</string>

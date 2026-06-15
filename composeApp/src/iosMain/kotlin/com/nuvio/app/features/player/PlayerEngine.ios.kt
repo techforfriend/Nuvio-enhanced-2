@@ -29,6 +29,7 @@ actual fun PlatformPlayerSurface(
     sourceAudioUrl: String?,
     sourceHeaders: Map<String, String>,
     sourceResponseHeaders: Map<String, String>,
+    streamType: String?,
     useYoutubeChunkedPlayback: Boolean,
     modifier: Modifier,
     playWhenReady: Boolean,
@@ -309,6 +310,7 @@ actual fun PlatformPlayerSurface(
 }
 
 private fun NuvioPlayerBridge.applyIosVideoOutputSettings(settings: PlayerSettingsUiState) {
+    configureAudioOutput(audioOutput = settings.iosAudioOutputMode.mpvValue)
     configureVideoOutput(
         hardwareDecoder = settings.iosHardwareDecoderMode.mpvValue,
         targetColorspaceHint = settings.iosTargetColorspaceHintEnabled,

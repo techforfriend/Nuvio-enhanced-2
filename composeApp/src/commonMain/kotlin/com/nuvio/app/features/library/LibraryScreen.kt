@@ -65,7 +65,7 @@ import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioViewAllPillSize
 import com.nuvio.app.core.ui.NuvioShelfSection
-import com.nuvio.app.core.ui.nuvioBlockPointerPassthrough
+import com.nuvio.app.core.ui.nuvioConsumePointerEvents
 import com.nuvio.app.features.cloud.CloudLibraryFile
 import com.nuvio.app.features.cloud.CloudLibraryItem
 import com.nuvio.app.features.cloud.CloudLibraryItemType
@@ -177,30 +177,35 @@ fun LibraryScreen(
         listState = listState,
     ) {
         stickyHeader {
-            androidx.compose.foundation.layout.Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .nuvioBlockPointerPassthrough()
-                    .background(MaterialTheme.colorScheme.background),
-            ) {
-                NuvioScreenHeader(
-                    title = if (sourceMode == LibraryViewMode.Cloud) {
-                        stringResource(Res.string.library_title)
-                    } else if (isTraktSource) {
-                        stringResource(Res.string.library_trakt_title)
-                    } else {
-                        stringResource(Res.string.library_title)
-                    },
-                    modifier = Modifier.padding(horizontal = 16.dp),
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(MaterialTheme.colorScheme.background)
+                        .nuvioConsumePointerEvents(),
                 )
-                LibrarySourceSwitch(
-                    selectedMode = sourceMode,
-                    onModeSelected = { mode ->
-                        sourceModeName = mode.name
-                    },
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-                Spacer(modifier = Modifier.height(6.dp))
+                androidx.compose.foundation.layout.Column(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    NuvioScreenHeader(
+                        title = if (sourceMode == LibraryViewMode.Cloud) {
+                            stringResource(Res.string.library_title)
+                        } else if (isTraktSource) {
+                            stringResource(Res.string.library_trakt_title)
+                        } else {
+                            stringResource(Res.string.library_title)
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                    LibrarySourceSwitch(
+                        selectedMode = sourceMode,
+                        onModeSelected = { mode ->
+                            sourceModeName = mode.name
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
             }
         }
 

@@ -188,6 +188,17 @@ val iosDistributionSourceDir = if (iosDistribution == "full") {
 val iosFrameworkBundleId = "com.nuvio.media"
 val fullCommonSourceDir = project.file("src/fullCommonMain/kotlin")
 val generatedRuntimeConfigDir = layout.buildDirectory.dir("generated/runtime-config/kotlin")
+val requestedGradleTasks = gradle.startParameter.taskNames.map { taskName ->
+    taskName.substringAfterLast(':').lowercase()
+}
+val isAndroidAppBundleBuild = requestedGradleTasks.any { taskName ->
+    taskName == "bundle" ||
+        taskName == "bundlerelease" ||
+        taskName == "bundledebug" ||
+        taskName.startsWith("bundleplaystore") ||
+        taskName.startsWith("bundlefull") ||
+        taskName.endsWith("bundle")
+}
 
 val generateRuntimeConfigs = tasks.register<GenerateRuntimeConfigsTask>("generateRuntimeConfigs") {
     outputDir.set(generatedRuntimeConfigDir)
@@ -238,7 +249,6 @@ kotlin {
             baseName = "ComposeApp"
             isStatic = true
             freeCompilerArgs += listOf("-Xbinary=bundleId=$iosFrameworkBundleId")
-            export("com.mohamedrejeb.calf:calf-ui:${libs.versions.calf.get()}")
         }
     }
     
@@ -275,7 +285,6 @@ kotlin {
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor3)
             implementation(libs.coil.svg)
-            api(libs.calf.ui)
             implementation("dev.chrisbanes.haze:haze:1.7.2")
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
@@ -305,6 +314,10 @@ afterEvaluate {
         add("fullImplementation", files("libs/quickjs-kt-android-1.0.5-nuvio.aar"))
         add("fullImplementation", libs.ksoup)
     }
+}
+
+configurations.matching { it.name == "iosMainImplementation" }.configureEach {
+    project.dependencies.add(name, libs.ktor.client.darwin)
 }
 
 dependencies {
