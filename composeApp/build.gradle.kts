@@ -44,6 +44,15 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 |}
                 """.trimMargin()
             )
+            resolve("SyncBackendBootstrapConfig.kt").writeText(
+                """
+                |package com.nuvio.app.core.network
+                |
+                |object SyncBackendBootstrapConfig {
+                |    const val SWITCH_MANIFEST_URL = "${props.getProperty("SYNC_BACKEND_MANIFEST_URL", "")}" 
+                |}
+                """.trimMargin()
+            )
         }
 
         outDir.resolve("com/nuvio/app/features/tmdb/TmdbConfig.kt").delete()
