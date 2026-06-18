@@ -3,6 +3,7 @@ package com.nuvio.app.features.player
 import androidx.compose.ui.Modifier
 
 internal data class PlayerScreenArgs(
+    val profileId: Int,
     val title: String,
     val sourceUrl: String,
     val sourceAudioUrl: String?,

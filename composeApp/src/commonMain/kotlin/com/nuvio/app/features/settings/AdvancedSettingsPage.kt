@@ -58,7 +58,7 @@ internal fun LazyListScope.advancedSettingsContent(
                     isTablet = isTablet,
                     onClick = {
                         if (!cleared) {
-                            ContinueWatchingEnrichmentCache.clearAll()
+                            ContinueWatchingEnrichmentCache.clearAll(ProfileRepository.activeProfileId)
                             cleared = true
                             scope.launch {
                                 WatchProgressRepository.forceSnapshotRefreshFromServer(

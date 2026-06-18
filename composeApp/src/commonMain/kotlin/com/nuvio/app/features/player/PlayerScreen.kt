@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 
 @Composable
 fun PlayerScreen(
+    profileId: Int,
     title: String,
     sourceUrl: String,
     sourceAudioUrl: String? = null,
@@ -40,6 +41,7 @@ fun PlayerScreen(
 ) {
     PlayerScreenContent(
         PlayerScreenArgs(
+            profileId = profileId,
             title = title,
             sourceUrl = sourceUrl,
             sourceAudioUrl = sourceAudioUrl,

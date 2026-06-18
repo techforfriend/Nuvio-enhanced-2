@@ -294,7 +294,7 @@ fun HomeScreen(
     }
 
     val cachedSnapshots = remember(activeProfileId, cwCacheClearVersion) {
-        ContinueWatchingEnrichmentCache.getSnapshots()
+        ContinueWatchingEnrichmentCache.getSnapshots(activeProfileId)
     }
     val shouldValidateMissingNextUpSeeds = remember(
         isTraktProgressActive,
@@ -466,6 +466,7 @@ fun HomeScreen(
         watchProgressSeedKey,
         watchedUiState.items,
         watchedUiState.isLoaded,
+        activeProfileId,
     ) {
         if (completedSeriesCandidates.isEmpty()) {
             nextUpItemsBySeries = emptyMap()
@@ -508,6 +509,7 @@ fun HomeScreen(
                     }
                 }
                 saveContinueWatchingSnapshots(
+                    profileId = activeProfileId,
                     nextUpItemsBySeries = cachedResolvedNextUpItems,
                     visibleContinueWatchingEntries = visibleContinueWatchingEntries,
                     todayIsoDate = CurrentDateProvider.todayIsoDate(),
@@ -576,6 +578,7 @@ fun HomeScreen(
             }
 
             saveContinueWatchingSnapshots(
+                profileId = activeProfileId,
                 nextUpItemsBySeries = results,
                 visibleContinueWatchingEntries = visibleContinueWatchingEntries,
                 todayIsoDate = todayIsoDate,
@@ -626,6 +629,7 @@ fun HomeScreen(
                             ).toSet()
                     }
                     saveContinueWatchingSnapshots(
+                        profileId = activeProfileId,
                         nextUpItemsBySeries = progressiveResults,
                         visibleContinueWatchingEntries = visibleContinueWatchingEntries,
                         todayIsoDate = todayIsoDate,
@@ -1212,6 +1216,7 @@ private data class HomeContinueWatchingCandidate(
 )
 
 private fun saveContinueWatchingSnapshots(
+    profileId: Int,
     nextUpItemsBySeries: Map<String, Pair<Long, ContinueWatchingItem>>,
     visibleContinueWatchingEntries: List<WatchProgressEntry>,
     todayIsoDate: String,
@@ -1265,6 +1270,7 @@ private fun saveContinueWatchingSnapshots(
         )
     }
     ContinueWatchingEnrichmentCache.saveSnapshots(
+        profileId = profileId,
         nextUp = nextUpCache,
         inProgress = inProgressCache,
     )
