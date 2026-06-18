@@ -23,5 +23,3 @@ internal actual fun publishNativeProfileTabIcon(
     avatarImageUrl: String?,
     avatarBackgroundColorHex: String?,
 ) = Unit
-
-internal actual fun notifyNativeProfileSwitcherPopupDismissed() = Unit

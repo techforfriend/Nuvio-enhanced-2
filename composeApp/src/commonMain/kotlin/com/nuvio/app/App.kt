@@ -103,6 +103,7 @@ import com.nuvio.app.core.ui.NativeTabBridge
 import com.nuvio.app.core.ui.isLiquidGlassNativeTabBarSupported
 import com.nuvio.app.core.ui.localizedContinueWatchingSubtitle
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.core.ui.nuvioBottomNavigationBarInsets
 import com.nuvio.app.features.auth.AuthScreen
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.catalog.CatalogRepository
@@ -1422,6 +1423,11 @@ private fun MainAppContent(
                         val isTabletLayout = maxWidth >= 768.dp
                         val useNativeBottomTabs =
                             liquidGlassNativeTabBarSupported && liquidGlassNativeTabBarEnabled && initialHomeReady
+                        val nativeTabSafeBottomPadding = nuvioBottomNavigationBarInsets()
+                            .asPaddingValues()
+                            .calculateBottomPadding()
+                        val nativeProfileTabAnchorBottomPadding =
+                            nativeTabSafeBottomPadding + NuvioTokens.Space.s10
                         val tabsRouteActive = currentBackStackEntry?.destination?.hasRoute<TabsRoute>() == true
                         val onProfileSelected: (NuvioProfile) -> Unit = { profile ->
                             nativeProfileSwitcherVisible = false
@@ -1596,7 +1602,9 @@ private fun MainAppContent(
                                             nativeProfileSwitcherVisible = false
                                             onSwitchProfile()
                                         },
-                                        modifier = Modifier.fillMaxSize(),
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(bottom = nativeProfileTabAnchorBottomPadding),
                                     )
                                 }
                             }

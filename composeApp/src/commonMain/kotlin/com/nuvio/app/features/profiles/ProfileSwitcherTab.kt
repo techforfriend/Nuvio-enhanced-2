@@ -72,7 +72,6 @@ import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.isIos
-import com.nuvio.app.core.ui.notifyNativeProfileSwitcherPopupDismissed
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
@@ -352,6 +351,7 @@ fun NativeProfileSwitcherPopup(
     val activeProfile = profileState.activeProfile
     val profiles = profileState.profiles
     val avatars by AvatarRepository.avatars.collectAsStateWithLifecycle()
+    val tokens = MaterialTheme.nuvio
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
 
@@ -415,7 +415,6 @@ fun NativeProfileSwitcherPopup(
                 )
             }
         } else if (popupVisible) {
-            notifyNativeProfileSwitcherPopupDismissed()
             launch { popupAlpha.animateTo(0f, tween(180, easing = FastOutSlowInEasing)) }
             launch { popupScale.animateTo(0.85f, tween(200, easing = FastOutSlowInEasing)) }
             launch {
@@ -437,7 +436,7 @@ fun NativeProfileSwitcherPopup(
             if (popupVisible && profiles.isNotEmpty() && !isSwitchingProfile) {
                 Popup(
                     alignment = Alignment.BottomCenter,
-                    offset = IntOffset(0, with(density) { -84.dp.roundToPx() }),
+                    offset = IntOffset(0, with(density) { -NuvioTokens.Space.s64.roundToPx() }),
                     properties = PopupProperties(focusable = true),
                     onDismissRequest = onDismissRequest,
                 ) {
@@ -450,16 +449,16 @@ fun NativeProfileSwitcherPopup(
                                 scaleY = popupScale.value
                                 translationY = popupTranslateY.value
                             }
-                            .shadow(16.dp, RoundedCornerShape(28.dp))
+                            .shadow(tokens.elevation.overlay, tokens.shapes.sheet)
                             .background(
-                                MaterialTheme.colorScheme.surfaceContainerHigh,
-                                RoundedCornerShape(28.dp),
+                                tokens.colors.surfaceSheet,
+                                tokens.shapes.sheet,
                             )
-                            .padding(16.dp),
+                            .padding(tokens.spacing.sheetPadding),
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(tokens.spacing.cardPadding),
                                 verticalAlignment = Alignment.Top,
                             ) {
                                 profiles.forEachIndexed { index, profile ->

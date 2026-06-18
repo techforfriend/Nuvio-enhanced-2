@@ -102,5 +102,3 @@ internal expect fun publishNativeProfileTabIcon(
     avatarImageUrl: String?,
     avatarBackgroundColorHex: String?,
 )
-
-internal expect fun notifyNativeProfileSwitcherPopupDismissed()

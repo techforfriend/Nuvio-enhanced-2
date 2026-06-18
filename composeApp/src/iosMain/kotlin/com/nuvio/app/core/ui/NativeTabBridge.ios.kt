@@ -17,7 +17,6 @@ private const val nativeProfileNameKey = "NuvioNativeProfileName"
 private const val nativeProfileAvatarColorKey = "NuvioNativeProfileAvatarColor"
 private const val nativeProfileAvatarUrlKey = "NuvioNativeProfileAvatarURL"
 private const val nativeProfileAvatarBackgroundColorKey = "NuvioNativeProfileAvatarBackgroundColor"
-private const val nativeProfileSwitcherPopupDismissedNotification = "NuvioNativeProfileSwitcherPopupDismissed"
 private const val nativeTabChromeDidChangeNotification = "NuvioNativeTabChromeDidChange"
 
 internal actual fun isLiquidGlassNativeTabBarSupported(): Boolean {
@@ -67,13 +66,6 @@ internal actual fun publishNativeProfileTabIcon(
     publishString(nativeProfileAvatarUrlKey, avatarImageUrl)
     publishString(nativeProfileAvatarBackgroundColorKey, avatarBackgroundColorHex)
     notifyNativeTabChromeChanged()
-}
-
-internal actual fun notifyNativeProfileSwitcherPopupDismissed() {
-    NSNotificationCenter.defaultCenter.postNotificationName(
-        nativeProfileSwitcherPopupDismissedNotification,
-        null,
-    )
 }
 
 private fun publishBool(key: String, value: Boolean) {
