@@ -38,16 +38,6 @@ data class SyncBackendManifest(
     val activeBackend: String,
     val revision: String = "",
     val forceLogoutOnChange: Boolean = true,
-    val backends: Map<String, SyncBackendManifestBackend> = emptyMap(),
-)
-
-@Serializable
-data class SyncBackendManifestBackend(
-    val displayName: String = "",
-    val supabaseUrl: String = "",
-    val anonKey: String = "",
-    val avatarPublicBaseUrl: String = "",
-    val schemaVersion: Int = 1,
 )
 
 data class SyncBackendState(
@@ -75,7 +65,8 @@ sealed interface SyncBackendRefreshResult {
 
 @Serializable
 internal data class StoredSyncBackendSelection(
-    val backend: SyncBackendConfig,
+    val backend: SyncBackendConfig? = null,
+    val backendId: String = "",
     val appliedRevision: String = "",
 )
 
@@ -94,9 +85,9 @@ object SyncBackendDefaults {
         SyncBackendConfig(
             id = SYNC_BACKEND_NUVIO_ID,
             displayName = "Nuvio",
-            supabaseUrl = "https://api.nuvio.tv",
-            anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxNTIxMzQ2LCJleHAiOjE5MzkyMDEzNDZ9.tmQaj682pwzehpqlgCDMnySOqiUvpgRbrE43T4VJpDI",
-            avatarPublicBaseUrl = "https://api.nuvio.tv/storage/v1/object/public/avatars",
+            supabaseUrl = SupabaseConfig.NUVIO_URL,
+            anonKey = SupabaseConfig.NUVIO_ANON_KEY,
+            avatarPublicBaseUrl = "${SupabaseConfig.NUVIO_URL.trim().trimEnd('/')}/storage/v1/object/public/avatars",
             schemaVersion = 1,
         ).normalized()
 
@@ -118,28 +109,8 @@ internal fun SyncBackendManifest.backendConfigForActiveBackend(): SyncBackendCon
     if (version != 1) return null
 
     val activeId = activeBackend.trim().lowercase()
-    val manifestBackend = backends.entries
-        .firstOrNull { (key, _) -> key.trim().lowercase() == activeId }
-        ?.value
-        ?: return null
-    val fallback = SyncBackendDefaults.byId(activeId) ?: return null
-
-    val supabaseUrl = manifestBackend.supabaseUrl.trim().ifBlank { fallback.supabaseUrl }
-    val anonKey = manifestBackend.anonKey.trim().ifBlank { fallback.anonKey }
-    val avatarPublicBaseUrl = manifestBackend.avatarPublicBaseUrl.trim().ifBlank {
-        "$supabaseUrl/storage/v1/object/public/avatars"
-    }
-
-    return SyncBackendConfig(
-        id = activeId,
-        displayName = manifestBackend.displayName.trim().ifBlank { fallback.displayName },
-        supabaseUrl = supabaseUrl,
-        anonKey = anonKey,
-        avatarPublicBaseUrl = avatarPublicBaseUrl,
-        schemaVersion = manifestBackend.schemaVersion.takeIf { it > 0 } ?: fallback.schemaVersion,
-    )
-        .normalized()
-        .takeIf { it.isUsableClientConfig() }
+    return SyncBackendDefaults.byId(activeId)
+        ?.takeIf { it.isUsableClientConfig() }
 }
 
 private fun SyncBackendConfig.isUsableClientConfig(): Boolean =
