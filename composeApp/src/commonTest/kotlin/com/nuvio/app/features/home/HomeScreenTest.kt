@@ -11,6 +11,7 @@ import com.nuvio.app.features.watchprogress.ContinueWatchingItem
 import com.nuvio.app.features.watchprogress.WatchProgressEntry
 import com.nuvio.app.features.watched.WatchedItem
 import com.nuvio.app.features.trakt.TRAKT_CONTINUE_WATCHING_DAYS_CAP_ALL
+import com.nuvio.app.features.watching.domain.WatchingContentRef
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -21,6 +22,18 @@ class HomeScreenTest {
     fun `home trakt continue watching candidate limits match TV`() {
         assertEquals(300, HomeContinueWatchingMaxRecentProgressItems)
         assertEquals(32, HomeNextUpInitialResolutionLimit)
+    }
+
+    @Test
+    fun `home next up resolution keeps candidates beyond initial limit for background resolution`() {
+        val candidates = (1..35).map { index -> completedSeriesCandidate(index) }
+
+        val plan = planHomeNextUpResolutionCandidates(candidates)
+
+        assertEquals(HomeNextUpInitialResolutionLimit, plan.initialCandidates.size)
+        assertEquals(3, plan.deferredCandidates.size)
+        assertEquals("show-1", plan.initialCandidates.first().content.id)
+        assertEquals("show-33", plan.deferredCandidates.first().content.id)
     }
 
     @Test
@@ -74,6 +87,33 @@ class HomeScreenTest {
 
         assertEquals(1, result.size)
         assertEquals("S1E5 • The Wolf and the Lion", result.single().subtitle)
+    }
+
+    @Test
+    fun `build home continue watching items keeps deferred next up items with metadata`() {
+        val nextUpItems = (1..35).associate { index ->
+            val id = "show-$index"
+            val item = continueWatchingItem(
+                videoId = "$id:1:$index",
+                subtitle = "Next Up • S1E$index",
+                imageUrl = "https://example.test/$id.jpg",
+                logo = "https://example.test/$id-logo.png",
+                episodeThumbnail = "https://example.test/$id-thumb.jpg",
+            )
+
+            id to ((10_000L - index) to item)
+        }
+
+        val result = buildHomeContinueWatchingItems(
+            visibleEntries = emptyList(),
+            nextUpItemsBySeries = nextUpItems,
+        )
+        val deferredItem = result.first { item -> item.parentMetaId == "show-33" }
+
+        assertEquals(35, result.size)
+        assertEquals("https://example.test/show-33.jpg", deferredItem.imageUrl)
+        assertEquals("https://example.test/show-33-logo.png", deferredItem.logo)
+        assertEquals("https://example.test/show-33-thumb.jpg", deferredItem.episodeThumbnail)
     }
 
     @Test
@@ -136,6 +176,45 @@ class HomeScreenTest {
         )
 
         assertEquals("GOAT.2026.2160p.UHD.mkv", result.single().title)
+    }
+
+    @Test
+    fun `build home continue watching items preserves cached in progress artwork fallback`() {
+        val progress = progressEntry(
+            videoId = "show:1:4",
+            title = "Show",
+            lastUpdatedEpochMs = 500L,
+        )
+        val cached = ContinueWatchingItem(
+            parentMetaId = "show",
+            parentMetaType = "series",
+            videoId = "show:1:4",
+            title = "Cached Show",
+            subtitle = "S1E4",
+            imageUrl = "https://example.test/cached.jpg",
+            logo = "https://example.test/logo.png",
+            poster = "https://example.test/poster.jpg",
+            background = "https://example.test/backdrop.jpg",
+            seasonNumber = 1,
+            episodeNumber = 4,
+            episodeTitle = "Cached Episode",
+            episodeThumbnail = "https://example.test/thumb.jpg",
+            pauseDescription = "Cached description",
+            isNextUp = false,
+            resumePositionMs = 120_000L,
+            durationMs = 1_000_000L,
+            progressFraction = 0.12f,
+        )
+
+        val result = buildHomeContinueWatchingItems(
+            visibleEntries = listOf(progress),
+            cachedInProgressByVideoId = mapOf(progress.videoId to cached),
+            nextUpItemsBySeries = emptyMap(),
+        )
+
+        assertEquals("https://example.test/cached.jpg", result.single().imageUrl)
+        assertEquals("https://example.test/logo.png", result.single().logo)
+        assertEquals("https://example.test/thumb.jpg", result.single().episodeThumbnail)
     }
 
     @Test
@@ -310,6 +389,9 @@ class HomeScreenTest {
         episodeNumber: Int? = 4,
         seedSeasonNumber: Int? = seasonNumber,
         seedEpisodeNumber: Int? = episodeNumber,
+        imageUrl: String? = null,
+        logo: String? = null,
+        episodeThumbnail: String? = null,
     ): ContinueWatchingItem =
         ContinueWatchingItem(
             parentMetaId = videoId.substringBefore(':'),
@@ -317,10 +399,12 @@ class HomeScreenTest {
             videoId = videoId,
             title = "Show",
             subtitle = subtitle,
-            imageUrl = null,
+            imageUrl = imageUrl,
+            logo = logo,
             seasonNumber = seasonNumber,
             episodeNumber = episodeNumber,
             episodeTitle = subtitle.substringAfterLast(" • ", "Episode"),
+            episodeThumbnail = episodeThumbnail,
             isNextUp = true,
             nextUpSeedSeasonNumber = seedSeasonNumber,
             nextUpSeedEpisodeNumber = seedEpisodeNumber,
@@ -342,6 +426,14 @@ class HomeScreenTest {
             season = season,
             episode = episode,
             markedAtEpochMs = markedAtEpochMs,
+        )
+
+    private fun completedSeriesCandidate(index: Int): CompletedSeriesCandidate =
+        CompletedSeriesCandidate(
+            content = WatchingContentRef(type = "series", id = "show-$index"),
+            seasonNumber = 1,
+            episodeNumber = index,
+            markedAtEpochMs = 10_000L - index,
         )
 
     private companion object {
