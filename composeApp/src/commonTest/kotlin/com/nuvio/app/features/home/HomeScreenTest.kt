@@ -33,7 +33,7 @@ class HomeScreenTest {
         )
         val nextUp = continueWatchingItem(
             videoId = "tt0944947:1:4",
-            subtitle = "Up Next • S1E4 • Cripples, Bastards, and Broken Things",
+            subtitle = "Next Up • S1E4 • Cripples, Bastards, and Broken Things",
         )
         val movie = progressEntry(
             videoId = "movie-1",
@@ -64,7 +64,7 @@ class HomeScreenTest {
         )
         val nextUp = continueWatchingItem(
             videoId = "show:1:5",
-            subtitle = "Up Next • S1E5 • The Wolf and the Lion",
+            subtitle = "Next Up • S1E5 • The Wolf and the Lion",
         )
 
         val result = buildHomeContinueWatchingItems(
@@ -87,7 +87,7 @@ class HomeScreenTest {
         )
         val nextUp = continueWatchingItem(
             videoId = "show:1:5",
-            subtitle = "Up Next • S1E5 • Next",
+            subtitle = "Next Up • S1E5 • Next",
         )
 
         val result = buildHomeContinueWatchingItems(
@@ -264,7 +264,7 @@ class HomeScreenTest {
     fun `stale live next up item is dropped when current seed advances`() {
         val staleNextUp = continueWatchingItem(
             videoId = "show:4:11",
-            subtitle = "Up Next • S4E11",
+            subtitle = "Next Up • S4E11",
             seedSeasonNumber = 4,
             seedEpisodeNumber = 10,
         )

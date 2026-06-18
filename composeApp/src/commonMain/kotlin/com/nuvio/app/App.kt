@@ -81,6 +81,9 @@ import com.nuvio.app.core.deeplink.AppDeepLink
 import com.nuvio.app.core.deeplink.AppDeepLinkRepository
 import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
+import com.nuvio.app.core.network.SupabaseProvider
+import com.nuvio.app.core.network.SyncBackendRefreshResult
+import com.nuvio.app.core.network.SyncBackendRepository
 import com.nuvio.app.core.sync.AppForegroundMonitor
 import com.nuvio.app.core.sync.ProfileSettingsSync
 import com.nuvio.app.core.sync.SyncManager
@@ -302,7 +305,7 @@ data class StreamRoute(
 data class CatalogRoute(
     val title: String,
     val subtitle: String,
-    val targetKind: CatalogTargetKind,
+    val targetKind: String,
     val contentType: String,
     val supportsPagination: Boolean = false,
     val manifestUrl: String? = null,
@@ -324,7 +327,7 @@ data class CatalogRoute(
             is CatalogTarget.Addon -> CatalogTargetKind.ADDON
             is CatalogTarget.Library -> CatalogTargetKind.LIBRARY
             is CatalogTarget.CollectionSource -> CatalogTargetKind.COLLECTION_SOURCE
-        },
+        }.name,
         contentType = target.contentType,
         supportsPagination = target.supportsPagination,
         manifestUrl = (target as? CatalogTarget.Addon)?.manifestUrl,
@@ -337,7 +340,7 @@ data class CatalogRoute(
     )
 
     fun toCatalogTarget(): CatalogTarget =
-        when (targetKind) {
+        when (CatalogTargetKind.valueOf(targetKind)) {
             CatalogTargetKind.ADDON -> CatalogTarget.Addon(
                 manifestUrl = requireNotNull(manifestUrl),
                 contentType = contentType,
@@ -408,6 +411,32 @@ private enum class AppGateScreen {
     Main,
 }
 
+private suspend fun refreshSyncBackendSelection() {
+    SyncBackendRepository.ensureLoaded()
+
+    when (val result = SyncBackendRepository.refreshFromManifest()) {
+        SyncBackendRefreshResult.NotConfigured,
+        is SyncBackendRefreshResult.Failed,
+        SyncBackendRefreshResult.Unchanged,
+        -> Unit
+        is SyncBackendRefreshResult.Applied -> {
+            SupabaseProvider.rebuildClient()
+            NetworkStatusRepository.requestRefresh(force = true)
+        }
+        is SyncBackendRefreshResult.RequiresLogout -> {
+            AuthRepository.resetForSyncBackendChange()
+                .onSuccess {
+                    SyncBackendRepository.applyBackendAfterLogout(
+                        backend = result.targetBackend,
+                        revision = result.revision,
+                    )
+                    SupabaseProvider.rebuildClient()
+                    NetworkStatusRepository.requestRefresh(force = true)
+                }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Preview
@@ -430,7 +459,14 @@ fun App() {
     val amoledEnabled by remember { ThemeSettingsRepository.amoledEnabled }.collectAsStateWithLifecycle()
     NuvioTheme(appTheme = selectedTheme, amoled = amoledEnabled) {
         LaunchedEffect(Unit) {
+            refreshSyncBackendSelection()
             AuthRepository.initialize()
+        }
+
+        LaunchedEffect(Unit) {
+            AppForegroundMonitor.events().collect {
+                refreshSyncBackendSelection()
+            }
         }
 
         LaunchedEffect(Unit) {
