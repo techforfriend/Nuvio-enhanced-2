@@ -26,6 +26,21 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
     @get:Input
     abstract val appVersionCode: Property<Int>
 
+    @get:Input
+    abstract val supabaseUrl: Property<String>
+
+    @get:Input
+    abstract val supabaseAnonKey: Property<String>
+
+    @get:Input
+    abstract val nuvioSupabaseUrl: Property<String>
+
+    @get:Input
+    abstract val nuvioSupabaseAnonKey: Property<String>
+
+    @get:Input
+    abstract val syncBackendManifestUrl: Property<String>
+
     @TaskAction
     fun generate() {
         val props = Properties()
@@ -39,8 +54,10 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 |package com.nuvio.app.core.network
                 |
                 |object SupabaseConfig {
-                |    const val URL = "${props.getProperty("SUPABASE_URL", "")}" 
-                |    const val ANON_KEY = "${props.getProperty("SUPABASE_ANON_KEY", "")}" 
+                |    const val URL = "${supabaseUrl.get()}"
+                |    const val ANON_KEY = "${supabaseAnonKey.get()}"
+                |    const val NUVIO_URL = "${nuvioSupabaseUrl.get()}"
+                |    const val NUVIO_ANON_KEY = "${nuvioSupabaseAnonKey.get()}"
                 |}
                 """.trimMargin()
             )
@@ -49,7 +66,7 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 |package com.nuvio.app.core.network
                 |
                 |object SyncBackendBootstrapConfig {
-                |    const val SWITCH_MANIFEST_URL = "${props.getProperty("SYNC_BACKEND_MANIFEST_URL", "")}" 
+                |    const val SWITCH_MANIFEST_URL = "${syncBackendManifestUrl.get()}"
                 |}
                 """.trimMargin()
             )
@@ -208,12 +225,28 @@ val isAndroidAppBundleBuild = requestedGradleTasks.any { taskName ->
         taskName.startsWith("bundlefull") ||
         taskName.endsWith("bundle")
 }
+val runtimeLocalProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use(::load)
+    }
+}
+
+fun runtimeConfigValue(key: String, fallback: String = ""): String =
+    runtimeLocalProperties.getProperty(key)?.trim()?.takeIf { it.isNotBlank() }
+        ?: providers.environmentVariable(key).orNull?.trim()?.takeIf { it.isNotBlank() }
+        ?: fallback
 
 val generateRuntimeConfigs = tasks.register<GenerateRuntimeConfigsTask>("generateRuntimeConfigs") {
     outputDir.set(generatedRuntimeConfigDir)
     localPropertiesFile.set(rootProject.layout.projectDirectory.file("local.properties"))
     appVersionName.set(releaseAppVersionName)
     appVersionCode.set(releaseAppVersionCode)
+    supabaseUrl.set(runtimeConfigValue("SUPABASE_URL"))
+    supabaseAnonKey.set(runtimeConfigValue("SUPABASE_ANON_KEY"))
+    nuvioSupabaseUrl.set(runtimeConfigValue("NUVIO_SUPABASE_URL"))
+    nuvioSupabaseAnonKey.set(runtimeConfigValue("NUVIO_SUPABASE_ANON_KEY"))
+    syncBackendManifestUrl.set(runtimeConfigValue("SYNC_BACKEND_MANIFEST_URL"))
 }
 
 tasks.withType<KotlinCompilationTask<*>>().configureEach {
