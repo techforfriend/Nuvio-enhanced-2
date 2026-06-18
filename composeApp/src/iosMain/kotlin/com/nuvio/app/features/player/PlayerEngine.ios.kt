@@ -100,23 +100,6 @@ actual fun PlatformPlayerSurface(
                 bridge.setPlaybackSpeed(speed)
             }
 
-            override fun currentPlayerVolume(): PlayerAudioLevel {
-                val current = bridge.getVolume().coerceIn(0f, 2f)
-                return PlayerAudioLevel(
-                    fraction = current,
-                    isMuted = current <= 0.001f,
-                )
-            }
-
-            override fun setPlayerVolume(level: Float): PlayerAudioLevel {
-                val target = level.coerceIn(0f, 2f)
-                bridge.setVolume(target)
-                return PlayerAudioLevel(
-                    fraction = target,
-                    isMuted = target <= 0.001f,
-                )
-            }
-
             override fun setMuted(muted: Boolean) {
                 bridge.setMuted(muted)
             }
