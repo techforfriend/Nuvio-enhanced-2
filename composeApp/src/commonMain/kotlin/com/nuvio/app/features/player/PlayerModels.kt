@@ -20,6 +20,7 @@ data class PlayerRoute(
 )
 
 data class PlayerLaunch(
+    val profileId: Int,
     val title: String,
     val sourceUrl: String,
     val sourceAudioUrl: String? = null,
