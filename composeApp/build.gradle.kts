@@ -363,9 +363,15 @@ kotlin {
             }
         }
         commonMain.dependencies {
-            implementation(libs.coil.compose)
-            implementation(libs.coil.network.ktor3)
-            implementation(libs.coil.svg)
+            implementation("io.coil-kt.coil3:coil-compose:${libs.versions.coil.get()}") {
+                exclude(group = "org.jetbrains.skiko", module = "skiko")
+            }
+            implementation("io.coil-kt.coil3:coil-network-ktor3:${libs.versions.coil.get()}") {
+                exclude(group = "org.jetbrains.skiko", module = "skiko")
+            }
+            implementation("io.coil-kt.coil3:coil-svg:${libs.versions.coil.get()}") {
+                exclude(group = "org.jetbrains.skiko", module = "skiko")
+            }
             implementation("dev.chrisbanes.haze:haze:1.7.2")
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
