@@ -71,6 +71,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.NuvioBottomSheetActionRow
 import com.nuvio.app.core.ui.NuvioBottomSheetDivider
@@ -792,6 +793,7 @@ internal fun StreamList(
     val hasGroups = filteredGroups.isNotEmpty()
     val hasAnyStreams = filteredGroups.any { it.streams.isNotEmpty() }
     val anyLoading = filteredGroups.any { it.isLoading }
+    val torrentNotSupportedText = stringResource(Res.string.streams_torrent_not_supported)
     val streamBadgeSettings by remember {
         StreamBadgeSettingsRepository.ensureLoaded()
         StreamBadgeSettingsRepository.uiState
@@ -829,6 +831,7 @@ internal fun StreamList(
                         showFileSizeBadges = streamBadgeSettings.showFileSizeBadges,
                         showAddonLogo = streamBadgeSettings.showAddonLogo,
                         badgePlacement = streamBadgeSettings.badgePlacement,
+                        torrentNotSupportedText = torrentNotSupportedText,
                         onStreamSelected = onStreamSelected,
                         onStreamLongPress = onStreamLongPress,
                         resumePositionMs = resumePositionMs,
@@ -857,6 +860,7 @@ private fun LazyListScope.streamSection(
     showFileSizeBadges: Boolean,
     showAddonLogo: Boolean,
     badgePlacement: StreamBadgePlacement,
+    torrentNotSupportedText: String,
     onStreamSelected: (stream: StreamItem, resumePositionMs: Long?, resumeProgressFraction: Float?) -> Unit,
     onStreamLongPress: (StreamItem) -> Unit,
     resumePositionMs: Long?,
@@ -898,16 +902,23 @@ private fun LazyListScope.streamSection(
                 )
             },
         ) { _, stream ->
+            val isSelectable = stream.isSelectableForPlayback(debridEnabled)
+            val isUnsupportedTorrentStream =
+                stream.needsLocalDebridResolve &&
+                    !AppFeaturePolicy.p2pEnabled &&
+                    !(debridEnabled && stream.isAddonDebridCandidate)
             StreamCard(
                 stream = stream,
-                enabled = stream.isSelectableForPlayback(debridEnabled),
+                enabled = isSelectable || isUnsupportedTorrentStream,
                 appendInstantServiceToDefaultName = appendInstantServiceToDefaultName,
                 showFileSizeBadges = showFileSizeBadges,
                 showAddonLogo = showAddonLogo,
                 badgePlacement = badgePlacement,
                 onClick = {
-                    if (stream.isSelectableForPlayback(debridEnabled)) {
+                    if (isSelectable) {
                         onStreamSelected(stream, resumePositionMs, resumeProgressFraction)
+                    } else if (isUnsupportedTorrentStream) {
+                        NuvioToastController.show(torrentNotSupportedText)
                     }
                 },
                 onLongClick = {
