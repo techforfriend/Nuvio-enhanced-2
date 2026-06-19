@@ -508,47 +508,4 @@ private fun StreamsUiState.streamDiagnostics(): String {
 private fun com.nuvio.app.features.addons.ManagedAddon.streamAddonInstanceId(manifestId: String): String =
     "addon:$manifestId:$manifestUrl"
 
-private fun PluginRuntimeResult.toStreamItem(scraper: PluginScraper): StreamItem {
-    val subtitleParts = listOfNotNull(
-        quality?.takeIf { it.isNotBlank() },
-        size?.takeIf { it.isNotBlank() },
-        language?.takeIf { it.isNotBlank() },
-    )
-    val requestHeaders = headers
-        .orEmpty()
-        .mapNotNull { (key, value) ->
-            val headerName = key.trim()
-            val headerValue = value.trim()
-            if (headerName.isBlank() || headerValue.isBlank() || headerName.equals("Range", ignoreCase = true)) {
-                null
-            } else {
-                headerName to headerValue
-            }
-        }
-        .toMap()
 
-    return StreamItem(
-        name = name ?: title,
-        description = subtitleParts.joinToString(" • ").ifBlank { null },
-        url = url,
-        infoHash = infoHash,
-        addonName = scraper.name,
-        addonId = "plugin:${scraper.id}",
-        behaviorHints = if (requestHeaders.isEmpty()) {
-            com.nuvio.app.features.streams.StreamBehaviorHints()
-        } else {
-            com.nuvio.app.features.streams.StreamBehaviorHints(
-                notWebReady = true,
-                proxyHeaders = com.nuvio.app.features.streams.StreamProxyHeaders(request = requestHeaders),
-            )
-        },
-        externalSubtitles = subtitles?.map {
-            com.nuvio.app.features.streams.StreamSubtitle(
-                url = it.url,
-                language = it.language,
-                name = it.name,
-                headers = it.headers
-            )
-        } ?: emptyList()
-    )
-}
