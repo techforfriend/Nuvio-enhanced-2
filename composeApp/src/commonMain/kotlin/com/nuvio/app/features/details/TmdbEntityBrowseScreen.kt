@@ -324,46 +324,46 @@ private fun EntityIdentitySidebar(
             overflow = TextOverflow.Ellipsis,
         )
 
-        Box(
-            modifier = Modifier.size(144.dp),
-            contentAlignment = Alignment.Center,
-        ) {
+        if (!header.logo.isNullOrBlank()) {
             Box(
                 modifier = Modifier
-                    .matchParentSize()
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(accentColor.copy(alpha = 0.14f)),
-            )
-            Box(
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.40f),
-                        shape = RoundedCornerShape(24.dp),
-                    )
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                    .width(184.dp)
+                    .height(104.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Color.White)
+                    .padding(18.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                if (!header.logo.isNullOrBlank()) {
-                    Box(
-                        modifier = Modifier
-                            .width(92.dp)
-                            .height(62.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White)
-                            .padding(10.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        AsyncImage(
-                            model = header.logo,
-                            contentDescription = header.name,
-                            modifier = Modifier.matchParentSize(),
-                            contentScale = ContentScale.Fit,
+                AsyncImage(
+                    model = header.logo,
+                    contentDescription = header.name,
+                    modifier = Modifier.matchParentSize(),
+                    contentScale = ContentScale.Fit,
+                )
+            }
+        } else {
+            Box(
+                modifier = Modifier.size(144.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(accentColor.copy(alpha = 0.14f)),
+                )
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.40f),
+                            shape = RoundedCornerShape(24.dp),
                         )
-                    }
-                } else {
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Text(
                         text = header.name.initials(),
                         style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
