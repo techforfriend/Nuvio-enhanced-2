@@ -53,6 +53,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
@@ -517,30 +518,6 @@ private fun PersonIdentitySidebar(
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
-            person.knownFor?.takeIf { it.isNotBlank() }?.let { knownFor ->
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(accentColor.copy(alpha = 0.14f))
-                        .padding(horizontal = 12.dp, vertical = 5.dp),
-                    horizontalArrangement = Arrangement.spacedBy(7.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(accentColor),
-                    )
-                    Text(
-                        text = stringResource(Res.string.person_known_for, knownFor).replace(": ", " "),
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = accentColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
@@ -805,6 +782,18 @@ private fun PersonDetailSkeleton(
             ),
         )
     }
+    val avatarSharedElementModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+        with(sharedTransitionScope) {
+            Modifier.sharedElement(
+                sharedContentState = rememberSharedContentState(
+                    key = avatarTransitionKey,
+                ),
+                animatedVisibilityScope = animatedVisibilityScope,
+            )
+        }
+    } else {
+        Modifier
+    }
 
     Box(
         modifier = Modifier
@@ -817,37 +806,194 @@ private fun PersonDetailSkeleton(
                 .background(accentGradient),
         )
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(top = 48.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                val avatarSharedElementModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-                    with(sharedTransitionScope) {
-                        Modifier.sharedElement(
-                            sharedContentState = rememberSharedContentState(
-                                key = avatarTransitionKey,
-                            ),
-                            animatedVisibilityScope = animatedVisibilityScope,
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            if (maxWidth >= PERSON_DETAIL_WIDE_LAYOUT_MIN_WIDTH) {
+                WidePersonDetailSkeleton(
+                    personName = personName,
+                    profilePhoto = profilePhoto,
+                    avatarRequest = avatarRequest,
+                    avatarSharedElementModifier = avatarSharedElementModifier,
+                    skeletonPosterWidth = skeletonPosterWidth,
+                    skeletonPosterHeight = skeletonPosterHeight,
+                    skeletonPosterCornerRadius = posterCardStyle.cornerRadiusDp.dp,
+                    showPosterLabels = !isLandscapeShelfMode,
+                )
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .padding(top = 48.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .then(avatarSharedElementModifier)
+                                .size(140.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (!profilePhoto.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = avatarRequest ?: profilePhoto,
+                                    contentDescription = personName,
+                                    modifier = Modifier.matchParentSize(),
+                                    contentScale = ContentScale.Crop,
+                                )
+                            } else {
+                                Text(
+                                    text = personName.firstOrNull()?.uppercase() ?: "?",
+                                    style = MaterialTheme.typography.displayMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = personName,
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        SkeletonLine(
+                            widthFraction = 0.58f,
+                            height = 14.dp,
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        SkeletonLine(
+                            widthFraction = 0.42f,
+                            height = 14.dp,
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        SkeletonLine(
+                            widthFraction = 0.34f,
+                            height = 14.dp,
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        listOf(1.0f, 0.96f, 0.92f, 0.98f, 0.88f, 0.94f, 0.82f, 0.74f).forEachIndexed { index, widthFraction ->
+                            SkeletonLine(
+                                widthFraction = widthFraction,
+                                height = 16.dp,
+                            )
+                            if (index != 7) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(120.dp)
+                                .height(18.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
                         )
                     }
-                } else {
-                    Modifier
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        repeat(4) {
+                            Column(modifier = Modifier.width(skeletonPosterWidth)) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(skeletonPosterWidth)
+                                        .height(skeletonPosterHeight)
+                                        .clip(RoundedCornerShape(posterCardStyle.cornerRadiusDp.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                )
+                                if (!isLandscapeShelfMode) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    SkeletonLine(
+                                        widthFraction = 1f,
+                                        height = 16.dp,
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    SkeletonLine(
+                                        widthFraction = 0.56f,
+                                        height = 12.dp,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WidePersonDetailSkeleton(
+    personName: String,
+    profilePhoto: String?,
+    avatarRequest: ImageRequest?,
+    avatarSharedElementModifier: Modifier,
+    skeletonPosterWidth: Dp,
+    skeletonPosterHeight: Dp,
+    skeletonPosterCornerRadius: Dp,
+    showPosterLabels: Boolean,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .padding(top = 34.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .width(PERSON_DETAIL_WIDE_SIDEBAR_WIDTH)
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 40.dp, end = 36.dp, top = 40.dp, bottom = 42.dp),
+            verticalArrangement = Arrangement.spacedBy(22.dp),
+        ) {
+            Box(
+                modifier = Modifier.size(162.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+                )
                 Box(
                     modifier = Modifier
                         .then(avatarSharedElementModifier)
-                        .size(140.dp)
+                        .size(148.dp)
                         .clip(CircleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.40f), CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -860,105 +1006,113 @@ private fun PersonDetailSkeleton(
                         )
                     } else {
                         Text(
-                            text = personName.firstOrNull()?.uppercase() ?: "?",
+                            text = personName.initials(),
                             style = MaterialTheme.typography.displayMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+            }
 
-                Text(
-                    text = personName,
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            Text(
+                text = personName,
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-0.5).sp,
+                    lineHeight = 34.sp,
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
 
-                Spacer(modifier = Modifier.height(12.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
+                repeat(3) {
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        SkeletonLine(widthFraction = 0.34f, height = 10.dp)
+                        SkeletonLine(widthFraction = if (it == 1) 0.88f else 0.58f, height = 14.dp)
+                    }
+                }
+            }
 
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.30f)),
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SkeletonLine(
-                    widthFraction = 0.58f,
-                    height = 14.dp,
+                    widthFraction = 0.32f,
+                    height = 10.dp,
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-                SkeletonLine(
-                    widthFraction = 0.42f,
-                    height = 14.dp,
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                SkeletonLine(
-                    widthFraction = 0.34f,
-                    height = 14.dp,
-                )
+                listOf(0.96f, 1f, 0.92f, 0.98f, 0.84f, 0.90f).forEach { widthFraction ->
+                    SkeletonLine(widthFraction = widthFraction, height = 16.dp)
+                }
+            }
+        }
 
-                Spacer(modifier = Modifier.height(12.dp))
+        Box(
+            modifier = Modifier
+                .width(1.dp)
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.30f)),
+        )
 
-                listOf(1.0f, 0.96f, 0.92f, 0.98f, 0.88f, 0.94f, 0.82f, 0.74f).forEachIndexed { index, widthFraction ->
-                    SkeletonLine(
-                        widthFraction = widthFraction,
-                        height = 16.dp,
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 40.dp, bottom = 40.dp),
+            verticalArrangement = Arrangement.spacedBy(34.dp),
+        ) {
+            repeat(3) {
+                WideSkeletonPosterRail(
+                    skeletonPosterWidth = skeletonPosterWidth,
+                    skeletonPosterHeight = skeletonPosterHeight,
+                    skeletonPosterCornerRadius = skeletonPosterCornerRadius,
+                    showPosterLabels = showPosterLabels,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WideSkeletonPosterRail(
+    skeletonPosterWidth: Dp,
+    skeletonPosterHeight: Dp,
+    skeletonPosterCornerRadius: Dp,
+    showPosterLabels: Boolean,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
+        Box(
+            modifier = Modifier
+                .width(120.dp)
+                .height(18.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            repeat(6) {
+                Column(modifier = Modifier.width(skeletonPosterWidth)) {
+                    Box(
+                        modifier = Modifier
+                            .width(skeletonPosterWidth)
+                            .height(skeletonPosterHeight)
+                            .clip(RoundedCornerShape(skeletonPosterCornerRadius))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                     )
-                    if (index != 7) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                    if (showPosterLabels) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        SkeletonLine(widthFraction = 1f, height = 16.dp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        SkeletonLine(widthFraction = 0.56f, height = 12.dp)
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Filmography header skeleton
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .width(120.dp)
-                        .height(18.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Poster row skeleton
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                repeat(4) {
-                    Column(modifier = Modifier.width(skeletonPosterWidth)) {
-                        Box(
-                            modifier = Modifier
-                                .width(skeletonPosterWidth)
-                                .height(skeletonPosterHeight)
-                                .clip(RoundedCornerShape(posterCardStyle.cornerRadiusDp.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                        )
-                        if (!isLandscapeShelfMode) {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            SkeletonLine(
-                                widthFraction = 1f,
-                                height = 16.dp,
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            SkeletonLine(
-                                widthFraction = 0.56f,
-                                height = 12.dp,
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -966,7 +1120,7 @@ private fun PersonDetailSkeleton(
 @Composable
 private fun SkeletonLine(
     widthFraction: Float,
-    height: androidx.compose.ui.unit.Dp,
+    height: Dp,
 ) {
     Box(
         modifier = Modifier
