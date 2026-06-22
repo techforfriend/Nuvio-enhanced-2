@@ -39,6 +39,10 @@ import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.TransferListener
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
@@ -46,6 +50,7 @@ import androidx.media3.exoplayer.ForwardingRenderer
 import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MergingMediaSource
+import com.nuvio.app.features.trailer.YoutubeChunkedDataSourceFactory
 import androidx.media3.exoplayer.text.TextOutput
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.extractor.DefaultExtractorsFactory
@@ -76,6 +81,7 @@ actual fun PlatformPlayerSurface(
     sourceAudioUrl: String?,
     sourceHeaders: Map<String, String>,
     sourceResponseHeaders: Map<String, String>,
+    externalSubtitles: List<com.nuvio.app.features.streams.StreamSubtitle>,
     streamType: String?,
     useYoutubeChunkedPlayback: Boolean,
     modifier: Modifier,
@@ -127,12 +133,28 @@ actual fun PlatformPlayerSurface(
     var fallbackStartPositionMs by remember(playerSourceKey) { mutableStateOf<Long?>(null) }
     val effectiveDecoderPriority = decoderPriorityOverride ?: playerSettings.decoderPriority
 
-    val initialMediaItem = remember(playerSourceKey) {
+    val initialMediaItem = remember(playerSourceKey, externalSubtitles) {
+        val subtitleConfigs = externalSubtitles.mapNotNull { subtitle ->
+            val mimeType = resolveSubtitleMimeType(subtitle.url, subtitle.headers)
+            MediaItem.SubtitleConfiguration.Builder(Uri.parse(subtitle.url))
+                .setMimeType(mimeType)
+                .setLanguage(subtitle.language)
+                .setLabel(subtitle.name ?: subtitle.language)
+                .setRoleFlags(C.ROLE_FLAG_SUBTITLE)
+                .build()
+        }
         playbackMediaItemFromUrl(
             url = sourceUrl,
             responseHeaders = sanitizedSourceResponseHeaders,
             streamType = normalizedStreamType,
-        )
+        ).buildUpon()
+            .setMediaId(sourceUrl)
+            .apply {
+                if (subtitleConfigs.isNotEmpty()) {
+                    setSubtitleConfigurations(subtitleConfigs)
+                }
+            }
+            .build()
     }
 
     var resolvedMediaItem by remember(playerSourceKey) { mutableStateOf(initialMediaItem) }
@@ -148,12 +170,14 @@ actual fun PlatformPlayerSurface(
         sanitizedSourceHeaders,
         sanitizedSourceResponseHeaders,
         useYoutubeChunkedPlayback,
+        externalSubtitles,
     ) {
         PlatformPlaybackDataSourceFactory.create(
             context = context,
             defaultRequestHeaders = sanitizedSourceHeaders,
             defaultResponseHeaders = sanitizedSourceResponseHeaders,
             useYoutubeChunkedPlayback = useYoutubeChunkedPlayback,
+            externalSubtitles = externalSubtitles,
         )
     }
 
@@ -309,6 +333,21 @@ actual fun PlatformPlayerSurface(
                             resolvedMediaItem = MediaItem.Builder()
                                 .setUri(sourceUrl)
                                 .setMimeType(probedMime)
+                                .setMediaId(sourceUrl)
+                                .apply {
+                                    val subtitleConfigs = externalSubtitles.mapNotNull { subtitle ->
+                                        val mimeType = resolveSubtitleMimeType(subtitle.url, subtitle.headers)
+                                        MediaItem.SubtitleConfiguration.Builder(Uri.parse(subtitle.url))
+                                            .setMimeType(mimeType)
+                                            .setLanguage(subtitle.language)
+                                            .setLabel(subtitle.name ?: subtitle.language)
+                                            .setRoleFlags(C.ROLE_FLAG_SUBTITLE)
+                                            .build()
+                                    }
+                                    if (subtitleConfigs.isNotEmpty()) {
+                                        setSubtitleConfigurations(subtitleConfigs)
+                                    }
+                                }
                                 .build()
                             latestOnError.value(null)
                             return@launch
@@ -1021,15 +1060,15 @@ private class SubtitleOffsetRenderer(
     }
 }
 
-private fun resolveSubtitleMimeType(url: String): String {
-    probeSubtitleHeaders(url)?.let { (contentType, contentDisposition) ->
+private fun resolveSubtitleMimeType(url: String, headers: Map<String, String>? = null): String {
+    probeSubtitleHeaders(url, headers)?.let { (contentType, contentDisposition) ->
         mapSubtitleMime(contentType)?.let { return it }
         filenameFromContentDisposition(contentDisposition)?.let(::guessSubtitleMime)?.let { return it }
     }
     return guessSubtitleMime(url)
 }
 
-private fun probeSubtitleHeaders(url: String): Pair<String?, String?>? {
+private fun probeSubtitleHeaders(url: String, headers: Map<String, String>? = null): Pair<String?, String?>? {
     val methods = listOf("HEAD", "GET")
     methods.forEach { method ->
         runCatching {
@@ -1039,6 +1078,9 @@ private fun probeSubtitleHeaders(url: String): Pair<String?, String?>? {
                 readTimeout = 5_000
                 instanceFollowRedirects = true
                 setRequestProperty("Accept", "*/*")
+                headers?.forEach { (key, value) ->
+                    setRequestProperty(key, value)
+                }
             }
             try {
                 connection.responseCode
@@ -1091,5 +1133,52 @@ private fun guessSubtitleMime(url: String): String {
         lower.contains(".ass") || lower.contains(".ssa") -> MimeTypes.TEXT_SSA
         lower.contains(".ttml") || lower.contains(".dfxp") || lower.contains(".xml") -> MimeTypes.APPLICATION_TTML
         else -> MimeTypes.TEXT_VTT
+    }
+}
+
+internal class SubtitleRequestHeaderDataSourceFactory(
+    private val upstreamFactory: DataSource.Factory,
+    private val externalSubtitles: List<com.nuvio.app.features.streams.StreamSubtitle>,
+) : DataSource.Factory {
+    override fun createDataSource(): DataSource =
+        SubtitleRequestHeaderDataSource(
+            upstream = upstreamFactory.createDataSource(),
+            externalSubtitles = externalSubtitles,
+        )
+}
+
+internal class SubtitleRequestHeaderDataSource(
+    private val upstream: DataSource,
+    private val externalSubtitles: List<com.nuvio.app.features.streams.StreamSubtitle>,
+) : DataSource {
+    override fun addTransferListener(transferListener: TransferListener) {
+        upstream.addTransferListener(transferListener)
+    }
+
+    override fun open(dataSpec: DataSpec): Long {
+        val url = dataSpec.uri.toString()
+        val subtitle = externalSubtitles.find { it.url == url }
+        val headers = subtitle?.headers
+        
+        return if (headers.isNullOrEmpty()) {
+            upstream.open(dataSpec)
+        } else {
+            val mergedHeaders = dataSpec.httpRequestHeaders.toMutableMap()
+            headers.forEach { (key, value) ->
+                mergedHeaders[key] = value
+            }
+            upstream.open(dataSpec.buildUpon().setHttpRequestHeaders(mergedHeaders).build())
+        }
+    }
+
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int =
+        upstream.read(buffer, offset, length)
+
+    override fun getUri(): Uri? = upstream.uri
+
+    override fun getResponseHeaders(): Map<String, List<String>> = upstream.responseHeaders
+
+    override fun close() {
+        upstream.close()
     }
 }
