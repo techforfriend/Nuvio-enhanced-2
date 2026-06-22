@@ -1762,7 +1762,7 @@
     <string name="settings_playback_introdb_invalid_key">Nieprawidłowy klucz API lub błąd połączenia</string>
     <string name="settings_playback_ios_audio_output">Wyjście audio</string>
     <string name="settings_playback_ios_audio_output_audiounit_desc">Użyj starszego wyjścia AudioUnit.</string>
-    <string name="settings_playback_ios_audio_output_auto_desc">Najpierw AVFoundation, potem AudioUnit jako zapasowe.</string>
+    <string name="settings_playback_ios_audio_output_auto_desc">Użyj AudioUnit, gdy wyjście AVFoundation jest tymczasowo wyłączone.</string>
     <string name="settings_playback_ios_audio_output_avfoundation_desc">Eksperymentalna obsługa Spatial Audio i wielokanałowego wyjścia.</string>
     <string name="settings_playback_ios_audio_output_dialog">Wyjście audio</string>
     <string name="settings_playback_ios_audio_output_section">Wyjście audio iOS</string>

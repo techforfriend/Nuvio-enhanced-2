@@ -153,9 +153,19 @@ enum class IosAudioOutputMode(
     val mpvValue: String,
     val label: String,
 ) {
-    Auto("avfoundation,audiounit,", "Auto"),
+    Auto("audiounit", "Auto"),
     AvFoundation("avfoundation", "AVFoundation"),
-    AudioUnit("audiounit", "AudioUnit"),
+    AudioUnit("audiounit", "AudioUnit");
+
+    companion object {
+        val selectableEntries: List<IosAudioOutputMode> = listOf(Auto, AudioUnit)
+
+        fun fromStoredName(name: String?): IosAudioOutputMode =
+            name
+                ?.let { runCatching { valueOf(it) }.getOrNull() }
+                ?.takeUnless { it == AvFoundation }
+                ?: Auto
+    }
 }
 
 @Composable

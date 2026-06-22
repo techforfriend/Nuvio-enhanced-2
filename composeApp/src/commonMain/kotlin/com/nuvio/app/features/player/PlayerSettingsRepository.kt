@@ -325,9 +325,7 @@ object PlayerSettingsRepository {
         iosHardwareDecoderMode = PlayerSettingsStorage.loadIosHardwareDecoderMode()
             ?.let { runCatching { IosHardwareDecoderMode.valueOf(it) }.getOrNull() }
             ?: IosHardwareDecoderMode.VideoToolbox
-        iosAudioOutputMode = PlayerSettingsStorage.loadIosAudioOutputMode()
-            ?.let { runCatching { IosAudioOutputMode.valueOf(it) }.getOrNull() }
-            ?: IosAudioOutputMode.Auto
+        iosAudioOutputMode = IosAudioOutputMode.fromStoredName(PlayerSettingsStorage.loadIosAudioOutputMode())
         iosExtendedDynamicRangeEnabled = PlayerSettingsStorage.loadIosExtendedDynamicRangeEnabled() ?: true
         iosTargetColorspaceHintEnabled = PlayerSettingsStorage.loadIosTargetColorspaceHintEnabled() ?: true
         iosHdrComputePeakEnabled = PlayerSettingsStorage.loadIosHdrComputePeakEnabled() ?: true
@@ -736,9 +734,9 @@ object PlayerSettingsRepository {
 
     fun setIosAudioOutputMode(mode: IosAudioOutputMode) {
         ensureLoaded()
-        iosAudioOutputMode = mode
+        iosAudioOutputMode = mode.takeUnless { it == IosAudioOutputMode.AvFoundation } ?: IosAudioOutputMode.Auto
         publish()
-        PlayerSettingsStorage.saveIosAudioOutputMode(mode.name)
+        PlayerSettingsStorage.saveIosAudioOutputMode(iosAudioOutputMode.name)
     }
 
     fun setIosExtendedDynamicRangeEnabled(enabled: Boolean) {

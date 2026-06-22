@@ -1299,7 +1299,7 @@ private fun PlaybackSettingsSection(
     if (showIosAudioOutputDialog) {
         IosEnumSelectionDialog(
             title = stringResource(Res.string.settings_playback_ios_audio_output_dialog),
-            options = IosAudioOutputMode.entries,
+            options = IosAudioOutputMode.selectableEntries,
             selected = autoPlayPlayerSettings.iosAudioOutputMode,
             label = { it.label },
             description = {

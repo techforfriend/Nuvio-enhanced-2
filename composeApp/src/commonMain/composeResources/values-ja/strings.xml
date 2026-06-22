@@ -1610,7 +1610,7 @@
     <string name="settings_playback_ios_target_transfer">ターゲット転送</string>
     <string name="settings_playback_ios_audio_output_section">iOS音声出力</string>
     <string name="settings_playback_ios_audio_output">音声出力</string>
-    <string name="settings_playback_ios_audio_output_auto_desc">AVFoundationを試み、失敗した場合はAudioUnitにフォールバックします。</string>
+    <string name="settings_playback_ios_audio_output_auto_desc">AVFoundation出力が一時的に無効な間はAudioUnitを使用します。</string>
     <string name="settings_playback_ios_audio_output_avfoundation_desc">空間オーディオとマルチチャンネル出力の試験的サポート。</string>
     <string name="settings_playback_ios_audio_output_audiounit_desc">レガシーのAudioUnit出力を使用します。</string>
     <string name="settings_debrid_section_result_management">結果の管理</string>

@@ -1596,7 +1596,7 @@
     <string name="settings_playback_ios_target_transfer">Transfert cible</string>
     <string name="settings_playback_ios_audio_output_section">Sortie audio iOS</string>
     <string name="settings_playback_ios_audio_output">Sortie audio</string>
-    <string name="settings_playback_ios_audio_output_auto_desc">Essaie d’abord AVFoundation, puis bascule sur AudioUnit.</string>
+    <string name="settings_playback_ios_audio_output_auto_desc">Utilise AudioUnit tant que la sortie AVFoundation est temporairement désactivée.</string>
     <string name="settings_playback_ios_audio_output_avfoundation_desc">Prise en charge expérimentale de l’audio spatial et de la sortie multicanal.</string>
     <string name="settings_playback_ios_audio_output_audiounit_desc">Utilise l’ancienne sortie AudioUnit.</string>
     <!-- Debrid Result Management section -->
