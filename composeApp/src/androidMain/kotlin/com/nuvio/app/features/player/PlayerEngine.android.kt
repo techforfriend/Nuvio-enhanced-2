@@ -96,6 +96,7 @@ actual fun PlatformPlayerSurface(
     val lifecycleOwner = LocalLifecycleOwner.current
     val latestOnSnapshot = rememberUpdatedState(onSnapshot)
     val latestOnError = rememberUpdatedState(onError)
+    val latestPlayWhenReady = rememberUpdatedState(playWhenReady)
     val coroutineScope = rememberCoroutineScope()
 
     val playerSettings = remember {
@@ -231,7 +232,7 @@ actual fun PlatformPlayerSurface(
         val loadControl = DefaultLoadControl.Builder()
             .setTargetBufferBytes(100 * 1024 * 1024)
             .setBufferDurationsMs(
-                DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+                15_000,
                 70_000,
                 DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
                 5_000
@@ -424,7 +425,7 @@ actual fun PlatformPlayerSurface(
         val activity = context.findActivity()
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_START -> exoPlayer.playWhenReady = playWhenReady
+                Lifecycle.Event.ON_START -> exoPlayer.playWhenReady = latestPlayWhenReady.value
                 Lifecycle.Event.ON_STOP -> {
                     val isInPictureInPicture =
                         Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && activity?.isInPictureInPictureMode == true
@@ -444,7 +445,7 @@ actual fun PlatformPlayerSurface(
     }
 
     LaunchedEffect(exoPlayer, playWhenReady) {
-        exoPlayer.playWhenReady = playWhenReady
+        exoPlayer.playWhenReady = latestPlayWhenReady.value
         syncPlayerViewKeepScreenOn()
         latestOnSnapshot.value(exoPlayer.snapshot())
     }
