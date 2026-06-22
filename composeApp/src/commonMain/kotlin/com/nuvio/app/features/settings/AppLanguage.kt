@@ -31,7 +31,7 @@ enum class AppLanguage(
     INDONESIAN("id", Res.string.lang_indonesian),
     ITALIAN("it", Res.string.lang_italian),
     POLISH("pl", Res.string.lang_polish),
-    PORTUGUESE BRAZIL("pt-BR", Res.string.lang_portuguese_brazil),
+    PORTUGUESE_BRAZIL("pt-BR", Res.string.lang_portuguese_brazil),
     PORTUGUESE("pt", Res.string.lang_portuguese_portugal),
     SPANISH("es", Res.string.lang_spanish),
     TURKISH("tr", Res.string.lang_turkish),
