@@ -108,6 +108,7 @@ import com.nuvio.app.core.ui.NativeTabBridge
 import com.nuvio.app.core.ui.isLiquidGlassNativeTabBarSupported
 import com.nuvio.app.core.ui.localizedContinueWatchingSubtitle
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.core.ui.nuvioBottomNavigationBarInsets
 import com.nuvio.app.features.auth.AuthScreen
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.catalog.CatalogRepository
@@ -160,6 +161,7 @@ import com.nuvio.app.features.player.sanitizePlaybackHeaders
 import com.nuvio.app.features.player.sanitizePlaybackResponseHeaders
 import com.nuvio.app.features.profiles.AvatarRepository
 import com.nuvio.app.features.profiles.NuvioProfile
+import com.nuvio.app.features.profiles.NativeProfileSwitcherPopup
 import com.nuvio.app.features.profiles.ProfileEditScreen
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.profiles.ProfileSelectionScreen
@@ -700,6 +702,7 @@ private fun MainAppContent(
         val searchScrollToTopRequests = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
         val libraryScrollToTopRequests = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
         val settingsRootActionRequests = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
+        var nativeProfileSwitcherVisible by remember { mutableStateOf(false) }
         val currentBackStackEntry by navController.currentBackStackEntryAsState()
         val liquidGlassNativeTabBarEnabled by remember {
             ThemeSettingsRepository.liquidGlassNativeTabBarEnabled
@@ -760,6 +763,10 @@ private fun MainAppContent(
     val cloudLibraryPlayFailedText = stringResource(Res.string.cloud_library_play_failed)
     val cloudLibraryPlayDisabledText = stringResource(Res.string.cloud_library_play_disabled)
     val cloudLibraryPlayNotConnectedText = stringResource(Res.string.cloud_library_play_not_connected)
+    val nativeTabHomeTitle = stringResource(Res.string.compose_nav_home)
+    val nativeTabSearchTitle = stringResource(Res.string.compose_nav_search)
+    val nativeTabLibraryTitle = stringResource(Res.string.compose_nav_library)
+    val nativeTabProfileTitle = stringResource(Res.string.compose_nav_profile)
     val isTraktLibrarySource = libraryUiState.sourceMode == LibrarySourceMode.TRAKT
     var initialHomeReady by rememberSaveable { mutableStateOf(false) }
     var offlineLaunchRouteHandled by rememberSaveable { mutableStateOf(false) }
@@ -791,6 +798,28 @@ private fun MainAppContent(
         }
     }
 
+    LaunchedEffect(liquidGlassNativeTabBarSupported, liquidGlassNativeTabBarEnabled) {
+        NativeTabBridge.profileTabLongPresses.collectLatest {
+            if (liquidGlassNativeTabBarSupported && liquidGlassNativeTabBarEnabled) {
+                nativeProfileSwitcherVisible = true
+            }
+        }
+    }
+
+    LaunchedEffect(
+        nativeTabHomeTitle,
+        nativeTabSearchTitle,
+        nativeTabLibraryTitle,
+        nativeTabProfileTitle,
+    ) {
+        NativeTabBridge.publishTabTitles(
+            home = nativeTabHomeTitle,
+            search = nativeTabSearchTitle,
+            library = nativeTabLibraryTitle,
+            profile = nativeTabProfileTitle,
+        )
+    }
+
     LaunchedEffect(selectedTab) {
         NativeTabBridge.publishSelectedTab(selectedTab.toNativeNavigationTab())
         if (selectedTab != AppScreenTab.Search) {
@@ -798,16 +827,20 @@ private fun MainAppContent(
         }
     }
 
+    var profileSwitchLoading by remember { mutableStateOf(false) }
+
     DisposableEffect(
         navController,
         liquidGlassNativeTabBarSupported,
         liquidGlassNativeTabBarEnabled,
         initialHomeReady,
+        profileSwitchLoading,
     ) {
         fun publishNativeTabVisibilityForCurrentRoute() {
             val visible = liquidGlassNativeTabBarSupported &&
                 liquidGlassNativeTabBarEnabled &&
                 initialHomeReady &&
+                !profileSwitchLoading &&
                 navController.currentDestination?.hasRoute<TabsRoute>() == true
             NativeTabBridge.publishTabBarVisible(visible)
         }
@@ -917,7 +950,6 @@ private fun MainAppContent(
             SyncManager.requestForegroundPull(activeProfileId, force = true)
         }
     }
-    var profileSwitchLoading by remember { mutableStateOf(false) }
     var resumePromptItem by remember { mutableStateOf<ContinueWatchingItem?>(null) }
     var lastExternalPlayerLaunch by remember { mutableStateOf<PlayerLaunch?>(null) }
     val activePlaybackProfileId = profileState.activeProfile?.profileIndex ?: ProfileRepository.activeProfileId
@@ -1419,9 +1451,16 @@ private fun MainAppContent(
                         val isTabletLayout = maxWidth >= 768.dp
                         val useNativeBottomTabs =
                             liquidGlassNativeTabBarSupported && liquidGlassNativeTabBarEnabled && initialHomeReady
+                        val nativeTabSafeBottomPadding = nuvioBottomNavigationBarInsets()
+                            .asPaddingValues()
+                            .calculateBottomPadding()
+                        val nativeProfileTabAnchorBottomPadding =
+                            nativeTabSafeBottomPadding + NuvioTokens.Space.s10
                         val tabsRouteActive = currentBackStackEntry?.destination?.hasRoute<TabsRoute>() == true
                         val onProfileSelected: (NuvioProfile) -> Unit = { profile ->
+                            nativeProfileSwitcherVisible = false
                             profileSwitchLoading = true
+                            NativeTabBridge.publishTabBarVisible(false)
                             selectedTab = AppScreenTab.Home
                             ProfileRepository.selectProfile(profile.profileIndex)
                             com.nuvio.app.core.sync.SyncManager.pullAllForProfile(profile.profileIndex)
@@ -1574,7 +1613,26 @@ private fun MainAppContent(
                                         selectedTab = selectedTab,
                                         onTabSelected = ::handleRootTabClick,
                                         onProfileSelected = onProfileSelected,
-                                        onAddProfileRequested = onSwitchProfile,
+                                        onAddProfileRequested = {
+                                            nativeProfileSwitcherVisible = false
+                                            onSwitchProfile()
+                                        },
+                                    )
+                                }
+
+                                if (!isTabletLayout && useNativeBottomTabs && tabsRouteActive) {
+                                    NativeProfileSwitcherPopup(
+                                        visible = nativeProfileSwitcherVisible,
+                                        isSwitchingProfile = profileSwitchLoading,
+                                        onDismissRequest = { nativeProfileSwitcherVisible = false },
+                                        onProfileSelected = onProfileSelected,
+                                        onAddProfileRequested = {
+                                            nativeProfileSwitcherVisible = false
+                                            onSwitchProfile()
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(bottom = nativeProfileTabAnchorBottomPadding),
                                     )
                                 }
                             }
