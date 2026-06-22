@@ -82,6 +82,31 @@ enum class PlayerResizeMode {
     Zoom,
 }
 
+enum class AndroidPlaybackEngine(
+    val label: String,
+) {
+    Auto("Auto"),
+    ExoPlayer("ExoPlayer"),
+    Libmpv("libmpv"),
+}
+
+enum class AndroidLibmpvVideoOutput(
+    val mpvValue: String,
+    val label: String,
+    val description: String,
+) {
+    GpuNext(
+        mpvValue = "gpu-next",
+        label = "GPU next",
+        description = "Modern libmpv renderer with higher quality processing.",
+    ),
+    Gpu(
+        mpvValue = "gpu",
+        label = "GPU",
+        description = "Compatibility renderer for devices that have issues with GPU next.",
+    ),
+}
+
 enum class IosVideoOutputPreset(
     val label: String,
     val description: String,
