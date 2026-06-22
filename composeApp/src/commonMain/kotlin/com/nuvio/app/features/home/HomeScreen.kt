@@ -453,8 +453,12 @@ fun HomeScreen(
         HomeRepository.refresh(enabledAddons)
     }
 
-    LaunchedEffect(collections) {
+    LaunchedEffect(collections, enabledAddons) {
         HomeCatalogSettingsRepository.syncCollections(collections)
+        HomeRepository.applyCurrentSettings()
+        if (collections.any { it.folders.isNotEmpty() }) {
+            HomeRepository.refresh(enabledAddons, force = true)
+        }
     }
 
     LaunchedEffect(
