@@ -29,6 +29,8 @@ import com.nuvio.app.core.network.SyncBackendRepository
 import com.nuvio.app.core.ui.NuvioPrimaryButton
 import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.NuvioSurfaceCard
+import com.nuvio.app.features.dev.DebugSyncBackendSwitch
+import com.nuvio.app.features.dev.shouldShowDebugSyncBackendSwitch
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
@@ -100,11 +102,19 @@ private fun AccountSettingsBody(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-            AccountInfoRow(
-                label = stringResource(Res.string.settings_account_sync_backend),
-                value = syncBackendLabel,
-            )
+            if (shouldShowDebugSyncBackendSwitch()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                DebugSyncBackendSwitch(
+                    modifier = Modifier.fillMaxWidth(),
+                    requireConfirmation = true,
+                )
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
+                AccountInfoRow(
+                    label = stringResource(Res.string.settings_account_sync_backend),
+                    value = syncBackendLabel,
+                )
+            }
         }
 
         NuvioPrimaryButton(
