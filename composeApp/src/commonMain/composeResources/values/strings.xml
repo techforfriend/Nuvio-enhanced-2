@@ -324,7 +324,9 @@
     <string name="compose_auth_sign_up_subtitle">Sign up to sync your data across devices</string>
     <string name="compose_auth_sign_up">Sign Up</string>
     <string name="compose_auth_store_locally">Your data will only be stored locally</string>
-    <string name="compose_auth_tagline">Stream everything, everywhere</string>
+    <string name="compose_auth_tagline">Watch your library, anywhere</string>
+    <string name="compose_auth_terms_prefix">By signing up, I agree to the</string>
+    <string name="compose_auth_terms_link">Terms</string>
     <string name="compose_auth_welcome_back">Welcome Back</string>
     <string name="compose_catalog_subtitle_library">Library</string>
     <string name="compose_catalog_subtitle_trakt_library">Trakt Library</string>
