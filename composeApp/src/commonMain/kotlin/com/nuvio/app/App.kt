@@ -1582,7 +1582,9 @@ private fun MainAppContent(
                                         },
                                         onAccountSettingsClick = { navController.navigate(AccountSettingsRoute) },
                                         onSupportersContributorsSettingsClick = {
-                                            navController.navigate(SupportersContributorsSettingsRoute)
+                                            if (AppFeaturePolicy.supportersContributorsPageEnabled) {
+                                                navController.navigate(SupportersContributorsSettingsRoute)
+                                            }
                                         },
                                         onLicensesAttributionsSettingsClick = {
                                             navController.navigate(LicensesAttributionsSettingsRoute)
@@ -2681,9 +2683,15 @@ private fun MainAppContent(
                         navController = navController,
                         backStackEntry = backStackEntry,
                     )
-                    SupportersContributorsSettingsScreen(
-                        onBack = onBack,
-                    )
+                    if (AppFeaturePolicy.supportersContributorsPageEnabled) {
+                        SupportersContributorsSettingsScreen(
+                            onBack = onBack,
+                        )
+                    } else {
+                        LaunchedEffect(Unit) {
+                            onBack()
+                        }
+                    }
                 }
                 composable<LicensesAttributionsSettingsRoute> { backStackEntry ->
                     val onBack = rememberGuardedPopBackStack(
