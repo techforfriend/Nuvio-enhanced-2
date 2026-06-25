@@ -2,12 +2,21 @@ package com.nuvio.app.features.player
 
 import com.nuvio.app.features.player.skip.SkipInterval
 import com.nuvio.app.features.player.skip.SkipIntroRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.put
 
 private const val SkipSegmentResolveTimeoutMs = 4_000L
+
+// Skip resolution runs on an app-lifetime scope rather than the caller's (often
+// composition-bound) scope, so navigating to the external player cannot cancel an
+// in-flight network lookup partway through.
+private val skipResolveScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
 /**
  * Orchestrates the full external player launch flow:
@@ -66,23 +75,25 @@ suspend fun prepareExternalPlayerLaunch(
  */
 private suspend fun resolveSkipSegmentsJson(videoId: String, season: Int?, episode: Int?): String? {
     val ep = episode ?: return null
-    val intervals = withTimeoutOrNull(SkipSegmentResolveTimeoutMs) {
-        when {
-            videoId.startsWith("mal:") -> {
-                val malId = videoId.removePrefix("mal:").substringBefore(':')
-                SkipIntroRepository.getSkipIntervalsForMal(malId, ep, requireSkipIntroEnabled = false)
-            }
-            videoId.startsWith("kitsu:") -> {
-                val kitsuId = videoId.removePrefix("kitsu:").substringBefore(':')
-                SkipIntroRepository.getSkipIntervalsForKitsu(kitsuId, ep, requireSkipIntroEnabled = false)
-            }
-            else -> {
-                val imdbId = videoId.substringBefore(':').takeIf { it.startsWith("tt") } ?: return@withTimeoutOrNull null
-                val s = season ?: return@withTimeoutOrNull null
-                SkipIntroRepository.getSkipIntervals(imdbId, s, ep, requireSkipIntroEnabled = false)
+    val intervals = skipResolveScope.async {
+        withTimeoutOrNull(SkipSegmentResolveTimeoutMs) {
+            when {
+                videoId.startsWith("mal:") -> {
+                    val malId = videoId.removePrefix("mal:").substringBefore(':')
+                    SkipIntroRepository.getSkipIntervalsForMal(malId, ep, requireSkipIntroEnabled = false)
+                }
+                videoId.startsWith("kitsu:") -> {
+                    val kitsuId = videoId.removePrefix("kitsu:").substringBefore(':')
+                    SkipIntroRepository.getSkipIntervalsForKitsu(kitsuId, ep, requireSkipIntroEnabled = false)
+                }
+                else -> {
+                    val imdbId = videoId.substringBefore(':').takeIf { it.startsWith("tt") } ?: return@withTimeoutOrNull null
+                    val s = season ?: return@withTimeoutOrNull null
+                    SkipIntroRepository.getSkipIntervals(imdbId, s, ep, requireSkipIntroEnabled = false)
+                }
             }
         }
-    }
+    }.await()
 
     if (intervals.isNullOrEmpty()) return null
     return intervals.toSkipSegmentsJson()
