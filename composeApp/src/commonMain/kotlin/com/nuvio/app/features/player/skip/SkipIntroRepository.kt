@@ -12,10 +12,15 @@ object SkipIntroRepository {
     private val introDbConfigured: Boolean
         get() = IntroDbConfig.URL.isNotBlank()
 
-    suspend fun getSkipIntervals(imdbId: String?, season: Int, episode: Int): List<SkipInterval> {
+    suspend fun getSkipIntervals(
+        imdbId: String?,
+        season: Int,
+        episode: Int,
+        requireSkipIntroEnabled: Boolean = true,
+    ): List<SkipInterval> {
         if (imdbId == null) return emptyList()
         val settings = PlayerSettingsRepository.uiState.value
-        if (!settings.skipIntroEnabled) return emptyList()
+        if (requireSkipIntroEnabled && !settings.skipIntroEnabled) return emptyList()
 
         val cacheKey = "$imdbId:$season:$episode"
         cache[cacheKey]?.let { return it }
@@ -46,9 +51,13 @@ object SkipIntroRepository {
         return emptyList<SkipInterval>().also { cache[cacheKey] = it }
     }
 
-    suspend fun getSkipIntervalsForMal(malId: String, episode: Int): List<SkipInterval> {
+    suspend fun getSkipIntervalsForMal(
+        malId: String,
+        episode: Int,
+        requireSkipIntroEnabled: Boolean = true,
+    ): List<SkipInterval> {
         val settings = PlayerSettingsRepository.uiState.value
-        if (!settings.skipIntroEnabled) return emptyList()
+        if (requireSkipIntroEnabled && !settings.skipIntroEnabled) return emptyList()
 
         val cacheKey = "mal:$malId:$episode"
         cache[cacheKey]?.let { return it }
@@ -90,9 +99,13 @@ object SkipIntroRepository {
         return emptyList<SkipInterval>().also { cache[cacheKey] = it }
     }
 
-    suspend fun getSkipIntervalsForKitsu(kitsuId: String, episode: Int): List<SkipInterval> {
+    suspend fun getSkipIntervalsForKitsu(
+        kitsuId: String,
+        episode: Int,
+        requireSkipIntroEnabled: Boolean = true,
+    ): List<SkipInterval> {
         val settings = PlayerSettingsRepository.uiState.value
-        if (!settings.skipIntroEnabled) return emptyList()
+        if (requireSkipIntroEnabled && !settings.skipIntroEnabled) return emptyList()
 
         val cacheKey = "kitsu:$kitsuId:$episode"
         cache[cacheKey]?.let { return it }
