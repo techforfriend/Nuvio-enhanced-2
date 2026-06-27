@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="bg"/>
 	<locale android:name="cs"/>
     <locale android:name="en"/>
 	<locale android:name="fr"/>
@@ -11,6 +12,7 @@
     <locale android:name="pl"/>
 	<locale android:name="pt-BR"/>
     <locale android:name="pt"/>
+    <locale android:name="sk"/>
     <locale android:name="es"/>
     <locale android:name="tr"/>
     <locale android:name="nb"/>
