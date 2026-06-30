@@ -664,6 +664,25 @@ fun HomeScreen(
     val enabledHomeItems = remember(homeSettingsUiState.items) {
         homeSettingsUiState.items.filter { it.enabled }
     }
+    val visibleSeriesPosterTargets = remember(enabledHomeItems, sectionsMap) {
+        enabledHomeItems
+            .filterNot { it.isCollection }
+            .mapNotNull { settingsItem -> sectionsMap[settingsItem.key] }
+            .flatMap { section -> section.items.take(HOME_CATALOG_PREVIEW_LIMIT) }
+            .filter { item -> item.type.isHomeSeriesLikeType() }
+            .distinctBy { item -> watchedItemKey(item.type, item.id) }
+    }
+    LaunchedEffect(
+        visibleSeriesPosterTargets,
+        watchedUiState.items,
+        watchProgressUiState.entries,
+    ) {
+        reconcileVisibleSeriesPosterBadges(
+            items = visibleSeriesPosterTargets,
+            watchedItems = watchedUiState.items,
+            progressEntries = watchProgressUiState.entries,
+        )
+    }
     val hasRenderableCollectionRows = remember(enabledHomeItems, collectionsMap) {
         enabledHomeItems.any { item ->
             item.isCollection && collectionsMap[item.key] != null
@@ -878,6 +897,56 @@ private const val MILLIS_PER_DAY = 24L * 60L * 60L * 1000L
 private const val OPTIMISTIC_NEXT_UP_SEED_WINDOW_MS = 3L * 60L * 1000L
 private const val NEXT_UP_RESOLUTION_CONCURRENCY = 4
 private const val NEXT_UP_RESOLUTION_BATCH_SIZE = NEXT_UP_RESOLUTION_CONCURRENCY
+
+private suspend fun reconcileVisibleSeriesPosterBadges(
+    items: List<MetaPreview>,
+    watchedItems: List<WatchedItem>,
+    progressEntries: List<WatchProgressEntry>,
+) {
+    if (items.isEmpty()) return
+    val watchedKeys = watchedItems.mapTo(linkedSetOf()) { item ->
+        watchedItemKey(item.type, item.id, item.season, item.episode)
+    }
+    val touchedSeriesIds = buildSet {
+        watchedItems.forEach { item ->
+            if (item.type.isHomeSeriesLikeType() && item.season != null && item.episode != null) {
+                add(item.id)
+            }
+        }
+        progressEntries.forEach { entry ->
+            if (entry.parentMetaType.isHomeSeriesLikeType() && entry.isEpisode && entry.isEffectivelyCompleted) {
+                add(entry.parentMetaId)
+            }
+        }
+    }
+    if (touchedSeriesIds.isEmpty()) return
+    val todayIsoDate = CurrentDateProvider.todayIsoDate()
+    withContext(Dispatchers.Default) {
+        items
+            .filter { item -> item.id in touchedSeriesIds }
+            .forEach { item ->
+                val meta = runCatching {
+                    MetaDetailsRepository.fetch(type = item.type, id = item.id)
+                }.getOrNull() ?: return@forEach
+                WatchedRepository.reconcileFullyWatchedSeriesState(
+                    meta = meta,
+                    todayIsoDate = todayIsoDate,
+                    isEpisodeWatched = { episode ->
+                        watchedItemKey(meta.type, meta.id, episode.season, episode.episode) in watchedKeys
+                    },
+                    isEpisodeCompleted = { episode ->
+                        val playbackId = meta.episodePlaybackId(episode)
+                        progressEntries.any { entry ->
+                            entry.videoId == playbackId && entry.isEffectivelyCompleted
+                        }
+                    },
+                )
+            }
+    }
+}
+
+private fun String.isHomeSeriesLikeType(): Boolean =
+    trim().lowercase() in setOf("series", "show", "tv", "tvshow")
 
 internal data class HomeNextUpResolutionPlan(
     val initialCandidates: List<CompletedSeriesCandidate>,
