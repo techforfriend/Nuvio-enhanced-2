@@ -46,6 +46,8 @@ import com.nuvio.app.features.trakt.normalizeTraktContinueWatchingDaysCap
 import com.nuvio.app.features.trakt.shouldUseTraktProgress
 import com.nuvio.app.features.watched.WatchedItem
 import com.nuvio.app.features.watched.WatchedRepository
+import com.nuvio.app.features.watched.episodePlaybackId
+import com.nuvio.app.features.watched.watchedItemKey
 import com.nuvio.app.features.watchprogress.CachedInProgressItem
 import com.nuvio.app.features.watchprogress.CachedNextUpItem
 import com.nuvio.app.features.watchprogress.ContinueWatchingEnrichmentCache
@@ -122,6 +124,7 @@ fun HomeScreen(
     val collections by CollectionRepository.collections.collectAsStateWithLifecycle()
     val continueWatchingPreferences by ContinueWatchingPreferencesRepository.uiState.collectAsStateWithLifecycle()
     val watchedUiState by WatchedRepository.uiState.collectAsStateWithLifecycle()
+    val fullyWatchedSeriesKeys by WatchedRepository.fullyWatchedSeriesKeys.collectAsStateWithLifecycle()
     val watchProgressUiState by WatchProgressRepository.uiState.collectAsStateWithLifecycle()
     val cloudLibraryUiState by CloudLibraryRepository.uiState.collectAsStateWithLifecycle()
     val networkStatusUiState by NetworkStatusRepository.uiState.collectAsStateWithLifecycle()
@@ -853,6 +856,7 @@ fun HomeScreen(
                                             null
                                         },
                                         watchedKeys = watchedUiState.watchedKeys,
+                                        fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                                         onPosterClick = onPosterClick,
                                         onPosterLongClick = onPosterLongClick,
                                     )
@@ -1013,6 +1017,23 @@ private suspend fun resolveHomeNextUpCandidate(
     } else {
         watchedItems
     }
+    val resolvedWatchedKeys = resolvedWatchedItems.mapTo(linkedSetOf()) { item ->
+        watchedItemKey(item.type, item.id, item.season, item.episode)
+    }
+
+    WatchedRepository.reconcileFullyWatchedSeriesState(
+        meta = meta,
+        todayIsoDate = todayIsoDate,
+        isEpisodeWatched = { episode ->
+            watchedItemKey(meta.type, meta.id, episode.season, episode.episode) in resolvedWatchedKeys
+        },
+        isEpisodeCompleted = { episode ->
+            val playbackId = meta.episodePlaybackId(episode)
+            resolvedProgressEntries.any { entry ->
+                entry.videoId == playbackId && entry.isEffectivelyCompleted
+            }
+        },
+    )
 
     val action = meta.seriesPrimaryAction(
         content = completedEntry.content,

@@ -210,7 +210,6 @@ import com.nuvio.app.features.watchprogress.WatchProgressPlaybackSession
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import com.nuvio.app.features.watchprogress.nextUpDismissKey
 import com.nuvio.app.features.watchprogress.toContinueWatchingItem
-import com.nuvio.app.features.watching.application.SeriesWatchedReconciliationService
 import com.nuvio.app.features.watching.application.WatchingActions
 import com.nuvio.app.features.watching.application.WatchingState
 import kotlinx.coroutines.flow.Flow
@@ -691,9 +690,6 @@ private fun MainAppContent(
         }
         remember {
             ProfileSettingsSync.startObserving()
-        }
-        remember {
-            SeriesWatchedReconciliationService.startObserving()
         }
         val hapticFeedback = LocalHapticFeedback.current
         val focusManager = LocalFocusManager.current

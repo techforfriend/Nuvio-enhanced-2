@@ -162,6 +162,7 @@ fun MetaDetailsScreen(
         WatchedRepository.ensureLoaded()
         WatchedRepository.uiState
     }.collectAsStateWithLifecycle()
+    val fullyWatchedSeriesKeys by WatchedRepository.fullyWatchedSeriesKeys.collectAsStateWithLifecycle()
     val watchProgressUiState by remember {
         WatchProgressRepository.ensureLoaded()
         WatchProgressRepository.uiState
@@ -360,10 +361,11 @@ fun MetaDetailsScreen(
                 ) {
                     LibraryRepository.isSaved(meta.id, meta.type)
                 }
-                val isWatched = remember(watchedUiState.watchedKeys, metaPreview) {
+                val isWatched = remember(watchedUiState.watchedKeys, fullyWatchedSeriesKeys, metaPreview) {
                     WatchingState.isPosterWatched(
                         watchedKeys = watchedUiState.watchedKeys,
                         item = metaPreview,
+                        fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                     )
                 }
                 val openLibraryListPicker = remember(meta) {
@@ -409,6 +411,22 @@ fun MetaDetailsScreen(
                 LaunchedEffect(meta.id, meta.type, watchProgressUiState.hasLoadedRemoteProgress) {
                     if (meta.type.lowercase() in setOf("series", "show", "tv", "tvshow")) {
                         WatchProgressRepository.refreshEpisodeProgress(meta.id)
+                    }
+                }
+                LaunchedEffect(
+                    meta.id,
+                    meta.type,
+                    todayIsoDate,
+                    watchedUiState.isLoaded,
+                    watchProgressUiState.hasLoadedRemoteProgress,
+                    watchedUiState.watchedKeys,
+                    watchProgressUiState.entries,
+                ) {
+                    if (watchedUiState.isLoaded && watchProgressUiState.hasLoadedRemoteProgress) {
+                        WatchingActions.reconcileSeriesWatchedState(
+                            meta = meta,
+                            todayIsoDate = todayIsoDate,
+                        )
                     }
                 }
                 val movieProgress = progressByVideoId[meta.id]

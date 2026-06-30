@@ -2,6 +2,7 @@ package com.nuvio.app.features.watched
 
 import co.touchlab.kermit.Logger
 import com.nuvio.app.features.details.MetaDetails
+import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.trakt.TraktAuthRepository
 import com.nuvio.app.features.trakt.TraktSettingsRepository
@@ -26,6 +27,7 @@ import kotlinx.serialization.json.Json
 @Serializable
 private data class StoredWatchedPayload(
     val items: List<WatchedItem> = emptyList(),
+    val fullyWatchedSeriesKeys: Set<String> = emptySet(),
     val lastSuccessfulPushEpochMs: Long = 0L,
     val deltaCursorEventId: Long = 0L,
     val deltaInitialized: Boolean = false,
@@ -56,6 +58,8 @@ object WatchedRepository {
 
     private val _uiState = MutableStateFlow(WatchedUiState())
     val uiState: StateFlow<WatchedUiState> = _uiState.asStateFlow()
+    private val _fullyWatchedSeriesKeys = MutableStateFlow<Set<String>>(emptySet())
+    val fullyWatchedSeriesKeys: StateFlow<Set<String>> = _fullyWatchedSeriesKeys.asStateFlow()
 
     private var hasLoaded = false
     private var currentProfileId: Int = 1
@@ -84,6 +88,7 @@ object WatchedRepository {
         lastSuccessfulPushEpochMs = 0L
         deltaCursorEventId = 0L
         deltaInitialized = false
+        _fullyWatchedSeriesKeys.value = emptySet()
         _uiState.value = WatchedUiState()
     }
 
@@ -105,10 +110,12 @@ object WatchedRepository {
                 .map(WatchedItem::normalizedMarkedAt)
                 .associateBy { watchedItemKey(it.type, it.id, it.season, it.episode) }
                 .toMutableMap()
+            _fullyWatchedSeriesKeys.value = storedPayload.fullyWatchedSeriesKeys
         } else {
             lastSuccessfulPushEpochMs = 0L
             deltaCursorEventId = 0L
             deltaInitialized = false
+            _fullyWatchedSeriesKeys.value = emptySet()
         }
 
         publish()
@@ -380,14 +387,11 @@ object WatchedRepository {
         if (!meta.type.isSeriesLikeWatchedType()) return
 
         ensureLoaded()
-        val shouldMarkSeriesWatched = meta.hasWatchedAllMainSeasonEpisodes(todayIsoDate) { episode ->
-            isWatched(
-                id = meta.id,
-                type = meta.type,
-                season = episode.season,
-                episode = episode.episode,
-            ) || isEpisodeCompleted(episode)
-        }
+        val shouldMarkSeriesWatched = reconcileFullyWatchedSeriesState(
+            meta = meta,
+            todayIsoDate = todayIsoDate,
+            isEpisodeCompleted = isEpisodeCompleted,
+        )
         val seriesWatchedItem = meta.toSeriesWatchedItem()
         val hasSeriesWatchedMarker = isWatched(id = meta.id, type = meta.type)
         if (shouldMarkSeriesWatched) {
@@ -397,6 +401,56 @@ object WatchedRepository {
         } else if (hasSeriesWatchedMarker) {
             unmarkWatched(seriesWatchedItem)
         }
+    }
+
+    fun reconcileFullyWatchedSeriesState(
+        meta: MetaDetails,
+        todayIsoDate: String,
+        isEpisodeWatched: (MetaVideo) -> Boolean = { episode ->
+            isWatched(
+                id = meta.id,
+                type = meta.type,
+                season = episode.season,
+                episode = episode.episode,
+            )
+        },
+        isEpisodeCompleted: (MetaVideo) -> Boolean = { false },
+    ): Boolean {
+        if (!meta.type.isSeriesLikeWatchedType()) return false
+
+        ensureLoaded()
+        val shouldMarkSeriesWatched = meta.hasWatchedAllMainSeasonEpisodes(todayIsoDate) { episode ->
+            isEpisodeWatched(episode) || isEpisodeCompleted(episode)
+        }
+        updateFullyWatchedSeriesKey(
+            key = watchedItemKey(meta.type, meta.id),
+            isFullyWatched = shouldMarkSeriesWatched,
+        )
+        return shouldMarkSeriesWatched
+    }
+
+    fun updateFullyWatchedSeries(
+        id: String,
+        type: String,
+        isFullyWatched: Boolean,
+    ) {
+        if (!type.isSeriesLikeWatchedType()) return
+        ensureLoaded()
+        updateFullyWatchedSeriesKey(
+            key = watchedItemKey(type, id),
+            isFullyWatched = isFullyWatched,
+        )
+    }
+
+    private fun updateFullyWatchedSeriesKey(
+        key: String,
+        isFullyWatched: Boolean,
+    ) {
+        val current = _fullyWatchedSeriesKeys.value
+        val updated = if (isFullyWatched) current + key else current - key
+        if (updated == current) return
+        _fullyWatchedSeriesKeys.value = updated
+        persist()
     }
 
     private fun pushMarksToServer(
@@ -454,6 +508,7 @@ object WatchedRepository {
                     items = itemsByKey.values
                         .map(WatchedItem::normalizedMarkedAt)
                         .sortedByDescending { it.markedAtEpochMs },
+                    fullyWatchedSeriesKeys = _fullyWatchedSeriesKeys.value,
                     lastSuccessfulPushEpochMs = lastSuccessfulPushEpochMs,
                     deltaCursorEventId = deltaCursorEventId,
                     deltaInitialized = deltaInitialized,

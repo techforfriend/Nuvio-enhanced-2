@@ -36,6 +36,11 @@ object WatchingActions {
         if (meta == null) {
             if (isCurrentlyWatched) {
                 WatchedRepository.unmarkWatched(preview.toWatchedItem(markedAtEpochMs = 0L))
+                WatchedRepository.updateFullyWatchedSeries(
+                    id = preview.id,
+                    type = preview.type,
+                    isFullyWatched = false,
+                )
             }
             return
         }
@@ -45,6 +50,11 @@ object WatchingActions {
         if (releasedMainEpisodes.isEmpty()) {
             if (isCurrentlyWatched) {
                 WatchedRepository.unmarkWatched(meta.toSeriesWatchedItem())
+                WatchedRepository.updateFullyWatchedSeries(
+                    id = meta.id,
+                    type = meta.type,
+                    isFullyWatched = false,
+                )
             }
             return
         }
@@ -55,8 +65,18 @@ object WatchingActions {
 
         if (isCurrentlyWatched) {
             WatchedRepository.unmarkWatched(seriesItems)
+            WatchedRepository.updateFullyWatchedSeries(
+                id = meta.id,
+                type = meta.type,
+                isFullyWatched = false,
+            )
         } else {
             WatchedRepository.markWatched(seriesItems)
+            WatchedRepository.updateFullyWatchedSeries(
+                id = meta.id,
+                type = meta.type,
+                isFullyWatched = true,
+            )
             WatchProgressRepository.clearProgress(
                 releasedMainEpisodes.map(meta::episodePlaybackId),
             )
