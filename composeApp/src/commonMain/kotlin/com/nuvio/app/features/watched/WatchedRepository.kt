@@ -12,6 +12,7 @@ import com.nuvio.app.features.watching.sync.SupabaseWatchedSyncAdapter
 import com.nuvio.app.features.watching.sync.TraktWatchedSyncAdapter
 import com.nuvio.app.features.watching.sync.WatchedDeltaEvent
 import com.nuvio.app.features.watching.sync.WatchedSyncAdapter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -168,6 +169,60 @@ object WatchedRepository {
             }
         }.onFailure { e ->
             log.e(e) { "Failed to pull watched items from server" }
+        }
+    }
+
+    suspend fun forceSnapshotRefreshFromServer(profileId: Int) {
+        TraktAuthRepository.ensureLoaded()
+        TraktSettingsRepository.ensureLoaded()
+        val operationGeneration = activeOperationGeneration(profileId) ?: run {
+            log.d { "Skipping watched snapshot pull for inactive profile $profileId" }
+            return
+        }
+        val pullStartedEpochMs = WatchedClock.nowEpochMs()
+        val localBeforePull = itemsByKey.values
+            .map(WatchedItem::normalizedMarkedAt)
+            .toList()
+        val lastPushEpochMs = lastSuccessfulPushEpochMs
+        runCatching {
+            if (shouldUseTraktWatchedSync()) {
+                pullFullFromAdapter(
+                    adapter = TraktWatchedSyncAdapter,
+                    profileId = profileId,
+                    localBeforePull = localBeforePull,
+                    lastPushEpochMs = lastPushEpochMs,
+                    pullStartedEpochMs = pullStartedEpochMs,
+                    resetDeltaState = true,
+                    operationGeneration = operationGeneration,
+                )
+                return@runCatching
+            }
+
+            val cursorBeforeSnapshot = try {
+                syncAdapter.getDeltaCursor(profileId)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Throwable) {
+                null
+            }
+            pullFullFromAdapter(
+                adapter = syncAdapter,
+                profileId = profileId,
+                localBeforePull = localBeforePull,
+                lastPushEpochMs = lastPushEpochMs,
+                pullStartedEpochMs = pullStartedEpochMs,
+                resetDeltaState = cursorBeforeSnapshot == null,
+                operationGeneration = operationGeneration,
+            )
+            if (!isActiveOperation(profileId, operationGeneration)) return@runCatching
+            if (cursorBeforeSnapshot != null) {
+                deltaCursorEventId = cursorBeforeSnapshot
+                deltaInitialized = true
+                persist()
+            }
+        }.onFailure { e ->
+            if (e is CancellationException) throw e
+            log.e(e) { "Failed to pull watched items snapshot from server" }
         }
     }
 
