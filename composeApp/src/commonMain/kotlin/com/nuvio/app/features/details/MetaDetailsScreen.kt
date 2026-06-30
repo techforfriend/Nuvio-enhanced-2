@@ -411,22 +411,6 @@ fun MetaDetailsScreen(
                         WatchProgressRepository.refreshEpisodeProgress(meta.id)
                     }
                 }
-                LaunchedEffect(
-                    meta.id,
-                    meta.type,
-                    todayIsoDate,
-                    watchedUiState.isLoaded,
-                    watchProgressUiState.hasLoadedRemoteProgress,
-                    watchedUiState.watchedKeys,
-                    watchProgressUiState.entries,
-                ) {
-                    if (watchedUiState.isLoaded && watchProgressUiState.hasLoadedRemoteProgress) {
-                        WatchingActions.reconcileSeriesWatchedState(
-                            meta = meta,
-                            todayIsoDate = todayIsoDate,
-                        )
-                    }
-                }
                 val movieProgress = progressByVideoId[meta.id]
                     ?.takeUnless { it.isCompleted }
                 val cwPrefs by ContinueWatchingPreferencesRepository.uiState.collectAsStateWithLifecycle()
