@@ -129,7 +129,7 @@ internal fun LazyListScope.streamsSettingsContent(isTablet: Boolean) {
             }
         }
     } 
-    Item {
+    item {
         SettingsSection(
             title = stringResource(Res.string.settings_stream_display_section),
             isTablet = isTablet,
