@@ -236,16 +236,13 @@ fun runtimeConfigValue(key: String, fallback: String = ""): String =
         ?: providers.environmentVariable(key).orNull?.trim()?.takeIf { it.isNotBlank() }
         ?: fallback
 
-fun runtimeConfigValueFromKey(key: String, fallbackKey: String): String =
-    runtimeConfigValue(key, runtimeConfigValue(fallbackKey))
-
 val generateRuntimeConfigs = tasks.register<GenerateRuntimeConfigsTask>("generateRuntimeConfigs") {
     outputDir.set(generatedRuntimeConfigDir)
     localPropertiesFile.set(rootProject.layout.projectDirectory.file("local.properties"))
     appVersionName.set(releaseAppVersionName)
     appVersionCode.set(releaseAppVersionCode)
-    supabaseUrl.set(runtimeConfigValueFromKey("NUVIO_SUPABASE_URL", fallbackKey = "SUPABASE_URL"))
-    supabaseAnonKey.set(runtimeConfigValueFromKey("NUVIO_SUPABASE_ANON_KEY", fallbackKey = "SUPABASE_ANON_KEY"))
+    supabaseUrl.set(runtimeConfigValue("NUVIO_SUPABASE_URL"))
+    supabaseAnonKey.set(runtimeConfigValue("NUVIO_SUPABASE_ANON_KEY"))
 }
 
 tasks.withType<KotlinCompilationTask<*>>().configureEach {
