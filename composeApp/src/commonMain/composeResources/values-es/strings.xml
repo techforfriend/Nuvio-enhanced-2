@@ -540,9 +540,6 @@
     <string name="settings_account_status">Estado</string>
     <string name="settings_account_status_anonymous">Anónimo</string>
     <string name="settings_account_status_signed_in">Sesión iniciada</string>
-    <string name="settings_account_sync_backend">Sincronizar el servidor</string>
-    <string name="debug_backend_switch_confirm_title">¿Cambiar de servidor?</string>
-    <string name="debug_backend_switch_confirm_message">¿Cambiar a %1$s y cerrar sesión? Puede iniciar sesión nuevamente en el backend seleccionado.</string>
     <string name="settings_appearance_amoled_black">Negro AMOLED</string>
     <string name="settings_appearance_amoled_description">Usa fondos negros puros para pantallas OLED.</string>
     <string name="settings_appearance_app_language">Idioma de la app</string>

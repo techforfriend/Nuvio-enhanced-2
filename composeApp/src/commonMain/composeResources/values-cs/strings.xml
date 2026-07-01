@@ -540,9 +540,6 @@
     <string name="settings_account_status">Stav</string>
     <string name="settings_account_status_anonymous">Anonymní</string>
     <string name="settings_account_status_signed_in">Přihlášen</string>
-    <string name="settings_account_sync_backend">Synchronizační backend</string>
-    <string name="debug_backend_switch_confirm_title">Přepnout backend?</string>
-    <string name="debug_backend_switch_confirm_message">Přepnout na %1$s a odhlásit se? Do vybraného backendu se můžete znovu přihlásit.</string>
     <string name="settings_appearance_amoled_black">AMOLED černá</string>
     <string name="settings_appearance_amoled_description">Použít čistě černé pozadí pro OLED obrazovky.</string>
     <string name="settings_appearance_app_language">Jazyk aplikace</string>
