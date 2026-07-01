@@ -144,7 +144,8 @@ internal fun LazyListScope.streamsSettingsContent(isTablet: Boolean) {
                 )
             }
         }
-
+    } 
+    
         if (showBadgeImportDialog) {
             BadgeUrlManagerDialog(
                 currentRules = currentRules,
