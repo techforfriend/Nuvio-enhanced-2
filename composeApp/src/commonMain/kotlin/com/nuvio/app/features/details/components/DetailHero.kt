@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.painter.Painter
@@ -64,7 +65,7 @@ fun DetailHero(
     heroTrailerPlayWhenReady: Boolean = false,
     heroTrailerMuted: Boolean = true,
     heroGradientColor: Color? = null,
-    onBackdropLoaded: (Painter) -> Unit = {},
+    onBackdropLoaded: (Painter, ImageBitmap?) -> Unit = { _, _ -> },
     onHeroTrailerMuteToggle: () -> Unit = {},
     onHeroTrailerReady: () -> Unit = {},
     onHeroTrailerEnded: () -> Unit = {},
@@ -118,7 +119,12 @@ fun DetailHero(
                         },
                         alignment = if (isTablet) Alignment.TopCenter else Alignment.Center,
                         contentScale = ContentScale.Crop,
-                        onSuccess = { state -> onBackdropLoaded(state.painter) },
+                        onSuccess = { state ->
+                            onBackdropLoaded(
+                                state.painter,
+                                loadedBackdropImageBitmap(state.result),
+                            )
+                        },
                     )
                 } else {
                     Box(

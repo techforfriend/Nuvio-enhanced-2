@@ -52,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
@@ -113,6 +114,7 @@ import com.nuvio.app.features.watchprogress.buildPlaybackVideoId
 import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesRepository
 import com.nuvio.app.features.watching.application.WatchingActions
 import com.nuvio.app.features.watching.application.WatchingState
+import com.kmpalette.rememberDominantColorState
 import com.kmpalette.extensions.painter.rememberPainterDominantColorState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -772,18 +774,38 @@ fun MetaDetailsScreen(
                     var dominantBackdropPainter by remember(meta.id, backdropUrl) {
                         mutableStateOf<Painter?>(null)
                     }
-                    val dominantColorState = rememberPainterDominantColorState(
+                    var dominantBackdropImageBitmap by remember(meta.id, backdropUrl) {
+                        mutableStateOf<ImageBitmap?>(null)
+                    }
+                    val dominantImageBitmapColorState = rememberDominantColorState(
                         defaultColor = colorScheme.background,
                         defaultOnColor = colorScheme.onBackground,
                     )
-                    LaunchedEffect(dominantColorEnabled, dominantBackdropPainter) {
+                    val dominantPainterColorState = rememberPainterDominantColorState(
+                        defaultColor = colorScheme.background,
+                        defaultOnColor = colorScheme.onBackground,
+                    )
+                    LaunchedEffect(dominantColorEnabled, dominantBackdropImageBitmap, dominantBackdropPainter) {
+                        val imageBitmap = dominantBackdropImageBitmap
                         val painter = dominantBackdropPainter
-                        if (dominantColorEnabled && painter != null) {
-                            runCatching { dominantColorState.updateFrom(painter) }
+                        if (dominantColorEnabled) {
+                            when {
+                                imageBitmap != null -> runCatching {
+                                    dominantImageBitmapColorState.updateFrom(imageBitmap)
+                                }
+                                painter != null -> runCatching {
+                                    dominantPainterColorState.updateFrom(painter)
+                                }
+                            }
                         }
                     }
+                    val extractedDominantColor = if (dominantBackdropImageBitmap != null) {
+                        dominantImageBitmapColorState.color
+                    } else {
+                        dominantPainterColorState.color
+                    }
                     val dominantBackdropTargetColor = if (dominantColorEnabled) {
-                        dominantBackdropBlendColor(dominantColorState.color, colorScheme.background)
+                        dominantBackdropBlendColor(extractedDominantColor, colorScheme.background)
                     } else {
                         colorScheme.background
                     }
@@ -841,8 +863,9 @@ fun MetaDetailsScreen(
                                     heroTrailerPlayWhenReady = heroTrailerPlayWhenReady,
                                     heroTrailerMuted = heroTrailerMuted,
                                     heroGradientColor = dominantBackdropColor.takeIf { dominantColorEnabled },
-                                    onBackdropLoaded = { painter ->
+                                    onBackdropLoaded = { painter, imageBitmap ->
                                         dominantBackdropPainter = painter
+                                        dominantBackdropImageBitmap = imageBitmap
                                     },
                                     onHeroTrailerMuteToggle = {
                                         HeroTrailerAudioState.toggleMuted()
