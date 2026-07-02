@@ -6,6 +6,8 @@ import org.jetbrains.skia.BlendMode
 import org.jetbrains.skia.Paint
 import org.jetbrains.skia.VertexMode
 
+internal actual val ashSwarmMaxGrainBudget: Int = 26000
+
 internal actual class AshSwarmRenderer actual constructor(maxGrains: Int) {
     private val positions = FloatArray(maxGrains * 12)
     private val vertexColors = IntArray(maxGrains * 6)

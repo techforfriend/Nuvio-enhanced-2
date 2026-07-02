@@ -99,8 +99,7 @@ private class AshField(
     val clipOutline = Path()
 }
 
-private const val ASH_COLS = 100
-private const val ASH_MAX_TILES = 15000
+private const val ASH_COLS = 130
 private const val TILE_LIFESPAN = 0.5f
 private const val TAU = 6.2831855f
 
@@ -112,10 +111,11 @@ private fun frontValue(nx: Float, ny: Float, phase: Float): Float =
 
 private fun buildAshField(bitmap: ImageBitmap, seed: Long): AshField {
     val aspect = bitmap.height.toFloat() / bitmap.width.toFloat()
+    val maxTiles = ashSwarmMaxGrainBudget
     var cols = ASH_COLS
     var rows = (cols * aspect).toInt().coerceAtLeast(8)
-    if (cols * rows > ASH_MAX_TILES) {
-        cols = (kotlin.math.sqrt(ASH_MAX_TILES / aspect)).toInt().coerceAtLeast(12)
+    if (cols * rows > maxTiles) {
+        cols = (kotlin.math.sqrt(maxTiles / aspect)).toInt().coerceAtLeast(12)
         rows = (cols * aspect).toInt().coerceAtLeast(8)
     }
     val pixels = bitmap.toPixelMap()

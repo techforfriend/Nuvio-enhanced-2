@@ -9,6 +9,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.nativeCanvas
 
+internal actual val ashSwarmMaxGrainBudget: Int =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) 26000 else 15000
+
 internal actual class AshSwarmRenderer actual constructor(maxGrains: Int) {
     private val batched = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
