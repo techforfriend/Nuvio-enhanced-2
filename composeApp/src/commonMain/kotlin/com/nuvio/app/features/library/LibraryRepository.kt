@@ -5,6 +5,7 @@ import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.auth.AuthState
 import com.nuvio.app.core.network.SupabaseProvider
+import com.nuvio.app.core.sync.putSyncOriginClientId
 import com.nuvio.app.features.home.PosterShape
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.trakt.TraktAuthRepository
@@ -421,6 +422,7 @@ object LibraryRepository {
                 val params = buildJsonObject {
                     put("p_profile_id", profileId)
                     put("p_items", json.encodeToJsonElement(syncItems))
+                    putSyncOriginClientId()
                 }
                 log.i { "Pushing library to server profile=$profileId itemCount=${syncItems.size}" }
                 SupabaseProvider.client.postgrest.rpc("sync_push_library", params)

@@ -135,13 +135,19 @@ object RealtimeSyncInvalidationService {
     private fun handleInsert(profileId: Int, record: JsonObject) {
         val eventId = record["id"]?.jsonPrimitive?.contentOrNull
         val createdAt = record["created_at"]?.jsonPrimitive?.contentOrNull
+        val originClientId = record["origin_client_id"]?.jsonPrimitive?.contentOrNull
+        if (originClientId != null && originClientId == SyncClientIdentity.currentClientId()) {
+            log.d { "Ignoring self-originated sync invalidation id=$eventId originClientId=$originClientId" }
+            return
+        }
         val surface = record["surface"]?.jsonPrimitive?.contentOrNull ?: run {
             log.w { "Received sync invalidation without surface id=$eventId createdAt=$createdAt keys=${record.keys}" }
             return
         }
         val eventProfileId = record["profile_id"]?.jsonPrimitive?.intOrNull
         log.i {
-            "Received sync invalidation id=$eventId surface=$surface eventProfile=$eventProfileId activeProfile=$profileId createdAt=$createdAt"
+            "Received sync invalidation id=$eventId surface=$surface eventProfile=$eventProfileId " +
+                "activeProfile=$profileId originClientId=$originClientId createdAt=$createdAt"
         }
         if (surface != "profiles" && eventProfileId != null && eventProfileId != profileId) {
             log.d { "Ignoring sync invalidation id=$eventId for inactive profile $eventProfileId" }
