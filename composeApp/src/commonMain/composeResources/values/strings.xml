@@ -508,6 +508,8 @@
     <string name="downloads_empty_episodes">No completed episodes</string>
     <string name="downloads_empty_title">No downloads yet</string>
     <string name="downloads_episode_count">%1$d downloaded episode(s)</string>
+    <string name="downloads_open_directory">Open downloads folder</string>
+    <string name="downloads_open_directory_failed">Couldn&apos;t open downloads folder</string>
     <string name="downloads_section_active">Active</string>
     <string name="downloads_section_movies">Movies</string>
     <string name="downloads_section_shows">Shows</string>
