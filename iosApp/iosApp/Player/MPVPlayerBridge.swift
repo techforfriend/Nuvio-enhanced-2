@@ -524,13 +524,17 @@ final class MPVPlayerViewController: UIViewController {
 
     func playPlayback() {
         guard mpv != nil else { return }
-        activateAudioSessionForPlayback()
+        publishNowPlayingForPlaybackSession()
         setFlag("pause", false)
+        isPlayerPlaying = true
+        syncNowPlayingPlaybackState(isPlaying: true)
     }
 
     func pausePlayback() {
         guard mpv != nil else { return }
         setFlag("pause", true)
+        isPlayerPlaying = false
+        syncNowPlayingPlaybackState(isPlaying: false)
     }
 
     func seekToMs(_ ms: Int64) {
@@ -795,13 +799,17 @@ final class MPVPlayerViewController: UIViewController {
 
         let shouldPublishNowPlayingState = !isPlayerLoading || isPlayerPlaying || durationMs > 0 || positionMs > 0
         if shouldPublishNowPlayingState {
-            nowPlayingController.syncPlayback(
-                positionMs: positionMs,
-                durationMs: durationMs,
-                isPlaying: isPlayerPlaying,
-                playbackSpeed: currentSpeed
-            )
+            syncNowPlayingPlaybackState(isPlaying: isPlayerPlaying)
         }
+    }
+
+    private func syncNowPlayingPlaybackState(isPlaying: Bool) {
+        nowPlayingController.syncPlayback(
+            positionMs: positionMs,
+            durationMs: durationMs,
+            isPlaying: isPlaying,
+            playbackSpeed: currentSpeed
+        )
     }
 
     /// Full state + track refresh — called from MPV event loop on property changes.
@@ -866,6 +874,7 @@ final class MPVPlayerViewController: UIViewController {
             subtitle: subtitle,
             artworkUrl: artworkUrl
         )
+        publishNowPlayingForPlaybackSession()
     }
 
     func clearNowPlayingInfo() {
@@ -880,6 +889,16 @@ final class MPVPlayerViewController: UIViewController {
             subtitle: metadata.subtitle,
             artworkUrl: metadata.artworkUrl
         )
+    }
+
+    private func publishNowPlayingForPlaybackSession() {
+        activateAudioSessionForPlayback()
+        if isViewLoaded, view.window != nil {
+            becomeFirstResponder()
+        }
+        UIApplication.shared.beginReceivingRemoteControlEvents()
+        publishCachedNowPlayingInfoIfNeeded()
+        syncNowPlayingPlaybackState(isPlaying: isPlayerPlaying)
     }
 
     private func getTrackString(_ index: Int, _ field: String) -> String {
@@ -1025,7 +1044,13 @@ final class MPVPlayerViewController: UIViewController {
                         self.clearPlaybackError()
                         self.isPlayerLoading = false
                         self.updateState()
+                        self.publishNowPlayingForPlaybackSession()
                         self.logCurrentAudioOutput()
+                    }
+                case MPV_EVENT_PLAYBACK_RESTART:
+                    DispatchQueue.main.async {
+                        self.updateState()
+                        self.publishNowPlayingForPlaybackSession()
                     }
                 case MPV_EVENT_END_FILE:
                     if let data = eventPtr.pointee.data {

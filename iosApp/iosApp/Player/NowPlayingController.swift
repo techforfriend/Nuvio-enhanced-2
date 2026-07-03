@@ -51,6 +51,7 @@ final class PlayerNowPlayingController {
         if metadata.title == normalizedTitle,
            metadata.subtitle == normalizedSubtitle,
            currentArtworkURL == normalizedArtworkUrl {
+            applyNowPlayingInfo()
             return
         }
 
