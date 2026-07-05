@@ -780,7 +780,7 @@
     <string name="community_section_description">Découvrez les personnes qui construisent et soutiennent Nuvio sur Mobile, TV et Web.</string>
     <string name="community_donation_progress_title">Serveur et maintenance de ce mois-ci</string>
     <string name="community_donation_progress_complete">Couvert. Le soutien supplémentaire va désormais au développement.</string>
-    <string name="community_donation_progress_remaining">Au-delà de 100 %%, le soutien supplémentaire va au développement.</string>
+    <string name="community_donation_progress_remaining">Au-delà de 100 %, le soutien supplémentaire va au développement.</string>
     <string name="community_loading_donation_progress">Chargement de la progression du financement…</string>
     <string name="community_supporters_not_configured">L’API des supporters n’est pas configurée. Ajoutez DONATIONS_BASE_URL dans local.properties.</string>
     <string name="community_tab_contributors">Contributeurs</string>
