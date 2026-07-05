@@ -11,7 +11,7 @@ import com.nuvio.app.features.watchprogress.WatchProgressSourceTraktHistory
 import com.nuvio.app.features.watchprogress.WatchProgressSourceTraktPlayback
 import com.nuvio.app.features.watchprogress.WatchProgressSourceTraktShowProgress
 import com.nuvio.app.features.watchprogress.buildPlaybackVideoId
-import com.nuvio.app.features.watchprogress.shouldTreatAsInProgressForContinueWatching
+import com.nuvio.app.features.watchprogress.shouldReplaceProgressSnapshotEntry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -1005,18 +1005,6 @@ object TraktProgressRepository {
         return mergedByVideoId.values
             .toList()
             .sortedByDescending { it.lastUpdatedEpochMs }
-    }
-
-    private fun shouldReplaceProgressSnapshotEntry(
-        existing: WatchProgressEntry,
-        candidate: WatchProgressEntry,
-    ): Boolean {
-        val existingInProgress = existing.shouldTreatAsInProgressForContinueWatching()
-        val candidateInProgress = candidate.shouldTreatAsInProgressForContinueWatching()
-        if (existingInProgress != candidateInProgress) {
-            return candidateInProgress
-        }
-        return candidate.lastUpdatedEpochMs > existing.lastUpdatedEpochMs
     }
 
     private fun mergeEntriesPreferRichMetadata(
