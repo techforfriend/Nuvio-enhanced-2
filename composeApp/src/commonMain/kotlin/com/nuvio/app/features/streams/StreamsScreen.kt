@@ -356,7 +356,7 @@ fun StreamsScreen(
             externalPlayerEnabled = playerSettings.externalPlayerEnabled,
             onDismiss = { streamActionsTarget = null },
             onCopyLink = { stream ->
-                val directUrl = stream.playableDirectUrl
+                val directUrl = stream.playableDirectUrl ?: stream.externalOpenUrl
                 if (!directUrl.isNullOrBlank()) {
                     clipboardManager.setText(AnnotatedString(directUrl))
                     NuvioToastController.show(streamLinkCopiedText)
@@ -987,7 +987,7 @@ private fun LazyListScope.streamSection(
                     }
                 },
                 onLongClick = {
-                    if (stream.playableDirectUrl != null || stream.isAddonDebridCandidate) {
+                    if (stream.playableDirectUrl != null || stream.shouldOpenExternally || stream.isAddonDebridCandidate) {
                         onStreamLongPress(stream)
                     }
                 },
@@ -1015,6 +1015,10 @@ internal fun streamCardRenderKey(
     append(itemIndex)
     append(':')
     append(stream.url ?: stream.infoHash ?: stream.clientResolve?.infoHash ?: stream.streamLabel)
+    stream.externalUrl?.let {
+        append(':')
+        append(it)
+    }
 }
 
 // ---------------------------------------------------------------------------
