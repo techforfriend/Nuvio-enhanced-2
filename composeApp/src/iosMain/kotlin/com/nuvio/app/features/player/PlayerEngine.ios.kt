@@ -29,8 +29,10 @@ import kotlinx.coroutines.isActive
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.action_play
 import nuvio.composeapp.generated.resources.player_error_mpv_unavailable
 import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.stringResource
 
 private const val TAG = "NuvioiOSPlayer"
 
@@ -364,7 +366,7 @@ actual fun PlatformPlayerSurface(
                 if (!isPlayingLocal) {
                     Icon(
                         imageVector = Icons.Rounded.PlayArrow,
-                        contentDescription = "Play",
+                        contentDescription = stringResource(Res.string.action_play),
                         tint = Color.White,
                         modifier = Modifier.size(64.dp)
                     )
