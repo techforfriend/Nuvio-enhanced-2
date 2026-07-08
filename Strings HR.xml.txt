@@ -95,7 +95,7 @@
     <string name="collections_editor_select_catalogs">Odaberite kataloge</string>
     <string name="collections_editor_select_genre">Odaberite žanr</string>
     <string name="collections_editor_selected_count">%1$d odabrano</string>
-    <string name="collections_editor_catalog_count">%1$d katalóga</string>
+    <string name="collections_editor_catalog_count">%1$d kataloga</string>
     <string name="collections_editor_catalog_selected_count">%1$d odabrano</string>
     <string name="collections_editor_shape_poster">Poster</string>
     <string name="collections_editor_shape_square">Kvadrat</string>
