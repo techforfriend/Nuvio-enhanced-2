@@ -944,6 +944,19 @@ private fun MainAppContent(
         }
     }
 
+    DisposableEffect(authState, profileState.activeProfile?.profileIndex) {
+        val authenticatedState = authState as? AuthState.Authenticated
+        val activeProfileId = profileState.activeProfile?.profileIndex
+        if (authenticatedState != null && !authenticatedState.isAnonymous && activeProfileId != null) {
+            SyncManager.startPeriodicNuvioSyncPull(activeProfileId)
+        } else {
+            SyncManager.stopPeriodicNuvioSyncPull()
+        }
+        onDispose {
+            SyncManager.stopPeriodicNuvioSyncPull()
+        }
+    }
+
     LaunchedEffect(authState, profileState.activeProfile?.profileIndex) {
         val authenticatedState = authState as? AuthState.Authenticated ?: return@LaunchedEffect
         if (authenticatedState.isAnonymous) return@LaunchedEffect
