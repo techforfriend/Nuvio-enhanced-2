@@ -140,7 +140,7 @@
     <string name="collections_editor_tmdb_collection_helper">Primjer: Kolekcija Ratovi zvijezda, kolekcija Harry Potter ili URL kolekcije.</string>
     <string name="collections_editor_tmdb_network_helper">Primjeri ID-a: Netflix 213, HBO 49, Disney+ 2739.</string>
     <string name="collections_editor_tmdb_list_helper">Primjer: https://www.themoviedb.org/list/8504994 alebo 8504994.</string>
-    <string name="collections_editor_tmdb_person_helper">Primjer: https://www.themoviedb.org/person/31-tom-hanks alebo 31.</string>
+    <string name="collections_editor_tmdb_person_helper">Primjer: https://www.themoviedb.org/person/31-tom-hanks ili 31.</string>
     <string name="collections_editor_tmdb_display_title">Prikazno ime</string>
     <string name="collections_editor_tmdb_title_helper">Prikazuje se kao naziv retka ili kartice. Ako se polje ostavi praznim, Nuvio ga generira iz izvora.</string>
     <string name="collections_editor_tmdb_title_placeholder">Marvel Filmovi, Netflix Originali, Pixar</string>
