@@ -111,6 +111,7 @@ import com.nuvio.app.core.ui.localizedContinueWatchingSubtitle
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.nuvioBottomNavigationBarInsets
 import com.nuvio.app.features.auth.AuthScreen
+import com.nuvio.app.features.addons.AddAddonResult
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.catalog.CatalogRepository
 import com.nuvio.app.features.catalog.CatalogScreen
@@ -1053,6 +1054,27 @@ private fun MainAppContent(
                         selectedTab = AppScreenTab.Home
                         navController.navigate(DetailRoute(type = deepLink.type, id = deepLink.id)) {
                             launchSingleTop = true
+                        }
+                        AppDeepLinkRepository.markConsumed(deepLink)
+                    }
+
+                    is AppDeepLink.AddonInstall -> {
+                        selectedTab = AppScreenTab.Settings
+                        navController.navigate(AddonsSettingsRoute) {
+                            launchSingleTop = true
+                        }
+                        NuvioToastController.show(getString(Res.string.addons_modal_checking_title))
+                        AddonRepository.initialize()
+                        when (val result = AddonRepository.addAddon(deepLink.manifestUrl)) {
+                            is AddAddonResult.Success -> {
+                                NuvioToastController.show(
+                                    getString(Res.string.addons_modal_success_message, result.manifest.name),
+                                )
+                            }
+
+                            is AddAddonResult.Error -> {
+                                NuvioToastController.show(result.message)
+                            }
                         }
                         AppDeepLinkRepository.markConsumed(deepLink)
                     }
