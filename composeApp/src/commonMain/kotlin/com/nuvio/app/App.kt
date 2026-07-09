@@ -209,6 +209,7 @@ import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesRepositor
 import com.nuvio.app.features.watchprogress.ResumePromptRepository
 import com.nuvio.app.features.watchprogress.WatchProgressPlaybackSession
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
+import com.nuvio.app.features.watchprogress.WatchProgressSourceCoordinator
 import com.nuvio.app.features.watchprogress.nextUpDismissKey
 import com.nuvio.app.features.watchprogress.toContinueWatchingItem
 import com.nuvio.app.features.watching.application.WatchingActions
@@ -744,6 +745,7 @@ private fun MainAppContent(
     var offlineLaunchRouteHandled by rememberSaveable { mutableStateOf(false) }
     var networkToastBaselineReady by rememberSaveable { mutableStateOf(false) }
     var lastNetworkToastCondition by rememberSaveable { mutableStateOf(NetworkCondition.Unknown.name) }
+    var watchSourceReconnectPending by remember { mutableStateOf(false) }
 
     fun handleRootTabClick(tab: AppScreenTab) {
         if (selectedTab != tab) {
@@ -880,6 +882,42 @@ private fun MainAppContent(
     }
 
     LaunchedEffect(
+        networkStatusUiState.condition,
+        (authState as? AuthState.Authenticated)?.userId,
+        profileState.activeProfile?.profileIndex,
+    ) {
+        when (networkStatusUiState.condition) {
+            NetworkCondition.NoInternet,
+            NetworkCondition.ServersUnreachable,
+            -> watchSourceReconnectPending = true
+
+            NetworkCondition.Online -> {
+                if (!watchSourceReconnectPending) return@LaunchedEffect
+
+                val profileId = profileState.activeProfile?.profileIndex
+                    ?: ProfileRepository.activeProfileId
+                val authenticatedState = authState as? AuthState.Authenticated
+                if (authenticatedState != null && !authenticatedState.isAnonymous) {
+                    SyncManager.requestForegroundPull(profileId = profileId, force = true)
+                    watchSourceReconnectPending = false
+                } else {
+                    val result = WatchProgressSourceCoordinator.refreshActiveSource(
+                        profileId = profileId,
+                        force = true,
+                    )
+                    if (result.succeeded) {
+                        watchSourceReconnectPending = false
+                    }
+                }
+            }
+
+            NetworkCondition.Unknown,
+            NetworkCondition.Checking,
+            -> Unit
+        }
+    }
+
+    LaunchedEffect(
         initialHomeReady,
         offlineLaunchRouteHandled,
         networkStatusUiState.condition,
@@ -962,6 +1000,7 @@ private fun MainAppContent(
         if (authenticatedState.isAnonymous) return@LaunchedEffect
 
         val activeProfileId = profileState.activeProfile?.profileIndex ?: return@LaunchedEffect
+        SyncManager.pullAllForProfile(activeProfileId)
         AppForegroundMonitor.events().collect {
             SyncManager.requestForegroundPull(activeProfileId, force = true)
         }

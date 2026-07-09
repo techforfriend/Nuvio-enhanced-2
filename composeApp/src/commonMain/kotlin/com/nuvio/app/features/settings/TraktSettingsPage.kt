@@ -52,7 +52,7 @@ import com.nuvio.app.features.trakt.WatchProgressSource
 import com.nuvio.app.features.trakt.TRAKT_CONTINUE_WATCHING_DAYS_CAP_ALL
 import com.nuvio.app.features.trakt.normalizeTraktContinueWatchingDaysCap
 import com.nuvio.app.features.trakt.traktBrandPainter
-import com.nuvio.app.features.watchprogress.WatchProgressRepository
+import com.nuvio.app.features.watchprogress.WatchProgressSourceCoordinator
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
@@ -240,15 +240,19 @@ private fun TraktFeatureRows(
             selectedSource = settingsUiState.watchProgressSource,
             onSourceSelected = { source ->
                 scope.launch {
-                    WatchProgressRepository.selectWatchProgressSource(
+                    val result = WatchProgressSourceCoordinator.selectSource(
                         profileId = ProfileRepository.activeProfileId,
                         source = source,
                     )
-                }
-                statusMessage = if (source == WatchProgressSource.TRAKT) {
-                    traktProgressSelectedMessage
-                } else {
-                    nuvioProgressSelectedMessage
+                    statusMessage = if (result.succeeded) {
+                        if (result.requestedSource == WatchProgressSource.TRAKT) {
+                            traktProgressSelectedMessage
+                        } else {
+                            nuvioProgressSelectedMessage
+                        }
+                    } else {
+                        null
+                    }
                 }
                 showWatchProgressDialog = false
             },
