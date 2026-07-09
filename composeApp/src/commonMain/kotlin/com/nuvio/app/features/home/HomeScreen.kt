@@ -13,6 +13,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.core.auth.AuthRepository
+import com.nuvio.app.core.auth.AuthState
 import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.ui.LocalNuvioBottomNavigationOverlayPadding
@@ -39,11 +41,10 @@ import com.nuvio.app.features.home.components.HomeHeroSection
 import com.nuvio.app.features.home.components.HomeSkeletonHero
 import com.nuvio.app.features.home.components.HomeSkeletonRow
 import com.nuvio.app.features.home.components.HomeContinueWatchingSectionBottomPadding
-import com.nuvio.app.features.trakt.TraktAuthRepository
 import com.nuvio.app.features.trakt.TRAKT_CONTINUE_WATCHING_DAYS_CAP_ALL
 import com.nuvio.app.features.trakt.TraktSettingsRepository
+import com.nuvio.app.features.trakt.WatchProgressSource
 import com.nuvio.app.features.trakt.normalizeTraktContinueWatchingDaysCap
-import com.nuvio.app.features.trakt.shouldUseTraktProgress
 import com.nuvio.app.features.watched.WatchedItem
 import com.nuvio.app.features.watched.WatchedRepository
 import com.nuvio.app.features.watched.episodePlaybackId
@@ -63,6 +64,7 @@ import com.nuvio.app.features.watchprogress.shouldUseAsCompletedSeedForContinueW
 import com.nuvio.app.features.watchprogress.WatchProgressClock
 import com.nuvio.app.features.watchprogress.WatchProgressEntry
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
+import com.nuvio.app.features.watchprogress.WatchProgressSourceCoordinator
 import com.nuvio.app.features.watchprogress.WatchProgressSourceTraktPlayback
 import com.nuvio.app.features.watchprogress.buildContinueWatchingEpisodeSubtitle
 import com.nuvio.app.features.watchprogress.continueWatchingEntries
@@ -110,6 +112,10 @@ fun HomeScreen(
         ContinueWatchingPreferencesRepository.ensureLoaded()
         WatchedRepository.ensureLoaded()
         WatchProgressRepository.ensureLoaded()
+        val authState = AuthRepository.state.value
+        if (authState !is AuthState.Authenticated || authState.isAnonymous) {
+            WatchProgressSourceCoordinator.ensureStarted()
+        }
     }
 
     val addonsUiState by AddonRepository.uiState.collectAsStateWithLifecycle()
@@ -124,15 +130,12 @@ fun HomeScreen(
     val watchedUiState by WatchedRepository.uiState.collectAsStateWithLifecycle()
     val fullyWatchedSeriesKeys by WatchedRepository.fullyWatchedSeriesKeys.collectAsStateWithLifecycle()
     val watchProgressUiState by WatchProgressRepository.uiState.collectAsStateWithLifecycle()
+    val effectiveWatchProgressSource by WatchProgressRepository.activeSourceState.collectAsStateWithLifecycle()
     val cloudLibraryUiState by CloudLibraryRepository.uiState.collectAsStateWithLifecycle()
     val networkStatusUiState by NetworkStatusRepository.uiState.collectAsStateWithLifecycle()
     val traktSettingsUiState by remember {
         TraktSettingsRepository.ensureLoaded()
         TraktSettingsRepository.uiState
-    }.collectAsStateWithLifecycle()
-    val isTraktAuthenticated by remember {
-        TraktAuthRepository.ensureLoaded()
-        TraktAuthRepository.isAuthenticated
     }.collectAsStateWithLifecycle()
     var observedOfflineState by remember { mutableStateOf(false) }
 
@@ -163,15 +166,7 @@ fun HomeScreen(
         }
     }
 
-    val isTraktProgressActive = remember(
-        isTraktAuthenticated,
-        traktSettingsUiState.watchProgressSource,
-    ) {
-        shouldUseTraktProgress(
-            isAuthenticated = isTraktAuthenticated,
-            source = traktSettingsUiState.watchProgressSource,
-        )
-    }
+    val isTraktProgressActive = effectiveWatchProgressSource == WatchProgressSource.TRAKT
 
     val effectiveWatchProgressEntries = remember(
         watchProgressUiState.entries,
@@ -283,19 +278,25 @@ fun HomeScreen(
     }
     val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
     val activeProfileId = profileState.activeProfile?.profileIndex ?: 1
-    val cwCacheClearVersion by ContinueWatchingEnrichmentCache.cacheCleared.collectAsStateWithLifecycle()
+    val cwCacheGeneration by ContinueWatchingEnrichmentCache.generation.collectAsStateWithLifecycle()
 
-    var nextUpItemsBySeries by remember(activeProfileId) { mutableStateOf<Map<String, Pair<Long, ContinueWatchingItem>>>(emptyMap()) }
-    var processedNextUpContentIds by remember(activeProfileId) { mutableStateOf<Set<String>>(emptySet()) }
+    var nextUpItemsBySeries by remember(activeProfileId, effectiveWatchProgressSource) {
+        mutableStateOf<Map<String, Pair<Long, ContinueWatchingItem>>>(emptyMap())
+    }
+    var processedNextUpContentIds by remember(activeProfileId, effectiveWatchProgressSource) {
+        mutableStateOf<Set<String>>(emptySet())
+    }
 
-    LaunchedEffect(activeProfileId, cwCacheClearVersion) {
-        if (cwCacheClearVersion == 0) return@LaunchedEffect
+    LaunchedEffect(activeProfileId, effectiveWatchProgressSource, cwCacheGeneration) {
         nextUpItemsBySeries = emptyMap()
         processedNextUpContentIds = emptySet()
     }
 
-    val cachedSnapshots = remember(activeProfileId, cwCacheClearVersion) {
-        ContinueWatchingEnrichmentCache.getSnapshots(activeProfileId)
+    val cachedSnapshots = remember(activeProfileId, effectiveWatchProgressSource, cwCacheGeneration) {
+        ContinueWatchingEnrichmentCache.getSnapshots(
+            profileId = activeProfileId,
+            source = effectiveWatchProgressSource,
+        )
     }
     val shouldValidateMissingNextUpSeeds = remember(
         isTraktProgressActive,
@@ -459,13 +460,25 @@ fun HomeScreen(
         continueWatchingPreferences.upNextFromFurthestEpisode,
         isRefreshingEnabledAddons,
         watchProgressSeedKey,
+        visibleContinueWatchingEntries,
         watchedUiState.items,
         watchedUiState.isLoaded,
         activeProfileId,
+        effectiveWatchProgressSource,
+        cwCacheGeneration,
     ) {
         if (completedSeriesCandidates.isEmpty()) {
             nextUpItemsBySeries = emptyMap()
             processedNextUpContentIds = emptySet()
+            saveContinueWatchingSnapshots(
+                profileId = activeProfileId,
+                source = effectiveWatchProgressSource,
+                cacheGeneration = cwCacheGeneration,
+                nextUpItemsBySeries = emptyMap(),
+                visibleContinueWatchingEntries = visibleContinueWatchingEntries,
+                todayIsoDate = CurrentDateProvider.todayIsoDate(),
+                seedLastWatchedMap = emptyMap(),
+            )
             return@LaunchedEffect
         }
 
@@ -505,6 +518,8 @@ fun HomeScreen(
                 }
                 saveContinueWatchingSnapshots(
                     profileId = activeProfileId,
+                    source = effectiveWatchProgressSource,
+                    cacheGeneration = cwCacheGeneration,
                     nextUpItemsBySeries = cachedResolvedNextUpItems,
                     visibleContinueWatchingEntries = visibleContinueWatchingEntries,
                     todayIsoDate = CurrentDateProvider.todayIsoDate(),
@@ -579,6 +594,8 @@ fun HomeScreen(
                         }
                         saveContinueWatchingSnapshots(
                             profileId = activeProfileId,
+                            source = effectiveWatchProgressSource,
+                            cacheGeneration = cwCacheGeneration,
                             nextUpItemsBySeries = progressiveResults,
                             visibleContinueWatchingEntries = visibleContinueWatchingEntries,
                             todayIsoDate = todayIsoDate,
@@ -603,6 +620,8 @@ fun HomeScreen(
 
             saveContinueWatchingSnapshots(
                 profileId = activeProfileId,
+                source = effectiveWatchProgressSource,
+                cacheGeneration = cwCacheGeneration,
                 nextUpItemsBySeries = results,
                 visibleContinueWatchingEntries = visibleContinueWatchingEntries,
                 todayIsoDate = todayIsoDate,
@@ -625,6 +644,8 @@ fun HomeScreen(
             }
             saveContinueWatchingSnapshots(
                 profileId = activeProfileId,
+                source = effectiveWatchProgressSource,
+                cacheGeneration = cwCacheGeneration,
                 nextUpItemsBySeries = deferredResults,
                 visibleContinueWatchingEntries = visibleContinueWatchingEntries,
                 todayIsoDate = todayIsoDate,
@@ -1284,6 +1305,8 @@ private data class HomeNextUpCandidateResolution(
 
 private fun saveContinueWatchingSnapshots(
     profileId: Int,
+    source: WatchProgressSource,
+    cacheGeneration: Int,
     nextUpItemsBySeries: Map<String, Pair<Long, ContinueWatchingItem>>,
     visibleContinueWatchingEntries: List<WatchProgressEntry>,
     todayIsoDate: String,
@@ -1338,10 +1361,21 @@ private fun saveContinueWatchingSnapshots(
     }
     ContinueWatchingEnrichmentCache.saveSnapshots(
         profileId = profileId,
+        source = source,
+        generation = cacheGeneration,
         nextUp = nextUpCache,
         inProgress = inProgressCache,
     )
 }
+
+internal fun effectiveContinueWatchingCacheSource(
+    isTraktProgressActive: Boolean,
+): WatchProgressSource =
+    if (isTraktProgressActive) {
+        WatchProgressSource.TRAKT
+    } else {
+        WatchProgressSource.NUVIO_SYNC
+    }
 
 private fun CompletedSeriesCandidate.toContinueWatchingSeed(meta: com.nuvio.app.features.details.MetaDetails) =
     WatchProgressEntry(
