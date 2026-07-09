@@ -3141,63 +3141,79 @@ private fun AppTabHost(
     onInitialHomeContentRendered: () -> Unit = {},
 ) {
     val tabStateHolder = rememberSaveableStateHolder()
+    val isHomeSelected = selectedTab == AppScreenTab.Home
 
     Box(modifier = modifier.fillMaxSize()) {
-        tabStateHolder.SaveableStateProvider(selectedTab.name) {
-            when (selectedTab) {
-                AppScreenTab.Home -> {
-                    AppHomeTabContent(
-                        tabsRouteActiveState = tabsRouteActiveState,
-                        homeScrollToTopRequests = homeScrollToTopRequests,
-                        onCatalogClick = onCatalogClick,
-                        onPosterClick = onPosterClick,
-                        onPosterLongClick = onPosterLongClick,
-                        onContinueWatchingClick = onContinueWatchingClick,
-                        onContinueWatchingLongPress = onContinueWatchingLongPress,
-                        onFolderClick = onFolderClick,
-                        onInitialHomeContentRendered = onInitialHomeContentRendered,
-                    )
-                }
+        tabStateHolder.SaveableStateProvider(AppScreenTab.Home.name) {
+            AppHomeTabContent(
+                tabsRouteActiveState = tabsRouteActiveState,
+                homeSelected = isHomeSelected,
+                homeScrollToTopRequests = homeScrollToTopRequests,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(if (isHomeSelected) 1f else 0f)
+                    .alpha(if (isHomeSelected) 1f else 0f),
+                onCatalogClick = onCatalogClick,
+                onPosterClick = onPosterClick,
+                onPosterLongClick = onPosterLongClick,
+                onContinueWatchingClick = onContinueWatchingClick,
+                onContinueWatchingLongPress = onContinueWatchingLongPress,
+                onFolderClick = onFolderClick,
+                onInitialHomeContentRendered = onInitialHomeContentRendered,
+            )
+        }
 
-                AppScreenTab.Search -> {
-                    AppSearchTabContent(
-                        onPosterClick = onPosterClick,
-                        onPosterLongClick = onPosterLongClick,
-                        searchFocusRequestCount = searchFocusRequestCount,
-                        searchScrollToTopRequests = searchScrollToTopRequests,
-                    )
-                }
+        if (!isHomeSelected) {
+            tabStateHolder.SaveableStateProvider(selectedTab.name) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(1f),
+                ) {
+                    when (selectedTab) {
+                        AppScreenTab.Home -> Unit
 
-                AppScreenTab.Library -> {
-                    AppLibraryTabContent(
-                        libraryScrollToTopRequests = libraryScrollToTopRequests,
-                        onPosterClick = onLibraryPosterClick,
-                        onPosterLongClick = onLibraryPosterLongClick,
-                        onSectionViewAllClick = onLibrarySectionViewAllClick,
-                        onCloudFilePlay = onCloudFilePlay,
-                        onConnectCloudClick = onConnectCloudClick,
-                    )
-                }
+                        AppScreenTab.Search -> {
+                            AppSearchTabContent(
+                                onPosterClick = onPosterClick,
+                                onPosterLongClick = onPosterLongClick,
+                                searchFocusRequestCount = searchFocusRequestCount,
+                                searchScrollToTopRequests = searchScrollToTopRequests,
+                            )
+                        }
 
-                AppScreenTab.Settings -> {
-                    AppSettingsTabContent(
-                        tabsRouteActiveState = tabsRouteActiveState,
-                        rootActionRequests = settingsRootActionRequests,
-                        requestedPageName = requestedSettingsPageName,
-                        onRequestedPageConsumed = onRequestedSettingsPageConsumed,
-                        onSwitchProfile = onSwitchProfile,
-                        onHomescreenClick = onHomescreenSettingsClick,
-                        onMetaScreenClick = onMetaScreenSettingsClick,
-                        onContinueWatchingClick = onContinueWatchingSettingsClick,
-                        onDownloadsClick = onDownloadsSettingsClick,
-                        onAddonsClick = onAddonsSettingsClick,
-                        onPluginsClick = onPluginsSettingsClick,
-                        onAccountClick = onAccountSettingsClick,
-                        onSupportersContributorsClick = onSupportersContributorsSettingsClick,
-                        onLicensesAttributionsClick = onLicensesAttributionsSettingsClick,
-                        onCheckForUpdatesClick = onCheckForUpdatesClick,
-                        onCollectionsClick = onCollectionsSettingsClick,
-                    )
+                        AppScreenTab.Library -> {
+                            AppLibraryTabContent(
+                                libraryScrollToTopRequests = libraryScrollToTopRequests,
+                                onPosterClick = onLibraryPosterClick,
+                                onPosterLongClick = onLibraryPosterLongClick,
+                                onSectionViewAllClick = onLibrarySectionViewAllClick,
+                                onCloudFilePlay = onCloudFilePlay,
+                                onConnectCloudClick = onConnectCloudClick,
+                            )
+                        }
+
+                        AppScreenTab.Settings -> {
+                            AppSettingsTabContent(
+                                tabsRouteActiveState = tabsRouteActiveState,
+                                rootActionRequests = settingsRootActionRequests,
+                                requestedPageName = requestedSettingsPageName,
+                                onRequestedPageConsumed = onRequestedSettingsPageConsumed,
+                                onSwitchProfile = onSwitchProfile,
+                                onHomescreenClick = onHomescreenSettingsClick,
+                                onMetaScreenClick = onMetaScreenSettingsClick,
+                                onContinueWatchingClick = onContinueWatchingSettingsClick,
+                                onDownloadsClick = onDownloadsSettingsClick,
+                                onAddonsClick = onAddonsSettingsClick,
+                                onPluginsClick = onPluginsSettingsClick,
+                                onAccountClick = onAccountSettingsClick,
+                                onSupportersContributorsClick = onSupportersContributorsSettingsClick,
+                                onLicensesAttributionsClick = onLicensesAttributionsSettingsClick,
+                                onCheckForUpdatesClick = onCheckForUpdatesClick,
+                                onCollectionsClick = onCollectionsSettingsClick,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -3207,7 +3223,9 @@ private fun AppTabHost(
 @Composable
 private fun AppHomeTabContent(
     tabsRouteActiveState: State<Boolean>,
+    homeSelected: Boolean,
     homeScrollToTopRequests: Flow<Unit>,
+    modifier: Modifier,
     onCatalogClick: ((HomeCatalogSection) -> Unit)?,
     onPosterClick: ((MetaPreview) -> Unit)?,
     onPosterLongClick: ((MetaPreview) -> Unit)?,
@@ -3216,11 +3234,11 @@ private fun AppHomeTabContent(
     onFolderClick: ((collectionId: String, folderId: String) -> Unit)?,
     onInitialHomeContentRendered: () -> Unit,
 ) {
-    val animateCollectionGifsProvider = remember(tabsRouteActiveState) {
-        { tabsRouteActiveState.value }
+    val animateCollectionGifsProvider = remember(tabsRouteActiveState, homeSelected) {
+        { homeSelected && tabsRouteActiveState.value }
     }
     HomeScreen(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier,
         animateCollectionGifsProvider = animateCollectionGifsProvider,
         scrollToTopRequests = homeScrollToTopRequests,
         onCatalogClick = onCatalogClick,
