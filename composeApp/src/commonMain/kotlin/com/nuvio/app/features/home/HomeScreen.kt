@@ -79,15 +79,15 @@ import com.nuvio.app.features.collection.CollectionRepository
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.home.components.HomeCollectionRowSection
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import com.nuvio.app.features.trakt.TraktEpisodeMappingService
 import com.nuvio.app.features.home.components.continueWatchingHeroViewportReserveHeight
@@ -415,47 +415,76 @@ fun HomeScreen(
             val semaphore = Semaphore(NEXT_UP_RESOLUTION_CONCURRENCY)
             val freshResults = mutableMapOf<String, Pair<Long, ContinueWatchingItem>>()
             val processedFreshContentIds = mutableSetOf<String>()
-            val candidateBatches = resolutionCandidates.chunked(NEXT_UP_RESOLUTION_BATCH_SIZE)
 
-            for (batch in candidateBatches) {
-                val batchResults = batch.map { completedEntry ->
-                    async {
-                        semaphore.withPermit {
-                            resolveHomeNextUpCandidate(
-                                completedEntry = completedEntry,
-                                watchProgressEntries = watchProgressUiState.entries,
-                                watchedItems = watchedUiState.items,
-                                todayIsoDate = todayIsoDate,
-                                preferFurthestEpisode = continueWatchingPreferences.upNextFromFurthestEpisode,
-                                showUnairedNextUp = continueWatchingPreferences.showUnairedNextUp,
-                                dismissedNextUpKeys = continueWatchingPreferences.dismissedNextUpKeys,
-                                isTraktProgressActive = isTraktProgressActive,
-                            )
+            suspend fun resolveCandidatesStreaming(
+                candidates: List<CompletedSeriesCandidate>,
+            ) {
+                if (candidates.isEmpty()) return
+
+                val results = Channel<HomeNextUpCandidateResolution>(Channel.UNLIMITED)
+                candidates.forEach { completedEntry ->
+                    launch {
+                        val resolved = try {
+                            semaphore.withPermit {
+                                resolveHomeNextUpCandidate(
+                                    completedEntry = completedEntry,
+                                    watchProgressEntries = watchProgressUiState.entries,
+                                    watchedItems = watchedUiState.items,
+                                    todayIsoDate = todayIsoDate,
+                                    preferFurthestEpisode = continueWatchingPreferences.upNextFromFurthestEpisode,
+                                    showUnairedNextUp = continueWatchingPreferences.showUnairedNextUp,
+                                    dismissedNextUpKeys = continueWatchingPreferences.dismissedNextUpKeys,
+                                    isTraktProgressActive = isTraktProgressActive,
+                                )
+                            }
+                        } catch (error: Throwable) {
+                            if (error is CancellationException) throw error
+                            null
+                        }
+                        results.send(
+                            HomeNextUpCandidateResolution(
+                                candidate = completedEntry,
+                                resolved = resolved,
+                            ),
+                        )
+                    }
+                }
+
+                repeat(candidates.size) {
+                    val resolution = results.receive()
+                    processedFreshContentIds += resolution.candidate.content.id
+
+                    var changed = false
+                    resolution.resolved?.let { (contentId, item) ->
+                        if (cachedResolvedNextUpItems.size + freshResults.size < HomeContinueWatchingMaxRecentProgressItems) {
+                            val previous = freshResults.put(contentId, item)
+                            changed = previous != item
                         }
                     }
-                }.awaitAll()
-                batch.forEach { candidate -> processedFreshContentIds += candidate.content.id }
 
-                val resolvedBeforeBatch = freshResults.size
-                batchResults.filterNotNull().forEach { (contentId, item) ->
-                    freshResults[contentId] = item
-                }
-                val batchResolvedCount = freshResults.size - resolvedBeforeBatch
-                if (batchResolvedCount > 0) {
-                    val progressiveResults = cachedResolvedNextUpItems + freshResults
-                    withContext(Dispatchers.Main) {
-                        nextUpItemsBySeries = progressiveResults
-                        processedNextUpContentIds = (
-                            cachedResolvedNextUpItems.keys +
-                                processedFreshContentIds
-                            ).toSet()
+                    if (changed) {
+                        val progressiveResults = cachedResolvedNextUpItems + freshResults
+                        withContext(Dispatchers.Main) {
+                            nextUpItemsBySeries = progressiveResults
+                            processedNextUpContentIds = (
+                                cachedResolvedNextUpItems.keys +
+                                    processedFreshContentIds
+                                ).toSet()
+                        }
+                        saveContinueWatchingSnapshots(
+                            profileId = activeProfileId,
+                            nextUpItemsBySeries = progressiveResults,
+                            visibleContinueWatchingEntries = visibleContinueWatchingEntries,
+                            todayIsoDate = todayIsoDate,
+                            seedLastWatchedMap = seedLastWatchedMap,
+                        )
                     }
+                    yield()
                 }
-
-                if (cachedResolvedNextUpItems.size + freshResults.size >= HomeContinueWatchingMaxRecentProgressItems) {
-                    break
-                }
+                results.close()
             }
+
+            resolveCandidatesStreaming(resolutionCandidates)
 
             val results = cachedResolvedNextUpItems + freshResults
             withContext(Dispatchers.Main) {
@@ -478,55 +507,23 @@ fun HomeScreen(
                 return@withContext
             }
 
-            val deferredCandidateBatches = deferredResolutionCandidates.chunked(NEXT_UP_RESOLUTION_BATCH_SIZE)
-            for (batch in deferredCandidateBatches) {
-                if (cachedResolvedNextUpItems.size + freshResults.size >= HomeContinueWatchingMaxRecentProgressItems) {
-                    break
-                }
+            resolveCandidatesStreaming(deferredResolutionCandidates)
 
-                val batchResults = batch.map { completedEntry ->
-                    async {
-                        semaphore.withPermit {
-                            resolveHomeNextUpCandidate(
-                                completedEntry = completedEntry,
-                                watchProgressEntries = watchProgressUiState.entries,
-                                watchedItems = watchedUiState.items,
-                                todayIsoDate = todayIsoDate,
-                                preferFurthestEpisode = continueWatchingPreferences.upNextFromFurthestEpisode,
-                                showUnairedNextUp = continueWatchingPreferences.showUnairedNextUp,
-                                dismissedNextUpKeys = continueWatchingPreferences.dismissedNextUpKeys,
-                                isTraktProgressActive = isTraktProgressActive,
-                            )
-                        }
-                    }
-                }.awaitAll()
-                batch.forEach { candidate -> processedFreshContentIds += candidate.content.id }
-
-                val resolvedBeforeBatch = freshResults.size
-                batchResults.filterNotNull().forEach { (contentId, item) ->
-                    if (cachedResolvedNextUpItems.size + freshResults.size < HomeContinueWatchingMaxRecentProgressItems) {
-                        freshResults[contentId] = item
-                    }
-                }
-                if (freshResults.size > resolvedBeforeBatch) {
-                    val progressiveResults = cachedResolvedNextUpItems + freshResults
-                    withContext(Dispatchers.Main) {
-                        nextUpItemsBySeries = progressiveResults
-                        processedNextUpContentIds = (
-                            cachedResolvedNextUpItems.keys +
-                                processedFreshContentIds
-                            ).toSet()
-                    }
-                    saveContinueWatchingSnapshots(
-                        profileId = activeProfileId,
-                        nextUpItemsBySeries = progressiveResults,
-                        visibleContinueWatchingEntries = visibleContinueWatchingEntries,
-                        todayIsoDate = todayIsoDate,
-                        seedLastWatchedMap = seedLastWatchedMap,
-                    )
-                }
-                yield()
+            val deferredResults = cachedResolvedNextUpItems + freshResults
+            withContext(Dispatchers.Main) {
+                nextUpItemsBySeries = deferredResults
+                processedNextUpContentIds = (
+                    cachedResolvedNextUpItems.keys +
+                        processedFreshContentIds
+                    ).toSet()
             }
+            saveContinueWatchingSnapshots(
+                profileId = activeProfileId,
+                nextUpItemsBySeries = deferredResults,
+                visibleContinueWatchingEntries = visibleContinueWatchingEntries,
+                todayIsoDate = todayIsoDate,
+                seedLastWatchedMap = seedLastWatchedMap,
+            )
         }
     }
 
@@ -783,7 +780,6 @@ internal const val HomeNextUpInitialResolutionLimit = 32
 private const val MILLIS_PER_DAY = 24L * 60L * 60L * 1000L
 private const val OPTIMISTIC_NEXT_UP_SEED_WINDOW_MS = 3L * 60L * 1000L
 private const val NEXT_UP_RESOLUTION_CONCURRENCY = 4
-private const val NEXT_UP_RESOLUTION_BATCH_SIZE = NEXT_UP_RESOLUTION_CONCURRENCY
 
 internal data class HomeProgressDerivedState(
     val watchProgressUiState: WatchProgressUiState = WatchProgressUiState(),
@@ -1319,6 +1315,11 @@ private data class HomeContinueWatchingCandidate(
     val lastUpdatedEpochMs: Long,
     val item: ContinueWatchingItem,
     val isProgressEntry: Boolean,
+)
+
+private data class HomeNextUpCandidateResolution(
+    val candidate: CompletedSeriesCandidate,
+    val resolved: Pair<String, Pair<Long, ContinueWatchingItem>>?,
 )
 
 private fun saveContinueWatchingSnapshots(

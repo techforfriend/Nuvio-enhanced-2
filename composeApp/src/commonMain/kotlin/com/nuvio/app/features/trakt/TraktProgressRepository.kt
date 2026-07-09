@@ -24,6 +24,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
@@ -37,6 +38,7 @@ import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlin.math.abs
 
 private const val BASE_URL = "https://api.trakt.tv"
 private const val TRAKT_COMPLETION_PERCENT_THRESHOLD = 90f
@@ -53,6 +55,7 @@ private const val METADATA_HYDRATION_LIMIT = 110
 private const val REFRESH_BASE_INTERVAL_MS = 60L * 1000L
 private const val EPISODE_PROGRESS_CACHE_TTL_MS = 30L * 60L * 1000L
 private const val EPISODE_PROGRESS_FETCH_THROTTLE_MS = 60L * 1000L
+private const val OPTIMISTIC_PROGRESS_TTL_MS = 3L * 60L * 1000L
 private const val MILLIS_PER_DAY = 24L * 60L * 60L * 1000L
 private const val AMBIGUOUS_ID_MARKER = "__ambiguous__"
 
@@ -64,6 +67,11 @@ data class TraktProgressUiState(
 )
 
 object TraktProgressRepository {
+    private data class OptimisticProgressEntry(
+        val progress: WatchProgressEntry,
+        val expiresAtMs: Long,
+    )
+
     private val log = Logger.withTag("TraktProgress")
     private val json = Json { ignoreUnknownKeys = true }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -73,11 +81,13 @@ object TraktProgressRepository {
     val uiState: StateFlow<TraktProgressUiState> = _uiState.asStateFlow()
 
     private val hiddenProgressShowIds = MutableStateFlow<Set<String>>(emptySet())
+    private val optimisticProgress = MutableStateFlow<Map<String, OptimisticProgressEntry>>(emptyMap())
 
     private var hasLoaded = false
     private var refreshRequestId: Long = 0L
     private val refreshJobMutex = Mutex()
     private var inFlightRefresh: Deferred<Unit>? = null
+    private var remoteEntriesSnapshot: List<WatchProgressEntry> = emptyList()
     private var refreshIntervalMs = REFRESH_BASE_INTERVAL_MS
     private var lastKnownMoviesWatchedAt: String? = null
     private var lastKnownEpisodeActivityFingerprint: String? = null
@@ -138,6 +148,8 @@ object TraktProgressRepository {
     fun onProfileChanged() {
         invalidateInFlightRefreshes()
         hasLoaded = false
+        remoteEntriesSnapshot = emptyList()
+        optimisticProgress.value = emptyMap()
         hiddenProgressShowIds.value = emptySet()
         resetActivitySnapshot()
         resetShowProgressCaches()
@@ -148,6 +160,8 @@ object TraktProgressRepository {
     fun clearLocalState() {
         invalidateInFlightRefreshes()
         hasLoaded = false
+        remoteEntriesSnapshot = emptyList()
+        optimisticProgress.value = emptyMap()
         hiddenProgressShowIds.value = emptySet()
         resetActivitySnapshot()
         resetShowProgressCaches()
@@ -179,6 +193,18 @@ object TraktProgressRepository {
         }
     }
 
+    suspend fun invalidateAndRefresh() {
+        ensureLoaded()
+        invalidateInFlightRefreshes()
+        resetActivitySnapshot()
+        episodeProgressMutex.withLock {
+            episodeProgressFetchedAtMsByContentId.clear()
+            episodeProgressLastAttemptAtMsByContentId.clear()
+            inFlightEpisodeProgressContentIds.clear()
+        }
+        refreshNow()
+    }
+
     suspend fun refreshEpisodeProgress(
         contentId: String,
         forceRefresh: Boolean = false,
@@ -208,14 +234,14 @@ object TraktProgressRepository {
 
         try {
             val entries = fetchEpisodeProgressEntries(headers = headers, contentId = normalizedContentId)
-            val existingEntries = _uiState.value.entries
-            val merged = mergeNewestByVideoId(existingEntries + entries)
-            _uiState.value = _uiState.value.copy(entries = merged.sortedByDescending { it.lastUpdatedEpochMs })
+            remoteEntriesSnapshot = mergeNewestByVideoId(remoteEntriesSnapshot + entries)
+            reconcileOptimisticProgress(remoteEntriesSnapshot)
+            publishProgressState(entries = remoteEntriesSnapshot)
             episodeProgressMutex.withLock {
                 episodeProgressFetchedAtMsByContentId[cacheKey] = TraktPlatformClock.nowEpochMs()
             }
             if (entries.isNotEmpty()) {
-                launchHydration(requestId = refreshRequestId, entries = entries)
+                launchHydration(requestId = refreshRequestId, entries = _uiState.value.entries)
             }
         } finally {
             episodeProgressMutex.withLock {
@@ -295,11 +321,13 @@ object TraktProgressRepository {
         val requestId = nextRefreshRequestId()
         val headers = TraktAuthRepository.authorizedHeaders()
         if (headers == null) {
+            remoteEntriesSnapshot = emptyList()
+            optimisticProgress.value = emptyMap()
             _uiState.value = TraktProgressUiState()
             return
         }
 
-        _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+        publishProgressState(isLoading = true, errorMessage = null)
 
         val playbackEntries = runCatching {
             fetchPlaybackEntries(headers)
@@ -321,14 +349,14 @@ object TraktProgressRepository {
         // Merge new playback entries into the existing state rather than replacing it wholesale.
         // This prevents the CW list from briefly losing "next up" seeds (like One Piece) for the
         // ~2.8s gap between fetchPlaybackEntries completing and the full sync finishing.
-        val existingEntries = _uiState.value.entries
-        val mergedWithPlayback = if (existingEntries.isEmpty()) {
+        val existingEntries = remoteEntriesSnapshot
+        remoteEntriesSnapshot = if (existingEntries.isEmpty()) {
             playbackEntries
         } else {
             mergeNewestByVideoId(existingEntries + playbackEntries)
         }
-        _uiState.value = _uiState.value.copy(
-            entries = mergedWithPlayback,
+        publishProgressState(
+            entries = remoteEntriesSnapshot,
             isLoading = true,
             errorMessage = null,
             hasLoadedRemoteProgress = false,
@@ -351,7 +379,7 @@ object TraktProgressRepository {
 
         if (completedEntries == null) {
             if (!isLatestRefreshRequest(requestId)) return
-            _uiState.value = _uiState.value.copy(
+            publishProgressState(
                 isLoading = false,
                 errorMessage = null,
                 hasLoadedRemoteProgress = false,
@@ -361,18 +389,19 @@ object TraktProgressRepository {
 
         if (!isLatestRefreshRequest(requestId)) return
 
-        val merged = mergeNewestByVideoId(playbackEntries + completedEntries)
-        val sortedMerged = merged.sortedByDescending { it.lastUpdatedEpochMs }
+        remoteEntriesSnapshot = mergeNewestByVideoId(playbackEntries + completedEntries)
+        reconcileOptimisticProgress(remoteEntriesSnapshot)
 
-        _uiState.value = _uiState.value.copy(
-            entries = sortedMerged,
+        publishProgressState(
+            entries = remoteEntriesSnapshot,
             isLoading = false,
             errorMessage = null,
             hasLoadedRemoteProgress = true,
         )
-        
-        if (sortedMerged.isNotEmpty()) {
-            launchHydration(requestId = requestId, entries = sortedMerged)
+
+        val visibleEntries = _uiState.value.entries
+        if (visibleEntries.isNotEmpty()) {
+            launchHydration(requestId = requestId, entries = visibleEntries)
         }
     }
 
@@ -390,27 +419,129 @@ object TraktProgressRepository {
 
             if (!isLatestRefreshRequest(requestId)) return@launch
 
-            val merged = mergeEntriesPreferRichMetadata(
-                current = _uiState.value.entries,
-                hydrated = hydrated,
-            )
-            val sortedMerged = merged.sortedByDescending { it.lastUpdatedEpochMs }
-            _uiState.value = _uiState.value.copy(
-                entries = sortedMerged,
+            val hydratedByVideoId = hydrated.associateBy { it.videoId }
+            val remoteVideoIds = remoteEntriesSnapshot.mapTo(mutableSetOf()) { it.videoId }
+            val remoteHydrated = hydrated.filter { it.videoId in remoteVideoIds }
+            if (remoteHydrated.isNotEmpty()) {
+                remoteEntriesSnapshot = mergeEntriesPreferRichMetadata(
+                    current = remoteEntriesSnapshot,
+                    hydrated = remoteHydrated,
+                )
+            }
+
+            optimisticProgress.update { current ->
+                current.mapValues { (videoId, optimistic) ->
+                    val hydratedEntry = hydratedByVideoId[videoId] ?: return@mapValues optimistic
+                    val normalizedHydrated = hydratedEntry.normalizedCompletion()
+                    if (shouldReplaceEntry(existing = optimistic.progress, candidate = normalizedHydrated)) {
+                        optimistic.copy(progress = normalizedHydrated)
+                    } else {
+                        optimistic
+                    }
+                }
+            }
+
+            publishProgressState(
                 isLoading = false,
                 errorMessage = null,
             )
         }
     }
 
+    private fun publishProgressState(
+        entries: List<WatchProgressEntry> = remoteEntriesSnapshot,
+        isLoading: Boolean = _uiState.value.isLoading,
+        errorMessage: String? = _uiState.value.errorMessage,
+        hasLoadedRemoteProgress: Boolean = _uiState.value.hasLoadedRemoteProgress,
+    ) {
+        _uiState.value = TraktProgressUiState(
+            entries = mergeWithActiveOptimistic(entries),
+            isLoading = isLoading,
+            errorMessage = errorMessage,
+            hasLoadedRemoteProgress = hasLoadedRemoteProgress,
+        )
+    }
+
+    private fun mergeWithActiveOptimistic(entries: List<WatchProgressEntry>): List<WatchProgressEntry> {
+        val optimisticEntries = activeOptimisticEntries()
+        if (optimisticEntries.isEmpty()) {
+            return entries.sortedByDescending { it.lastUpdatedEpochMs }
+        }
+        return mergeNewestByVideoId(entries + optimisticEntries)
+    }
+
+    private fun activeOptimisticEntries(
+        now: Long = TraktPlatformClock.nowEpochMs(),
+    ): List<WatchProgressEntry> {
+        val current = optimisticProgress.value
+        if (current.isEmpty()) return emptyList()
+        val active = current.filterValues { entry -> entry.expiresAtMs > now }
+        if (active.size != current.size) {
+            optimisticProgress.value = active
+        }
+        return active.values.map { it.progress }
+    }
+
+    private fun putOptimisticProgress(entry: WatchProgressEntry) {
+        val now = TraktPlatformClock.nowEpochMs()
+        optimisticProgress.update { current ->
+            val active = current
+                .filterValues { optimistic -> optimistic.expiresAtMs > now }
+                .toMutableMap()
+            val existing = active[entry.videoId]?.progress
+            if (existing == null || shouldReplaceProgressSnapshotEntry(existing = existing, candidate = entry)) {
+                active[entry.videoId] = OptimisticProgressEntry(
+                    progress = entry,
+                    expiresAtMs = now + OPTIMISTIC_PROGRESS_TTL_MS,
+                )
+            }
+            active
+        }
+    }
+
+    private fun removeOptimisticProgress(
+        shouldRemove: (WatchProgressEntry) -> Boolean,
+    ) {
+        optimisticProgress.update { current ->
+            current.filterValues { optimistic -> !shouldRemove(optimistic.progress) }
+        }
+    }
+
+    private fun reconcileOptimisticProgress(remoteEntries: List<WatchProgressEntry>) {
+        if (remoteEntries.isEmpty() || optimisticProgress.value.isEmpty()) return
+        val remoteByVideoId = remoteEntries.associateBy { it.videoId }
+        val now = TraktPlatformClock.nowEpochMs()
+        optimisticProgress.update { current ->
+            current.filter { (videoId, optimistic) ->
+                if (optimistic.expiresAtMs <= now) return@filter false
+                val remoteEntry = remoteByVideoId[videoId] ?: return@filter true
+                !remoteConfirmsOptimisticEntry(
+                    remote = remoteEntry,
+                    optimistic = optimistic.progress,
+                )
+            }
+        }
+    }
+
+    private fun remoteConfirmsOptimisticEntry(
+        remote: WatchProgressEntry,
+        optimistic: WatchProgressEntry,
+    ): Boolean {
+        val normalizedRemote = remote.normalizedCompletion()
+        val normalizedOptimistic = optimistic.normalizedCompletion()
+        val remoteNewEnough = normalizedRemote.lastUpdatedEpochMs >= normalizedOptimistic.lastUpdatedEpochMs - 60_000L
+        if (normalizedOptimistic.isEffectivelyCompleted) {
+            return normalizedRemote.isEffectivelyCompleted && remoteNewEnough
+        }
+
+        val closeEnough = abs(normalizedRemote.progressFraction - normalizedOptimistic.progressFraction) <= 0.03f
+        return closeEnough && remoteNewEnough
+    }
+
     fun applyOptimisticProgress(entry: WatchProgressEntry) {
         if (!TraktAuthRepository.isAuthenticated.value) return
-        val current = _uiState.value.entries.associateBy { it.videoId }.toMutableMap()
         val normalizedEntry = entry.normalizedCompletion()
-        val existing = current[normalizedEntry.videoId]
-        if (existing == null || normalizedEntry.lastUpdatedEpochMs >= existing.lastUpdatedEpochMs) {
-            current[normalizedEntry.videoId] = normalizedEntry
-        }
+        putOptimisticProgress(normalizedEntry)
         if (normalizedEntry.isCompleted && normalizedEntry.seasonNumber != null && normalizedEntry.episodeNumber != null) {
             optimisticallyAddWatchedEpisode(
                 contentId = normalizedEntry.parentMetaId,
@@ -418,14 +549,15 @@ object TraktProgressRepository {
                 episode = normalizedEntry.episodeNumber,
             )
         }
-        _uiState.value = _uiState.value.copy(entries = current.values.sortedByDescending { it.lastUpdatedEpochMs })
+        publishProgressState()
     }
 
     fun applyOptimisticRemoval(videoId: String) {
         if (!TraktAuthRepository.isAuthenticated.value) return
         if (videoId.isBlank()) return
-        val filtered = _uiState.value.entries.filterNot { it.videoId == videoId }
-        _uiState.value = _uiState.value.copy(entries = filtered)
+        removeOptimisticProgress { it.videoId == videoId }
+        remoteEntriesSnapshot = remoteEntriesSnapshot.filterNot { it.videoId == videoId }
+        publishProgressState()
     }
 
     fun applyOptimisticRemoval(
@@ -436,7 +568,7 @@ object TraktProgressRepository {
         if (!TraktAuthRepository.isAuthenticated.value) return
         val normalizedContentId = contentId.trim()
         if (normalizedContentId.isBlank()) return
-        val filtered = _uiState.value.entries.filterNot { entry ->
+        val shouldRemove: (WatchProgressEntry) -> Boolean = { entry ->
             if (entry.parentMetaId != normalizedContentId) {
                 false
             } else if (seasonNumber != null && episodeNumber != null) {
@@ -445,6 +577,8 @@ object TraktProgressRepository {
                 true
             }
         }
+        removeOptimisticProgress(shouldRemove)
+        remoteEntriesSnapshot = remoteEntriesSnapshot.filterNot(shouldRemove)
         if (seasonNumber != null && episodeNumber != null) {
             optimisticallyRemoveWatchedEpisode(
                 contentId = normalizedContentId,
@@ -452,7 +586,7 @@ object TraktProgressRepository {
                 episode = episodeNumber,
             )
         }
-        _uiState.value = _uiState.value.copy(entries = filtered)
+        publishProgressState()
     }
 
     suspend fun removeProgress(

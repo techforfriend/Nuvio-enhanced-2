@@ -283,7 +283,7 @@ object WatchProgressRepository {
 
         if (shouldUseTraktProgress()) {
             log.d { "Force refreshing Trakt watch progress for profile $profileId" }
-            runCatching { TraktProgressRepository.refreshNow() }
+            runCatching { TraktProgressRepository.invalidateAndRefresh() }
                 .onFailure { error ->
                     if (error is CancellationException) throw error
                     log.e(error) { "Failed to force refresh Trakt progress" }
