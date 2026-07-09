@@ -14,6 +14,7 @@ import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.trakt.TraktAuthRepository
 import com.nuvio.app.features.trakt.TraktProgressRepository
 import com.nuvio.app.features.trakt.TraktSettingsRepository
+import com.nuvio.app.features.trakt.WatchProgressSource
 import com.nuvio.app.features.trakt.isTraktCompatibleId
 import com.nuvio.app.features.trakt.resolveEffectiveContentId
 import com.nuvio.app.features.trakt.shouldUseTraktProgress as shouldUseTraktProgressSource
@@ -302,6 +303,119 @@ object WatchProgressRepository {
         pullFromServer(profileId)
     }
 
+    suspend fun selectWatchProgressSource(profileId: Int, source: WatchProgressSource) {
+        TraktSettingsRepository.ensureLoaded()
+        val previousSource = TraktSettingsRepository.uiState.value.watchProgressSource
+        if (previousSource == source) return
+
+        ensureLoaded()
+        if (currentProfileId != profileId) {
+            loadFromDisk(profileId)
+        }
+
+        ContinueWatchingEnrichmentCache.clearAll(profileId)
+        metadataResolutionJob?.cancel()
+        TraktSettingsRepository.setWatchProgressSource(source)
+
+        val removedLocalEntries = removeLocalEntriesMatching { entry ->
+            isTraktCompatibleId(entry.parentMetaId)
+        }
+        if (removedLocalEntries) {
+            persist()
+        }
+
+        when (source) {
+            WatchProgressSource.TRAKT -> {
+                TraktProgressRepository.clearLocalState()
+                publish()
+                if (TraktAuthRepository.isAuthenticated.value) {
+                    runCatching { TraktProgressRepository.invalidateAndRefresh() }
+                        .onFailure { error ->
+                            if (error is CancellationException) throw error
+                            log.e(error) { "Failed to refresh Trakt progress after source selection" }
+                        }
+                    publish()
+                }
+            }
+
+            WatchProgressSource.NUVIO_SYNC -> {
+                publish()
+                forceSnapshotRefreshFromServer(profileId)
+            }
+        }
+    }
+
+    suspend fun clearLocalAndForceSnapshotRefreshFromServer(profileId: Int) {
+        ensureLoaded()
+        if (currentProfileId != profileId) {
+            loadFromDisk(profileId)
+        }
+
+        val operationGeneration = activeOperationGeneration(profileId) ?: run {
+            log.d { "Skipping clear and force watch progress refresh for inactive profile $profileId" }
+            return
+        }
+
+        metadataResolutionJob?.cancel()
+        clearLocalEntries()
+        lastSuccessfulPushEpochMs = 0L
+        deltaCursorEventId = 0L
+        deltaInitialized = false
+        publish()
+        persist()
+
+        if (shouldUseTraktProgress()) {
+            log.d { "Clearing local Trakt watch progress cache and force refreshing profile $profileId" }
+            TraktProgressRepository.clearLocalState()
+            TraktProgressRepository.invalidateAndRefresh()
+            if (isActiveOperation(profileId, operationGeneration)) {
+                publish()
+            }
+            return
+        }
+
+        val authState = AuthRepository.state.value
+        if (authState !is AuthState.Authenticated || authState.isAnonymous) {
+            log.d { "Cleared local watch progress but skipped remote refresh because Nuvio Sync is not authenticated" }
+            return
+        }
+
+        if (isPullingNuvioSyncFromServer) {
+            log.d { "Cleared local watch progress but skipped remote refresh because a Nuvio sync pull is already running" }
+            return
+        }
+
+        isPullingNuvioSyncFromServer = true
+        try {
+            val pullStartedEpochMs = WatchProgressClock.nowEpochMs()
+            val cursorBeforeSnapshot = try {
+                syncAdapter.getDeltaCursor(profileId)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                log.w { "Watch progress delta cursor unavailable during clear refresh, falling back to snapshot reset: ${error.message}" }
+                null
+            }
+
+            pullFullFromAdapter(
+                profileId = profileId,
+                pullStartedEpochMs = pullStartedEpochMs,
+                resetDeltaState = cursorBeforeSnapshot == null,
+                operationGeneration = operationGeneration,
+                preserveLocalEntries = false,
+            )
+            if (!isActiveOperation(profileId, operationGeneration)) return
+
+            if (cursorBeforeSnapshot != null) {
+                deltaCursorEventId = cursorBeforeSnapshot
+                deltaInitialized = true
+                persist()
+            }
+        } finally {
+            isPullingNuvioSyncFromServer = false
+        }
+    }
+
     private suspend fun pullSupabaseDeltaFromServer(
         profileId: Int,
         pullStartedEpochMs: Long,
@@ -432,21 +546,27 @@ object WatchProgressRepository {
         pullStartedEpochMs: Long,
         resetDeltaState: Boolean,
         operationGeneration: Long,
+        preserveLocalEntries: Boolean = true,
     ) {
         val serverEntries = syncAdapter.pull(profileId = profileId)
         if (!isActiveOperation(profileId, operationGeneration)) return
         log.d {
             "Watch progress snapshot fetched ${serverEntries.size} entries for profile $profileId " +
-                "resetDeltaState=$resetDeltaState"
+                "resetDeltaState=$resetDeltaState preserveLocalEntries=$preserveLocalEntries"
         }
-        replaceLocalEntries(
+        val updatedEntries = if (preserveLocalEntries) {
             mergeWatchProgressEntriesPreservingUnsynced(
-            serverEntries = serverEntries,
-            localEntries = localEntriesSnapshot(),
-            lastSuccessfulPushEpochMs = lastSuccessfulPushEpochMs,
-            pullStartedEpochMs = pullStartedEpochMs,
-            ),
-        )
+                serverEntries = serverEntries,
+                localEntries = localEntriesSnapshot(),
+                lastSuccessfulPushEpochMs = lastSuccessfulPushEpochMs,
+                pullStartedEpochMs = pullStartedEpochMs,
+            )
+        } else {
+            serverEntries.associate { record ->
+                record.videoId to record.toWatchProgressEntry(cached = null)
+            }
+        }
+        replaceLocalEntries(updatedEntries)
         if (resetDeltaState) {
             deltaCursorEventId = 0L
             deltaInitialized = false
@@ -1104,6 +1224,19 @@ object WatchProgressRepository {
             entriesByVideoId.clear()
         }
     }
+
+    private fun removeLocalEntriesMatching(predicate: (WatchProgressEntry) -> Boolean): Boolean =
+        synchronized(entriesLock) {
+            val filteredEntries = entriesByVideoId
+                .filterValues { entry -> !predicate(entry) }
+                .toMutableMap()
+            if (filteredEntries.size == entriesByVideoId.size) {
+                false
+            } else {
+                entriesByVideoId = filteredEntries
+                true
+            }
+        }
 
     private fun replaceLocalEntries(entries: Collection<WatchProgressEntry>) {
         synchronized(entriesLock) {

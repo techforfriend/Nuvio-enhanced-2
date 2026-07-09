@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -77,7 +78,6 @@ import com.nuvio.app.core.ui.NuvioBottomSheetDivider
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
-import com.nuvio.app.core.ui.withDuplicateSafeLazyKeys
 import com.nuvio.app.features.downloads.DownloadsRepository
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -842,32 +842,6 @@ private fun FilterChip(
 // Stream List
 // ---------------------------------------------------------------------------
 
-private const val STREAM_CONTENT_TYPE_LOADING = "streams_loading"
-private const val STREAM_CONTENT_TYPE_EMPTY = "streams_empty"
-private const val STREAM_CONTENT_TYPE_SECTION_HEADER = "streams_section_header"
-private const val STREAM_CONTENT_TYPE_SOURCE_HEADER = "streams_source_header"
-private const val STREAM_CONTENT_TYPE_STREAM = "streams_stream"
-private const val STREAM_CONTENT_TYPE_FOOTER_LOADING = "streams_footer_loading"
-private const val STREAM_CONTENT_TYPE_BOTTOM_SPACER = "streams_bottom_spacer"
-
-private data class StreamSectionRenderModel(
-    val sectionKey: String,
-    val group: AddonStreamGroup,
-    val sources: List<StreamSourceRenderModel>,
-    val showSourceHeaders: Boolean,
-)
-
-private data class StreamSourceRenderModel(
-    val sourceKey: String,
-    val sourceName: String,
-    val streams: List<StreamCardRenderModel>,
-)
-
-private data class StreamCardRenderModel(
-    val lazyKey: String,
-    val stream: StreamItem,
-)
-
 @Composable
 internal fun StreamList(
     uiState: StreamsUiState,
@@ -883,9 +857,6 @@ internal fun StreamList(
     val hasGroups = filteredGroups.isNotEmpty()
     val hasAnyStreams = filteredGroups.any { it.streams.isNotEmpty() }
     val anyLoading = filteredGroups.any { it.isLoading }
-    val streamSections = remember(filteredGroups) {
-        buildStreamSectionRenderModels(filteredGroups)
-    }
     val torrentNotSupportedText = stringResource(Res.string.streams_torrent_not_supported)
     val streamBadgeSettings by remember {
         StreamBadgeSettingsRepository.ensureLoaded()
@@ -902,27 +873,22 @@ internal fun StreamList(
     ) {
         when {
             hasGroups && anyLoading && !hasAnyStreams -> {
-                item(
-                    key = "streams_loading",
-                    contentType = STREAM_CONTENT_TYPE_LOADING,
-                ) {
+                item {
                     LoadingStateBlock()
                 }
             }
 
             !hasAnyStreams && !uiState.isAnyLoading -> {
-                item(
-                    key = "streams_empty",
-                    contentType = STREAM_CONTENT_TYPE_EMPTY,
-                ) {
+                item {
                     EmptyStateBlock(reason = uiState.emptyStateReason)
                 }
             }
 
             else -> {
-                streamSections.forEach { section ->
+                filteredGroups.forEachIndexed { groupIndex, group ->
                     streamSection(
-                        section = section,
+                        sectionKey = streamSectionRenderKey(groupIndex = groupIndex, group = group),
+                        group = group,
                         showHeader = uiState.selectedFilter == null,
                         debridEnabled = debridEnabled,
                         appendInstantServiceToDefaultName = appendInstantServiceToDefaultName,
@@ -937,17 +903,11 @@ internal fun StreamList(
                     )
                 }
                 if (anyLoading) {
-                    item(
-                        key = "streams_footer_loading",
-                        contentType = STREAM_CONTENT_TYPE_FOOTER_LOADING,
-                    ) {
+                    item {
                         FooterLoadingBlock()
                     }
                 }
-                item(
-                    key = "streams_bottom_spacer",
-                    contentType = STREAM_CONTENT_TYPE_BOTTOM_SPACER,
-                ) {
+                item {
                     Spacer(modifier = Modifier.height(nuvioSafeBottomPadding(80.dp)))
                 }
             }
@@ -955,45 +915,9 @@ internal fun StreamList(
     }
 }
 
-private fun buildStreamSectionRenderModels(groups: List<AddonStreamGroup>): List<StreamSectionRenderModel> =
-    groups
-        .withDuplicateSafeLazyKeys { group -> streamSectionRenderKey(group) }
-        .map { keyedGroup ->
-            val group = keyedGroup.value
-            val sectionKey = keyedGroup.lazyKey.toString()
-            val streamsBySource = group.streams.groupBy(::streamSourceName)
-            val sortedSources = streamsBySource.keys.sortedBy { it.lowercase() }
-
-            StreamSectionRenderModel(
-                sectionKey = sectionKey,
-                group = group,
-                sources = sortedSources.map { sourceName ->
-                    StreamSourceRenderModel(
-                        sourceKey = streamSourceRenderKey(sectionKey = sectionKey, sourceName = sourceName),
-                        sourceName = sourceName,
-                        streams = streamsBySource[sourceName]
-                            .orEmpty()
-                            .withDuplicateSafeLazyKeys { stream ->
-                                streamCardRenderKey(
-                                    sectionKey = sectionKey,
-                                    sourceName = sourceName,
-                                    stream = stream,
-                                )
-                            }
-                            .map { keyedStream ->
-                                StreamCardRenderModel(
-                                    lazyKey = keyedStream.lazyKey.toString(),
-                                    stream = keyedStream.value,
-                                )
-                            },
-                    )
-                },
-                showSourceHeaders = sortedSources.size > 1,
-            )
-        }
-
 private fun LazyListScope.streamSection(
-    section: StreamSectionRenderModel,
+    sectionKey: String,
+    group: AddonStreamGroup,
     showHeader: Boolean,
     debridEnabled: Boolean,
     appendInstantServiceToDefaultName: Boolean,
@@ -1006,14 +930,10 @@ private fun LazyListScope.streamSection(
     resumePositionMs: Long?,
     resumeProgressFraction: Float?,
 ) {
-    val group = section.group
     if (group.streams.isEmpty() && !group.isLoading) return
 
     if (showHeader) {
-        item(
-            key = "stream_section_header_${section.sectionKey}",
-            contentType = STREAM_CONTENT_TYPE_SECTION_HEADER,
-        ) {
+        item(key = "header_$sectionKey") {
             StreamSectionHeader(
                 addonName = group.addonName,
                 isLoading = group.isLoading,
@@ -1021,22 +941,31 @@ private fun LazyListScope.streamSection(
         }
     }
 
-    section.sources.forEach { source ->
-        if (section.showSourceHeaders) {
-            item(
-                key = source.sourceKey,
-                contentType = STREAM_CONTENT_TYPE_SOURCE_HEADER,
-            ) {
-                StreamSourceHeader(sourceName = source.sourceName)
+    val streamsBySource = group.streams.groupBy { stream ->
+        stream.sourceName?.takeIf { it.isNotBlank() } ?: stream.addonName
+    }
+    val sortedSources = streamsBySource.keys.sortedBy { it.lowercase() }
+    val showSourceHeaders = sortedSources.size > 1
+
+    sortedSources.forEachIndexed { sourceIndex, sourceName ->
+        val sourceStreams = streamsBySource[sourceName].orEmpty()
+        if (showSourceHeaders) {
+            item(key = "source_${sectionKey}_$sourceIndex") {
+                StreamSourceHeader(sourceName = sourceName)
             }
         }
 
-        items(
-            items = source.streams,
-            key = { renderItem -> renderItem.lazyKey },
-            contentType = { STREAM_CONTENT_TYPE_STREAM },
-        ) { renderItem ->
-            val stream = renderItem.stream
+        itemsIndexed(
+            items = sourceStreams,
+            key = { index, stream ->
+                streamCardRenderKey(
+                    sectionKey = sectionKey,
+                    sourceIndex = sourceIndex,
+                    itemIndex = index,
+                    stream = stream,
+                )
+            },
+        ) { _, stream ->
             val isSelectable = stream.isSelectableForPlayback(debridEnabled)
             val isUnsupportedTorrentStream =
                 stream.needsLocalDebridResolve &&
@@ -1067,42 +996,28 @@ private fun LazyListScope.streamSection(
     }
 }
 
-internal fun streamSectionRenderKey(group: AddonStreamGroup): String = buildString {
-    append("stream_section")
-    appendLazyKeyPart(group.addonId.takeIf { it.isNotBlank() } ?: group.addonName)
-}
-
-private fun streamSourceName(stream: StreamItem): String =
-    stream.sourceName?.takeIf { it.isNotBlank() } ?: stream.addonName
-
-private fun streamSourceRenderKey(
-    sectionKey: String,
-    sourceName: String,
-): String = buildString {
-    append("stream_source")
-    appendLazyKeyPart(sectionKey)
-    appendLazyKeyPart(sourceName)
-}
+internal fun streamSectionRenderKey(
+    groupIndex: Int,
+    group: AddonStreamGroup,
+): String = "$groupIndex:${group.addonId}"
 
 internal fun streamCardRenderKey(
     sectionKey: String,
-    sourceName: String,
+    sourceIndex: Int,
+    itemIndex: Int,
     stream: StreamItem,
 ): String = buildString {
-    append("stream_card")
-    appendLazyKeyPart(sectionKey)
-    appendLazyKeyPart(sourceName)
-    appendLazyKeyPart(stream.url ?: stream.infoHash ?: stream.clientResolve?.infoHash ?: stream.streamLabel)
-    appendLazyKeyPart(stream.fileIdx)
-    appendLazyKeyPart(stream.externalUrl)
-}
-
-private fun StringBuilder.appendLazyKeyPart(value: Any?) {
-    val text = value?.toString()?.trim().orEmpty()
+    append(sectionKey)
     append(':')
-    append(text.length)
+    append(sourceIndex)
     append(':')
-    append(text)
+    append(itemIndex)
+    append(':')
+    append(stream.url ?: stream.infoHash ?: stream.clientResolve?.infoHash ?: stream.streamLabel)
+    stream.externalUrl?.let {
+        append(':')
+        append(it)
+    }
 }
 
 // ---------------------------------------------------------------------------

@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalUriHandler
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.features.library.LibrarySourceMode
+import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.trakt.TraktAuthRepository
 import com.nuvio.app.features.trakt.TraktBrandAsset
 import com.nuvio.app.features.trakt.TraktAuthUiState
@@ -50,6 +52,8 @@ import com.nuvio.app.features.trakt.WatchProgressSource
 import com.nuvio.app.features.trakt.TRAKT_CONTINUE_WATCHING_DAYS_CAP_ALL
 import com.nuvio.app.features.trakt.normalizeTraktContinueWatchingDaysCap
 import com.nuvio.app.features.trakt.traktBrandPainter
+import com.nuvio.app.features.watchprogress.WatchProgressRepository
+import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
 import nuvio.composeapp.generated.resources.settings_playback_dialog_close
@@ -157,6 +161,7 @@ private fun TraktFeatureRows(
     var showContinueWatchingWindowDialog by rememberSaveable { mutableStateOf(false) }
     var showMoreLikeThisSourceDialog by rememberSaveable { mutableStateOf(false) }
     var statusMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     val librarySourceValue = librarySourceModeLabel(settingsUiState.librarySourceMode)
     val watchProgressValue = watchProgressSourceLabel(settingsUiState.watchProgressSource)
@@ -234,7 +239,12 @@ private fun TraktFeatureRows(
         WatchProgressSourceDialog(
             selectedSource = settingsUiState.watchProgressSource,
             onSourceSelected = { source ->
-                TraktSettingsRepository.setWatchProgressSource(source)
+                scope.launch {
+                    WatchProgressRepository.selectWatchProgressSource(
+                        profileId = ProfileRepository.activeProfileId,
+                        source = source,
+                    )
+                }
                 statusMessage = if (source == WatchProgressSource.TRAKT) {
                     traktProgressSelectedMessage
                 } else {
