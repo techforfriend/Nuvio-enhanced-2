@@ -3,6 +3,7 @@ package com.nuvio.app.features.trakt
 import co.touchlab.kermit.Logger
 import com.nuvio.app.features.addons.httpGetTextWithHeaders
 import com.nuvio.app.features.addons.httpRequestRaw
+import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.tmdb.TmdbService
 import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesRepository
@@ -19,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,6 +66,11 @@ data class TraktProgressUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val hasLoadedRemoteProgress: Boolean = false,
+)
+
+private data class TraktMetadataHydrationResult(
+    val entries: List<WatchProgressEntry>,
+    val meta: MetaDetails?,
 )
 
 object TraktProgressRepository {
@@ -410,41 +417,15 @@ object TraktProgressRepository {
         entries: List<WatchProgressEntry>,
     ) {
         scope.launch {
-            val hydrated = runCatching {
-                hydrateEntriesFromAddonMeta(entries)
+            runCatching {
+                hydrateEntriesFromAddonMeta(
+                    requestId = requestId,
+                    entries = entries,
+                )
             }.onFailure { error ->
                 if (error is CancellationException) throw error
                 log.w { "Failed to hydrate Trakt metadata: ${error.message}" }
-            }.getOrNull() ?: return@launch
-
-            if (!isLatestRefreshRequest(requestId)) return@launch
-
-            val hydratedByVideoId = hydrated.associateBy { it.videoId }
-            val remoteVideoIds = remoteEntriesSnapshot.mapTo(mutableSetOf()) { it.videoId }
-            val remoteHydrated = hydrated.filter { it.videoId in remoteVideoIds }
-            if (remoteHydrated.isNotEmpty()) {
-                remoteEntriesSnapshot = mergeEntriesPreferRichMetadata(
-                    current = remoteEntriesSnapshot,
-                    hydrated = remoteHydrated,
-                )
             }
-
-            optimisticProgress.update { current ->
-                current.mapValues { (videoId, optimistic) ->
-                    val hydratedEntry = hydratedByVideoId[videoId] ?: return@mapValues optimistic
-                    val normalizedHydrated = hydratedEntry.normalizedCompletion()
-                    if (shouldReplaceEntry(existing = optimistic.progress, candidate = normalizedHydrated)) {
-                        optimistic.copy(progress = normalizedHydrated)
-                    } else {
-                        optimistic
-                    }
-                }
-            }
-
-            publishProgressState(
-                isLoading = false,
-                errorMessage = null,
-            )
         }
     }
 
@@ -1176,36 +1157,105 @@ object TraktProgressRepository {
     private fun isLatestRefreshRequest(requestId: Long): Boolean = refreshRequestId == requestId
 
     private suspend fun hydrateEntriesFromAddonMeta(
+        requestId: Long,
         entries: List<WatchProgressEntry>,
-    ): List<WatchProgressEntry> = coroutineScope {
-        if (entries.isEmpty()) return@coroutineScope entries
+    ) = coroutineScope {
+        if (entries.isEmpty()) return@coroutineScope
 
-        val uniqueContent = entries
-            .map { entry -> entry.parentMetaType to entry.parentMetaId }
-            .distinct()
+        val entriesByContent = entries
+            .groupBy { entry -> entry.parentMetaType to entry.parentMetaId }
+            .entries
             .take(METADATA_HYDRATION_LIMIT)
 
         val semaphore = Semaphore(METADATA_FETCH_CONCURRENCY)
-        val metadataByContent = uniqueContent
-            .map { (metaType, metaId) ->
-                async {
-                    semaphore.withPermit {
-                        val normalizedType = when (metaType.lowercase()) {
-                            "movie", "film" -> "movie"
-                            else -> "series"
-                        }
-                        val meta = withTimeoutOrNull(METADATA_FETCH_TIMEOUT_MS) {
-                            MetaDetailsRepository.fetch(type = normalizedType, id = metaId)
-                        }
-                        (metaType to metaId) to meta
-                    }
+        val results = Channel<TraktMetadataHydrationResult>(Channel.UNLIMITED)
+        entriesByContent.forEach { (key, contentEntries) ->
+            launch {
+                val (metaType, metaId) = key
+                val meta = semaphore.withPermit {
+                    fetchAddonMetaForHydration(metaType = metaType, metaId = metaId)
+                }
+                results.send(
+                    TraktMetadataHydrationResult(
+                        entries = contentEntries,
+                        meta = meta,
+                    ),
+                )
+            }
+        }
+
+        repeat(entriesByContent.size) {
+            val result = results.receive()
+            if (!isLatestRefreshRequest(requestId)) return@coroutineScope
+            val meta = result.meta ?: return@repeat
+            val hydrated = hydrateEntriesWithAddonMeta(entries = result.entries, meta = meta)
+            if (hydrated.isEmpty()) return@repeat
+
+            val hydratedByVideoId = hydrated.associateBy { entry -> entry.videoId }
+            val remoteVideoIds = remoteEntriesSnapshot.mapTo(mutableSetOf()) { entry -> entry.videoId }
+            val remoteHydrated = hydrated.filter { entry -> entry.videoId in remoteVideoIds }
+            var changed = false
+            if (remoteHydrated.isNotEmpty()) {
+                val merged = mergeEntriesPreferRichMetadata(
+                    current = remoteEntriesSnapshot,
+                    hydrated = remoteHydrated,
+                )
+                if (merged != remoteEntriesSnapshot) {
+                    remoteEntriesSnapshot = merged
+                    changed = true
                 }
             }
-            .awaitAll()
-            .toMap()
 
+            optimisticProgress.update { current ->
+                val updated = current.mapValues { (videoId, optimistic) ->
+                    val hydratedEntry = hydratedByVideoId[videoId] ?: return@mapValues optimistic
+                    val normalizedHydrated = hydratedEntry.normalizedCompletion()
+                    if (shouldReplaceEntry(existing = optimistic.progress, candidate = normalizedHydrated)) {
+                        optimistic.copy(progress = normalizedHydrated)
+                    } else {
+                        optimistic
+                    }
+                }
+                if (updated != current) {
+                    changed = true
+                }
+                updated
+            }
+
+            if (changed) {
+                publishProgressState(
+                    isLoading = false,
+                    errorMessage = null,
+                )
+            }
+        }
+        results.close()
+    }
+
+    private suspend fun fetchAddonMetaForHydration(
+        metaType: String,
+        metaId: String,
+    ): MetaDetails? {
+        val normalizedType = when (metaType.lowercase()) {
+            "movie", "film" -> "movie"
+            else -> "series"
+        }
+        return try {
+            withTimeoutOrNull(METADATA_FETCH_TIMEOUT_MS) {
+                MetaDetailsRepository.fetch(type = normalizedType, id = metaId)
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    private suspend fun hydrateEntriesWithAddonMeta(
+        entries: List<WatchProgressEntry>,
+        meta: MetaDetails,
+    ): List<WatchProgressEntry> =
         entries.map { entry ->
-            val meta = metadataByContent[entry.parentMetaType to entry.parentMetaId] ?: return@map entry
             var resolvedSeason = entry.seasonNumber
             var resolvedEpisode = entry.episodeNumber
 
@@ -1255,7 +1305,6 @@ object TraktProgressRepository {
                     ?: meta.description,
             )
         }
-    }
 
     private fun mapPlaybackMovie(item: TraktPlaybackItem, fallbackIndex: Int): WatchProgressEntry? {
         val movie = item.movie ?: return null
