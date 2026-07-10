@@ -17,13 +17,15 @@ private enum NuvioComposeHost {
 
     static func wrap(
         _ contentController: UIViewController,
-        disablesInteractiveContentPopGesture: Bool = false
+        disablesInteractiveContentPopGesture: Bool = false,
+        onTabBarAvailable: ((UITabBar) -> Void)? = nil
     ) -> RootComposeViewController {
         _ = registerPlayerBridge
         contentController.view.backgroundColor = nuvioBackgroundColor
         return RootComposeViewController(
             contentController: contentController,
-            disablesInteractiveContentPopGesture: disablesInteractiveContentPopGesture
+            disablesInteractiveContentPopGesture: disablesInteractiveContentPopGesture,
+            onTabBarAvailable: onTabBarAvailable
         )
     }
 }
@@ -34,13 +36,16 @@ private enum NuvioComposeHost {
 final class RootComposeViewController: UIViewController {
     private let contentController: UIViewController
     private let disablesInteractiveContentPopGesture: Bool
+    private let onTabBarAvailable: ((UITabBar) -> Void)?
 
     init(
         contentController: UIViewController,
-        disablesInteractiveContentPopGesture: Bool
+        disablesInteractiveContentPopGesture: Bool,
+        onTabBarAvailable: ((UITabBar) -> Void)?
     ) {
         self.contentController = contentController
         self.disablesInteractiveContentPopGesture = disablesInteractiveContentPopGesture
+        self.onTabBarAvailable = onTabBarAvailable
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -103,6 +108,9 @@ final class RootComposeViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         setInteractiveContentPopGestureEnabled(false)
+        if let tabBar = tabBarController?.tabBar {
+            onTabBarAvailable?(tabBar)
+        }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -442,15 +450,93 @@ final class NativeTabIconStore: ObservableObject {
 
 @available(iOS 16.0, *)
 @MainActor
+final class NativeProfileTabInteractionCoordinator: NSObject, UIGestureRecognizerDelegate {
+    var onLongPress: (() -> Void)?
+    private(set) var isHandlingLongPress = false
+    private(set) var suppressesProfileSelection = false
+    private weak var tabBar: UITabBar?
+    private var resetWorkItem: DispatchWorkItem?
+    private lazy var recognizer: UILongPressGestureRecognizer = {
+        let recognizer = UILongPressGestureRecognizer(
+            target: self,
+            action: #selector(handleLongPress(_:))
+        )
+        recognizer.minimumPressDuration = 0.45
+        recognizer.cancelsTouchesInView = true
+        recognizer.delegate = self
+        return recognizer
+    }()
+
+    func attach(to tabBar: UITabBar) {
+        guard self.tabBar !== tabBar else { return }
+        self.tabBar?.removeGestureRecognizer(recognizer)
+        tabBar.addGestureRecognizer(recognizer)
+        self.tabBar = tabBar
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldReceive touch: UITouch
+    ) -> Bool {
+        guard gestureRecognizer === recognizer,
+              let tabBar,
+              let profileItem = tabBar.items?.last else {
+            return false
+        }
+        guard #available(iOS 17.0, *),
+              let profileFrame = profileItem.frame(in: tabBar) else { return false }
+        return profileFrame.contains(touch.location(in: tabBar))
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        gestureRecognizer === recognizer || otherGestureRecognizer === recognizer
+    }
+
+    @objc private func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            resetWorkItem?.cancel()
+            isHandlingLongPress = true
+            suppressesProfileSelection = true
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            onLongPress?()
+        case .ended, .cancelled, .failed:
+            let workItem = DispatchWorkItem { [weak self] in
+                self?.isHandlingLongPress = false
+                self?.suppressesProfileSelection = false
+            }
+            resetWorkItem = workItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.75, execute: workItem)
+        default:
+            break
+        }
+    }
+}
+
+@available(iOS 16.0, *)
+@MainActor
 final class AppNavigationCoordinator: ObservableObject {
     @Published var selectedTab: NuvioAppTab = .home
     @Published private(set) var isAppReady = false
     @Published private var localizedTabTitles: [NuvioAppTab: String] = [:]
+    @Published var isProfileSwitcherPresented = false
 
     let homeCoordinator = TabNavigationCoordinator()
     let searchCoordinator = TabNavigationCoordinator()
     let libraryCoordinator = TabNavigationCoordinator()
     let settingsCoordinator = TabNavigationCoordinator()
+    let profileSwitcherController = NativeProfileSwitcherController()
+    let profileTabInteraction = NativeProfileTabInteractionCoordinator()
+
+    init() {
+        profileTabInteraction.onLongPress = { [weak self] in
+            guard let self, self.isAppReady else { return }
+            self.isProfileSwitcherPresented = true
+        }
+    }
 
     private var allCoordinators: [TabNavigationCoordinator] {
         [homeCoordinator, searchCoordinator, libraryCoordinator, settingsCoordinator]
@@ -488,9 +574,16 @@ final class AppNavigationCoordinator: ObservableObject {
     func updateAppReady(_ ready: Bool) {
         isAppReady = ready
         if !ready {
+            isProfileSwitcherPresented = false
             selectedTab = .home
             allCoordinators.forEach { $0.popToRoot() }
         }
+    }
+
+    func openProfileManagement() {
+        isProfileSwitcherPresented = false
+        updateAppReady(false)
+        profileSwitcherController.requestManageProfiles()
     }
 
     func tab(for target: TabNavigationCoordinator) -> NuvioAppTab? {
@@ -565,9 +658,15 @@ struct NativeNavComposeView: UIViewControllerRepresentable {
                     library: library,
                     profile: profile
                 )
+            },
+            nativeProfileSwitcherController: appCoordinator.profileSwitcherController
+        )
+        return NuvioComposeHost.wrap(
+            controller,
+            onTabBarAvailable: { tabBar in
+                appCoordinator.profileTabInteraction.attach(to: tabBar)
             }
         )
-        return NuvioComposeHost.wrap(controller)
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
@@ -738,6 +837,269 @@ private struct DetailDestinationView: View {
     }
 }
 
+@available(iOS 26.0, *)
+private struct NativeProfileItem: Identifiable, Equatable {
+    let id: Int32
+    let name: String
+    let avatarColor: UIColor
+    let avatarBackgroundColor: UIColor
+    let avatarURL: URL?
+    let pinEnabled: Bool
+    let active: Bool
+
+    init(_ option: NativeProfileOption) {
+        id = option.profileIndex
+        name = option.name
+        avatarColor = UIColor(hexString: option.avatarColorHex)
+            ?? UIColor(red: 30 / 255, green: 136 / 255, blue: 229 / 255, alpha: 1)
+        avatarBackgroundColor = UIColor(hexString: option.avatarBackgroundColorHex)
+            ?? avatarColor.withAlphaComponent(0.16)
+        avatarURL = option.avatarImageUrl.flatMap(URL.init(string:))
+        pinEnabled = option.pinEnabled
+        active = option.active
+    }
+}
+
+@available(iOS 26.0, *)
+@MainActor
+private final class NativeProfileSwitcherViewModel: ObservableObject {
+    @Published private(set) var profiles: [NativeProfileItem] = []
+    @Published private(set) var isLoaded = false
+    @Published private(set) var canAddProfile = false
+    @Published var lockedProfile: NativeProfileItem?
+    @Published var pin = ""
+    @Published var errorMessage: String?
+    @Published private(set) var isSubmitting = false
+
+    private let controller: NativeProfileSwitcherController
+
+    init(controller: NativeProfileSwitcherController) {
+        self.controller = controller
+        apply(controller.currentState())
+    }
+
+    func startObserving() {
+        controller.observeState { [weak self] state in
+            self?.apply(state)
+        }
+    }
+
+    func stopObserving() {
+        controller.stopObserving()
+    }
+
+    func choose(_ profile: NativeProfileItem, onComplete: @escaping () -> Void) {
+        if profile.pinEnabled {
+            lockedProfile = profile
+            pin = ""
+            errorMessage = nil
+        } else {
+            submit(profile, pin: nil, onComplete: onComplete)
+        }
+    }
+
+    func updatePin(_ value: String) {
+        pin = String(value.filter(\.isNumber).prefix(4))
+        errorMessage = nil
+    }
+
+    func unlock(onComplete: @escaping () -> Void) {
+        guard let lockedProfile, pin.count == 4 else { return }
+        submit(lockedProfile, pin: pin, onComplete: onComplete)
+    }
+
+    func cancelUnlock() {
+        lockedProfile = nil
+        pin = ""
+        errorMessage = nil
+    }
+
+    private func apply(_ state: NativeProfileSwitcherState) {
+        profiles = state.profiles.map(NativeProfileItem.init)
+        isLoaded = state.isLoaded
+        canAddProfile = state.canAddProfile
+    }
+
+    private func submit(
+        _ profile: NativeProfileItem,
+        pin: String?,
+        onComplete: @escaping () -> Void
+    ) {
+        guard !isSubmitting else { return }
+        isSubmitting = true
+        errorMessage = nil
+        controller.chooseProfile(profileIndex: profile.id, pin: pin) { [weak self] result in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.isSubmitting = false
+                if result.unlocked {
+                    onComplete()
+                } else if let message = result.message, !message.isEmpty {
+                    self.errorMessage = message
+                } else if result.retryAfterSeconds > 0 {
+                    self.errorMessage = "Try again in \(result.retryAfterSeconds) seconds."
+                } else {
+                    self.errorMessage = "Incorrect PIN."
+                }
+            }
+        }
+    }
+}
+
+@available(iOS 26.0, *)
+private struct NativeProfileAvatarView: View {
+    let profile: NativeProfileItem
+
+    var body: some View {
+        ZStack {
+            Circle().fill(Color(uiColor: profile.avatarBackgroundColor))
+            if let avatarURL = profile.avatarURL {
+                AsyncImage(url: avatarURL) { phase in
+                    if let image = phase.image {
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        initial
+                    }
+                }
+            } else {
+                initial
+            }
+        }
+        .clipShape(Circle())
+        .overlay {
+            Circle().stroke(
+                Color(uiColor: profile.avatarColor).opacity(profile.active ? 1 : 0.45),
+                lineWidth: profile.active ? 2.5 : 1.5
+            )
+        }
+    }
+
+    private var initial: some View {
+        Text(profile.name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(1).uppercased())
+            .font(.system(size: 20, weight: .bold, design: .rounded))
+            .foregroundStyle(Color(uiColor: profile.avatarColor))
+    }
+}
+
+@available(iOS 26.0, *)
+private struct NativeProfileSwitcherView: View {
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var model: NativeProfileSwitcherViewModel
+    let onManageProfiles: () -> Void
+
+    init(
+        controller: NativeProfileSwitcherController,
+        onManageProfiles: @escaping () -> Void
+    ) {
+        _model = StateObject(
+            wrappedValue: NativeProfileSwitcherViewModel(controller: controller)
+        )
+        self.onManageProfiles = onManageProfiles
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Switch Profile")
+                .font(.headline)
+
+            if model.isLoaded {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 14) {
+                        ForEach(model.profiles) { profile in
+                            Button {
+                                model.choose(profile, onComplete: dismiss.callAsFunction)
+                            } label: {
+                                VStack(spacing: 6) {
+                                    NativeProfileAvatarView(profile: profile)
+                                        .frame(width: 52, height: 52)
+                                        .overlay(alignment: .bottomTrailing) {
+                                            if profile.pinEnabled {
+                                                Image(systemName: "lock.fill")
+                                                    .font(.system(size: 9, weight: .bold))
+                                                    .foregroundStyle(.white)
+                                                    .frame(width: 18, height: 18)
+                                                    .background(.black.opacity(0.72), in: Circle())
+                                            }
+                                        }
+
+                                    Text(profile.name)
+                                        .font(.caption)
+                                        .lineLimit(1)
+                                        .frame(width: 64)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(model.isSubmitting)
+                        }
+
+                        if model.canAddProfile {
+                            Button {
+                                onManageProfiles()
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 19, weight: .semibold))
+                                        .frame(width: 52, height: 52)
+                                        .background(.secondary.opacity(0.12), in: Circle())
+                                    Text("Add")
+                                        .font(.caption)
+                                        .frame(width: 64)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+            }
+
+            if let lockedProfile = model.lockedProfile {
+                Divider()
+                Text("Enter PIN for \(lockedProfile.name)")
+                    .font(.subheadline.weight(.semibold))
+
+                SecureField("4-digit PIN", text: Binding(
+                    get: { model.pin },
+                    set: model.updatePin
+                ))
+                .keyboardType(.numberPad)
+                .textContentType(.password)
+                .multilineTextAlignment(.center)
+                .font(.title3.monospacedDigit())
+                .padding(.horizontal, 12)
+                .frame(height: 42)
+                .background(.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+
+                if let errorMessage = model.errorMessage {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                HStack {
+                    Button("Cancel", action: model.cancelUnlock)
+                    Spacer()
+                    Button("Unlock") {
+                        model.unlock(onComplete: dismiss.callAsFunction)
+                    }
+                    .disabled(model.pin.count != 4 || model.isSubmitting)
+                }
+            }
+        }
+        .padding(18)
+        .frame(minWidth: 250, idealWidth: 330, maxWidth: 360)
+        .presentationCompactAdaptation(.popover)
+        .presentationSizing(.fitted)
+        .onAppear(perform: model.startObserving)
+        .onDisappear(perform: model.stopObserving)
+    }
+}
+
 @available(iOS 16.0, *)
 struct NativeNavContentView: View {
     @StateObject private var appCoordinator = AppNavigationCoordinator()
@@ -757,21 +1119,30 @@ struct NativeNavContentView: View {
         UIDevice.current.userInterfaceIdiom == .pad
     }
 
-    private var tabs: some View {
-        TabView(
-            selection: Binding(
-                get: { appCoordinator.selectedTab },
-                set: { newTab in
-                    if newTab == appCoordinator.selectedTab {
-                        NativeTabBridgeKt.nativeTabSelect(tabName: newTab.rawValue)
-                        return
-                    }
-                    if appCoordinator.isAppReady || newTab == .home {
-                        appCoordinator.selectedTab = newTab
-                    }
+    private var tabSelection: Binding<NuvioAppTab> {
+        Binding(
+            get: { appCoordinator.selectedTab },
+            set: { newTab in
+                if newTab == .settings &&
+                    (
+                        appCoordinator.profileTabInteraction.suppressesProfileSelection ||
+                            appCoordinator.isProfileSwitcherPresented
+                    ) {
+                    return
                 }
-            )
-        ) {
+                if newTab == appCoordinator.selectedTab {
+                    NativeTabBridgeKt.nativeTabSelect(tabName: newTab.rawValue)
+                    return
+                }
+                if appCoordinator.isAppReady || newTab == .home {
+                    appCoordinator.selectedTab = newTab
+                }
+            }
+        )
+    }
+
+    private var legacyTabs: some View {
+        TabView(selection: tabSelection) {
             ForEach(NuvioAppTab.allCases, id: \.self) { tab in
                 TabContentView(
                     tab: tab,
@@ -802,12 +1173,83 @@ struct NativeNavContentView: View {
         .tint(Color(uiColor: iconStore.accentColor))
     }
 
+    @available(iOS 26.0, *)
+    private var nativeTabs: some View {
+        TabView(selection: tabSelection) {
+            ForEach(NuvioAppTab.allCases, id: \.self) { tab in
+                if tab == .settings {
+                    Tab(value: tab) {
+                        TabContentView(
+                            tab: tab,
+                            usesNativeTabBar: usesNativeTabBar,
+                            usesTabletFloatingTabBar: usesTabletFloatingTabBar,
+                            coordinator: appCoordinator.coordinator(for: tab),
+                            appCoordinator: appCoordinator
+                        )
+                    } label: {
+                        Label {
+                            Text(appCoordinator.title(for: tab))
+                        } icon: {
+                            Image(
+                                uiImage: iconStore.image(
+                                    for: tab,
+                                    selected: appCoordinator.selectedTab == tab
+                                )
+                            )
+                            .id(
+                                "\(tab.rawValue)-\(iconStore.revision)-" +
+                                    "\(appCoordinator.selectedTab == tab)"
+                            )
+                        }
+                    }
+                    .popover(
+                        isPresented: $appCoordinator.isProfileSwitcherPresented,
+                        attachmentAnchor: .rect(.bounds),
+                        arrowEdge: .bottom
+                    ) {
+                        NativeProfileSwitcherView(
+                            controller: appCoordinator.profileSwitcherController,
+                            onManageProfiles: appCoordinator.openProfileManagement
+                        )
+                    }
+                } else {
+                    Tab(value: tab) {
+                        TabContentView(
+                            tab: tab,
+                            usesNativeTabBar: usesNativeTabBar,
+                            usesTabletFloatingTabBar: usesTabletFloatingTabBar,
+                            coordinator: appCoordinator.coordinator(for: tab),
+                            appCoordinator: appCoordinator
+                        )
+                    } label: {
+                        Label {
+                            Text(appCoordinator.title(for: tab))
+                        } icon: {
+                            Image(
+                                uiImage: iconStore.image(
+                                    for: tab,
+                                    selected: appCoordinator.selectedTab == tab
+                                )
+                            )
+                            .id(
+                                "\(tab.rawValue)-\(iconStore.revision)-" +
+                                    "\(appCoordinator.selectedTab == tab)"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        .tint(Color(uiColor: iconStore.accentColor))
+        .tabBarMinimizeBehavior(.automatic)
+    }
+
     @ViewBuilder
     var body: some View {
         if #available(iOS 26.0, *), usesNativeTabBar {
-            tabs.tabBarMinimizeBehavior(.automatic)
+            nativeTabs
         } else {
-            tabs
+            legacyTabs
         }
     }
 }
