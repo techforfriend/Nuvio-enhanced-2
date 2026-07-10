@@ -529,12 +529,16 @@ final class AppNavigationCoordinator: ObservableObject {
 @available(iOS 16.0, *)
 struct NativeNavComposeView: UIViewControllerRepresentable {
     let tab: NuvioAppTab
+    let usesNativeTabBar: Bool
+    let usesTabletFloatingTabBar: Bool
     let coordinator: TabNavigationCoordinator
     let appCoordinator: AppNavigationCoordinator
 
     func makeUIViewController(context: Context) -> UIViewController {
         let controller = MainViewControllerKt.MainViewController(
             initialTabName: tab.rawValue,
+            useNativeTabBar: usesNativeTabBar,
+            useTabletFloatingTabBar: usesTabletFloatingTabBar,
             onNavigate: { route, launchSingleTop in
                 appCoordinator.push(
                     route,
@@ -607,6 +611,8 @@ struct DetailComposeView: UIViewControllerRepresentable {
 @available(iOS 16.0, *)
 struct TabContentView: View {
     let tab: NuvioAppTab
+    let usesNativeTabBar: Bool
+    let usesTabletFloatingTabBar: Bool
     @ObservedObject var coordinator: TabNavigationCoordinator
     @ObservedObject var appCoordinator: AppNavigationCoordinator
 
@@ -619,6 +625,8 @@ struct TabContentView: View {
         ) {
             NativeNavComposeView(
                 tab: tab,
+                usesNativeTabBar: usesNativeTabBar,
+                usesTabletFloatingTabBar: usesTabletFloatingTabBar,
                 coordinator: coordinator,
                 appCoordinator: appCoordinator
             )
@@ -646,7 +654,7 @@ struct TabContentView: View {
         // stack. Applying it here keeps the authentication/profile gate truly
         // full-screen on iOS 26, where a modifier on TabView itself is ignored.
         .toolbar(
-            appCoordinator.isAppReady && coordinator.path.isEmpty
+            usesNativeTabBar && appCoordinator.isAppReady && coordinator.path.isEmpty
                 ? Visibility.visible
                 : Visibility.hidden,
             for: .tabBar
@@ -728,6 +736,20 @@ struct NativeNavContentView: View {
     @StateObject private var appCoordinator = AppNavigationCoordinator()
     @StateObject private var iconStore = NativeTabIconStore()
 
+    private var usesNativeTabBar: Bool {
+        guard UIDevice.current.userInterfaceIdiom == .phone else {
+            return false
+        }
+        if #available(iOS 26.0, *) {
+            return true
+        }
+        return false
+    }
+
+    private var usesTabletFloatingTabBar: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+
     private var tabs: some View {
         TabView(
             selection: Binding(
@@ -746,6 +768,8 @@ struct NativeNavContentView: View {
             ForEach(NuvioAppTab.allCases, id: \.self) { tab in
                 TabContentView(
                     tab: tab,
+                    usesNativeTabBar: usesNativeTabBar,
+                    usesTabletFloatingTabBar: usesTabletFloatingTabBar,
                     coordinator: appCoordinator.coordinator(for: tab),
                     appCoordinator: appCoordinator
                 )
@@ -773,7 +797,7 @@ struct NativeNavContentView: View {
 
     @ViewBuilder
     var body: some View {
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.0, *), usesNativeTabBar {
             tabs.tabBarMinimizeBehavior(.automatic)
         } else {
             tabs

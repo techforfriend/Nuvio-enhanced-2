@@ -394,6 +394,8 @@ fun App(
     initialTab: AppScreenTab = AppScreenTab.Home,
     initialRoute: AppRoute = TabsRoute,
     useNativeNavigation: Boolean = false,
+    useNativeTabBar: Boolean = false,
+    useTabletFloatingTabBar: Boolean = false,
     ownsAppRuntime: Boolean = true,
     bypassAppGate: Boolean = false,
     onNavigate: ((AppRoute, launchSingleTop: Boolean) -> Unit)? = null,
@@ -425,6 +427,8 @@ fun App(
                 initialTab = initialTab,
                 initialRoute = initialRoute,
                 useNativeNavigation = useNativeNavigation,
+                useNativeTabBar = useNativeTabBar,
+                useTabletFloatingTabBar = useTabletFloatingTabBar,
                 ownsAppRuntime = false,
                 onNavigate = onNavigate,
                 onGoBack = onGoBack,
@@ -688,6 +692,8 @@ fun App(
                         initialTab = initialTab,
                         initialRoute = initialRoute,
                         useNativeNavigation = useNativeNavigation,
+                        useNativeTabBar = useNativeTabBar,
+                        useTabletFloatingTabBar = useTabletFloatingTabBar,
                         ownsAppRuntime = ownsAppRuntime,
                         onNavigate = onNavigate,
                         onGoBack = onGoBack,
@@ -716,6 +722,8 @@ private fun MainAppContent(
     initialTab: AppScreenTab = AppScreenTab.Home,
     initialRoute: AppRoute = TabsRoute,
     useNativeNavigation: Boolean = false,
+    useNativeTabBar: Boolean = false,
+    useTabletFloatingTabBar: Boolean = false,
     ownsAppRuntime: Boolean = true,
     onNavigate: ((AppRoute, launchSingleTop: Boolean) -> Unit)? = null,
     onGoBack: (() -> Unit)? = null,
@@ -1762,9 +1770,12 @@ private fun MainAppContent(
                     )
 
                     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                        val isTabletLayout = maxWidth >= 768.dp
-                        val useNativeBottomTabs = useNativeNavigation ||
-                            (liquidGlassNativeTabBarSupported && liquidGlassNativeTabBarEnabled && initialHomeReady)
+                        val isTabletLayout = useTabletFloatingTabBar || maxWidth >= 768.dp
+                        val useNativeBottomTabs = if (useNativeNavigation) {
+                            useNativeTabBar
+                        } else {
+                            liquidGlassNativeTabBarSupported && liquidGlassNativeTabBarEnabled && initialHomeReady
+                        }
                         val nativeTabSafeBottomPadding = nuvioBottomNavigationBarInsets()
                             .asPaddingValues()
                             .calculateBottomPadding()
@@ -1877,7 +1888,7 @@ private fun MainAppContent(
                                             }
                                         },
                                         onConnectCloudClick = {
-                                            if (useNativeNavigation) {
+                                            if (useNativeNavigation && !isTabletLayout) {
                                                 activateTab(AppScreenTab.Settings)
                                                 navController.navigate(
                                                     SettingsPageRoute(
@@ -1893,7 +1904,7 @@ private fun MainAppContent(
                                         onContinueWatchingClick = onContinueWatchingClick,
                                         onContinueWatchingLongPress = onContinueWatchingLongPress,
                                         onSwitchProfile = onSwitchProfile,
-                                        onSettingsPageClick = if (useNativeNavigation) {
+                                        onSettingsPageClick = if (useNativeNavigation && !isTabletLayout) {
                                             { pageName, title ->
                                                 navController.navigate(SettingsPageRoute(pageName, title))
                                             }

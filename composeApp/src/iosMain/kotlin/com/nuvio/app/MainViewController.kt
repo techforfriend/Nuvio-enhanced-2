@@ -16,6 +16,8 @@ fun MainViewController(): UIViewController = nuvioComposeViewController {
 @Suppress("unused")
 fun MainViewController(
     initialTabName: String,
+    useNativeTabBar: Boolean,
+    useTabletFloatingTabBar: Boolean,
     onNavigate: (AppRoute, Boolean) -> Unit,
     onGoBack: () -> Unit,
     onReplace: (AppRoute) -> Unit,
@@ -28,6 +30,8 @@ fun MainViewController(
         App(
             initialTab = initialTab,
             useNativeNavigation = true,
+            useNativeTabBar = useNativeTabBar,
+            useTabletFloatingTabBar = useTabletFloatingTabBar,
             ownsAppRuntime = initialTab == AppScreenTab.Home,
             bypassAppGate = initialTab != AppScreenTab.Home,
             onNavigate = onNavigate,
