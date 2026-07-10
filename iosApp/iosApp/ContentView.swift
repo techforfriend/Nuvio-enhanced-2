@@ -711,9 +711,16 @@ private struct DetailDestinationView: View {
                 NativeToolbarReadabilityFade()
             }
         }
-        .navigationTitle(usesComposeNavigationHeader ? "" : wrapper.route.title ?? "")
+        .navigationTitle(wrapper.route.title ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarRole(usesComposeNavigationHeader ? .editor : .automatic)
+        .toolbar {
+            if usesComposeNavigationHeader {
+                ToolbarItem(placement: .principal) {
+                    Color.clear.frame(width: 1, height: 1)
+                }
+            }
+        }
         .toolbar(.hidden, for: .tabBar)
         .toolbar(
             wrapper.route.hidesNavigationBar ? Visibility.hidden : Visibility.visible,
