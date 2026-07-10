@@ -596,6 +596,11 @@ struct TabContentView: View {
                         coordinator: coordinator,
                         appCoordinator: appCoordinator
                     )
+                    // A native replace keeps the same NavigationStack depth.
+                    // Keying by the wrapper forces SwiftUI to replace the
+                    // embedded Compose controller instead of reusing the old
+                    // screen with the new route's toolbar preferences.
+                    .id(wrapper.id)
                 } else {
                     Color.clear
                 }
@@ -642,12 +647,12 @@ private struct DetailDestinationView: View {
     @ObservedObject var coordinator: TabNavigationCoordinator
     @ObservedObject var appCoordinator: AppNavigationCoordinator
 
-    private var isMetaDetail: Bool {
-        wrapper.route is DetailRoute
+    private var usesComposeNavigationHeader: Bool {
+        wrapper.route is DetailRoute || wrapper.route is StreamRoute
     }
 
     private var showsReadabilityFade: Bool {
-        !wrapper.route.hidesNavigationBar && !isMetaDetail
+        !wrapper.route.hidesNavigationBar && !usesComposeNavigationHeader
     }
 
     private var content: some View {
@@ -663,9 +668,9 @@ private struct DetailDestinationView: View {
                 NativeToolbarReadabilityFade()
             }
         }
-        .navigationTitle(isMetaDetail ? "" : wrapper.route.title ?? "")
+        .navigationTitle(usesComposeNavigationHeader ? "" : wrapper.route.title ?? "")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarRole(isMetaDetail ? .editor : .automatic)
+        .toolbarRole(usesComposeNavigationHeader ? .editor : .automatic)
         .toolbar(.hidden, for: .tabBar)
         .toolbar(
             wrapper.route.hidesNavigationBar ? Visibility.hidden : Visibility.visible,
@@ -675,7 +680,7 @@ private struct DetailDestinationView: View {
 
     @ViewBuilder
     var body: some View {
-        if #available(iOS 26.0, *), !isMetaDetail {
+        if #available(iOS 26.0, *), !usesComposeNavigationHeader {
             content.navigationSubtitle(wrapper.route.subtitle ?? "")
         } else {
             content

@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.NuvioBackButton
+import com.nuvio.app.core.ui.platformPhysicalTopInset
 import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.isIos
 import com.nuvio.app.navigation.LocalUseNativeNavigation
@@ -55,10 +56,14 @@ fun DetailFloatingHeader(
     onToggleSaved: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val safeAreaTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val useNativeNavigation = LocalUseNativeNavigation.current
+    val safeAreaTop = if (useNativeNavigation) {
+        platformPhysicalTopInset()
+    } else {
+        WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    }
     val headerTopPadding = (safeAreaTop - 6.dp).coerceAtLeast(safeAreaTop * 0.8f)
     val interactive = progress > 0.05f
-    val useNativeNavigation = LocalUseNativeNavigation.current
     val surfaceColor = backgroundColor ?: if (isIos) {
         MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
     } else {
