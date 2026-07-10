@@ -41,6 +41,7 @@ import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.isIos
+import com.nuvio.app.navigation.LocalUseNativeNavigation
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -57,6 +58,7 @@ fun DetailFloatingHeader(
     val safeAreaTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val headerTopPadding = (safeAreaTop - 6.dp).coerceAtLeast(safeAreaTop * 0.8f)
     val interactive = progress > 0.05f
+    val useNativeNavigation = LocalUseNativeNavigation.current
     val surfaceColor = backgroundColor ?: if (isIos) {
         MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
     } else {
@@ -93,7 +95,7 @@ fun DetailFloatingHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (interactive) {
+                if (interactive && !useNativeNavigation) {
                     NuvioBackButton(
                         onClick = onBack,
                         modifier = Modifier.size(40.dp),
@@ -103,6 +105,9 @@ fun DetailFloatingHeader(
                         iconSize = 24.dp,
                     )
                 } else {
+                    // Native iOS navigation owns the back button, but retaining
+                    // this slot keeps the Compose logo centered as the floating
+                    // header replaces the hero while scrolling.
                     Box(modifier = Modifier.size(40.dp))
                 }
 
