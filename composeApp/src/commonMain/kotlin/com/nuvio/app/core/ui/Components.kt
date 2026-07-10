@@ -151,7 +151,7 @@ fun NuvioScreenHeader(
         Row(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(top = statusBarTop + NuvioTokens.Space.s40, bottom = NuvioTokens.Space.s4),
+                .padding(bottom = NuvioTokens.Space.s4),
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
             content = actions,

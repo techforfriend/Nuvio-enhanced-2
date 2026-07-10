@@ -4,9 +4,9 @@ import UIKit
 import ComposeApp
 
 private let nuvioBackgroundColor = UIColor(
-    red: 0.008,
-    green: 0.016,
-    blue: 0.016,
+    red: 0.051,
+    green: 0.051,
+    blue: 0.051,
     alpha: 1.0
 )
 
@@ -15,10 +15,16 @@ private enum NuvioComposeHost {
         NuvioPlayerRegistration.register()
     }()
 
-    static func wrap(_ contentController: UIViewController) -> RootComposeViewController {
+    static func wrap(
+        _ contentController: UIViewController,
+        disablesInteractiveContentPopGesture: Bool = false
+    ) -> RootComposeViewController {
         _ = registerPlayerBridge
         contentController.view.backgroundColor = nuvioBackgroundColor
-        return RootComposeViewController(contentController: contentController)
+        return RootComposeViewController(
+            contentController: contentController,
+            disablesInteractiveContentPopGesture: disablesInteractiveContentPopGesture
+        )
     }
 }
 
@@ -27,9 +33,14 @@ private enum NuvioComposeHost {
 /// to the deepest child that requests them.
 final class RootComposeViewController: UIViewController {
     private let contentController: UIViewController
+    private let disablesInteractiveContentPopGesture: Bool
 
-    init(contentController: UIViewController) {
+    init(
+        contentController: UIViewController,
+        disablesInteractiveContentPopGesture: Bool
+    ) {
         self.contentController = contentController
+        self.disablesInteractiveContentPopGesture = disablesInteractiveContentPopGesture
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -84,10 +95,32 @@ final class RootComposeViewController: UIViewController {
         .fade
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        setInteractiveContentPopGestureEnabled(false)
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        setInteractiveContentPopGestureEnabled(false)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        setInteractiveContentPopGestureEnabled(true)
+        super.viewWillDisappear(animated)
+    }
+
     func refreshImmersiveSystemUI() {
         setNeedsUpdateOfHomeIndicatorAutoHidden()
         setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
         setNeedsStatusBarAppearanceUpdate()
+    }
+
+    private func setInteractiveContentPopGestureEnabled(_ enabled: Bool) {
+        guard disablesInteractiveContentPopGesture else { return }
+        if #available(iOS 26.0, *) {
+            navigationController?.interactiveContentPopGestureRecognizer?.isEnabled = enabled
+        }
     }
 
     private func immersiveController(in controller: UIViewController?) -> UIViewController? {
@@ -562,7 +595,10 @@ struct DetailComposeView: UIViewControllerRepresentable {
                 appCoordinator.activateTab(named: tabName)
             }
         )
-        return NuvioComposeHost.wrap(controller)
+        return NuvioComposeHost.wrap(
+            controller,
+            disablesInteractiveContentPopGesture: true
+        )
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
@@ -622,13 +658,12 @@ struct TabContentView: View {
 private struct NativeToolbarReadabilityFade: View {
     var body: some View {
         Rectangle()
-            .fill(.ultraThinMaterial)
-            .mask(
+            .fill(
                 LinearGradient(
                     stops: [
-                        .init(color: .black, location: 0),
-                        .init(color: .black.opacity(0.78), location: 0.55),
-                        .init(color: .clear, location: 1),
+                        .init(color: Color(uiColor: nuvioBackgroundColor), location: 0),
+                        .init(color: Color(uiColor: nuvioBackgroundColor).opacity(0.78), location: 0.55),
+                        .init(color: Color(uiColor: nuvioBackgroundColor).opacity(0), location: 1),
                     ],
                     startPoint: .top,
                     endPoint: .bottom
