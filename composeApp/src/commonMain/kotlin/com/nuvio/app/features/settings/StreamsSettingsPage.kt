@@ -128,7 +128,8 @@ internal fun LazyListScope.streamsSettingsContent(isTablet: Boolean) {
                 )
             }
         }
-
+    } 
+    item {
         SettingsSection(
             title = stringResource(Res.string.settings_stream_display_section),
             isTablet = isTablet,
@@ -143,7 +144,8 @@ internal fun LazyListScope.streamsSettingsContent(isTablet: Boolean) {
                 )
             }
         }
-
+    } 
+    
         if (showBadgeImportDialog) {
             BadgeUrlManagerDialog(
                 currentRules = currentRules,
