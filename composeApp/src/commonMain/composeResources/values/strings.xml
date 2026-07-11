@@ -814,7 +814,7 @@
     <string name="community_section_description">See the people building and supporting Nuvio across Mobile, TV, and Web.</string>
     <string name="community_donation_progress_title">This month&apos;s server &amp; maintenance</string>
     <string name="community_donation_progress_complete">Covered. Additional support now goes to development.</string>
-    <string name="community_donation_progress_remaining">After 100%%, additional support goes to development.</string>
+    <string name="community_donation_progress_remaining">After 100%, additional support goes to development.</string>
     <string name="community_loading_donation_progress">Loading funding progress...</string>
     <string name="community_supporters_not_configured">Supporters API is not configured. Add DONATIONS_BASE_URL to local.properties.</string>
     <string name="community_tab_contributors">Contributors</string>
@@ -966,6 +966,8 @@
     <string name="settings_playback_selected_count">%1$d selected</string>
     <string name="settings_playback_show_loading_overlay">Loading Overlay</string>
     <string name="settings_playback_show_loading_overlay_description">Show loading screen until first video frame appears.</string>
+    <string name="settings_playback_parental_guide">Content Warnings</string>
+    <string name="settings_playback_parental_guide_description">Show parental guidance overlay when playback starts.</string>
     <string name="settings_playback_subtitle_background_color">Background Color</string>
     <string name="settings_playback_subtitle_bold">Bold</string>
     <string name="settings_playback_subtitle_bold_description">Use a heavier subtitle font weight.</string>

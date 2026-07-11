@@ -50,6 +50,7 @@ import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.DisintegratingContainer
 import com.nuvio.app.core.ui.NuvioProgressBar
 import com.nuvio.app.core.ui.NuvioShelfSection
+import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.PosterLandscapeAspectRatio
 import com.nuvio.app.core.ui.landscapePosterHeightForWidth
 import com.nuvio.app.core.ui.landscapePosterWidth
@@ -70,12 +71,52 @@ private val ContinueWatchingStatusBadgeShape = RoundedCornerShape(4.dp)
 private val ContinueWatchingNewEpisodeBadgeColor = Color(0xFF1D4ED8)
 private val ContinueWatchingNewSeasonBadgeColor = Color(0xFFB45309)
 private const val ContinueWatchingLandscapeCardScale = 1.2f
+internal val HomeContinueWatchingSectionBottomPadding = 12.dp
 
 internal fun continueWatchingLandscapeCardWidth(basePosterWidthDp: Int): Dp =
     (landscapePosterWidth(basePosterWidthDp).value * ContinueWatchingLandscapeCardScale).dp
 
 internal fun continueWatchingLandscapeCardHeight(basePosterWidthDp: Int): Dp =
     landscapePosterHeightForWidth(continueWatchingLandscapeCardWidth(basePosterWidthDp))
+
+internal fun continueWatchingSectionHeightEstimate(
+    style: ContinueWatchingSectionStyle,
+    layout: ContinueWatchingLayout,
+    basePosterWidthDp: Int,
+    showHeaderAccent: Boolean,
+): Dp {
+    val headerHeight = NuvioTokens.Space.s40 + if (showHeaderAccent) {
+        NuvioTokens.Space.s6 + NuvioTokens.Space.s4
+    } else {
+        0.dp
+    }
+    val headerToRowGap = NuvioTokens.Space.s8 + NuvioTokens.Space.s2
+    val rowHeight = when (style) {
+        ContinueWatchingSectionStyle.Card -> continueWatchingLandscapeCardHeight(basePosterWidthDp)
+        ContinueWatchingSectionStyle.Wide -> layout.wideCardHeight
+        ContinueWatchingSectionStyle.Poster -> layout.posterCardHeight + layout.posterTitleBlockHeight
+    }
+    return headerHeight + headerToRowGap + rowHeight + HomeContinueWatchingSectionBottomPadding
+}
+
+internal fun continueWatchingHeroViewportReserveHeight(
+    style: ContinueWatchingSectionStyle,
+    layout: ContinueWatchingLayout,
+    basePosterWidthDp: Int,
+    showHeaderAccent: Boolean,
+): Dp {
+    val bottomNavigationClearance = when (style) {
+        ContinueWatchingSectionStyle.Card,
+        ContinueWatchingSectionStyle.Wide -> NuvioTokens.Space.s24
+        ContinueWatchingSectionStyle.Poster -> 0.dp
+    }
+    return continueWatchingSectionHeightEstimate(
+        style = style,
+        layout = layout,
+        basePosterWidthDp = basePosterWidthDp,
+        showHeaderAccent = showHeaderAccent,
+    ) + bottomNavigationClearance
+}
 
 private fun continueWatchingProgressPercent(progressFraction: Float): Int =
     (progressFraction * 100f).roundToInt().coerceIn(1, 99)
@@ -662,7 +703,12 @@ private fun ContinueWatchingCard(
             .aspectRatio(PosterLandscapeAspectRatio)
             .clip(RoundedCornerShape(cardMetrics.cornerRadius))
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .posterCardClickable(onClick = onClick, onLongClick = onLongClick),
+            .posterCardClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+                zoomImageUrl = imageUrl,
+                zoomCornerRadius = cardMetrics.cornerRadius,
+            ),
     ) {
         if (imageUrl != null) {
             AsyncImage(
@@ -953,6 +999,7 @@ private fun ContinueWatchingPosterCard(
     onClick: (() -> Unit)?,
     onLongClick: (() -> Unit)?,
 ) {
+    val imageUrl = item.continueWatchingPosterArtworkUrl(useEpisodeThumbnails)
     Column(
         modifier = Modifier.width(layout.posterCardWidth),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -963,9 +1010,13 @@ private fun ContinueWatchingPosterCard(
                 .height(layout.posterCardHeight)
                 .clip(RoundedCornerShape(layout.cardRadius))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .posterCardClickable(onClick = onClick, onLongClick = onLongClick),
+                .posterCardClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                    zoomImageUrl = imageUrl,
+                    zoomCornerRadius = layout.cardRadius,
+                ),
         ) {
-            val imageUrl = item.continueWatchingPosterArtworkUrl(useEpisodeThumbnails)
             val shouldBlurArtwork = blurNextUp &&
                 useEpisodeThumbnails &&
                 item.isNextUp &&
