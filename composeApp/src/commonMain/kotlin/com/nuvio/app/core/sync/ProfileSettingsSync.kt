@@ -17,6 +17,8 @@ import com.nuvio.app.features.notifications.EpisodeReleaseNotificationsRepositor
 import com.nuvio.app.features.player.PlayerSettingsStorage
 import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.profiles.ProfileRepository
+import com.nuvio.app.core.ui.CardDepthStyleRepository
+import com.nuvio.app.core.ui.CardDepthStyleStorage
 import com.nuvio.app.core.ui.PosterCardStyleRepository
 import com.nuvio.app.core.ui.PosterCardStyleStorage
 import com.nuvio.app.features.settings.ThemeSettingsStorage
@@ -289,6 +291,7 @@ object ProfileSettingsSync {
             ThemeSettingsRepository.amoledEnabled.map { "amoled" },
             ThemeSettingsRepository.liquidGlassNativeTabBarEnabled.map { "liquid_glass_tab_bar" },
             PosterCardStyleRepository.uiState.map { "poster_card_style" },
+            CardDepthStyleRepository.uiState.map { "card_depth_style" },
             PlayerSettingsRepository.uiState.map { "player" },
             StreamBadgeSettingsRepository.uiState.map { "stream_badges" },
             DebridSettingsRepository.uiState.map { "debrid" },
@@ -462,6 +465,7 @@ object ProfileSettingsSync {
             features = MobileProfileSettingsFeatures(
                 themeSettings = ThemeSettingsStorage.exportToSyncPayload(),
                 posterCardStyleSettingsPayload = PosterCardStyleStorage.loadPayload().orEmpty().trim(),
+                cardDepthStyleSettingsPayload = CardDepthStyleStorage.loadPayload().orEmpty().trim(),
                 playerSettings = PlayerSettingsStorage.exportToSyncPayload(),
                 streamBadgeSettings = StreamBadgeSettingsStorage.exportToSyncPayload(),
                 debridSettings = DebridSettingsStorage.exportToSyncPayload(),
@@ -485,6 +489,9 @@ object ProfileSettingsSync {
 
         PosterCardStyleStorage.savePayload(blob.features.posterCardStyleSettingsPayload)
         PosterCardStyleRepository.onProfileChanged()
+
+        CardDepthStyleStorage.savePayload(blob.features.cardDepthStyleSettingsPayload)
+        CardDepthStyleRepository.onProfileChanged()
 
         PlayerSettingsStorage.replaceFromSyncPayload(blob.features.playerSettings)
         PlayerSettingsRepository.onProfileChanged()
@@ -523,6 +530,7 @@ object ProfileSettingsSync {
     private fun ensureRepositoriesLoaded() {
         ThemeSettingsRepository.ensureLoaded()
         PosterCardStyleRepository.ensureLoaded()
+        CardDepthStyleRepository.ensureLoaded()
         PlayerSettingsRepository.ensureLoaded()
         StreamBadgeSettingsRepository.ensureLoaded()
         DebridSettingsRepository.ensureLoaded()
@@ -547,6 +555,7 @@ object ProfileSettingsSync {
         "amoled=${ThemeSettingsRepository.amoledEnabled.value}",
         "liquid_glass_tab_bar=${ThemeSettingsRepository.liquidGlassNativeTabBarEnabled.value}",
         "poster_card_style=${PosterCardStyleRepository.uiState.value}",
+        "card_depth_style=${CardDepthStyleRepository.uiState.value}",
         "player=${PlayerSettingsRepository.uiState.value}",
         "stream_badges=${StreamBadgeSettingsRepository.uiState.value}",
         "debrid=${DebridSettingsRepository.uiState.value}",
@@ -579,6 +588,7 @@ private data class MobileProfileSettingsBlob(
 private data class MobileProfileSettingsFeatures(
     @SerialName("theme_settings") val themeSettings: JsonObject = JsonObject(emptyMap()),
     @SerialName("poster_card_style_settings_payload") val posterCardStyleSettingsPayload: String = "",
+    @SerialName("card_depth_style_settings_payload") val cardDepthStyleSettingsPayload: String = "",
     @SerialName("player_settings") val playerSettings: JsonObject = JsonObject(emptyMap()),
     @SerialName("stream_badge_settings") val streamBadgeSettings: JsonObject = JsonObject(emptyMap()),
     @SerialName("debrid_settings") val debridSettings: JsonObject = JsonObject(emptyMap()),
