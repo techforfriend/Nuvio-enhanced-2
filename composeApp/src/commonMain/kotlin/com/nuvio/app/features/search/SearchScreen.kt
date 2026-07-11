@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.ui.NuvioInputField
@@ -64,6 +65,8 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.addons_appstore_empty_subtitle
+import nuvio.composeapp.generated.resources.addons_empty_title
 import nuvio.composeapp.generated.resources.compose_nav_search
 import nuvio.composeapp.generated.resources.compose_search_clear
 import nuvio.composeapp.generated.resources.compose_search_discover_title
@@ -78,6 +81,8 @@ import nuvio.composeapp.generated.resources.compose_search_empty_no_search_catal
 import nuvio.composeapp.generated.resources.compose_search_placeholder
 import nuvio.composeapp.generated.resources.compose_search_recent_searches
 import nuvio.composeapp.generated.resources.compose_search_remove_recent_search
+import nuvio.composeapp.generated.resources.store_empty_unavailable_message
+import nuvio.composeapp.generated.resources.store_empty_unavailable_title
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -317,7 +322,9 @@ fun SearchScreen(
                     isWaitingForSearch -> {
                         items(2) {
                             HomeSkeletonRow(
-                                modifier = Modifier.padding(horizontal = homeSectionPadding),
+                                modifier = Modifier
+                                    .fillParentMaxHeight()
+                                    .padding(horizontal = homeSectionPadding),
                                 showHeaderAccent = !homeCatalogSettingsUiState.hideCatalogUnderline,
                             )
                         }
@@ -413,13 +420,37 @@ private fun SearchEmptyStateCard(
 
     when (reason) {
         SearchEmptyStateReason.NoActiveAddons -> {
-            title = stringResource(Res.string.compose_search_empty_no_active_addons_title)
-            message = stringResource(Res.string.compose_search_empty_no_active_addons_message)
+            title = stringResource(
+                if (AppFeaturePolicy.storeNarrativeEnabled) {
+                    Res.string.addons_empty_title
+                } else {
+                    Res.string.compose_search_empty_no_active_addons_title
+                },
+            )
+            message = stringResource(
+                if (AppFeaturePolicy.storeNarrativeEnabled) {
+                    Res.string.addons_appstore_empty_subtitle
+                } else {
+                    Res.string.compose_search_empty_no_active_addons_message
+                },
+            )
         }
 
         SearchEmptyStateReason.NoSearchCatalogs -> {
-            title = stringResource(Res.string.compose_search_empty_no_search_catalogs_title)
-            message = stringResource(Res.string.compose_search_empty_no_search_catalogs_message)
+            title = stringResource(
+                if (AppFeaturePolicy.storeNarrativeEnabled) {
+                    Res.string.store_empty_unavailable_title
+                } else {
+                    Res.string.compose_search_empty_no_search_catalogs_title
+                },
+            )
+            message = stringResource(
+                if (AppFeaturePolicy.storeNarrativeEnabled) {
+                    Res.string.store_empty_unavailable_message
+                } else {
+                    Res.string.compose_search_empty_no_search_catalogs_message
+                },
+            )
         }
 
         SearchEmptyStateReason.RequestFailed -> {

@@ -9,7 +9,7 @@ expect object AppFeaturePolicy {
     val pluginsEnabled: Boolean
     val supportersContributorsPageEnabled: Boolean
     val accountDeletionEnabled: Boolean
-    val personalMediaAddonCopyEnabled: Boolean
+    val storeNarrativeEnabled: Boolean
     val p2pEnabled: Boolean
     val trailerPlaybackMode: TrailerPlaybackMode
     val heroTrailerPlaybackSupported: Boolean

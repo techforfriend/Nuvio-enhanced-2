@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
+import com.nuvio.app.core.ui.NuvioEmptyState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -162,6 +163,7 @@ fun CatalogScreen(
             .background(MaterialTheme.colorScheme.background),
     ) {
         val columns = remember(maxWidth) { catalogGridColumnsForWidth(maxWidth) }
+        val viewportHeight = maxHeight
 
         Box(modifier = Modifier.fillMaxSize()) {
             LazyVerticalGrid(
@@ -184,6 +186,9 @@ fun CatalogScreen(
                 } else if (uiState.items.isEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         CatalogEmptyState(
+                            modifier = Modifier.height(
+                                (viewportHeight - 120.dp).coerceAtLeast(280.dp),
+                            ),
                             errorMessage = uiState.errorMessage,
                             networkCondition = networkStatusUiState.condition,
                             onRetry = {
@@ -361,6 +366,7 @@ private fun CatalogEmptyState(
     errorMessage: String?,
     networkCondition: NetworkCondition,
     onRetry: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
 ) {
     if (networkCondition == NetworkCondition.NoInternet || networkCondition == NetworkCondition.ServersUnreachable) {
         NuvioNetworkOfflineCard(
@@ -370,24 +376,11 @@ private fun CatalogEmptyState(
         return
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(
-            text = stringResource(Res.string.catalog_empty_title),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Text(
-            text = errorMessage ?: stringResource(Res.string.catalog_empty_message),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+    NuvioEmptyState(
+        modifier = modifier,
+        title = stringResource(Res.string.catalog_empty_title),
+        message = errorMessage ?: stringResource(Res.string.catalog_empty_message),
+    )
 }
 
 @Composable

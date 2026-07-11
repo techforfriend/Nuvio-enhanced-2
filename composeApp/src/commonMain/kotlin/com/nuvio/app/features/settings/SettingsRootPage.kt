@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.build.AppVersionConfig
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_about_made_with
@@ -37,7 +38,9 @@ import nuvio.composeapp.generated.resources.compose_settings_root_appearance_des
 import nuvio.composeapp.generated.resources.compose_settings_root_check_updates_description
 import nuvio.composeapp.generated.resources.compose_settings_root_check_updates_title
 import nuvio.composeapp.generated.resources.compose_settings_root_content_discovery_description
+import nuvio.composeapp.generated.resources.compose_settings_root_content_discovery_description_appstore
 import nuvio.composeapp.generated.resources.compose_settings_root_downloads_description
+import nuvio.composeapp.generated.resources.compose_settings_root_downloads_description_appstore
 import nuvio.composeapp.generated.resources.compose_settings_root_downloads_title
 import nuvio.composeapp.generated.resources.compose_settings_root_general_section
 import nuvio.composeapp.generated.resources.compose_settings_root_integrations_description
@@ -130,7 +133,13 @@ internal fun LazyListScope.settingsRootContent(
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_content_discovery),
-                        description = stringResource(Res.string.compose_settings_root_content_discovery_description),
+                        description = stringResource(
+                            if (AppFeaturePolicy.storeNarrativeEnabled) {
+                                Res.string.compose_settings_root_content_discovery_description_appstore
+                            } else {
+                                Res.string.compose_settings_root_content_discovery_description
+                            },
+                        ),
                         icon = Icons.Rounded.Extension,
                         isTablet = isTablet,
                         onClick = onContentDiscoveryClick,
@@ -138,7 +147,13 @@ internal fun LazyListScope.settingsRootContent(
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_root_downloads_title),
-                        description = stringResource(Res.string.compose_settings_root_downloads_description),
+                        description = stringResource(
+                            if (AppFeaturePolicy.storeNarrativeEnabled) {
+                                Res.string.compose_settings_root_downloads_description_appstore
+                            } else {
+                                Res.string.compose_settings_root_downloads_description
+                            },
+                        ),
                         icon = Icons.Rounded.CloudDownload,
                         isTablet = isTablet,
                         onClick = onDownloadsClick,
