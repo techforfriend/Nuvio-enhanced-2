@@ -31,7 +31,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.NuvioDropdownChip
@@ -95,9 +94,7 @@ internal fun LazyListScope.discoverContent(
             items(2) {
                 DiscoverSkeletonRow(
                     columns = columns,
-                    modifier = Modifier
-                        .fillParentMaxHeight(0.72f)
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
         }
@@ -356,37 +353,13 @@ private fun DiscoverEmptyStateCard(
 
     when (reason) {
         DiscoverEmptyStateReason.NoActiveAddons -> {
-            title = stringResource(
-                if (AppFeaturePolicy.storeNarrativeEnabled) {
-                    Res.string.addons_empty_title
-                } else {
-                    Res.string.compose_search_empty_no_active_addons_title
-                },
-            )
-            message = stringResource(
-                if (AppFeaturePolicy.storeNarrativeEnabled) {
-                    Res.string.addons_appstore_empty_subtitle
-                } else {
-                    Res.string.discover_empty_no_active_addons_message
-                },
-            )
+            title = stringResource(Res.string.compose_search_empty_no_active_addons_title)
+            message = stringResource(Res.string.discover_empty_no_active_addons_message)
         }
 
         DiscoverEmptyStateReason.NoDiscoverCatalogs -> {
-            title = stringResource(
-                if (AppFeaturePolicy.storeNarrativeEnabled) {
-                    Res.string.store_empty_unavailable_title
-                } else {
-                    Res.string.discover_empty_no_catalogs_title
-                },
-            )
-            message = stringResource(
-                if (AppFeaturePolicy.storeNarrativeEnabled) {
-                    Res.string.store_empty_unavailable_message
-                } else {
-                    Res.string.discover_empty_no_catalogs_message
-                },
-            )
+            title = stringResource(Res.string.discover_empty_no_catalogs_title)
+            message = stringResource(Res.string.discover_empty_no_catalogs_message)
         }
 
         DiscoverEmptyStateReason.RequestFailed -> {

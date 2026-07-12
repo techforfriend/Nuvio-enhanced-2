@@ -84,7 +84,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -269,10 +268,7 @@ fun LibraryScreen(
                             )
                         } else {
                             HomeEmptyStateCard(
-                                modifier = Modifier
-                                    .fillParentMaxHeight(0.55f)
-                                    .padding(horizontal = 16.dp),
-                                iconPainter = painterResource(Res.drawable.sidebar_library),
+                                modifier = Modifier.padding(horizontal = 16.dp),
                                 title = if (isTraktSource) {
                                     stringResource(Res.string.library_trakt_load_failed)
                                 } else {
@@ -296,10 +292,7 @@ fun LibraryScreen(
                             )
                         } else {
                             HomeEmptyStateCard(
-                                modifier = Modifier
-                                    .fillParentMaxHeight(0.55f)
-                                    .padding(horizontal = 16.dp),
-                                iconPainter = painterResource(Res.drawable.sidebar_library),
+                                modifier = Modifier.padding(horizontal = 16.dp),
                                 title = if (isTraktSource) {
                                     stringResource(Res.string.library_trakt_empty_title)
                                 } else {
@@ -352,10 +345,7 @@ private fun LazyListScope.cloudLibraryContent(
         !uiState.isEnabled -> {
             item {
                 HomeEmptyStateCard(
-                    modifier = Modifier
-                        .fillParentMaxHeight(0.55f)
-                        .padding(horizontal = 16.dp),
-                    iconPainter = painterResource(Res.drawable.sidebar_library),
+                    modifier = Modifier.padding(horizontal = 16.dp),
                     title = stringResource(Res.string.cloud_library_disabled_title),
                     message = stringResource(Res.string.cloud_library_disabled_message),
                     actionLabel = stringResource(Res.string.cloud_library_disabled_action),
@@ -367,10 +357,7 @@ private fun LazyListScope.cloudLibraryContent(
         !uiState.hasConnectedProvider -> {
             item {
                 HomeEmptyStateCard(
-                    modifier = Modifier
-                        .fillParentMaxHeight(0.55f)
-                        .padding(horizontal = 16.dp),
-                    iconPainter = painterResource(Res.drawable.sidebar_library),
+                    modifier = Modifier.padding(horizontal = 16.dp),
                     title = stringResource(Res.string.cloud_library_connect_title),
                     message = stringResource(Res.string.cloud_library_connect_message),
                     actionLabel = stringResource(Res.string.cloud_library_connect_action),
@@ -420,7 +407,6 @@ private fun LazyListScope.cloudLibraryContent(
                         item(key = "cloud-error-${providerState.providerId}") {
                             HomeEmptyStateCard(
                                 modifier = Modifier.padding(horizontal = 16.dp),
-                                iconPainter = painterResource(Res.drawable.sidebar_library),
                                 title = stringResource(Res.string.cloud_library_load_failed, providerState.providerName),
                                 message = providerState.errorMessage.orEmpty(),
                                 actionLabel = stringResource(Res.string.action_retry),
@@ -434,10 +420,7 @@ private fun LazyListScope.cloudLibraryContent(
                 } else if (filteredItems.isEmpty()) {
                     item {
                         HomeEmptyStateCard(
-                            modifier = Modifier
-                                .fillParentMaxHeight(0.5f)
-                                .padding(horizontal = 16.dp),
-                            iconPainter = painterResource(Res.drawable.sidebar_library),
+                            modifier = Modifier.padding(horizontal = 16.dp),
                             title = stringResource(Res.string.cloud_library_empty_title),
                             message = stringResource(Res.string.cloud_library_empty_message),
                             actionLabel = stringResource(Res.string.action_retry),

@@ -8,7 +8,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
@@ -44,7 +43,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.NuvioTokens
-import com.nuvio.app.core.ui.NuvioEmptyState
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.isIos
 import nuvio.composeapp.generated.resources.*
@@ -83,7 +81,7 @@ internal fun settingsSearchEntries(
     pluginsEnabled: Boolean,
     supportersContributorsPageEnabled: Boolean,
     accountDeletionEnabled: Boolean,
-    storeNarrativeEnabled: Boolean,
+    personalMediaAddonCopyEnabled: Boolean,
     liquidGlassNativeTabBarSupported: Boolean,
     switchProfileAvailable: Boolean,
     checkForUpdatesAvailable: Boolean,
@@ -227,25 +225,13 @@ internal fun settingsSearchEntries(
         page = SettingsPage.ContentDiscovery,
         key = "content-discovery",
         title = contentDiscoveryPage,
-        description = stringResource(
-            if (storeNarrativeEnabled) {
-                Res.string.compose_settings_root_content_discovery_description_appstore
-            } else {
-                Res.string.compose_settings_root_content_discovery_description
-            },
-        ),
+        description = stringResource(Res.string.compose_settings_root_content_discovery_description),
         icon = Icons.Rounded.Extension,
     )
     add(
         key = "downloads",
         title = downloadsPage,
-        description = stringResource(
-            if (storeNarrativeEnabled) {
-                Res.string.compose_settings_root_downloads_description_appstore
-            } else {
-                Res.string.compose_settings_root_downloads_description
-            },
-        ),
+        description = stringResource(Res.string.compose_settings_root_downloads_description),
         category = generalCategory,
         icon = Icons.Rounded.CloudDownload,
         target = SettingsSearchTarget.Downloads,
@@ -462,7 +448,7 @@ internal fun settingsSearchEntries(
         key = "addons",
         title = addonsPage,
         description = stringResource(
-            if (storeNarrativeEnabled) {
+            if (personalMediaAddonCopyEnabled) {
                 Res.string.settings_content_discovery_addons_description_appstore
             } else {
                 Res.string.settings_content_discovery_addons_description
@@ -1120,14 +1106,25 @@ private fun SettingsSearchField(
 
 @Composable
 private fun SettingsSearchEmptyState(isTablet: Boolean) {
+    val tokens = MaterialTheme.nuvio
     SettingsSection(
         title = stringResource(Res.string.settings_search_results_section),
         isTablet = isTablet,
     ) {
-        NuvioEmptyState(
-            modifier = Modifier.heightIn(min = 280.dp),
-            title = stringResource(Res.string.settings_search_empty),
-        )
+        SettingsGroup(isTablet = isTablet) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = if (isTablet) 20.dp else 16.dp, vertical = 18.dp),
+            ) {
+                Text(
+                    text = stringResource(Res.string.settings_search_empty),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = tokens.colors.textPrimary,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        }
     }
 }
 

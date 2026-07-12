@@ -4,7 +4,7 @@ actual object AppFeaturePolicy {
     actual val pluginsEnabled: Boolean = false
     actual val supportersContributorsPageEnabled: Boolean = true
     actual val accountDeletionEnabled: Boolean = false
-    actual val storeNarrativeEnabled: Boolean = false
+    actual val personalMediaAddonCopyEnabled: Boolean = false
     actual val p2pEnabled: Boolean = false
     actual val trailerPlaybackMode: TrailerPlaybackMode = TrailerPlaybackMode.EXTERNAL
     actual val heroTrailerPlaybackSupported: Boolean = false

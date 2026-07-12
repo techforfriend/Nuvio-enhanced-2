@@ -41,6 +41,7 @@ import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.SearchOff
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -74,7 +75,6 @@ import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.NuvioBottomSheetActionRow
 import com.nuvio.app.core.ui.NuvioBottomSheetDivider
-import com.nuvio.app.core.ui.NuvioEmptyState
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
@@ -892,10 +892,7 @@ internal fun StreamList(
 
             !hasAnyStreams && !uiState.isAnyLoading -> {
                 item {
-                    EmptyStateBlock(
-                        reason = uiState.emptyStateReason,
-                        modifier = Modifier.fillParentMaxHeight(),
-                    )
+                    EmptyStateBlock(reason = uiState.emptyStateReason)
                 }
             }
 
@@ -1252,37 +1249,13 @@ private fun EmptyStateBlock(
 
     when (reason) {
         StreamsEmptyStateReason.NoAddonsInstalled -> {
-            title = stringResource(
-                if (AppFeaturePolicy.storeNarrativeEnabled) {
-                    Res.string.addons_empty_title
-                } else {
-                    Res.string.compose_search_empty_no_active_addons_title
-                },
-            )
-            message = stringResource(
-                if (AppFeaturePolicy.storeNarrativeEnabled) {
-                    Res.string.addons_appstore_empty_subtitle
-                } else {
-                    Res.string.streams_empty_no_addons_message
-                },
-            )
+            title = stringResource(Res.string.compose_search_empty_no_active_addons_title)
+            message = stringResource(Res.string.streams_empty_no_addons_message)
         }
 
         StreamsEmptyStateReason.NoCompatibleAddons -> {
-            title = stringResource(
-                if (AppFeaturePolicy.storeNarrativeEnabled) {
-                    Res.string.store_empty_unavailable_title
-                } else {
-                    Res.string.streams_empty_no_stream_addon_title
-                },
-            )
-            message = stringResource(
-                if (AppFeaturePolicy.storeNarrativeEnabled) {
-                    Res.string.store_empty_unavailable_message
-                } else {
-                    Res.string.streams_empty_no_stream_addon_message
-                },
-            )
+            title = stringResource(Res.string.streams_empty_no_stream_addon_title)
+            message = stringResource(Res.string.streams_empty_no_stream_addon_message)
         }
 
         StreamsEmptyStateReason.StreamFetchFailed -> {
@@ -1296,11 +1269,35 @@ private fun EmptyStateBlock(
         }
     }
 
-    NuvioEmptyState(
-        modifier = modifier,
-        title = title,
-        message = message,
-    )
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.SearchOff,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge.copy(
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+            ),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center,
+        )
+    }
 }
 
 @Composable

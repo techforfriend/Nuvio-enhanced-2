@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -48,7 +47,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.build.AppFeaturePolicy
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.NuvioIconActionButton
-import com.nuvio.app.core.ui.NuvioEmptyState
 import com.nuvio.app.core.ui.NuvioInfoBadge
 import com.nuvio.app.core.ui.NuvioInputField
 import com.nuvio.app.core.ui.NuvioPrimaryButton
@@ -96,7 +94,7 @@ internal fun AddonsSettingsPageContent(
     var formMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var installModalState by remember { mutableStateOf<AddonInstallModalState?>(null) }
     val enterAddonUrlMessage = stringResource(Res.string.addons_error_enter_url)
-    val useStoreNarrative = AppFeaturePolicy.storeNarrativeEnabled
+    val usePersonalMediaCopy = AppFeaturePolicy.personalMediaAddonCopyEnabled
 
     val overview = remember(uiState.addons) { uiState.addons.toOverview() }
 
@@ -111,7 +109,7 @@ internal fun AddonsSettingsPageContent(
         AddAddonCard(
             addonUrl = addonUrl,
             formMessage = formMessage,
-            useStoreNarrative = useStoreNarrative,
+            usePersonalMediaCopy = usePersonalMediaCopy,
             onAddonUrlChange = {
                 addonUrl = it
                 formMessage = null
@@ -143,7 +141,7 @@ internal fun AddonsSettingsPageContent(
 
         SectionHeader(stringResource(Res.string.addons_section_installed))
         if (uiState.addons.isEmpty()) {
-            EmptyStateCard(useStoreNarrative = useStoreNarrative)
+            EmptyStateCard(usePersonalMediaCopy = usePersonalMediaCopy)
         } else {
             val lastIndex = uiState.addons.lastIndex
             uiState.addons.forEachIndexed { index, addon ->
@@ -288,7 +286,7 @@ private fun VerticalSeparator() {
 private fun AddAddonCard(
     addonUrl: String,
     formMessage: String?,
-    useStoreNarrative: Boolean,
+    usePersonalMediaCopy: Boolean,
     onAddonUrlChange: (String) -> Unit,
     onAddClick: () -> Unit,
 ) {
@@ -296,15 +294,27 @@ private fun AddAddonCard(
         NuvioInputField(
             value = addonUrl,
             onValueChange = onAddonUrlChange,
-            placeholder = stringResource(Res.string.addons_input_placeholder),
+            placeholder = stringResource(
+                if (usePersonalMediaCopy) {
+                    Res.string.addons_appstore_input_placeholder
+                } else {
+                    Res.string.addons_input_placeholder
+                },
+            ),
         )
         Spacer(modifier = Modifier.height(18.dp))
         NuvioPrimaryButton(
-            text = stringResource(Res.string.addons_install_button),
+            text = stringResource(
+                if (usePersonalMediaCopy) {
+                    Res.string.addons_appstore_install_button
+                } else {
+                    Res.string.addons_install_button
+                },
+            ),
             enabled = addonUrl.isNotBlank(),
             onClick = onAddClick,
         )
-        if (useStoreNarrative) {
+        if (usePersonalMediaCopy) {
             Spacer(modifier = Modifier.height(14.dp))
             Text(
                 text = stringResource(Res.string.addons_appstore_add_description),
@@ -345,26 +355,33 @@ private sealed interface AddonInstallModalState {
 
 @Composable
 private fun EmptyStateCard(
-    useStoreNarrative: Boolean,
+    usePersonalMediaCopy: Boolean,
 ) {
-    NuvioEmptyState(
-        modifier = Modifier.heightIn(min = 220.dp),
-        icon = Icons.Rounded.Extension,
-        title = stringResource(
-            if (useStoreNarrative) {
-                Res.string.addons_appstore_empty_title
-            } else {
-                Res.string.addons_empty_title
-            },
-        ),
-        message = stringResource(
-            if (useStoreNarrative) {
-                Res.string.addons_appstore_empty_subtitle
-            } else {
-                Res.string.addons_empty_subtitle
-            },
-        ),
-    )
+    NuvioSurfaceCard {
+        Text(
+            text = stringResource(
+                if (usePersonalMediaCopy) {
+                    Res.string.addons_appstore_empty_title
+                } else {
+                    Res.string.addons_empty_title
+                },
+            ),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(
+                if (usePersonalMediaCopy) {
+                    Res.string.addons_appstore_empty_subtitle
+                } else {
+                    Res.string.addons_empty_subtitle
+                },
+            ),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable

@@ -2,6 +2,7 @@ package com.nuvio.app.features.downloads
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,7 +14,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
@@ -37,8 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.i18n.localizedByteUnit
 import com.nuvio.app.core.ui.NuvioScreen
-import com.nuvio.app.core.ui.NuvioEmptyState
 import com.nuvio.app.core.ui.NuvioScreenHeader
+import com.nuvio.app.core.ui.NuvioToastController
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -56,6 +57,8 @@ fun DownloadsScreen(
     }.collectAsStateWithLifecycle()
 
     var selectedShowId by rememberSaveable(initialShowId) { mutableStateOf(initialShowId) }
+    val openDownloadsDirectoryFailedText = stringResource(Res.string.downloads_open_directory_failed)
+
     val completedEpisodes = remember(uiState.items) {
         uiState.completedItems
             .filter { it.isEpisode }
@@ -81,6 +84,20 @@ fun DownloadsScreen(
                         onBackFromShow?.invoke() ?: run { selectedShowId = null }
                     } else {
                         onBack()
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            if (!DownloadsPlatformDownloader.openDownloadsDirectory()) {
+                                NuvioToastController.show(openDownloadsDirectoryFailedText)
+                            }
+                        },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Folder,
+                            contentDescription = stringResource(Res.string.downloads_open_directory),
+                        )
                     }
                 },
             )
@@ -211,11 +228,18 @@ private fun LazyListScope.downloadsRootContent(
 
     if (uiState.items.isEmpty()) {
         item {
-            NuvioEmptyState(
-                modifier = Modifier.fillParentMaxHeight(),
-                icon = Icons.Rounded.Download,
-                title = stringResource(Res.string.downloads_empty_title),
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 40.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(Res.string.downloads_empty_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
@@ -240,11 +264,18 @@ private fun LazyListScope.downloadsShowContent(
 
     if (seasons.isEmpty()) {
         item {
-            NuvioEmptyState(
-                modifier = Modifier.fillParentMaxHeight(),
-                icon = Icons.Rounded.Download,
-                title = stringResource(Res.string.downloads_empty_episodes),
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 40.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(Res.string.downloads_empty_episodes),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         return
     }

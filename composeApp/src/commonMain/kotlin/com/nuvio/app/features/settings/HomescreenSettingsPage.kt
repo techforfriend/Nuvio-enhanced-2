@@ -31,7 +31,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.ui.NuvioActionLabel
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.features.home.HomeCatalogSettingsItem
@@ -59,8 +58,6 @@ import nuvio.composeapp.generated.resources.settings_homescreen_show_hero
 import nuvio.composeapp.generated.resources.settings_homescreen_show_hero_description
 import nuvio.composeapp.generated.resources.settings_homescreen_summary
 import nuvio.composeapp.generated.resources.settings_homescreen_summary_hint
-import nuvio.composeapp.generated.resources.store_empty_unavailable_message
-import nuvio.composeapp.generated.resources.store_empty_unavailable_title
 import org.jetbrains.compose.resources.stringResource
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 import sh.calvin.reorderable.ReorderableItem
@@ -136,23 +133,9 @@ internal fun LazyListScope.homescreenSettingsContent(
     item {
         if (items.isEmpty()) {
             HomeEmptyStateCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 280.dp),
-                title = stringResource(
-                    if (AppFeaturePolicy.storeNarrativeEnabled) {
-                        Res.string.store_empty_unavailable_title
-                    } else {
-                        Res.string.settings_homescreen_empty_title
-                    },
-                ),
-                message = stringResource(
-                    if (AppFeaturePolicy.storeNarrativeEnabled) {
-                        Res.string.store_empty_unavailable_message
-                    } else {
-                        Res.string.settings_homescreen_empty_message
-                    },
-                ),
+                modifier = Modifier.fillMaxWidth(),
+                title = stringResource(Res.string.settings_homescreen_empty_title),
+                message = stringResource(Res.string.settings_homescreen_empty_message),
             )
         } else {
             val catalogCount = items.count { !it.isCollection }

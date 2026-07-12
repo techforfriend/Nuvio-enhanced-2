@@ -19,20 +19,14 @@ internal fun LazyListScope.contentDiscoveryContent(
 ) {
     item {
         SettingsSection(
-            title = stringResource(
-                if (AppFeaturePolicy.storeNarrativeEnabled) {
-                    Res.string.compose_settings_page_addons
-                } else {
-                    Res.string.settings_content_discovery_section_sources
-                },
-            ),
+            title = stringResource(Res.string.settings_content_discovery_section_sources),
             isTablet = isTablet,
         ) {
             SettingsGroup(isTablet = isTablet) {
                 SettingsNavigationRow(
                     title = stringResource(Res.string.compose_settings_page_addons),
                     description = stringResource(
-                        if (AppFeaturePolicy.storeNarrativeEnabled) {
+                        if (AppFeaturePolicy.personalMediaAddonCopyEnabled) {
                             Res.string.settings_content_discovery_addons_description_appstore
                         } else {
                             Res.string.settings_content_discovery_addons_description

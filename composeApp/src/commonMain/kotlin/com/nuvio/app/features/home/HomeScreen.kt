@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
-import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.ui.LocalNuvioBottomNavigationOverlayPadding
@@ -37,6 +36,7 @@ import com.nuvio.app.features.details.seriesPrimaryAction
 import com.nuvio.app.features.home.components.HomeCatalogRowSection
 import com.nuvio.app.features.home.components.HomeContinueWatchingSection
 import com.nuvio.app.features.home.components.HomeEmptyStateCard
+import com.nuvio.app.features.home.components.HomeHeroReservedSpace
 import com.nuvio.app.features.home.components.HomeHeroSection
 import com.nuvio.app.features.home.components.HomeSkeletonHero
 import com.nuvio.app.features.home.components.HomeSkeletonRow
@@ -107,6 +107,7 @@ fun HomeScreen(
     onFirstCatalogRendered: (() -> Unit)? = null,
 ) {
     LaunchedEffect(Unit) {
+        AddonRepository.initialize()
         CollectionRepository.initialize()
         ContinueWatchingPreferencesRepository.ensureLoaded()
         WatchedRepository.ensureLoaded()
@@ -117,10 +118,7 @@ fun HomeScreen(
         }
     }
 
-    val addonsUiState by remember {
-        AddonRepository.initialize()
-        AddonRepository.uiState
-    }.collectAsStateWithLifecycle()
+    val addonsUiState by AddonRepository.uiState.collectAsStateWithLifecycle()
     val homeUiState by HomeRepository.uiState.collectAsStateWithLifecycle()
     val homeSettingsUiState by remember {
         HomeCatalogSettingsRepository.snapshot()
@@ -442,6 +440,7 @@ fun HomeScreen(
     }
 
     LaunchedEffect(catalogRefreshKey) {
+        if (catalogRefreshKey.isEmpty()) return@LaunchedEffect
         HomeCatalogSettingsRepository.syncCatalogs(enabledAddons)
         HomeRepository.refresh(enabledAddons)
     }
@@ -656,15 +655,11 @@ fun HomeScreen(
     }
 
     val hasActiveAddons = enabledAddons.any { it.manifest != null }
-    val hasCurrentHeroSource = enabledAddons.any { it.manifest != null || it.isRefreshing } ||
-        collections.any { it.folders.isNotEmpty() }
+    val showHeroSlot = homeSettingsUiState.heroEnabled
     val isResolvingHeroSources = enabledAddons.any { it.isRefreshing } || homeUiState.isLoading
-    val showHeroSkeleton = homeSettingsUiState.heroEnabled &&
-        enabledAddons.isNotEmpty() &&
+    val showHeroSkeleton = showHeroSlot &&
         homeUiState.heroItems.isEmpty() &&
         isResolvingHeroSources
-    val showHeroSlot = homeSettingsUiState.heroEnabled && hasCurrentHeroSource &&
-        (homeUiState.heroItems.isNotEmpty() || showHeroSkeleton)
     var firstCatalogReported by remember { mutableStateOf(false) }
 
     LaunchedEffect(homeUiState.sections.firstOrNull()?.key, onFirstCatalogRendered) {
@@ -754,20 +749,26 @@ fun HomeScreen(
         ) {
             if (showHeroSlot) {
                 item {
-                    if (showHeroSkeleton) {
-                        HomeSkeletonHero(
+                    when {
+                        showHeroSkeleton -> HomeSkeletonHero(
                             modifier = Modifier,
                             viewportHeight = maxHeight,
                             mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
                         )
-                    } else {
-                        HomeHeroSection(
+
+                        homeUiState.heroItems.isNotEmpty() -> HomeHeroSection(
                             items = homeUiState.heroItems,
                             modifier = Modifier,
                             viewportHeight = maxHeight,
                             mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
                             listState = homeListState,
                             onItemClick = onPosterClick,
+                        )
+
+                        else -> HomeHeroReservedSpace(
+                            modifier = Modifier,
+                            viewportHeight = maxHeight,
+                            mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
                         )
                     }
                 }
@@ -791,31 +792,10 @@ fun HomeScreen(
                         }
                     }
                     item {
-                        val emptyStateModifier = if (
-                            continueWatchingPreferences.isVisible && continueWatchingItems.isNotEmpty()
-                        ) {
-                            Modifier.padding(horizontal = 16.dp)
-                        } else {
-                            Modifier
-                                .fillParentMaxHeight()
-                                .padding(horizontal = 16.dp)
-                        }
                         HomeEmptyStateCard(
-                            modifier = emptyStateModifier,
-                            title = stringResource(
-                                if (AppFeaturePolicy.storeNarrativeEnabled) {
-                                    Res.string.addons_empty_title
-                                } else {
-                                    Res.string.compose_search_empty_no_active_addons_title
-                                },
-                            ),
-                            message = stringResource(
-                                if (AppFeaturePolicy.storeNarrativeEnabled) {
-                                    Res.string.addons_appstore_empty_subtitle
-                                } else {
-                                    Res.string.home_empty_no_active_addons_message
-                                },
-                            ),
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            title = stringResource(Res.string.compose_search_empty_no_active_addons_title),
+                            message = stringResource(Res.string.home_empty_no_active_addons_message),
                         )
                     }
                 }
@@ -859,22 +839,10 @@ fun HomeScreen(
                             )
                         } else {
                             HomeEmptyStateCard(
-                                modifier = Modifier
-                                    .fillParentMaxHeight()
-                                    .padding(horizontal = 16.dp),
-                                title = stringResource(
-                                    if (AppFeaturePolicy.storeNarrativeEnabled) {
-                                        Res.string.store_empty_unavailable_title
-                                    } else {
-                                        Res.string.home_empty_no_rows_title
-                                    },
-                                ),
-                                message = if (AppFeaturePolicy.storeNarrativeEnabled) {
-                                    stringResource(Res.string.store_empty_unavailable_message)
-                                } else {
-                                    homeUiState.errorMessage
-                                        ?: stringResource(Res.string.home_empty_no_rows_message)
-                                },
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                title = stringResource(Res.string.home_empty_no_rows_title),
+                                message = homeUiState.errorMessage
+                                    ?: stringResource(Res.string.home_empty_no_rows_message),
                             )
                         }
                     }
