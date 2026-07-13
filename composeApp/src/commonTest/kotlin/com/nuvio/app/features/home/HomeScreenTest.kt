@@ -11,6 +11,7 @@ import com.nuvio.app.features.watchprogress.CachedInProgressItem
 import com.nuvio.app.features.watchprogress.CachedNextUpItem
 import com.nuvio.app.features.watchprogress.ContinueWatchingItem
 import com.nuvio.app.features.watchprogress.WatchProgressEntry
+import com.nuvio.app.features.watchprogress.WatchProgressSourceTraktHistory
 import com.nuvio.app.features.watchprogress.nextUpDismissKey
 import com.nuvio.app.features.watchprogress.parseReleaseDateToEpochMs
 import com.nuvio.app.features.watchprogress.resolvedProgressKey
@@ -489,6 +490,34 @@ class HomeScreenTest {
     }
 
     @Test
+    fun `Trakt next up seeds ignore watched items from the separate watched sync`() {
+        val traktProgress = progressEntry(
+            videoId = "show:1:2",
+            title = "Show",
+            seasonNumber = 1,
+            episodeNumber = 2,
+            lastUpdatedEpochMs = 2_000L,
+            isCompleted = true,
+        ).copy(source = WatchProgressSourceTraktHistory)
+        val watchedItem = watchedItem(
+            id = "other-show",
+            season = 3,
+            episode = 8,
+            markedAtEpochMs = 3_000L,
+        )
+
+        val result = buildHomeNextUpSeedCandidates(
+            progressEntries = listOf(traktProgress),
+            watchedItems = listOf(watchedItem),
+            isTraktProgressActive = true,
+            preferFurthestEpisode = true,
+            nowEpochMs = 4_000L,
+        )
+
+        assertEquals(listOf("show"), result.map { it.content.id })
+    }
+
+    @Test
     fun `stale live next up item is dropped when current seed advances`() {
         val staleNextUp = continueWatchingItem(
             videoId = "show:4:11",
@@ -511,6 +540,7 @@ class HomeScreenTest {
     fun `home next up waits for the selected seed source before resolving or clearing cache`() {
         assertFalse(
             isHomeNextUpSeedSourceLoaded(
+                isTraktProgressActive = false,
                 hasLoadedRemoteProgress = false,
                 hasLoadedWatchedItems = true,
                 hasLoadedRemoteWatchedItems = true,
@@ -518,6 +548,7 @@ class HomeScreenTest {
         )
         assertFalse(
             isHomeNextUpSeedSourceLoaded(
+                isTraktProgressActive = false,
                 hasLoadedRemoteProgress = true,
                 hasLoadedWatchedItems = false,
                 hasLoadedRemoteWatchedItems = true,
@@ -525,6 +556,7 @@ class HomeScreenTest {
         )
         assertFalse(
             isHomeNextUpSeedSourceLoaded(
+                isTraktProgressActive = false,
                 hasLoadedRemoteProgress = true,
                 hasLoadedWatchedItems = true,
                 hasLoadedRemoteWatchedItems = false,
@@ -532,9 +564,18 @@ class HomeScreenTest {
         )
         assertTrue(
             isHomeNextUpSeedSourceLoaded(
+                isTraktProgressActive = false,
                 hasLoadedRemoteProgress = true,
                 hasLoadedWatchedItems = true,
                 hasLoadedRemoteWatchedItems = true,
+            ),
+        )
+        assertTrue(
+            isHomeNextUpSeedSourceLoaded(
+                isTraktProgressActive = true,
+                hasLoadedRemoteProgress = true,
+                hasLoadedWatchedItems = false,
+                hasLoadedRemoteWatchedItems = false,
             ),
         )
     }

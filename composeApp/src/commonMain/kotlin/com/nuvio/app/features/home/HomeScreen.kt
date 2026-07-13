@@ -170,6 +170,10 @@ fun HomeScreen(
 
     val isTraktProgressActive = effectiveWatchProgressSource == WatchProgressSource.TRAKT
 
+    val nextUpWatchedItems = remember(watchedUiState.items, isTraktProgressActive) {
+        if (isTraktProgressActive) emptyList() else watchedUiState.items
+    }
+
     val effectiveWatchProgressEntries = remember(
         watchProgressUiState.entries,
         isTraktProgressActive,
@@ -190,7 +194,7 @@ fun HomeScreen(
 
     val allNextUpSeedCandidates = remember(
         watchProgressUiState.entries,
-        watchedUiState.items,
+        nextUpWatchedItems,
         isTraktProgressActive,
         continueWatchingPreferences.upNextFromFurthestEpisode,
     ) {
@@ -199,14 +203,9 @@ fun HomeScreen(
         } else {
             watchProgressUiState.entries
         }
-        val filteredWatchedItems = if (isTraktProgressActive) {
-            watchedUiState.items.filter { !WatchProgressRepository.isDroppedShow(it.id) }
-        } else {
-            watchedUiState.items
-        }
         buildHomeNextUpSeedCandidates(
             progressEntries = filteredEntries,
-            watchedItems = filteredWatchedItems,
+            watchedItems = nextUpWatchedItems,
             isTraktProgressActive = isTraktProgressActive,
             preferFurthestEpisode = continueWatchingPreferences.upNextFromFurthestEpisode,
             nowEpochMs = WatchProgressClock.nowEpochMs(),
@@ -304,8 +303,10 @@ fun HomeScreen(
         watchProgressUiState.hasLoadedRemoteProgress,
         watchedUiState.isLoaded,
         watchedUiState.hasLoadedRemoteItems,
+        isTraktProgressActive,
     ) {
         isHomeNextUpSeedSourceLoaded(
+            isTraktProgressActive = isTraktProgressActive,
             hasLoadedRemoteProgress = watchProgressUiState.hasLoadedRemoteProgress,
             hasLoadedWatchedItems = watchedUiState.isLoaded,
             hasLoadedRemoteWatchedItems = watchedUiState.hasLoadedRemoteItems,
@@ -490,7 +491,7 @@ fun HomeScreen(
         continueWatchingPreferences.dismissedNextUpKeys,
         watchProgressSeedKey,
         visibleContinueWatchingEntries,
-        watchedUiState.items,
+        nextUpWatchedItems,
         watchedUiState.isLoaded,
         watchedUiState.hasLoadedRemoteItems,
         watchProgressUiState.hasLoadedRemoteProgress,
@@ -500,6 +501,7 @@ fun HomeScreen(
     ) {
         if (
             !isHomeNextUpSeedSourceLoaded(
+                isTraktProgressActive = isTraktProgressActive,
                 hasLoadedRemoteProgress = watchProgressUiState.hasLoadedRemoteProgress,
                 hasLoadedWatchedItems = watchedUiState.isLoaded,
                 hasLoadedRemoteWatchedItems = watchedUiState.hasLoadedRemoteItems,
@@ -585,7 +587,7 @@ fun HomeScreen(
                                 resolveHomeNextUpCandidate(
                                     completedEntry = completedEntry,
                                     watchProgressEntries = watchProgressUiState.entries,
-                                    watchedItems = watchedUiState.items,
+                                    watchedItems = nextUpWatchedItems,
                                     cachedFallbackItem = cachedNextUpItems[completedEntry.content.id]?.second,
                                     todayIsoDate = todayIsoDate,
                                     preferFurthestEpisode = continueWatchingPreferences.upNextFromFurthestEpisode,
@@ -1094,12 +1096,16 @@ internal fun buildHomeNextUpSeedCandidates(
             }
         }
         .toList()
-    val watchedSeeds = watchedItems.filter { item ->
-        item.type.isSeriesTypeForContinueWatching() &&
-            item.season != null &&
-            item.episode != null &&
-            item.season != 0 &&
-            !isMalformedNextUpSeedContentId(item.id)
+    val watchedSeeds = if (isTraktProgressActive) {
+        emptyList()
+    } else {
+        watchedItems.filter { item ->
+            item.type.isSeriesTypeForContinueWatching() &&
+                item.season != null &&
+                item.episode != null &&
+                item.season != 0 &&
+                !isMalformedNextUpSeedContentId(item.id)
+        }
     }
 
     return WatchingState.latestCompletedBySeries(
@@ -1140,10 +1146,13 @@ internal fun filterNextUpItemsByCurrentSeeds(
     }
 
 internal fun isHomeNextUpSeedSourceLoaded(
+    isTraktProgressActive: Boolean,
     hasLoadedRemoteProgress: Boolean,
     hasLoadedWatchedItems: Boolean,
     hasLoadedRemoteWatchedItems: Boolean,
-): Boolean = hasLoadedRemoteProgress && hasLoadedWatchedItems && hasLoadedRemoteWatchedItems
+): Boolean = hasLoadedRemoteProgress && (
+    isTraktProgressActive || (hasLoadedWatchedItems && hasLoadedRemoteWatchedItems)
+)
 
 internal fun cachedNextUpHasAired(
     cached: CachedNextUpItem,
@@ -1252,28 +1261,26 @@ private suspend fun resolveHomeNextUpCandidate(
     } else {
         watchProgressEntries
     }
-    val resolvedWatchedItems = if (isTraktProgressActive) {
-        remapTraktWatchedItems(watchedItems, contentId)
-    } else {
-        watchedItems
-    }
+    val resolvedWatchedItems = watchedItems
     val resolvedWatchedKeys = resolvedWatchedItems.mapTo(linkedSetOf()) { item ->
         watchedItemKey(item.type, item.id, item.season, item.episode)
     }
 
-    WatchedRepository.reconcileFullyWatchedSeriesState(
-        meta = meta,
-        todayIsoDate = todayIsoDate,
-        isEpisodeWatched = { episode ->
-            watchedItemKey(meta.type, meta.id, episode.season, episode.episode) in resolvedWatchedKeys
-        },
-        isEpisodeCompleted = { episode ->
-            val playbackId = meta.episodePlaybackId(episode)
-            resolvedProgressEntries.any { entry ->
-                entry.videoId == playbackId && entry.isEffectivelyCompleted
-            }
-        },
-    )
+    if (!isTraktProgressActive) {
+        WatchedRepository.reconcileFullyWatchedSeriesState(
+            meta = meta,
+            todayIsoDate = todayIsoDate,
+            isEpisodeWatched = { episode ->
+                watchedItemKey(meta.type, meta.id, episode.season, episode.episode) in resolvedWatchedKeys
+            },
+            isEpisodeCompleted = { episode ->
+                val playbackId = meta.episodePlaybackId(episode)
+                resolvedProgressEntries.any { entry ->
+                    entry.videoId == playbackId && entry.isEffectivelyCompleted
+                }
+            },
+        )
+    }
 
     val action = meta.seriesPrimaryAction(
         content = completedEntry.content,
@@ -1792,32 +1799,6 @@ private suspend fun remapTraktProgressEntries(
                 )
             } else {
                 entry
-            }
-        }
-    }
-}
-
-private suspend fun remapTraktWatchedItems(
-    items: List<WatchedItem>,
-    contentId: String,
-): List<WatchedItem> {
-    return items.map { item ->
-        if (item.id != contentId) {
-            item
-        } else {
-            val mapping = TraktEpisodeMappingService.resolveAddonEpisodeMapping(
-                contentId = item.id,
-                contentType = item.type ?: "series",
-                season = item.season,
-                episode = item.episode,
-            )
-            if (mapping != null) {
-                item.copy(
-                    season = mapping.season,
-                    episode = mapping.episode,
-                )
-            } else {
-                item
             }
         }
     }
