@@ -360,6 +360,33 @@ private fun ExoPlayerSurface(
         player
     }
 
+    val nowPlayingController = remember(context, exoPlayer) {
+        AndroidPlayerNowPlayingController(
+            context = context,
+            controls = AndroidPlayerNowPlayingController.PlaybackControls(
+                play = {
+                    exoPlayer.playWhenReady = true
+                    exoPlayer.play()
+                },
+                pause = exoPlayer::pause,
+                seekTo = { positionMs -> exoPlayer.seekTo(positionMs.coerceAtLeast(0L)) },
+                seekBy = { offsetMs ->
+                    exoPlayer.seekTo((exoPlayer.currentPosition + offsetMs).coerceAtLeast(0L))
+                },
+            ),
+        )
+    }
+
+    fun dispatchExoPlayerSnapshot() {
+        val snapshot = exoPlayer.snapshot()
+        latestOnSnapshot.value(snapshot)
+        nowPlayingController.syncPlayback(snapshot)
+    }
+
+    DisposableEffect(nowPlayingController) {
+        onDispose { nowPlayingController.release() }
+    }
+
     LaunchedEffect(exoPlayer, resolvedMediaItem) {
         val mediaItem = resolvedMediaItem ?: return@LaunchedEffect
         exoPlayer.setPlaybackMediaItem(mediaItem, fallbackStartPositionMs)
@@ -468,16 +495,16 @@ private fun ExoPlayerSurface(
                     exoPlayer.logCurrentTracks("STATE_READY")
                 }
                 syncPlayerViewKeepScreenOn()
-                latestOnSnapshot.value(exoPlayer.snapshot())
+                dispatchExoPlayerSnapshot()
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 syncPlayerViewKeepScreenOn()
-                latestOnSnapshot.value(exoPlayer.snapshot())
+                dispatchExoPlayerSnapshot()
             }
 
             override fun onPlaybackParametersChanged(playbackParameters: androidx.media3.common.PlaybackParameters) {
-                latestOnSnapshot.value(exoPlayer.snapshot())
+                dispatchExoPlayerSnapshot()
             }
 
             override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
@@ -501,7 +528,7 @@ private fun ExoPlayerSurface(
                         exoPlayer.selectTrackByIndex(C.TRACK_TYPE_TEXT, idx)
                     }
                 }
-                latestOnSnapshot.value(exoPlayer.snapshot())
+                dispatchExoPlayerSnapshot()
             }
 
         }
@@ -523,7 +550,8 @@ private fun ExoPlayerSurface(
                     val isInPictureInPicture =
                         Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && activity?.isInPictureInPictureMode == true
                     val isFinishing = activity?.isFinishing == true
-                    if (!isInPictureInPicture || isFinishing) {
+                    val hasActiveNowPlayingSession = nowPlayingController.isActive
+                    if ((!isInPictureInPicture && !hasActiveNowPlayingSession) || isFinishing) {
                         exoPlayer.pause()
                     }
                 }
@@ -540,7 +568,7 @@ private fun ExoPlayerSurface(
     LaunchedEffect(exoPlayer, playWhenReady) {
         exoPlayer.playWhenReady = latestPlayWhenReady.value
         syncPlayerViewKeepScreenOn()
-        latestOnSnapshot.value(exoPlayer.snapshot())
+        dispatchExoPlayerSnapshot()
     }
 
     LaunchedEffect(exoPlayer) {
@@ -570,6 +598,14 @@ private fun ExoPlayerSurface(
 
                 override fun setPlaybackSpeed(speed: Float) {
                     exoPlayer.setPlaybackSpeed(speed)
+                }
+
+                override fun updateNowPlayingMetadata(info: PlayerNowPlayingInfo) {
+                    nowPlayingController.updateMetadata(info)
+                }
+
+                override fun clearNowPlayingInfo() {
+                    nowPlayingController.clear()
                 }
 
                 override fun getAudioTracks(): List<AudioTrack> =
@@ -700,7 +736,7 @@ private fun ExoPlayerSurface(
 
     LaunchedEffect(exoPlayer) {
         while (isActive) {
-            latestOnSnapshot.value(exoPlayer.snapshot())
+            dispatchExoPlayerSnapshot()
             delay(250L)
         }
     }
@@ -766,8 +802,25 @@ private fun LibmpvPlayerSurface(
         sanitizePlaybackHeaders(sourceHeaders)
     }
     var playerViewRef by remember { mutableStateOf<NuvioLibmpvView?>(null) }
+    val nowPlayingController = remember(context, playerViewRef) {
+        playerViewRef?.let { view ->
+            AndroidPlayerNowPlayingController(
+                context = context,
+                controls = AndroidPlayerNowPlayingController.PlaybackControls(
+                    play = { view.setPaused(false) },
+                    pause = { view.setPaused(true) },
+                    seekTo = { positionMs -> view.seekToMs(positionMs) },
+                    seekBy = { offsetMs -> view.seekByMs(offsetMs) },
+                ),
+            )
+        }
+    }
 
-    DisposableEffect(lifecycleOwner) {
+    DisposableEffect(nowPlayingController) {
+        onDispose { nowPlayingController?.release() }
+    }
+
+    DisposableEffect(lifecycleOwner, nowPlayingController) {
         val activity = context.findActivity()
         val observer = LifecycleEventObserver { _, event ->
             val view = playerViewRef ?: return@LifecycleEventObserver
@@ -777,7 +830,8 @@ private fun LibmpvPlayerSurface(
                     val isInPictureInPicture =
                         Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && activity?.isInPictureInPictureMode == true
                     val isFinishing = activity?.isFinishing == true
-                    if (!isInPictureInPicture || isFinishing) {
+                    val hasActiveNowPlayingSession = nowPlayingController?.isActive == true
+                    if ((!isInPictureInPicture && !hasActiveNowPlayingSession) || isFinishing) {
                         view.setPaused(true)
                     }
                 }
@@ -790,11 +844,13 @@ private fun LibmpvPlayerSurface(
         }
     }
 
-    DisposableEffect(playerViewRef) {
+    DisposableEffect(playerViewRef, nowPlayingController) {
         val view = playerViewRef ?: return@DisposableEffect onDispose {}
         fun dispatchSnapshot(updateKeepScreenOn: Boolean = false) {
             coroutineScope.launch(Dispatchers.Main.immediate) {
-                latestOnSnapshot.value(view.snapshot())
+                val snapshot = view.snapshot()
+                latestOnSnapshot.value(snapshot)
+                nowPlayingController?.syncPlayback(snapshot)
                 if (updateKeepScreenOn) {
                     view.keepScreenOn = view.shouldKeepScreenOn()
                 }
@@ -826,14 +882,18 @@ private fun LibmpvPlayerSurface(
                     MPV.mpvEvent.MPV_EVENT_START_FILE -> {
                         coroutineScope.launch(Dispatchers.Main.immediate) {
                             latestOnError.value(null)
-                            latestOnSnapshot.value(PlayerPlaybackSnapshot())
+                            val snapshot = PlayerPlaybackSnapshot()
+                            latestOnSnapshot.value(snapshot)
+                            nowPlayingController?.syncPlayback(snapshot)
                         }
                     }
                     MPV.mpvEvent.MPV_EVENT_FILE_LOADED,
                     MPV.mpvEvent.MPV_EVENT_PLAYBACK_RESTART -> {
                         coroutineScope.launch(Dispatchers.Main.immediate) {
                             latestOnError.value(null)
-                            latestOnSnapshot.value(view.snapshot())
+                            val snapshot = view.snapshot()
+                            latestOnSnapshot.value(snapshot)
+                            nowPlayingController?.syncPlayback(snapshot)
                         }
                     }
                     MPV.mpvEvent.MPV_EVENT_END_FILE -> dispatchSnapshot()
@@ -859,7 +919,9 @@ private fun LibmpvPlayerSurface(
 
     LaunchedEffect(playerViewRef, sourceUrl, sourceAudioUrl, sanitizedSourceHeaders, externalSubtitles) {
         val view = playerViewRef ?: return@LaunchedEffect
-        latestOnSnapshot.value(PlayerPlaybackSnapshot())
+        val snapshot = PlayerPlaybackSnapshot()
+        latestOnSnapshot.value(snapshot)
+        nowPlayingController?.syncPlayback(snapshot)
         view.loadSource(
             sourceUrl = sourceUrl,
             sourceAudioUrl = sourceAudioUrl,
@@ -873,7 +935,9 @@ private fun LibmpvPlayerSurface(
         val view = playerViewRef ?: return@LaunchedEffect
         view.setPaused(!latestPlayWhenReady.value)
         view.keepScreenOn = view.shouldKeepScreenOn()
-        latestOnSnapshot.value(view.snapshot())
+        val snapshot = view.snapshot()
+        latestOnSnapshot.value(snapshot)
+        nowPlayingController?.syncPlayback(snapshot)
     }
 
     LaunchedEffect(playerViewRef, resizeMode) {
@@ -882,13 +946,15 @@ private fun LibmpvPlayerSurface(
 
     LaunchedEffect(playerViewRef, sourceUrl, sourceAudioUrl, sanitizedSourceHeaders, externalSubtitles) {
         val view = playerViewRef ?: return@LaunchedEffect
-        onControllerReady(view.controller(context))
+        onControllerReady(view.controller(context, nowPlayingController))
     }
 
     LaunchedEffect(playerViewRef) {
         val view = playerViewRef ?: return@LaunchedEffect
         while (isActive) {
-            latestOnSnapshot.value(view.snapshot())
+            val snapshot = view.snapshot()
+            latestOnSnapshot.value(snapshot)
+            nowPlayingController?.syncPlayback(snapshot)
             view.keepScreenOn = view.shouldKeepScreenOn()
             delay(250L)
         }
@@ -1071,19 +1137,26 @@ private class NuvioLibmpvView(
         }
     }
 
-    fun controller(context: Context): PlayerEngineController =
+    fun seekToMs(positionMs: Long) {
+        mpv.command("seek", (positionMs.coerceAtLeast(0L) / 1000.0).toString(), "absolute")
+    }
+
+    fun seekByMs(offsetMs: Long) {
+        mpv.command("seek", (offsetMs / 1000.0).toString(), "relative")
+    }
+
+    fun controller(
+        context: Context,
+        nowPlayingController: AndroidPlayerNowPlayingController?,
+    ): PlayerEngineController =
         object : PlayerEngineController {
             override fun play() = setPaused(false)
 
             override fun pause() = setPaused(true)
 
-            override fun seekTo(positionMs: Long) {
-                mpv.command("seek", (positionMs.coerceAtLeast(0L) / 1000.0).toString(), "absolute")
-            }
+            override fun seekTo(positionMs: Long) = this@NuvioLibmpvView.seekToMs(positionMs)
 
-            override fun seekBy(offsetMs: Long) {
-                mpv.command("seek", (offsetMs / 1000.0).toString(), "relative")
-            }
+            override fun seekBy(offsetMs: Long) = this@NuvioLibmpvView.seekByMs(offsetMs)
 
             override fun retry() {
                 loadCurrentSource(playWhenReady = true)
@@ -1091,6 +1164,14 @@ private class NuvioLibmpvView(
 
             override fun setPlaybackSpeed(speed: Float) {
                 mpv.setPropertyDouble("speed", speed.coerceIn(0.25f, 4f).toDouble())
+            }
+
+            override fun updateNowPlayingMetadata(info: PlayerNowPlayingInfo) {
+                nowPlayingController?.updateMetadata(info)
+            }
+
+            override fun clearNowPlayingInfo() {
+                nowPlayingController?.clear()
             }
 
             override fun setMuted(muted: Boolean) {
