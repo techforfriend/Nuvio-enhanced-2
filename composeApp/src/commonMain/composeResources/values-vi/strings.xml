@@ -67,7 +67,7 @@
     <string name="collections_editor_add_catalog">Thêm danh mục</string>
     <string name="collections_editor_add_folder">Thêm thư mục</string>
     <string name="collections_editor_all_genres">Tất cả thể loại</string>
-    <string name="collections_editor_catalog_sources_empty_subtitle">Thêm danh mục từ addon đã cài để xác định nội dung cho thư mục này</string>
+    <string name="collections_editor_catalog_sources_empty_subtitle">Thêm danh mục từ addon đã cài để thiết lập nội dung cho thư mục này</string>
     <string name="collections_editor_catalog_sources_empty_title">Chưa có nguồn danh mục</string>
     <string name="collections_editor_choose_genre">Chọn</string>
     <string name="collections_editor_cover_emoji">Biểu tượng</string>
@@ -108,8 +108,8 @@
     <string name="collections_editor_shape_wide">Ngang</string>
     <string name="collections_editor_show_all_tab_desc">Gộp mọi danh mục vào một tab</string>
     <string name="collections_editor_show_all_tab">Hiển thị tab "Tất cả"</string>
-    <string name="collections_editor_show_gif_when_configured_desc">Phát GIF thay cho ảnh bìa nếu có</string>
-    <string name="collections_editor_show_gif_when_configured">Hiển thị GIF khi có</string>
+    <string name="collections_editor_show_gif_when_configured_desc">Thay thế ảnh bìa bằng ảnh GIF khi khả dụng</string>
+    <string name="collections_editor_show_gif_when_configured">Hiển thị ảnh GIF</string>
     <string name="collections_editor_source_count">%1$d nguồn · %2$s</string>
     <string name="collections_editor_tile_shape">Kiểu ô</string>
     <string name="collections_editor_view_mode_rows">Hàng</string>
@@ -126,11 +126,11 @@
     <string name="collections_editor_tmdb_help_presets">Chọn nguồn có sẵn. Bạn có thể sửa hoặc xóa sau khi thêm</string>
     <string name="collections_editor_tmdb_help_list">Dán URL danh sách công khai trên TMDB hoặc nhập ID danh sách</string>
     <string name="collections_editor_tmdb_help_production">Tìm theo tên hãng phim hoặc nhập ID/URL TMDB để thêm nhanh</string>
-    <string name="collections_editor_tmdb_help_network">Nhập ID đơn vị phát hành. Xem các mạng phổ biến trong mục Gợi ý và bộ lọc nhanh</string>
+    <string name="collections_editor_tmdb_help_network">Nhập ID đơn vị phát hành. Các đơn vị phổ biến có trong phần Mẫu có sẵn và Bộ lọc tùy chỉnh</string>
     <string name="collections_editor_tmdb_help_collection">Tìm tên hoặc nhập ID bộ sưu tập TMDB</string>
     <string name="collections_editor_tmdb_help_person">Nhập ID hoặc URL diễn viên TMDB để tạo danh sách phim</string>
     <string name="collections_editor_tmdb_help_director">Nhập ID hoặc URL đạo diễn TMDB để tạo danh sách tác phẩm</string>
-    <string name="collections_editor_tmdb_help_discover">Tạo danh sách TMDB động bằng bộ lọc. Bỏ trống mục không cần</string>
+    <string name="collections_editor_tmdb_help_discover">Tạo danh sách TMDB bằng bộ lọc tùy chỉnh. Bỏ trống mục không cần</string>
     <string name="collections_editor_tmdb_public_list">Danh sách TMDB công khai</string>
     <string name="collections_editor_tmdb_network_id">ID đơn vị phát hành</string>
     <string name="collections_editor_tmdb_collection_id">ID bộ sưu tập</string>
@@ -148,7 +148,7 @@
     <string name="collections_editor_tmdb_list_helper">Ví dụ: https://www.themoviedb.org/list/8504994 hoặc 8504994</string>
     <string name="collections_editor_tmdb_person_helper">Ví dụ: https://www.themoviedb.org/person/31-tom-hanks hoặc 31</string>
     <string name="collections_editor_tmdb_display_title">Tên hiển thị</string>
-    <string name="collections_editor_tmdb_title_helper">Hiển thị theo hàng hoặc tab. Bỏ trống để Nuvio tự tạo theo nguồn</string>
+    <string name="collections_editor_tmdb_title_helper">Hiển thị tên theo hàng hoặc tab. Bỏ trống để Nuvio tự động tạo tên từ nguồn dữ liệu</string>
     <string name="collections_editor_tmdb_title_placeholder">Phim Marvel, Netflix Originals, Pixar</string>
     <string name="collections_editor_tmdb_person_title_placeholder">Phim Tom Hanks, Diễn viên yêu thích</string>
     <string name="collections_editor_tmdb_director_title_placeholder">Phim Christopher Nolan, Đạo diễn yêu thích</string>
@@ -163,7 +163,7 @@
     <string name="collections_editor_tmdb_both">Tất cả</string>
     <string name="collections_editor_tmdb_sort">Sắp xếp</string>
     <string name="collections_editor_tmdb_filters">Bộ lọc</string>
-    <string name="collections_editor_tmdb_filters_helper">Bỏ trống các mục không cần</string>
+    <string name="collections_editor_tmdb_filters_helper">Bỏ trống mục không cần</string>
     <string name="collections_editor_tmdb_quick_genres">Thể loại</string>
     <string name="collections_editor_tmdb_quick_languages">Ngôn ngữ</string>
     <string name="collections_editor_tmdb_quick_countries">Quốc gia</string>
@@ -175,7 +175,7 @@
     <string name="collections_editor_tmdb_genres_movie_placeholder">28,12</string>
     <string name="collections_editor_tmdb_genres_series_placeholder">18,35</string>
     <string name="collections_editor_tmdb_date_from">Ngày phát hành từ</string>
-    <string name="collections_editor_tmdb_date_to">Đến ngày phát hành</string>
+    <string name="collections_editor_tmdb_date_to">Ngày phát hành đến</string>
     <string name="collections_editor_tmdb_date_helper">Định dạng YYYY-MM-DD, ví dụ 2024-01-01</string>
     <string name="collections_editor_tmdb_date_from_placeholder">2020-01-01</string>
     <string name="collections_editor_tmdb_date_to_placeholder">2024-12-31</string>
@@ -195,7 +195,7 @@
     <string name="collections_editor_tmdb_country_placeholder">US, KR, JP, IN</string>
     <string name="collections_editor_tmdb_keywords">ID từ khóa</string>
     <string name="collections_editor_tmdb_keywords_helper">Dùng ID từ khóa TMDB. Gợi ý nhanh sẽ tự điền các từ khóa phổ biến</string>
-    <string name="collections_editor_tmdb_keywords_placeholder">9715 cho superhero</string>
+    <string name="collections_editor_tmdb_keywords_placeholder">9715 cho Siêu anh hùng</string>
     <string name="collections_editor_tmdb_companies">ID hãng phim</string>
     <string name="collections_editor_tmdb_companies_helper">Dùng ID hãng phim hoặc studio. Gợi ý nhanh sẽ tự điền các hãng phim phổ biến</string>
     <string name="collections_editor_tmdb_companies_placeholder">420 cho Marvel Studios</string>
@@ -221,7 +221,7 @@
     <string name="collections_editor_trakt_direction">Thứ tự</string>
     <string name="collections_editor_trakt_ascending">Tăng dần</string>
     <string name="collections_editor_trakt_descending">Giảm dần</string>
-    <string name="collections_editor_trakt_sort_list_order">Theo thứ tự danh sách</string>
+    <string name="collections_editor_trakt_sort_list_order">Mặc định</string>
     <string name="collections_editor_trakt_sort_recently_added">Mới thêm</string>
     <string name="collections_editor_trakt_sort_title">Tiêu đề</string>
     <string name="collections_editor_trakt_sort_released">Ngày phát hành</string>
@@ -578,7 +578,7 @@
     <string name="layout_hide_unreleased_sub">Ẩn phim và chương trình chưa phát hành</string>
     <string name="settings_homescreen_hide_catalog_underline">Ẩn gạch chân danh mục</string>
     <string name="settings_homescreen_hide_catalog_underline_description">Ẩn gạch chân dưới tiêu đề danh mục và bộ sưu tập</string>
-    <string name="settings_homescreen_summary">%1$d/%2$d danh mục hiển thị • %3$d nguồn Hero</string>
+    <string name="settings_homescreen_summary">%1$d/%2$d danh mục • %3$d nguồn Hero</string>
     <string name="settings_homescreen_summary_hint">Chỉ mở danh mục khi cần đổi tên hoặc sắp xếp</string>
     <string name="settings_homescreen_visible">Hiển thị</string>
     <string name="settings_hide_secret">Ẩn giá trị</string>
@@ -830,8 +830,8 @@
     <string name="community_date_format">%2$s %1$s, %3$s</string>
     <string name="settings_playback_all_addons">Tất cả addon đã cài</string>
     <string name="settings_playback_all_plugins">Tất cả plugin đã bật</string>
-    <string name="settings_playback_allowed_addons">Addon được phép</string>
-    <string name="settings_playback_allowed_plugins">Plugin được phép</string>
+    <string name="settings_playback_allowed_addons">Addon được cho phép</string>
+    <string name="settings_playback_allowed_plugins">Plugin được cho phép</string>
     <string name="settings_playback_anime_skip">Anime Skip</string>
     <string name="settings_playback_anime_skip_client_id">Client ID Anime Skip</string>
     <string name="settings_playback_anime_skip_client_id_description">Nhập Client ID API Anime Skip. Tạo tại anime-skip.com</string>
@@ -873,7 +873,7 @@
     <string name="settings_playback_touch_gestures">Cử chỉ cảm ứng</string>
     <string name="settings_playback_touch_gestures_description">Cho phép vuốt và chạm hai lần để tua, chỉnh độ sáng hoặc âm lượng</string>
     <string name="settings_playback_invalid_regex_pattern">Biểu thức Regex không hợp lệ</string>
-    <string name="settings_playback_last_link_cache_duration">Thời hạn lưu trữ liên kết tạm thời</string>
+    <string name="settings_playback_last_link_cache_duration">Thời gian ghi nhớ nguồn phát gần nhất</string>
     <string name="settings_playback_map_dv7_to_hevc">DV7 → HEVC</string>
     <string name="settings_playback_map_dv7_to_hevc_description">Chuyển Dolby Vision Profile 7 sang HEVC cho thiết bị không hỗ trợ Dolby Vision</string>
     <string name="settings_playback_minutes_before_end">Thời gian trước khi kết thúc</string>
@@ -923,8 +923,8 @@
     <string name="settings_playback_render_type_effects_opengl">Hiệu ứng OpenGL</string>
     <string name="settings_playback_render_type_overlay_canvas">Lớp phủ Canvas</string>
     <string name="settings_playback_render_type_overlay_opengl">Lớp phủ OpenGL (Khuyến nghị)</string>
-    <string name="settings_playback_reuse_last_link">Dùng lại liên kết gần nhất</string>
-    <string name="settings_playback_reuse_last_link_description">Tự động phát lại nguồn phim mà bạn đã xem gần nhất nếu bộ nhớ đệm còn hợp lệ</string>
+    <string name="settings_playback_reuse_last_link">Lưu liên kết phát gần nhất</string>
+    <string name="settings_playback_reuse_last_link_description">Tự động phát lại nguồn phim mà bạn đã xem gần nhất khi thời gian ghi nhớ còn hiệu lực</string>
     <string name="settings_playback_secondary_audio_language">Ngôn ngữ âm thanh phụ</string>
     <string name="settings_playback_secondary_subtitle_language">Ngôn ngữ phụ đề phụ</string>
     <string name="settings_playback_section_decoder">DECODER</string>
@@ -946,8 +946,8 @@
     <string name="settings_playback_section_subtitle_audio">PHỤ ĐỀ VÀ ÂM THANH</string>
     <string name="settings_playback_section_subtitle_rendering">HIỂN THỊ PHỤ ĐỀ</string>
     <string name="settings_playback_selected_count">Đã chọn %1$d</string>
-    <string name="settings_playback_show_loading_overlay">Lớp phủ đang tải</string>
-    <string name="settings_playback_show_loading_overlay_description">Hiển thị màn hình tải đến khi khung hình đầu tiên xuất hiện</string>
+    <string name="settings_playback_show_loading_overlay">Hiệu ứng tải dữ liệu</string>
+    <string name="settings_playback_show_loading_overlay_description">Hiển thị màn hình tải dữ liệu đến khi khung hình đầu tiên xuất hiện</string>
     <string name="settings_playback_parental_guide">Cảnh báo nội dung</string>
     <string name="settings_playback_parental_guide_description">Hiển thị cảnh báo phân loại nội dung khi bắt đầu phát</string>
     <string name="settings_playback_subtitle_background_color">Màu nền</string>
@@ -961,8 +961,8 @@
     <string name="settings_playback_subtitle_show_preferred_only_description">Chỉ hiển thị phụ đề khớp với ngôn ngữ ưu tiên</string>
     <string name="settings_playback_subtitle_size">Cỡ chữ</string>
     <string name="settings_playback_subtitle_text_color">Màu chữ</string>
-    <string name="settings_playback_subtitle_use_forced">Ưu tiên phụ đề bắt buộc</string>
-    <string name="settings_playback_subtitle_use_forced_description">Ưu tiên dùng phụ đề bắt buộc nếu khớp với ngôn ngữ đã chọn</string>
+    <string name="settings_playback_subtitle_use_forced">Phụ đề tự động</string>
+    <string name="settings_playback_subtitle_use_forced_description">Tự động áp dụng phụ đề khớp với ngôn ngữ đã chọn</string>
     <string name="settings_playback_subtitle_vertical_offset">Căn chỉnh dọc</string>
     <string name="settings_playback_skip_intro_outro_recap">Tự động bỏ qua Đoạn mở đầu</string>
     <string name="settings_playback_skip_intro_outro_recap_description">Dùng IntroDB để phát hiện Đoạn mở đầu và Tóm tắt</string>
@@ -983,7 +983,7 @@
     <string name="settings_playback_stream_selection_mode_regex">Tự động phát theo Regex</string>
     <string name="settings_playback_stream_selection_mode_regex_description">Phát nguồn đầu tiên khớp với mẫu Regex</string>
     <string name="settings_playback_stream_timeout">Thời gian chờ nguồn phát</string>
-    <string name="settings_playback_stream_timeout_description">Thời gian chờ addon trước khi chọn</string>
+    <string name="settings_playback_stream_timeout_description">Thời gian chờ addon trước khi tự động chọn</string>
     <string name="settings_playback_threshold_minutes">Số phút</string>
     <string name="settings_playback_threshold_mode">Ngưỡng tập tiếp theo</string>
     <string name="settings_playback_threshold_mode_minutes_before_end">Số phút trước khi kết thúc</string>
