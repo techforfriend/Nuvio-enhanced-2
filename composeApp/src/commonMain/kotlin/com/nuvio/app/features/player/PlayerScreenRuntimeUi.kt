@@ -466,7 +466,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         parentMetaId = parentMetaId,
         activeSeasonNumber = activeSeasonNumber,
         activeEpisodeNumber = activeEpisodeNumber,
-        watchProgressByVideoId = watchProgressUiState.byVideoId,
+        watchProgressByVideoId = watchProgressUiState.byVideoIdForContent(parentMetaId),
         watchedKeys = watchedUiState.watchedKeys,
         blurUnwatchedEpisodes = metaScreenSettingsUiState.blurUnwatchedEpisodes,
         episodeStreamsPanelState = episodeStreamsPanelState,
