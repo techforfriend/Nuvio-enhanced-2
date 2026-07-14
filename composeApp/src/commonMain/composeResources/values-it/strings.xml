@@ -1530,11 +1530,6 @@
   <string name="supporters_contributors_donation_progress_remaining">Dopo il 100%, eventuale supporto in più andrà allo sviluppo.</string>
   <string name="supporters_contributors_donate_button">Dona a Nuvio</string>
   <string name="action_switch">Cambia</string>
-  <string name="addons_appstore_add_description">Collega il tuo media server per esplorare e riprodurre i contenuti della tua libreria personale.</string>
-  <string name="addons_appstore_empty_subtitle">Aggiungi qui sopra l’URL di un server affinché Nuvio mostri la tua libreria privata.</string>
-  <string name="addons_appstore_empty_title">Nessuna libreria personale collegata.</string>
-  <string name="addons_appstore_input_placeholder">URL del server</string>
-  <string name="addons_appstore_install_button">Aggiungi</string>
   <string name="collections_editor_tmdb_genres_movie_placeholder">28,12</string>
   <string name="collections_editor_tmdb_genres_series_placeholder">18,35</string>
   <string name="collections_editor_tmdb_date_from_placeholder">2020-01-01</string>
@@ -1578,7 +1573,6 @@
   <string name="settings_appearance_app_language_device">Lingua del dispositivo</string>
   <string name="settings_continue_watching_style_card">Scheda</string>
   <string name="settings_continue_watching_style_card_description">Scheda orizzontale in stile TV</string>
-  <string name="settings_content_discovery_addons_description_appstore">Collega sorgenti multimediali personali e gestisci l’accesso alla tua libreria.</string>
   <string name="settings_stream_badge_urls_search_description">Gestisci gli URL JSON importati dei badge dei flussi in stile Fusion.</string>
   <string name="settings_stream_badge_import_failed">Importazione dei badge non riuscita.</string>
   <string name="settings_stream_badge_enter_url">Inserisci un URL JSON dei badge.</string>
