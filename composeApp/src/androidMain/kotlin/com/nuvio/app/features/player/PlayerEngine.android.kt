@@ -1182,10 +1182,6 @@ private class NuvioLibmpvView(
         }
     }
 
-    fun seekToMs(positionMs: Long) {
-        mpv.command("seek", (positionMs.coerceAtLeast(0L) / 1000.0).toString(), "absolute")
-    }
-
     fun seekByMs(offsetMs: Long) {
         mpv.command("seek", (offsetMs / 1000.0).toString(), "relative")
     }
