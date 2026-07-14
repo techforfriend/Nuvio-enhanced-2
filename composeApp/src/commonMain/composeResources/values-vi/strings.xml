@@ -1885,7 +1885,7 @@
     <string name="collections_editor_trakt_list_title_format">Danh sách Trakt %1$s</string>
     <string name="external_player_android_system">Trình phát mặc định của Android</string>
     <string name="p2p_consent_title">Phát qua P2P</string>
-    <string name="p2p_consent_body">Nguồn phát này sử dụng công nghệ ngang hàng (P2P).\n\nKhi bật P2P, bạn xác nhận và đồng ý rằng:nn• Địa chỉ IP của bạn sẽ hiển thị với các peer khác trong mạng.\n• Bạn tự chịu trách nhiệm về nội dung mình truy cập.\n• Bạn xác nhận mình có quyền hợp pháp để phát nội dung này tại khu vực của mình.\n• Nuvio không lưu trữ, phân phối hoặc kiểm soát bất kỳ nội dung P2P nào.\n• Nuvio không chịu trách nhiệm cho bất kỳ hậu quả pháp lý nào phát sinh từ việc sử dụng P2P.\n\nBạn tự chịu mọi rủi ro khi sử dụng tính năng này. Có thể tắt P2P bất cứ lúc nào trong phần Cài đặt</string>
+    <string name="p2p_consent_body">Nguồn phát này sử dụng công nghệ ngang hàng (P2P)\n\nKhi bật P2P, bạn xác nhận và đồng ý rằng:\n\n• Địa chỉ IP của bạn sẽ hiển thị với các peer khác trong mạng.\n• Bạn tự chịu trách nhiệm về nội dung mình truy cập.\n• Bạn xác nhận mình có quyền hợp pháp để phát nội dung này tại khu vực của mình.\n• Nuvio không lưu trữ, phân phối hoặc kiểm soát bất kỳ nội dung P2P nào.\n• Nuvio không chịu trách nhiệm cho bất kỳ hậu quả pháp lý nào phát sinh từ việc sử dụng P2P.\n\nBạn tự chịu mọi rủi ro khi sử dụng tính năng này. Có thể tắt P2P bất cứ lúc nào trong phần Cài đặt</string>
     <string name="p2p_consent_enable">Bật P2P</string>
     <string name="p2p_consent_cancel">Hủy</string>
     <string name="p2p_error_unknown">Lỗi torrent không xác định</string>
