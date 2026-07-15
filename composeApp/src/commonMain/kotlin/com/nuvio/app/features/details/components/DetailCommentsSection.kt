@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,8 +37,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nuvio.app.core.ui.nuvioHorizontalScrollBleed
 import com.nuvio.app.core.ui.withDuplicateSafeLazyKeys
 import com.nuvio.app.features.trakt.TraktCommentReview
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -56,6 +59,7 @@ fun DetailCommentsSection(
     onCommentClick: (TraktCommentReview) -> Unit,
     modifier: Modifier = Modifier,
     showHeader: Boolean = true,
+    horizontalScrollPadding: Dp = 0.dp,
 ) {
     val listState = rememberLazyListState()
 
@@ -81,7 +85,10 @@ fun DetailCommentsSection(
         when {
             isLoading -> {
                 LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .nuvioHorizontalScrollBleed(horizontalScrollPadding)
+                        .fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = horizontalScrollPadding),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(3) {
@@ -119,8 +126,11 @@ fun DetailCommentsSection(
 
             else -> {
                 LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .nuvioHorizontalScrollBleed(horizontalScrollPadding)
+                        .fillMaxWidth(),
                     state = listState,
+                    contentPadding = PaddingValues(horizontal = horizontalScrollPadding),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(

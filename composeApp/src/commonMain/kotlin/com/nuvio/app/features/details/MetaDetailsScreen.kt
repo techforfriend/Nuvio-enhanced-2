@@ -1608,6 +1608,7 @@ private fun LazyListScope.configuredMetaSectionItems(
                     ),
                     meta = meta,
                     isTablet = isTablet,
+                    horizontalScrollPadding = contentHorizontalPadding,
                     playButtonLabel = playButtonLabel,
                     isSaved = isSaved,
                     isWatched = isWatched,
@@ -1756,6 +1757,7 @@ private fun ConfiguredMetaSections(
     settings: MetaScreenSettingsUiState,
     meta: MetaDetails,
     isTablet: Boolean,
+    horizontalScrollPadding: Dp,
     playButtonLabel: String,
     isSaved: Boolean,
     isWatched: Boolean,
@@ -1858,7 +1860,10 @@ private fun ConfiguredMetaSections(
                 )
             }
             MetaScreenSectionKey.OVERVIEW -> {
-                DetailMetaInfo(meta = meta)
+                DetailMetaInfo(
+                    meta = meta,
+                    horizontalScrollPadding = horizontalScrollPadding,
+                )
             }
             MetaScreenSectionKey.PRODUCTION -> {
                 if (hasProductionSection) {
@@ -1869,6 +1874,7 @@ private fun ConfiguredMetaSections(
                 DetailCastSection(
                     cast = meta.cast,
                     showHeader = showHeader,
+                    horizontalScrollPadding = horizontalScrollPadding,
                     onCastClick = onCastClick,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
@@ -1886,12 +1892,18 @@ private fun ConfiguredMetaSections(
                         onLoadMore = onLoadMoreComments,
                         onCommentClick = onCommentClick,
                         showHeader = showHeader,
+                        horizontalScrollPadding = horizontalScrollPadding,
                     )
                 }
             }
             MetaScreenSectionKey.TRAILERS -> {
                 if (hasTrailersSection) {
-                    DetailTrailersSection(trailers = meta.trailers, onTrailerClick = onTrailerClick, showHeader = showHeader)
+                    DetailTrailersSection(
+                        trailers = meta.trailers,
+                        onTrailerClick = onTrailerClick,
+                        showHeader = showHeader,
+                        horizontalScrollPadding = horizontalScrollPadding,
+                    )
                 }
             }
             MetaScreenSectionKey.EPISODES -> {
@@ -1899,6 +1911,7 @@ private fun ConfiguredMetaSections(
                     DetailSeriesContent(
                         meta = meta,
                         showHeader = showHeader,
+                        horizontalScrollPadding = horizontalScrollPadding,
                         preferredSeasonNumber = preferredEpisodeSeasonNumber,
                         preferredEpisodeNumber = preferredEpisodeNumber,
                         episodeCardStyle = settings.episodeCardStyle,
@@ -1924,6 +1937,7 @@ private fun ConfiguredMetaSections(
                         items = meta.collectionItems,
                         watchedKeys = watchedKeys,
                         showHeader = showHeader,
+                        horizontalScrollPadding = horizontalScrollPadding,
                         onPosterClick = onOpenMeta,
                     )
                 }
@@ -1940,6 +1954,7 @@ private fun ConfiguredMetaSections(
                         items = meta.moreLikeThis,
                         watchedKeys = watchedKeys,
                         showHeader = showHeader,
+                        horizontalScrollPadding = horizontalScrollPadding,
                         sourceLabel = sourceLabel,
                         onPosterClick = onOpenMeta,
                     )
