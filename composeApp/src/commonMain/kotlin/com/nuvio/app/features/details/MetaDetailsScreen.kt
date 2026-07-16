@@ -44,6 +44,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -764,21 +766,28 @@ fun MetaDetailsScreen(
                         .calculateTopPadding()
                         .toPx()
                 }
-                var heroHeightPx by remember(meta.id) { mutableIntStateOf(0) }
-                val thresholdPx = (heroHeightPx - safeAreaTopPx).coerceAtLeast(0f)
-                val detailScrollOffsetPx = if (listState.firstVisibleItemIndex == 0) {
-                    listState.firstVisibleItemScrollOffset.toFloat()
-                } else {
-                    heroHeightPx.toFloat() + listState.firstVisibleItemScrollOffset
+                val heroHeightPx = remember(meta.id) { mutableIntStateOf(0) }
+                // Keep pixel-by-pixel list state reads out of this composition. Reading the
+                // offset here would recompose every metadata section on every scroll frame.
+                val detailScrollOffsetPx = remember(listState, heroHeightPx) {
+                    {
+                        if (listState.firstVisibleItemIndex == 0) {
+                            listState.firstVisibleItemScrollOffset.toFloat()
+                        } else {
+                            heroHeightPx.intValue.toFloat() + listState.firstVisibleItemScrollOffset
+                        }
+                    }
                 }
-                val heroScrollOffset = detailScrollOffsetPx.toInt()
-                val headerTarget = if (
-                    heroHeightPx > 0 &&
-                    (listState.firstVisibleItemIndex > 0 || detailScrollOffsetPx > thresholdPx)
-                ) {
-                    1f
-                } else {
-                    0f
+                val heroScrollOffset = remember(detailScrollOffsetPx) {
+                    { detailScrollOffsetPx().toInt() }
+                }
+                val isHeroCollapsed = remember(listState, heroHeightPx, safeAreaTopPx) {
+                    derivedStateOf {
+                        val measuredHeroHeightPx = heroHeightPx.intValue
+                        val thresholdPx = (measuredHeroHeightPx - safeAreaTopPx).coerceAtLeast(0f)
+                        measuredHeroHeightPx > 0 &&
+                            (listState.firstVisibleItemIndex > 0 || detailScrollOffsetPx() > thresholdPx)
+                    }
                 }
                 val heroTrailerSourceUrl = heroTrailerPlaybackSource
                     ?.videoUrl
@@ -786,17 +795,6 @@ fun MetaDetailsScreen(
                 val heroTrailerSourceAudioUrl = heroTrailerPlaybackSource
                     ?.audioUrl
                     ?.takeIf { heroTrailerSourceUrl != null && it.isNotBlank() }
-                val heroTrailerPlayWhenReady = heroTrailerSourceUrl != null &&
-                    !isLeavingDetails &&
-                    (heroHeightPx == 0 || detailScrollOffsetPx <= thresholdPx)
-                val headerProgress by animateFloatAsState(
-                    targetValue = headerTarget,
-                    animationSpec = tween(
-                        durationMillis = if (headerTarget > 0f) 150 else 100,
-                        easing = LinearOutSlowInEasing,
-                    ),
-                    label = "detail_floating_header_progress",
-                )
 
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                     val colorScheme = MaterialTheme.colorScheme
@@ -895,11 +893,15 @@ fun MetaDetailsScreen(
                                     contentMaxWidth = contentMaxWidth,
                                     scrollOffset = heroScrollOffset,
                                     stretchPx = { heroStretchState.stretchPx },
-                                    onHeightChanged = { heroHeightPx = it },
+                                    onHeightChanged = { heroHeightPx.intValue = it },
                                     heroTrailerSourceUrl = heroTrailerSourceUrl,
                                     heroTrailerSourceAudioUrl = heroTrailerSourceAudioUrl,
                                     heroTrailerReady = heroTrailerReady,
-                                    heroTrailerPlayWhenReady = heroTrailerPlayWhenReady,
+                                    heroTrailerPlayWhenReady = {
+                                        heroTrailerSourceUrl != null &&
+                                            !isLeavingDetails &&
+                                            !isHeroCollapsed.value
+                                    },
                                     heroTrailerMuted = heroTrailerMuted,
                                     heroGradientColor = dominantBackdropColor.takeIf { dominantColorEnabled },
                                     onBackdropLoaded = { painter, imageBitmap ->
@@ -1009,7 +1011,7 @@ fun MetaDetailsScreen(
                             }
                         }
 
-                        if (backgroundMode.usesBackdropBackground && deferredMetaWorkAllowed && heroHeightPx > 0) {
+                        if (backgroundMode.usesBackdropBackground && deferredMetaWorkAllowed && heroHeightPx.intValue > 0) {
                             val blendColor = dominantBackdropColor.takeIf { dominantColorEnabled }
                                 ?: colorScheme.background
                             Box(
@@ -1018,7 +1020,7 @@ fun MetaDetailsScreen(
                                     .fillMaxWidth()
                                     .height(132.dp)
                                     .graphicsLayer {
-                                        translationY = heroHeightPx.toFloat() - detailScrollOffsetPx
+                                        translationY = heroHeightPx.intValue.toFloat() - detailScrollOffsetPx()
                                     }
                                     .background(
                                         Brush.verticalGradient(
@@ -1033,26 +1035,13 @@ fun MetaDetailsScreen(
                             )
                         }
 
-                        if (headerProgress <= 0.05f) {
-                            NuvioBackButton(
-                                onClick = onBackFromDetails,
-                                modifier = Modifier.padding(
-                                    start = 12.dp,
-                                    top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
-                                ).zIndex(2f),
-                                containerColor = Color.Transparent,
-                                contentColor = MaterialTheme.colorScheme.onBackground,
-                            )
-                        }
-
-                        DetailFloatingHeader(
+                        DetailHeaderOverlay(
                             meta = meta,
                             isSaved = isSaved,
-                            progress = headerProgress,
+                            isHeroCollapsed = isHeroCollapsed,
                             backgroundColor = dominantBackdropColor.takeIf { dominantColorEnabled },
                             onBack = onBackFromDetails,
                             onToggleSaved = toggleSaved,
-                            modifier = Modifier.zIndex(2f),
                         )
 
                         selectedEpisodeForActions
@@ -1455,6 +1444,50 @@ private fun MetaDetails.isSeriesLikeForEpisodeRatings(): Boolean {
     val normalizedType = type.trim().lowercase()
     val hasNumberedEpisodes = videos.any { it.season != null && it.episode != null }
     return hasNumberedEpisodes && normalizedType in setOf("series", "show", "tv", "tvshow")
+}
+
+@Composable
+private fun DetailHeaderOverlay(
+    meta: MetaDetails,
+    isSaved: Boolean,
+    isHeroCollapsed: State<Boolean>,
+    backgroundColor: Color?,
+    onBack: () -> Unit,
+    onToggleSaved: () -> Unit,
+) {
+    val headerTarget = if (isHeroCollapsed.value) 1f else 0f
+    val headerProgress by animateFloatAsState(
+        targetValue = headerTarget,
+        animationSpec = tween(
+            durationMillis = if (headerTarget > 0f) 150 else 100,
+            easing = LinearOutSlowInEasing,
+        ),
+        label = "detail_floating_header_progress",
+    )
+
+    if (headerProgress <= 0.05f) {
+        NuvioBackButton(
+            onClick = onBack,
+            modifier = Modifier
+                .padding(
+                    start = 12.dp,
+                    top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
+                )
+                .zIndex(2f),
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+        )
+    }
+
+    DetailFloatingHeader(
+        meta = meta,
+        isSaved = isSaved,
+        progress = headerProgress,
+        backgroundColor = backgroundColor,
+        onBack = onBack,
+        onToggleSaved = onToggleSaved,
+        modifier = Modifier.zIndex(2f),
+    )
 }
 
 @Composable

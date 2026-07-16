@@ -59,14 +59,14 @@ import org.jetbrains.compose.resources.stringResource
 fun DetailHero(
     meta: MetaDetails,
     isTablet: Boolean = false,
-    scrollOffset: Int = 0,
+    scrollOffset: () -> Int = { 0 },
     stretchPx: () -> Float = { 0f },
     contentMaxWidth: Dp = 560.dp,
     onHeightChanged: (Int) -> Unit = {},
     heroTrailerSourceUrl: String? = null,
     heroTrailerSourceAudioUrl: String? = null,
     heroTrailerReady: Boolean = false,
-    heroTrailerPlayWhenReady: Boolean = false,
+    heroTrailerPlayWhenReady: () -> Boolean = { false },
     heroTrailerMuted: Boolean = true,
     heroGradientColor: Color? = null,
     onBackdropLoaded: (Painter, ImageBitmap?) -> Unit = { _, _ -> },
@@ -122,7 +122,7 @@ fun DetailHero(
                             .height(heroHeight)
                             .heroStretchZoom(stretchPx)
                             .graphicsLayer {
-                                translationY = scrollOffset * 0.5f
+                                translationY = scrollOffset() * 0.5f
                                 scaleX = 1.08f
                                 scaleY = 1.08f
                         },
@@ -146,7 +146,7 @@ fun DetailHero(
                     HeroTrailerPlayerSurface(
                         sourceUrl = heroTrailerSourceUrl,
                         sourceAudioUrl = heroTrailerSourceAudioUrl,
-                        playWhenReady = heroTrailerPlayWhenReady,
+                        playWhenReady = heroTrailerPlayWhenReady(),
                         muted = heroTrailerMuted,
                         modifier = Modifier
                             .align(Alignment.TopCenter)
@@ -155,7 +155,7 @@ fun DetailHero(
                             .heroStretchZoom(stretchPx)
                             .graphicsLayer {
                                 alpha = trailerAlpha
-                                translationY = scrollOffset * 0.5f
+                                translationY = scrollOffset() * 0.5f
                                 scaleX = 1.08f
                                 scaleY = 1.08f
                             },
