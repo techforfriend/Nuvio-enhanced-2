@@ -1065,6 +1065,8 @@
     <string name="settings_tmdb_module_credits_description">Cast with photos, director, and writer from TMDB</string>
     <string name="settings_tmdb_module_details">Details</string>
     <string name="settings_tmdb_module_details_description">Runtime, status, country, and language from TMDB</string>
+    <string name="settings_tmdb_module_release_dates">Release dates</string>
+    <string name="settings_tmdb_module_release_dates_description">Use TMDB broadcaster air dates instead of precise add-on release times</string>
     <string name="settings_tmdb_module_episodes">Episodes</string>
     <string name="settings_tmdb_module_episodes_description">Episode titles, overviews, thumbnails, and runtime from TMDB</string>
     <string name="settings_tmdb_module_more_like_this">More Like This</string>
