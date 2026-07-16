@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.nuvioHorizontalScrollBleed
 import com.nuvio.app.core.ui.withDuplicateSafeLazyKeys
 import com.nuvio.app.features.trakt.TraktCommentReview
@@ -214,21 +215,18 @@ private fun CommentCard(
                     fontWeight = FontWeight.SemiBold,
                 )
 
-                if (review.review || review.hasSpoilerContent) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (review.review) {
-                            CommentChip(text = stringResource(Res.string.detail_comments_badge_review))
-                        }
-                        if (review.hasSpoilerContent) {
-                            CommentChip(text = stringResource(Res.string.detail_comments_badge_spoiler))
-                        }
-                    }
+                if (review.review) {
+                    CommentChip(text = stringResource(Res.string.detail_comments_badge_review))
                 }
 
                 Text(
                     text = bodyText,
                     style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (review.hasSpoilerContent) {
+                        MaterialTheme.nuvio.colors.warning
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                     maxLines = 5,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),

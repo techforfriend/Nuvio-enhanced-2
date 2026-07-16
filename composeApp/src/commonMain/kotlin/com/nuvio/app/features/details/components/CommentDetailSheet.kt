@@ -27,6 +27,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
+import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.trakt.TraktCommentReview
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -53,6 +56,10 @@ fun CommentDetailSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scrollState = rememberScrollState()
+    val isSpoilerRevealed = rememberSaveable(comment.id) {
+        mutableStateOf(!comment.hasSpoilerContent)
+    }
+    val isSpoilerHidden = comment.hasSpoilerContent && !isSpoilerRevealed.value
 
     LaunchedEffect(comment.id) {
         scrollState.scrollTo(0)
@@ -151,17 +158,9 @@ fun CommentDetailSheet(
                 }
             }
 
-            if (comment.review || comment.hasSpoilerContent) {
+            if (comment.review) {
                 Spacer(modifier = Modifier.height(12.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (comment.review) {
-                        CommentDetailChip(text = stringResource(Res.string.detail_comments_badge_review))
-                    }
-                    if (comment.hasSpoilerContent) {
-                        CommentDetailChip(text = stringResource(Res.string.detail_comments_badge_spoiler))
-                    }
-                }
+                CommentDetailChip(text = stringResource(Res.string.detail_comments_badge_review))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -173,13 +172,24 @@ fun CommentDetailSheet(
                     .verticalScroll(scrollState),
             ) {
                 Text(
-                    text = if (comment.hasSpoilerContent) {
+                    text = if (isSpoilerHidden) {
                         stringResource(Res.string.detail_comments_spoiler_hidden_sheet)
                     } else {
                         comment.comment
                     },
                     style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp),
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = if (isSpoilerHidden) {
+                        MaterialTheme.nuvio.colors.warning
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    modifier = Modifier.then(
+                        if (isSpoilerHidden) {
+                            Modifier.clickable { isSpoilerRevealed.value = true }
+                        } else {
+                            Modifier
+                        },
+                    ),
                 )
             }
 
