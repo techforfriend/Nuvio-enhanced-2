@@ -151,17 +151,16 @@ fun CommentDetailSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            if (comment.review || comment.hasSpoilerContent) {
+                Spacer(modifier = Modifier.height(12.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (comment.review) {
-                    CommentDetailChip(text = stringResource(Res.string.detail_comments_badge_review))
-                }
-                if (comment.hasSpoilerContent) {
-                    CommentDetailChip(text = stringResource(Res.string.detail_comments_badge_spoiler))
-                }
-                comment.rating?.let { rating ->
-                    CommentDetailChip(text = stringResource(Res.string.detail_comments_badge_rating, rating))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (comment.review) {
+                        CommentDetailChip(text = stringResource(Res.string.detail_comments_badge_review))
+                    }
+                    if (comment.hasSpoilerContent) {
+                        CommentDetailChip(text = stringResource(Res.string.detail_comments_badge_spoiler))
+                    }
                 }
             }
 
@@ -190,11 +189,20 @@ fun CommentDetailSheet(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(
-                    text = stringResource(Res.string.detail_comments_likes, comment.likes),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    comment.rating?.let { rating ->
+                        Text(
+                            text = stringResource(Res.string.detail_comments_badge_rating, rating),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Text(
+                        text = stringResource(Res.string.detail_comments_likes, comment.likes),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 comment.createdAt?.take(10)?.let { date ->
                     Text(
                         text = date,

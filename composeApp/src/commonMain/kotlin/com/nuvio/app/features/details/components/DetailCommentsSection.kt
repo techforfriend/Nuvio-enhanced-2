@@ -214,15 +214,14 @@ private fun CommentCard(
                     fontWeight = FontWeight.SemiBold,
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (review.review) {
-                        CommentChip(text = stringResource(Res.string.detail_comments_badge_review))
-                    }
-                    if (review.hasSpoilerContent) {
-                        CommentChip(text = stringResource(Res.string.detail_comments_badge_spoiler))
-                    }
-                    review.rating?.let { rating ->
-                        CommentChip(text = stringResource(Res.string.detail_comments_badge_rating, rating))
+                if (review.review || review.hasSpoilerContent) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (review.review) {
+                            CommentChip(text = stringResource(Res.string.detail_comments_badge_review))
+                        }
+                        if (review.hasSpoilerContent) {
+                            CommentChip(text = stringResource(Res.string.detail_comments_badge_spoiler))
+                        }
                     }
                 }
 
@@ -235,13 +234,23 @@ private fun CommentCard(
                     modifier = Modifier.weight(1f, fill = false),
                 )
 
-                Text(
-                    text = stringResource(Res.string.detail_comments_likes, review.likes),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    review.rating?.let { rating ->
+                        Text(
+                            text = stringResource(Res.string.detail_comments_badge_rating, rating),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            maxLines = 1,
+                        )
+                    }
+                    Text(
+                        text = stringResource(Res.string.detail_comments_likes, review.likes),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
