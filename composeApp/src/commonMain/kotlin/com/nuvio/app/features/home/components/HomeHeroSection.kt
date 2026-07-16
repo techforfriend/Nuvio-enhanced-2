@@ -52,6 +52,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
+import com.nuvio.app.core.ui.heroStretchHeight
+import com.nuvio.app.core.ui.heroStretchZoom
 import com.nuvio.app.features.home.MetaPreview
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -92,6 +94,7 @@ fun HomeHeroSection(
     viewportHeight: Dp? = null,
     mobileBelowSectionHeightHint: Dp? = null,
     listState: LazyListState? = null,
+    stretchPx: () -> Float = { 0f },
     onItemClick: ((MetaPreview) -> Unit)? = null,
 ) {
     if (items.isEmpty()) return
@@ -170,7 +173,7 @@ fun HomeHeroSection(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(layout.heroHeight),
+                .heroStretchHeight(layout.heroHeight, stretchPx),
         ) {
             HorizontalPager(
                 state = pagerState,
@@ -185,22 +188,29 @@ fun HomeHeroSection(
             Box(
                 modifier = Modifier.fillMaxSize(),
             ) {
-                visiblePages.forEach { layer ->
-                    AsyncImage(
-                        model = items[layer.page].banner ?: items[layer.page].poster,
-                        contentDescription = items[layer.page].name,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer {
-                                alpha = layer.visibility
-                                translationX = -layer.offset * heroWidthPx * HERO_BACKGROUND_PARALLAX
-                                translationY = heroScrollTranslationY
-                                scaleX = HERO_BACKGROUND_SCALE * heroScrollScale
-                                scaleY = HERO_BACKGROUND_SCALE * heroScrollScale
-                            },
-                        alignment = if (layout.isTablet) Alignment.TopCenter else Alignment.Center,
-                        contentScale = ContentScale.Crop,
-                    )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(layout.heroHeight)
+                        .heroStretchZoom(stretchPx),
+                ) {
+                    visiblePages.forEach { layer ->
+                        AsyncImage(
+                            model = items[layer.page].banner ?: items[layer.page].poster,
+                            contentDescription = items[layer.page].name,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    alpha = layer.visibility
+                                    translationX = -layer.offset * heroWidthPx * HERO_BACKGROUND_PARALLAX
+                                    translationY = heroScrollTranslationY
+                                    scaleX = HERO_BACKGROUND_SCALE * heroScrollScale
+                                    scaleY = HERO_BACKGROUND_SCALE * heroScrollScale
+                                },
+                            alignment = if (layout.isTablet) Alignment.TopCenter else Alignment.Center,
+                            contentScale = ContentScale.Crop,
+                        )
+                    }
                 }
 
                 Box(
