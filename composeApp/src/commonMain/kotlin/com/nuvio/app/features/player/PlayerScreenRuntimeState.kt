@@ -189,7 +189,6 @@ internal class PlayerScreenRuntime(
     var useCustomSubtitles by mutableStateOf(false)
     var preferredAudioSelectionApplied by mutableStateOf(false)
     var preferredSubtitleSelectionApplied by mutableStateOf(false)
-    var activeSubtitleTab by mutableStateOf(SubtitleTab.BuiltIn)
     var autoFetchedAddonSubtitlesForKey by mutableStateOf<String?>(null)
     var trackPreferenceRestoreApplied by mutableStateOf(false)
     var subtitleDelayMs by mutableStateOf(0)
