@@ -16,6 +16,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.Proxy
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import kotlin.text.Charsets
 import java.util.concurrent.TimeUnit
 
@@ -87,6 +89,11 @@ private val addonHttpClient = OkHttpClient.Builder()
 
 private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
+private data class LimitedReadResult(
+    val bytes: ByteArray,
+    val truncated: Boolean,
+)
+
 private fun requestAllowsBody(method: String): Boolean =
     when (method.uppercase()) {
         "POST", "PUT", "PATCH", "DELETE" -> true
@@ -100,6 +107,42 @@ private fun Map<String, String>.withoutAcceptEncoding(): Map<String, String> =
 
 private fun Map<String, String>.getHeaderIgnoreCase(name: String): String? =
     entries.firstOrNull { (key, _) -> key.equals(name, ignoreCase = true) }?.value
+
+private fun readAtMostBytes(stream: InputStream, maxBytes: Int): LimitedReadResult {
+    val out = ByteArrayOutputStream(minOf(maxBytes, 16 * 1024))
+    val buffer = ByteArray(8 * 1024)
+    var remaining = maxBytes
+    var truncated = false
+
+    while (remaining > 0) {
+        val read = stream.read(buffer, 0, minOf(buffer.size, remaining))
+        if (read <= 0) break
+        out.write(buffer, 0, read)
+        remaining -= read
+    }
+
+    if (remaining == 0) {
+        truncated = stream.read() != -1
+    }
+
+    return LimitedReadResult(out.toByteArray(), truncated)
+}
+
+private fun readResponseBodyLimited(body: ResponseBody?, maxBytes: Int): String {
+    if (body == null) return ""
+    val charset = body.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+    val readResult = body.byteStream().use { stream ->
+        readAtMostBytes(stream, maxBytes.coerceAtLeast(0))
+    }
+
+    val decoded = try {
+        String(readResult.bytes, charset)
+    } catch (_: Exception) {
+        String(readResult.bytes, Charsets.UTF_8)
+    }
+
+    return if (readResult.truncated) "$decoded\n...[truncated]" else decoded
+}
 
 private fun readResponseBody(body: ResponseBody?): String {
     if (body == null) return ""
@@ -196,6 +239,7 @@ actual suspend fun httpRequestRaw(
     headers: Map<String, String>,
     body: String,
     followRedirects: Boolean,
+    maxResponseBodyBytes: Int,
 ): RawHttpResponse =
     withContext(Dispatchers.IO) {
         val normalizedMethod = method.uppercase()
@@ -228,7 +272,7 @@ actual suspend fun httpRequestRaw(
                 status = response.code,
                 statusText = response.message,
                 url = response.request.url.toString(),
-                body = readResponseBody(response.body),
+                body = readResponseBodyLimited(response.body, maxResponseBodyBytes),
                 headers = response.headers.toMultimap().mapValues { (_, values) ->
                     values.joinToString(",")
                 }.mapKeys { (name, _) ->
