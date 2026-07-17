@@ -19,6 +19,7 @@ actual object ThemeSettingsStorage {
     private const val amoledEnabledKey = "amoled_enabled"
     private const val liquidGlassNativeTabBarEnabledKey = "liquid_glass_native_tab_bar_enabled"
     private const val selectedAppLanguageKey = "selected_app_language"
+    private const val NAV_BAR_STYLE_KEY = "nav_bar_style"
     private val profileScopedSyncKeys = listOf(
         selectedThemeKey,
         amoledEnabledKey,
@@ -91,6 +92,16 @@ actual object ThemeSettingsStorage {
                 LocaleListCompat.forLanguageTags(languageCode),
             )
         }
+    }
+
+    actual fun loadNavBarStyle(): String? =
+        preferences?.getString(ProfileScopedKey.of(NAV_BAR_STYLE_KEY), null)
+
+    actual fun saveNavBarStyle(styleKey: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(NAV_BAR_STYLE_KEY), styleKey)
+            ?.apply()
     }
 
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {

@@ -15,6 +15,7 @@ actual object ThemeSettingsStorage {
     private const val amoledEnabledKey = "amoled_enabled"
     private const val liquidGlassNativeTabBarEnabledKey = "liquid_glass_native_tab_bar_enabled"
     private const val selectedAppLanguageKey = "selected_app_language"
+    private const val navBarStyleKey = "nav_bar_style"
     private val profileScopedSyncKeys = listOf(
         selectedThemeKey,
         amoledEnabledKey,
@@ -86,6 +87,13 @@ actual object ThemeSettingsStorage {
             forKey = "AppleLanguages",
         )
         NSUserDefaults.standardUserDefaults.synchronize()
+    }
+
+    actual fun loadNavBarStyle(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(navBarStyleKey))
+
+    actual fun saveNavBarStyle(styleKey: String) {
+        NSUserDefaults.standardUserDefaults.setObject(styleKey, forKey = ProfileScopedKey.of(navBarStyleKey))
     }
 
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {
