@@ -1468,6 +1468,7 @@
     <string name="stream_default_name">Stream</string>
     <string name="source_embedded">Embedded</string>
     <string name="trakt_authorization_denied">Authorization denied</string>
+    <string name="trakt_authorization_expired_reconnect">Your Trakt authorization is no longer valid. Reconnect your Trakt account.</string>
     <string name="trakt_complete_sign_in_browser">Complete Trakt sign in in your browser</string>
     <string name="trakt_connected">Connected to Trakt</string>
     <string name="trakt_disconnected">Disconnected from Trakt</string>
