@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.nuvio.app.core.ui.NuvioAnimatedWatchedBadge
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.debrid.DebridSettingsRepository
@@ -376,16 +377,27 @@ private fun EpisodeRow(
     ) {
         // Thumbnail
         if (episode.thumbnail != null) {
-            AsyncImage(
-                model = episode.thumbnail,
-                contentDescription = null,
+            Box(
                 modifier = Modifier
                     .width(NuvioTokens.Space.s80)
-                    .height(NuvioTokens.Space.s48)
-                    .clip(tokens.shapes.compactCard)
-                    .then(if (shouldBlurArtwork) Modifier.blur(NuvioTokens.Space.s18) else Modifier),
-                contentScale = ContentScale.Crop,
-            )
+                    .height(NuvioTokens.Space.s48),
+            ) {
+                AsyncImage(
+                    model = episode.thumbnail,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(tokens.shapes.compactCard)
+                        .then(if (shouldBlurArtwork) Modifier.blur(NuvioTokens.Space.s18) else Modifier),
+                    contentScale = ContentScale.Crop,
+                )
+                NuvioAnimatedWatchedBadge(
+                    isVisible = isWatched,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(NuvioTokens.Space.s4),
+                )
+            }
         }
 
         Column(modifier = Modifier.weight(1f)) {
@@ -413,6 +425,9 @@ private fun EpisodeRow(
                         fontSize = NuvioTokens.Type.labelXs,
                         fontWeight = FontWeight.SemiBold,
                     )
+                }
+                if (episode.thumbnail == null) {
+                    NuvioAnimatedWatchedBadge(isVisible = isWatched)
                 }
                 if (isCurrent) {
                     Box(
