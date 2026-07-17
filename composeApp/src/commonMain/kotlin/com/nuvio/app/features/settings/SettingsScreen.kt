@@ -155,6 +155,7 @@ fun SettingsScreen(
             !useNativeNavigation && isLiquidGlassNativeTabBarSupported()
         }
         val selectedAppLanguage by remember { ThemeSettingsRepository.selectedAppLanguage }.collectAsStateWithLifecycle()
+        val navBarStyle by remember { ThemeSettingsRepository.navBarStyle }.collectAsStateWithLifecycle()
         val tmdbSettings by remember {
             TmdbSettingsRepository.ensureLoaded()
             TmdbSettingsRepository.uiState
@@ -392,6 +393,8 @@ fun SettingsScreen(
                 onLiquidGlassNativeTabBarToggle = ThemeSettingsRepository::setLiquidGlassNativeTabBar,
                 selectedAppLanguage = selectedAppLanguage,
                 onAppLanguageSelected = ThemeSettingsRepository::setAppLanguage,
+                navBarStyle = navBarStyle,
+                onNavBarStyleSelected = ThemeSettingsRepository::setNavBarStyle,
                 episodeReleaseNotificationsUiState = episodeReleaseNotificationsUiState,
                 tmdbSettings = tmdbSettings,
                 mdbListSettings = mdbListSettings,
@@ -450,6 +453,8 @@ fun SettingsScreen(
                 onLiquidGlassNativeTabBarToggle = ThemeSettingsRepository::setLiquidGlassNativeTabBar,
                 selectedAppLanguage = selectedAppLanguage,
                 onAppLanguageSelected = ThemeSettingsRepository::setAppLanguage,
+                navBarStyle = navBarStyle,
+                onNavBarStyleSelected = ThemeSettingsRepository::setNavBarStyle,
                 episodeReleaseNotificationsUiState = episodeReleaseNotificationsUiState,
                 tmdbSettings = tmdbSettings,
                 mdbListSettings = mdbListSettings,
@@ -518,6 +523,8 @@ private fun MobileSettingsScreen(
     onLiquidGlassNativeTabBarToggle: (Boolean) -> Unit,
     selectedAppLanguage: AppLanguage,
     onAppLanguageSelected: (AppLanguage) -> Unit,
+    navBarStyle: NavBarStyle,
+    onNavBarStyleSelected: (NavBarStyle) -> Unit,
     episodeReleaseNotificationsUiState: EpisodeReleaseNotificationsUiState,
     tmdbSettings: TmdbSettings,
     mdbListSettings: MdbListSettings,
@@ -713,6 +720,8 @@ private fun MobileSettingsScreen(
                     onLiquidGlassNativeTabBarToggle = onLiquidGlassNativeTabBarToggle,
                     selectedAppLanguage = selectedAppLanguage,
                     onAppLanguageSelected = onAppLanguageSelected,
+                    selectedNavBarStyle = navBarStyle,
+                    onNavBarStyleSelected = onNavBarStyleSelected,
                     onHomescreenClick = onHomescreenClick,
                     onMetaScreenClick = onMetaScreenClick,
                     onStreamsClick = { onPageChange(SettingsPage.Streams) },
@@ -870,6 +879,8 @@ private fun TabletSettingsScreen(
     onLiquidGlassNativeTabBarToggle: (Boolean) -> Unit,
     selectedAppLanguage: AppLanguage,
     onAppLanguageSelected: (AppLanguage) -> Unit,
+    navBarStyle: NavBarStyle,
+    onNavBarStyleSelected: (NavBarStyle) -> Unit,
     episodeReleaseNotificationsUiState: EpisodeReleaseNotificationsUiState,
     tmdbSettings: TmdbSettings,
     mdbListSettings: MdbListSettings,
@@ -1121,6 +1132,8 @@ private fun TabletSettingsScreen(
                         onLiquidGlassNativeTabBarToggle = onLiquidGlassNativeTabBarToggle,
                         selectedAppLanguage = selectedAppLanguage,
                         onAppLanguageSelected = onAppLanguageSelected,
+                        selectedNavBarStyle = navBarStyle,
+                        onNavBarStyleSelected = onNavBarStyleSelected,
                         onHomescreenClick = { openInlinePage(SettingsPage.Homescreen) },
                         onMetaScreenClick = { openInlinePage(SettingsPage.MetaScreen) },
                         onStreamsClick = { openInlinePage(SettingsPage.Streams) },
