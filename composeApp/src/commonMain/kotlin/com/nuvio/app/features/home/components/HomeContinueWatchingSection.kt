@@ -1023,6 +1023,10 @@ private fun ContinueWatchingPosterCard(
                 .height(layout.posterCardHeight)
                 .clip(RoundedCornerShape(layout.cardRadius))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
+                .nuvioCardDepth(
+                    shape = RoundedCornerShape(layout.cardRadius),
+                    surface = NuvioCardDepthSurface.ContinueWatching,
+                )
                 .posterCardClickable(
                     onClick = onClick,
                     onLongClick = onLongClick,
