@@ -97,40 +97,27 @@ internal fun findPreferredSubtitleTrackIndex(
 internal fun filterAddonSubtitlesForSettings(
     subtitles: List<AddonSubtitle>,
     settings: PlayerSettingsUiState,
-    selectedAddonSubtitleId: String?,
 ): List<AddonSubtitle> {
     val shouldFilter = settings.subtitleStyle.showOnlyPreferredLanguages ||
         settings.addonSubtitleStartupMode == AddonSubtitleStartupMode.PREFERRED_ONLY
     if (!shouldFilter) return subtitles
 
     val targets = preferredSubtitleTargetsForSettings(settings)
-    if (targets.isEmpty()) {
-        return subtitles.filter { subtitle ->
-            subtitle.id == selectedAddonSubtitleId || subtitle.url == selectedAddonSubtitleId
+    if (targets.isEmpty()) return emptyList()
+
+    return subtitles.filter { subtitle ->
+        targets.any { target ->
+            languageMatchesPreference(
+                trackLanguage = subtitle.language,
+                targetLanguage = target,
+            )
         }
     }
-
-    val filtered = subtitles.filter { subtitle ->
-        subtitle.id == selectedAddonSubtitleId ||
-            subtitle.url == selectedAddonSubtitleId ||
-            targets.any { target ->
-                languageMatchesPreference(
-                    trackLanguage = subtitle.language,
-                    targetLanguage = target,
-                )
-            }
-    }
-    return filtered
 }
 
 internal fun preferredSubtitleTargetsForSettings(settings: PlayerSettingsUiState): List<String> {
-    val preferredLanguage = if (settings.subtitleStyle.useForcedSubtitles) {
-        SubtitleLanguageOption.FORCED
-    } else {
-        settings.preferredSubtitleLanguage
-    }
     return resolvePreferredSubtitleLanguageTargets(
-        preferredSubtitleLanguage = preferredLanguage,
+        preferredSubtitleLanguage = settings.preferredSubtitleLanguage,
         secondaryPreferredSubtitleLanguage = settings.secondaryPreferredSubtitleLanguage,
         deviceLanguages = DeviceLanguagePreferences.preferredLanguageCodes(),
     ).filterNot { it == SubtitleLanguageOption.FORCED }

@@ -17,11 +17,10 @@ internal val PlayerScreenRuntime.visibleAddonSubtitles: List<AddonSubtitle>
     get() = filterAddonSubtitlesForSettings(
         subtitles = addonSubtitles,
         settings = playerSettingsUiState,
-        selectedAddonSubtitleId = selectedAddonSubtitleId,
     )
 
 internal val PlayerScreenRuntime.selectedAddonSubtitle: AddonSubtitle?
-    get() = addonSubtitles.firstOrNull { subtitle ->
+    get() = visibleAddonSubtitles.firstOrNull { subtitle ->
         subtitle.id == selectedAddonSubtitleId || subtitle.url == selectedAddonSubtitleId
     }
 
