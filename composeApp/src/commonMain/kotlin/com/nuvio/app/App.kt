@@ -158,6 +158,7 @@ import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.library.LibraryItem
 import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.library.LibrarySection
+import com.nuvio.app.features.library.LibrarySortOption
 import com.nuvio.app.features.library.LibrarySourceMode
 import com.nuvio.app.features.library.LibraryScreen
 import com.nuvio.app.features.library.toLibraryItem
@@ -1676,7 +1677,7 @@ private fun MainAppContent(
             stringResource(Res.string.compose_catalog_subtitle_library)
         }
 
-        val onLibrarySectionViewAllClick: (LibrarySection) -> Unit = { section ->
+        val onLibrarySectionViewAllClick: (LibrarySection, LibrarySortOption) -> Unit = { section, sortOption ->
             val launchId = CatalogLaunchStore.put(
                 CatalogLaunch(
                     title = section.displayTitle,
@@ -1684,6 +1685,7 @@ private fun MainAppContent(
                     target = CatalogTarget.Library(
                         contentType = section.items.firstOrNull()?.type ?: "movie",
                         sectionType = section.type,
+                        sortOption = sortOption,
                     ),
                 ),
             )
@@ -3605,7 +3607,7 @@ private fun AppTabHost(
     onPosterLongClick: ((MetaPreview) -> Unit)? = null,
     onLibraryPosterClick: ((LibraryItem) -> Unit)? = null,
     onLibraryPosterLongClick: ((LibraryItem, LibrarySection) -> Unit)? = null,
-    onLibrarySectionViewAllClick: ((LibrarySection) -> Unit)? = null,
+    onLibrarySectionViewAllClick: ((LibrarySection, LibrarySortOption) -> Unit)? = null,
     onCloudFilePlay: ((CloudLibraryItem, CloudLibraryFile) -> Unit)? = null,
     onConnectCloudClick: (() -> Unit)? = null,
     onContinueWatchingClick: ((ContinueWatchingItem) -> Unit)? = null,
