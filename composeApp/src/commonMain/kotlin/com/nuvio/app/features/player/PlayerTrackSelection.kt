@@ -65,28 +65,93 @@ internal fun <T> findPreferredTrackIndex(
     return -1
 }
 
+internal enum class SubtitleAutoSelectionMode {
+    FORCED_ONLY,
+    NORMAL_ONLY,
+}
+
+internal data class SubtitleAutoSelectionPlan(
+    val targets: List<String>,
+    val mode: SubtitleAutoSelectionMode,
+)
+
+internal fun resolveAudioTrackLanguageTarget(track: AudioTrack?): String? {
+    if (track == null) return null
+
+    val directLanguage = normalizeLanguageCode(track.language)
+        ?.takeUnless { it == "und" || it == "unknown" }
+    if (directLanguage != null) return directLanguage
+
+    val selectableLanguages = AvailableLanguageOptions
+        .mapNotNull { option -> normalizeLanguageCode(option.code) }
+        .toSet()
+    return listOf(track.label, track.id).firstNotNullOfOrNull { value ->
+        normalizeLanguageCode(value)?.takeIf(selectableLanguages::contains)
+    }
+}
+
+internal fun resolveSubtitleAutoSelectionPlan(
+    selectedAudioLanguage: String?,
+    preferredAudioTargets: List<String>,
+    preferredSubtitleTargets: List<String>,
+    useForcedSubtitles: Boolean,
+): SubtitleAutoSelectionPlan? {
+    val normalizedAudioLanguage = normalizeLanguageCode(selectedAudioLanguage)
+    if (useForcedSubtitles && normalizedAudioLanguage == null) return null
+
+    val subtitleTargets = preferredSubtitleTargets
+        .mapNotNull(::normalizeLanguageCode)
+        .filterNot { target ->
+            target == SubtitleLanguageOption.NONE ||
+                target == SubtitleLanguageOption.FORCED ||
+                target == AudioLanguageOption.DEFAULT
+        }
+        .distinct()
+    val primarySubtitleTarget = subtitleTargets.firstOrNull()
+    val forcedTarget = when {
+        !useForcedSubtitles -> null
+        primarySubtitleTarget != null &&
+            normalizedAudioLanguage != null &&
+            languageMatchesPreference(normalizedAudioLanguage, primarySubtitleTarget) ->
+            primarySubtitleTarget
+        primarySubtitleTarget == null &&
+            normalizedAudioLanguage != null &&
+            preferredAudioTargets.any { target ->
+                languageMatchesPreference(normalizedAudioLanguage, target)
+            } -> normalizedAudioLanguage
+        else -> null
+    }
+
+    return SubtitleAutoSelectionPlan(
+        targets = forcedTarget?.let(::listOf) ?: subtitleTargets,
+        mode = if (forcedTarget != null) {
+            SubtitleAutoSelectionMode.FORCED_ONLY
+        } else {
+            SubtitleAutoSelectionMode.NORMAL_ONLY
+        },
+    )
+}
+
 internal fun findPreferredSubtitleTrackIndex(
     tracks: List<SubtitleTrack>,
     targets: List<String>,
-    requireForced: Boolean = false,
+    mode: SubtitleAutoSelectionMode,
 ): Int {
     if (targets.isEmpty()) return -1
 
-    for ((targetPosition, target) in targets.withIndex()) {
+    for (target in targets) {
         val normalizedTarget = normalizeLanguageCode(target) ?: continue
-        if (normalizedTarget == SubtitleLanguageOption.FORCED) {
-            val forcedIndex = tracks.indexOfFirst { it.isForced }
-            if (forcedIndex >= 0) return forcedIndex
-            if (targetPosition == 0) return -1
-            continue
-        }
-
         val matchIndex = tracks.indexOfFirst { track ->
-            (!requireForced || track.isForced) &&
-                languageMatchesPreference(
-                    trackLanguage = track.language,
-                    targetLanguage = normalizedTarget,
-                )
+            when (mode) {
+                SubtitleAutoSelectionMode.FORCED_ONLY -> track.isForced
+                SubtitleAutoSelectionMode.NORMAL_ONLY -> !track.isForced
+            } &&
+                listOf(track.language, track.label, track.id).any { trackLanguage ->
+                    languageMatchesPreference(
+                        trackLanguage = trackLanguage,
+                        targetLanguage = normalizedTarget,
+                    )
+                }
         }
         if (matchIndex >= 0) return matchIndex
     }
