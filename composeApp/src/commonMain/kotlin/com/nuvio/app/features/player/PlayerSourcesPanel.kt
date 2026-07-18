@@ -59,17 +59,7 @@ fun PlayerSourcesPanel(
     modifier: Modifier = Modifier,
 ) {
     val tokens = MaterialTheme.nuvio
-    val debridSettings by remember {
-        DebridSettingsRepository.ensureLoaded()
-        DebridSettingsRepository.uiState
-    }.collectAsStateWithLifecycle()
-    val streamBadgeSettings by remember {
-        StreamBadgeSettingsRepository.ensureLoaded()
-        StreamBadgeSettingsRepository.uiState
-    }.collectAsStateWithLifecycle()
-    val streams = streamsUiState.allStreams
     val addonGroups = streamsUiState.groups
-    val visibleGroups = streamsUiState.filteredGroups
     val contentLabel = if (currentSeason != null && currentEpisode != null) {
         buildString {
             append(stringResource(Res.string.compose_player_episode_code_full, currentSeason, currentEpisode))
@@ -144,61 +134,14 @@ fun PlayerSourcesPanel(
 
             Spacer(Modifier.height(16.dp))
 
-            when {
-                streamsUiState.isAnyLoading -> {
-                    PlayerModalLoading(
-                        modifier = Modifier.padding(vertical = 24.dp),
-                    )
-                }
-
-                streams.isEmpty() -> {
-                    val error = visibleGroups.firstOrNull { it.error != null }?.error
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 24.dp),
-                        contentAlignment = Alignment.CenterStart,
-                    ) {
-                        Text(
-                            text = error ?: stringResource(Res.string.compose_player_no_streams_found),
-                            color = Color.White.copy(alpha = if (error == null) 0.7f else 0.85f),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                    }
-                }
-
-                else -> {
-                    val streamKeys = remember(streams) { streams.stablePlayerKeys() }
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(
-                            start = 8.dp,
-                            top = 14.dp,
-                            end = 8.dp,
-                            bottom = 8.dp,
-                        ),
-                    ) {
-                        itemsIndexed(
-                            items = streams,
-                            key = { index, _ -> streamKeys[index] },
-                        ) { _, stream ->
-                            StreamCard(
-                                stream = stream,
-                                enabled = stream.isSelectableForPlayback(debridSettings.canResolvePlayableLinks),
-                                appendInstantServiceToDefaultName = debridSettings.canResolvePlayableLinks &&
-                                    !debridSettings.hasCustomStreamFormatting,
-                                showFileSizeBadges = streamBadgeSettings.showFileSizeBadges,
-                                showAddonLogo = streamBadgeSettings.showAddonLogo,
-                                badgePlacement = streamBadgeSettings.badgePlacement,
-                                isCurrent = stream.isCurrentPlayerStream(currentStreamUrl, currentStreamName),
-                                currentLabel = stringResource(Res.string.compose_player_playing),
-                                onClick = { onStreamSelected(stream) },
-                            )
-                        }
-                    }
-                }
-            }
+            PlayerStreamList(
+                streamsUiState = streamsUiState,
+                onStreamSelected = onStreamSelected,
+                modifier = Modifier.weight(1f),
+                currentStreamUrl = currentStreamUrl,
+                currentStreamName = currentStreamName,
+                currentLabel = stringResource(Res.string.compose_player_playing),
+            )
         }
     }
 }
