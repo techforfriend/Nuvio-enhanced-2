@@ -175,11 +175,7 @@ internal fun PlayerScreenRuntime.refreshTracks() {
 
     if (!preferredSubtitleSelectionApplied) {
         val preferredSubtitleTargets = resolvePreferredSubtitleLanguageTargets(
-            preferredSubtitleLanguage = if (subtitleStyle.useForcedSubtitles) {
-                SubtitleLanguageOption.FORCED
-            } else {
-                playerSettingsUiState.preferredSubtitleLanguage
-            },
+            preferredSubtitleLanguage = playerSettingsUiState.preferredSubtitleLanguage,
             secondaryPreferredSubtitleLanguage = playerSettingsUiState.secondaryPreferredSubtitleLanguage,
             deviceLanguages = DeviceLanguagePreferences.preferredLanguageCodes(),
         )
@@ -196,6 +192,7 @@ internal fun PlayerScreenRuntime.refreshTracks() {
             val preferredSubtitleIndex = findPreferredSubtitleTrackIndex(
                 tracks = subtitleTracks,
                 targets = preferredSubtitleTargets,
+                requireForced = subtitleStyle.useForcedSubtitles,
             )
             if (preferredSubtitleIndex >= 0 && preferredSubtitleIndex != selectedSubtitleIndex) {
                 playerController?.selectSubtitleTrack(preferredSubtitleIndex)
