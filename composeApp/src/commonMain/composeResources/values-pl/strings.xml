@@ -590,6 +590,9 @@
     <string name="settings_continue_watching_sort_mode_default_desc">Sortuj wszystkie elementy według czasu</string>
     <string name="settings_continue_watching_sort_mode_streaming">Styl streamingowy</string>
     <string name="settings_continue_watching_sort_mode_streaming_desc">Wydane najpierw, nadchodzące na końcu</string>
+    <string name="settings_continue_watching_sort_mode_split_upcoming">Oddzielny rząd Nadchodzące</string>
+    <string name="settings_continue_watching_sort_mode_split_upcoming_desc">Przenieś niewydane odcinki do oddzielnego rzędu Nadchodzące</string>
+    <string name="upcoming_section_title">Nadchodzące</string>
     <string name="settings_continue_watching_section_card_style">STYL KARTY</string>
     <string name="settings_continue_watching_section_on_launch">PRZY URUCHOMIENIU</string>
     <string name="settings_continue_watching_section_up_next_behavior">ZACHOWANIE NASTĘPNEGO</string>

@@ -683,6 +683,9 @@
     <string name="settings_continue_watching_sort_mode_default_desc">Sort all items by recency</string>
     <string name="settings_continue_watching_sort_mode_streaming">Streaming Style</string>
     <string name="settings_continue_watching_sort_mode_streaming_desc">Released items first, upcoming at the end</string>
+    <string name="settings_continue_watching_sort_mode_split_upcoming">Separate Upcoming Row</string>
+    <string name="settings_continue_watching_sort_mode_split_upcoming_desc">Move unaired episodes to a separate Upcoming row</string>
+    <string name="upcoming_section_title">Upcoming</string>
     <string name="settings_continue_watching_section_card_style">POSTER CARD STYLE</string>
     <string name="settings_continue_watching_section_on_launch">ON LAUNCH</string>
     <string name="settings_continue_watching_section_up_next_behavior">NEXT UP BEHAVIOR</string>
