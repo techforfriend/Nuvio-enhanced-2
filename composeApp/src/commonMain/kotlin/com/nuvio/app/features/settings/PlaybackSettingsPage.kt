@@ -616,7 +616,7 @@ private fun PlaybackSettingsSection(
 
         if (P2pSettingsRepository.isVisible) {
             SettingsSection(
-                title = stringResource(Res.string.settings_p2p_title),
+                title = stringResource(Res.string.settings_playback_section_p2p),
                 isTablet = isTablet,
             ) {
                 SettingsGroup(isTablet = isTablet) {
