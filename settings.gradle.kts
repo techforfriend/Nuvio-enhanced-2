@@ -25,6 +25,11 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
+        maven {
+            name = "localNuvioEngine"
+            url = uri("../nuvio-engine/platform/android/engine/build/repository")
+            content { includeGroup("com.nuvio") }
+        }
     }
 }
 
