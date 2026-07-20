@@ -50,6 +50,7 @@ jobs:
           RELEASE_COMMIT: ${{ steps.release.outputs.release_commit }}
           CURRENT_BRANCH: ${{ github.ref_name }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RELEASE_MODE: ${{ inputs.mode }}
         run: |
           if [[ "${CURRENT_BRANCH}" != "${DEFAULT_BRANCH}" ]]; then
             echo "Releases must run from the default branch (${DEFAULT_BRANCH}), not ${CURRENT_BRANCH}." >&2
@@ -77,19 +78,21 @@ jobs:
             exit 1
           fi
 
-          required_secrets=(
-            RELEASE_PROPERTIES_BASE64
-            RELEASE_KEYSTORE_BASE64
-          )
-          missing=()
-          for secret_name in "${required_secrets[@]}"; do
-            if [[ -z "${!secret_name}" ]]; then
-              missing+=("${secret_name}")
+          if [[ "${RELEASE_MODE}" != "dry-run" ]]; then
+            required_secrets=(
+              RELEASE_PROPERTIES_BASE64
+              RELEASE_KEYSTORE_BASE64
+            )
+            missing=()
+            for secret_name in "${required_secrets[@]}"; do
+              if [[ -z "${!secret_name}" ]]; then
+                missing+=("${secret_name}")
+              fi
+            done
+            if (( ${#missing[@]} > 0 )); then
+              printf 'Missing required release secrets: %s\n' "${missing[*]}" >&2
+              exit 1
             fi
-          done
-          if (( ${#missing[@]} > 0 )); then
-            printf 'Missing required release secrets: %s\n' "${missing[*]}" >&2
-            exit 1
           fi
 
       - name: Generate release notes
@@ -117,17 +120,18 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Set up Java
+        if: inputs.mode != 'dry-run'
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
 
       - name: Set up Gradle
+        if: inputs.mode != 'dry-run'
         uses: gradle/actions/setup-gradle@v6
 
       - name: Configure release properties
-        env:
-          RELEASE_MODE: ${{ inputs.mode }}
+        if: inputs.mode != 'dry-run'
         run: |
           keystore_path="${RUNNER_TEMP}/nuvio-release.jks"
           printf '%s' "${RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${keystore_path}"
@@ -136,11 +140,6 @@ jobs:
           # These paths only apply to the machine where local.properties was encoded.
           sed -i -E '/^[[:space:]]*(sdk\.dir|NUVIO_RELEASE_STORE_FILE)[[:space:]]*=/d' local.properties
           printf '\nNUVIO_RELEASE_STORE_FILE=%s\n' "${keystore_path}" >> local.properties
-
-          # A dry run must not upload ProGuard mappings or mutate release services.
-          if [[ "${RELEASE_MODE}" == "dry-run" ]]; then
-            sed -i -E '/^[[:space:]]*SENTRY_(AUTH_TOKEN|ORG|PROJECT)[[:space:]]*=/d' local.properties
-          fi
 
           required_properties=(
             NUVIO_RELEASE_STORE_PASSWORD
@@ -157,9 +156,11 @@ jobs:
           done
 
       - name: Build full release APKs
+        if: inputs.mode != 'dry-run'
         run: ./gradlew :androidApp:assembleFullRelease --stacktrace
 
       - name: Upload build artifacts
+        if: inputs.mode != 'dry-run'
         uses: actions/upload-artifact@v6
         with:
           name: nuvio-${{ steps.release.outputs.version }}-full-release
