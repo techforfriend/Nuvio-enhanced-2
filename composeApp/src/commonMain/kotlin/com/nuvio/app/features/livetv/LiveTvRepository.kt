@@ -28,12 +28,14 @@ object LiveTvRepository {
         _uiState.value = LiveTvUiState(
             playlistUrl = playlists.firstEnabledUrlSource(),
             playlists = playlists,
+            stalkerSettings = LiveTvStorage.loadStalkerSettings(),
+            xtreamSettings = LiveTvStorage.loadXtreamSettings(),
             favoriteChannelIds = loadFavoriteChannelIds(),
             lastWatchedChannelId = LiveTvStorage.loadLastWatchedChannelId(),
             isNavigationEnabled = LiveTvStorage.loadNavigationEnabled() ?: true,
         )
         publishNavigationVisibility()
-        if (playlists.isNotEmpty()) {
+        if (_uiState.value.hasPlaylist) {
             refresh()
         }
     }
@@ -206,10 +208,45 @@ object LiveTvRepository {
         publishNavigationVisibility()
     }
 
+    fun saveStalkerSettings(settings: LiveTvStalkerSettings) {
+        ensureLoaded()
+        val normalized = settings.copy(
+            portalUrl = settings.portalUrl.trim().trimEnd('/'),
+            macAddress = settings.macAddress.trim().uppercase(),
+            username = settings.username.trim(),
+            password = settings.password.trim(),
+        )
+        LiveTvStorage.saveStalkerSettings(normalized)
+        _uiState.value = _uiState.value.copy(stalkerSettings = normalized, errorMessage = null)
+        publishNavigationVisibility()
+        refresh()
+    }
+
+    fun saveXtreamSettings(settings: LiveTvXtreamSettings) {
+        ensureLoaded()
+        val normalized = settings.copy(
+            serverUrl = settings.serverUrl.trim().trimEnd('/').substringBefore("/player_api.php").trimEnd('/'),
+            username = settings.username.trim(),
+            password = settings.password.trim(),
+        )
+        LiveTvStorage.saveXtreamSettings(normalized)
+        _uiState.value = _uiState.value.copy(xtreamSettings = normalized, errorMessage = null)
+        publishNavigationVisibility()
+        refresh()
+    }
+
+    fun removeStalker() = saveStalkerSettings(LiveTvStalkerSettings())
+    fun removeXtream() = saveXtreamSettings(LiveTvXtreamSettings())
+
+    suspend fun prepareForPlayback(channel: LiveTvChannel): LiveTvChannel =
+        if (channel.stalkerCommand.isNullOrBlank()) channel
+        else preparePortalChannelForPlayback(channel, _uiState.value.stalkerSettings)
+
     fun refresh() {
         ensureLoaded()
-        val playlists = _uiState.value.playlists
-        if (playlists.isEmpty()) {
+        val currentState = _uiState.value
+        val playlists = currentState.playlists
+        if (!currentState.hasPlaylist) {
             _uiState.value = _uiState.value.copy(
                 playlistUrl = "",
                 playlists = emptyList(),
@@ -222,7 +259,9 @@ object LiveTvRepository {
         }
 
         val enabledPlaylists = playlists.filter { it.isEnabled }
-        if (enabledPlaylists.isEmpty()) {
+        val hasEnabledPortal = (currentState.xtreamSettings.isConfigured && currentState.xtreamSettings.isEnabled) ||
+            (currentState.stalkerSettings.isConfigured && currentState.stalkerSettings.isEnabled)
+        if (enabledPlaylists.isEmpty() && !hasEnabledPortal) {
             _uiState.value = _uiState.value.copy(
                 playlistUrl = "",
                 playlists = playlists,
@@ -253,6 +292,27 @@ object LiveTvRepository {
                         if (error is CancellationException) throw error
                         failedPlaylistNames += playlist.name
                         log.w(error) { "Failed to load live TV playlist ${playlist.name}" }
+                    },
+                )
+            }
+
+            if (currentState.xtreamSettings.isConfigured && currentState.xtreamSettings.isEnabled) {
+                runCatching { fetchXtreamChannels(currentState.xtreamSettings) }.fold(
+                    onSuccess = { loadedChannels += it },
+                    onFailure = { error ->
+                        if (error is CancellationException) throw error
+                        failedPlaylistNames += "Xtream"
+                        log.w(error) { "Failed to load Xtream provider" }
+                    },
+                )
+            }
+            if (currentState.stalkerSettings.isConfigured && currentState.stalkerSettings.isEnabled) {
+                runCatching { fetchStalkerChannels(currentState.stalkerSettings) }.fold(
+                    onSuccess = { loadedChannels += it },
+                    onFailure = { error ->
+                        if (error is CancellationException) throw error
+                        failedPlaylistNames += "Stalker Portal"
+                        log.w(error) { "Failed to load Stalker provider" }
                     },
                 )
             }

@@ -1253,23 +1253,30 @@ internal fun MainAppContent(
         }
 
         val onLiveTvChannelClick: (LiveTvChannel) -> Unit = { channel ->
-            val launchId = PlayerLaunchStore.put(
-                PlayerLaunch(
-                    profileId = activePlaybackProfileId,
-                    title = channel.name,
-                    sourceUrl = channel.streamUrl,
-                    logo = channel.logoUrl,
-                    streamTitle = channel.name,
-                    streamSubtitle = channel.group,
-                    providerName = "Live TV",
-                    providerAddonId = "live-tv",
-                    contentType = "live",
-                    videoId = channel.id,
-                    parentMetaId = channel.id,
-                    parentMetaType = "live",
-                ),
-            )
-            navController.navigate(PlayerRoute(launchId = launchId))
+            coroutineScope.launch {
+                val playableChannel = runCatching {
+                    LiveTvRepository.prepareForPlayback(channel)
+                }.getOrDefault(channel)
+                val launchId = PlayerLaunchStore.put(
+                    PlayerLaunch(
+                        profileId = activePlaybackProfileId,
+                        title = playableChannel.name,
+                        sourceUrl = playableChannel.streamUrl,
+                        sourceHeaders = playableChannel.headers,
+                        streamType = playableChannel.streamType,
+                        logo = playableChannel.logoUrl,
+                        streamTitle = playableChannel.name,
+                        streamSubtitle = playableChannel.group,
+                        providerName = "Live TV",
+                        providerAddonId = "live-tv",
+                        contentType = "live",
+                        videoId = playableChannel.id,
+                        parentMetaId = playableChannel.id,
+                        parentMetaType = "live",
+                    ),
+                )
+                navController.navigate(PlayerRoute(launchId = launchId))
+            }
         }
 
         AppUpdaterHost(

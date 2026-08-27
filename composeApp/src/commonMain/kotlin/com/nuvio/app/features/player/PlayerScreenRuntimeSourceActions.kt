@@ -276,6 +276,13 @@ internal fun PlayerScreenRuntime.switchToP2pEpisodeStream(
 }
 
 internal fun PlayerScreenRuntime.switchToLiveChannel(channel: LiveTvChannel) {
+    scope.launch {
+        val playableChannel = runCatching { LiveTvRepository.prepareForPlayback(channel) }.getOrDefault(channel)
+        switchToPreparedLiveChannel(playableChannel)
+    }
+}
+
+private fun PlayerScreenRuntime.switchToPreparedLiveChannel(channel: LiveTvChannel) {
     LiveTvRepository.markChannelWatched(channel)
 
     if (channel.streamUrl == activeSourceUrl) {
@@ -295,7 +302,7 @@ internal fun PlayerScreenRuntime.switchToLiveChannel(channel: LiveTvChannel) {
     activeSourceUrl = channel.streamUrl
     activePlaybackSourceUrl = if (channel.streamUrl.contains(".m3u8", ignoreCase = true)) null else channel.streamUrl
     activeSourceAudioUrl = null
-    activeSourceHeaders = emptyMap()
+    activeSourceHeaders = sanitizePlaybackHeaders(channel.headers)
     activeSourceResponseHeaders = emptyMap()
     activeStreamTitle = channel.name
     activeStreamSubtitle = channel.group
@@ -306,7 +313,7 @@ internal fun PlayerScreenRuntime.switchToLiveChannel(channel: LiveTvChannel) {
     activeSeasonNumber = null
     activeEpisodeNumber = null
     activeEpisodeTitle = null
-    activeStreamType = null
+    activeStreamType = channel.streamType
     activeEpisodeThumbnail = null
     activeVideoId = channel.id
     activeInitialPositionMs = 0L
