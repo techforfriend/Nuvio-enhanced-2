@@ -71,6 +71,7 @@ import com.nuvio.app.features.library.LibraryUiState
 import com.nuvio.app.features.profiles.AvatarCatalogItem
 import com.nuvio.app.features.profiles.AvatarRepository
 import com.nuvio.app.features.profiles.NuvioProfile
+import com.nuvio.app.features.profiles.ProfileBackgroundBackdrop
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.profiles.parseHexColor
 import com.nuvio.app.features.profiles.profileAvatarImageUrl
@@ -326,17 +327,28 @@ private fun ProfileInsightsHero(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        Color(0xFF0E1727),
-                        accent.copy(alpha = 0.42f),
-                        tokens.colors.surface,
-                    ),
-                ),
-            )
             .border(1.dp, Color.White.copy(alpha = 0.12f), shape),
     ) {
+        if (profile != null) {
+            ProfileBackgroundBackdrop(
+                profile = profile,
+                modifier = Modifier.matchParentSize(),
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                Color(0xFF0E1727),
+                                accent.copy(alpha = 0.42f),
+                                tokens.colors.surface,
+                            ),
+                        ),
+                    ),
+            )
+        }
         Box(
             modifier = Modifier
                 .matchParentSize()

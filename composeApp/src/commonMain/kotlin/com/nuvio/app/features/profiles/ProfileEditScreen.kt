@@ -85,6 +85,7 @@ fun ProfileEditScreen(
     var avatarUrl by rememberSaveable { mutableStateOf(currentProfile?.avatarUrl.orEmpty()) }
     var selectedBackgroundId by rememberSaveable { mutableStateOf(currentProfile?.profileBackgroundId) }
     var selectedBackgroundUrl by rememberSaveable { mutableStateOf(currentProfile?.profileBackgroundUrl) }
+    var customBackgroundUrlInput by rememberSaveable { mutableStateOf(currentProfile?.profileBackgroundUrl.orEmpty()) }
     var usesPrimaryAddons by rememberSaveable { mutableStateOf(currentProfile?.usesPrimaryAddons ?: false) }
     var isSaving by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -112,6 +113,8 @@ fun ProfileEditScreen(
 
     val customAvatarUrl = remember(avatarUrl) { normalizedAvatarUrl(avatarUrl) }
     val avatarUrlIsInvalid = avatarUrl.isNotBlank() && customAvatarUrl == null
+    val customBackgroundUrl = remember(customBackgroundUrlInput) { normalizedAvatarUrl(customBackgroundUrlInput) }
+    val customBackgroundUrlIsInvalid = customBackgroundUrlInput.isNotBlank() && customBackgroundUrl == null
     val selectedAvatarItem = remember(selectedAvatarId, avatars) {
         selectedAvatarId?.let { id -> avatars.find { it.id == id } }
     }
@@ -204,8 +207,50 @@ fun ProfileEditScreen(
                             onSelectionChange = { id, url ->
                                 selectedBackgroundId = id
                                 selectedBackgroundUrl = url
+                                customBackgroundUrlInput = ""
                             },
                         )
+                    }
+                }
+            }
+        }
+
+        if (!isNew) {
+            item {
+                NuvioSurfaceCard {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = stringResource(Res.string.profile_custom_background_url),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = stringResource(Res.string.profile_custom_background_url_description),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        NuvioInputField(
+                            value = customBackgroundUrlInput,
+                            onValueChange = { value ->
+                                customBackgroundUrlInput = value
+                                val normalized = normalizedAvatarUrl(value)
+                                if (normalized != null) {
+                                    selectedBackgroundId = null
+                                    selectedBackgroundUrl = normalized
+                                } else if (value.isBlank()) {
+                                    selectedBackgroundId = null
+                                    selectedBackgroundUrl = null
+                                }
+                            },
+                            placeholder = stringResource(Res.string.profile_custom_background_url_placeholder),
+                        )
+                        if (customBackgroundUrlIsInvalid) {
+                            Text(
+                                text = stringResource(Res.string.profile_background_url_invalid),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
                 }
             }
@@ -305,7 +350,7 @@ fun ProfileEditScreen(
                 } else {
                     stringResource(Res.string.collections_editor_save_changes)
                 },
-                enabled = name.isNotBlank() && !avatarUrlIsInvalid && !isSaving,
+                enabled = name.isNotBlank() && !avatarUrlIsInvalid && !customBackgroundUrlIsInvalid && !isSaving,
                 onClick = {
                     isSaving = true
                     scope.launch {

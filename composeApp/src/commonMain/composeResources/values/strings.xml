@@ -8,6 +8,10 @@
     <string name="profile_background_member_note">Custom background URLs can be configured from the Nuvio web panel.</string>
     <string name="profile_background_normal">Normal</string>
     <string name="profile_background_custom">Custom</string>
+    <string name="profile_custom_background_url">Custom background URL</string>
+    <string name="profile_custom_background_url_description">Paste an image link to use as this profile\'s background, or leave this empty to use the default background.</string>
+    <string name="profile_custom_background_url_placeholder">https://example.com/background.jpg</string>
+    <string name="profile_background_url_invalid">Enter a valid http:// or https:// image URL.</string>
     <string name="about_licenses_attributions_subtitle">Data sources, acknowledgements, and platform licenses</string>
     <string name="about_supporters_contributors_subtitle">Open recognition and project credits</string>
     <string name="action_back">Back</string>
