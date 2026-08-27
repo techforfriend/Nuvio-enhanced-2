@@ -8,7 +8,29 @@ data class LiveTvChannel(
     val group: String? = null,
     val playlistId: String? = null,
     val playlistName: String? = null,
+    val headers: Map<String, String> = emptyMap(),
+    val streamType: String? = null,
+    val stalkerCommand: String? = null,
 )
+
+data class LiveTvStalkerSettings(
+    val portalUrl: String = "",
+    val macAddress: String = "",
+    val username: String = "",
+    val password: String = "",
+    val isEnabled: Boolean = true,
+) {
+    val isConfigured: Boolean get() = portalUrl.isNotBlank() && macAddress.isNotBlank()
+}
+
+data class LiveTvXtreamSettings(
+    val serverUrl: String = "",
+    val username: String = "",
+    val password: String = "",
+    val isEnabled: Boolean = true,
+) {
+    val isConfigured: Boolean get() = serverUrl.isNotBlank() && username.isNotBlank() && password.isNotBlank()
+}
 
 enum class LiveTvPlaylistType {
     Url,
@@ -26,6 +48,8 @@ data class LiveTvPlaylist(
 data class LiveTvUiState(
     val playlistUrl: String = "",
     val playlists: List<LiveTvPlaylist> = emptyList(),
+    val stalkerSettings: LiveTvStalkerSettings = LiveTvStalkerSettings(),
+    val xtreamSettings: LiveTvXtreamSettings = LiveTvXtreamSettings(),
     val channels: List<LiveTvChannel> = emptyList(),
     val favoriteChannelIds: Set<String> = emptySet(),
     val lastWatchedChannelId: String? = null,
@@ -34,7 +58,8 @@ data class LiveTvUiState(
     val errorMessage: String? = null,
 ) {
     val hasPlaylist: Boolean
-        get() = playlists.isNotEmpty() || playlistUrl.isNotBlank()
+        get() = playlists.isNotEmpty() || playlistUrl.isNotBlank() ||
+            stalkerSettings.isConfigured || xtreamSettings.isConfigured
 
     val showInNavigation: Boolean
         get() = hasPlaylist && isNavigationEnabled
