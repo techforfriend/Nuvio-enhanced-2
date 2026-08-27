@@ -1,4 +1,5 @@
 name: Build Mobile Release
+run-name: ${{ inputs.description != '' && format('Build Mobile Release - {0}', inputs.description) || 'Build Mobile Release' }}
 
 on:
   workflow_dispatch:
