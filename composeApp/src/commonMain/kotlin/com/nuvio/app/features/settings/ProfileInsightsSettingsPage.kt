@@ -623,10 +623,12 @@ private fun ProfileInsightStatCard(
             ) {
                 Text(
                     text = tile.value,
+                    modifier = Modifier.weight(1f, fill = false),
                     style = MaterialTheme.typography.titleLarge,
                     color = tokens.colors.textPrimary,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Surface(
                     modifier = Modifier.size(34.dp),
@@ -1022,12 +1024,23 @@ private fun ProfileTasteDnaChip(
 
 @Composable
 private fun profileInsightDurationLabel(durationMs: Long): String {
-    val minutes = (durationMs / ProfileInsightsMinuteMs).coerceAtLeast(0L)
-    return if (minutes >= 60L) {
-        stringResource(Res.string.profile_insights_hours, ((minutes + 30L) / 60L).toInt())
+    val totalMinutes = (durationMs / ProfileInsightsMinuteMs).coerceAtLeast(0L)
+    if (totalMinutes <= 0L) return stringResource(Res.string.profile_insights_minutes, 0)
+
+    val formatted = if (totalMinutes < 60L) {
+        stringResource(Res.string.profile_insights_minutes, totalMinutes.toInt())
     } else {
-        stringResource(Res.string.profile_insights_minutes, minutes.toInt())
+        val totalHours = (totalMinutes + 30L) / 60L
+        val days = totalHours / 24L
+        val hours = totalHours % 24L
+        when {
+            days > 0L && hours > 0L ->
+                stringResource(Res.string.profile_insights_days_hours, days.toInt(), hours.toInt())
+            days > 0L -> stringResource(Res.string.profile_insights_days, days.toInt())
+            else -> stringResource(Res.string.profile_insights_hours, totalHours.toInt())
+        }
     }
+    return "~$formatted"
 }
 
 private fun buildProfileInsightsStats(
@@ -1468,35 +1481,42 @@ private fun WatchProgressEntry.profileEpisodeLine(): String? {
 }
 
 private fun WatchProgressEntry.profileTrackedDurationMs(): Long {
-    if (durationMs <= 0L) return lastPositionMs.coerceAtLeast(0L)
-    if (isEffectivelyCompleted) return durationMs
-    if (lastPositionMs > 0L) return lastPositionMs.coerceIn(0L, durationMs)
+    val effectiveDurationMs = if (durationMs > 0L) {
+        durationMs
+    } else {
+        profileFallbackDurationMs(
+            kind = parentMetaType.profileCompletedContentKind(),
+            isEpisode = isEpisode,
+        )
+    }
+    if (effectiveDurationMs <= 0L) return lastPositionMs.coerceAtLeast(0L)
+    if (isEffectivelyCompleted) return effectiveDurationMs
+    if (lastPositionMs > 0L) return lastPositionMs.coerceIn(0L, effectiveDurationMs)
     val explicitPercent = normalizedProgressPercent ?: return 0L
-    return (durationMs * (explicitPercent / 100f)).toLong().coerceIn(0L, durationMs)
+    return (effectiveDurationMs * (explicitPercent / 100f)).toLong().coerceIn(0L, effectiveDurationMs)
 }
 
 private fun profileTrackedDurationMs(
     watchedItems: List<WatchedItem>,
     progressEntries: List<WatchProgressEntry>,
 ): Long {
-    val progressDurationByKey = progressEntries
-        .asSequence()
-        .mapNotNull { entry ->
-            entry.profileTrackableActivityKey()?.let { key -> key to entry.profileTrackedDurationMs() }
-        }
-        .groupBy({ it.first }, { it.second })
-        .mapValues { (_, durations) -> durations.maxOrNull() ?: 0L }
+    val durationByKey = mutableMapOf<String, Long>()
 
-    val watchedDurationByKey = watchedItems
-        .asSequence()
-        .mapNotNull { item ->
-            item.profileTrackableActivityKey()?.let { key -> key to item.profileCachedWatchedDurationMs() }
+    fun record(key: String?, durationMs: Long) {
+        if (key == null || durationMs <= 0L) return
+        if (durationMs > (durationByKey[key] ?: 0L)) {
+            durationByKey[key] = durationMs
         }
-        .filter { (key, duration) -> duration > 0L && key !in progressDurationByKey }
-        .groupBy({ it.first }, { it.second })
-        .mapValues { (_, durations) -> durations.maxOrNull() ?: 0L }
+    }
 
-    return progressDurationByKey.values.sum() + watchedDurationByKey.values.sum()
+    progressEntries.forEach { entry ->
+        record(entry.profileTrackableActivityKey(), entry.profileTrackedDurationMs())
+    }
+    watchedItems.forEach { item ->
+        record(item.profileTrackableActivityKey(), item.profileEstimatedDurationMs())
+    }
+
+    return durationByKey.values.sum()
 }
 
 private fun WatchProgressEntry.profileArtworkUrl(): String? =
@@ -1605,18 +1625,30 @@ private fun WatchProgressEntry.isProfileTrackableActivity(): Boolean {
     return kind == "movie" || (kind == "series" && seasonNumber != null && episodeNumber != null)
 }
 
-private fun WatchedItem.profileCachedWatchedDurationMs(): Long {
+private fun WatchedItem.profileEstimatedDurationMs(): Long {
     val kind = type.profileCompletedContentKind() ?: return 0L
-    val meta = profileCachedMeta(type, id) ?: return 0L
+    val meta = profileCachedMeta(type, id)
     val minutes = when {
-        kind == "movie" && season == null && episode == null -> profileParseRuntimeMinutes(meta.runtime)
-        kind == "series" && season != null && episode != null -> meta.videos
-            .firstOrNull { video -> video.season == season && video.episode == episode }
-            ?.runtime
-            ?.takeIf { runtime -> runtime > 0 }
-        else -> null
-    } ?: return 0L
-    return minutes.toLong() * ProfileInsightsMinuteMs
+        kind == "movie" && season == null && episode == null ->
+            meta?.runtime?.let(::profileParseRuntimeMinutes)?.toLong()
+                ?: ProfileInsightsFallbackMovieMinutes
+        kind == "series" && season != null && episode != null ->
+            meta?.videos
+                ?.firstOrNull { video -> video.season == season && video.episode == episode }
+                ?.runtime
+                ?.takeIf { runtime -> runtime > 0 }
+                ?.toLong()
+                ?: ProfileInsightsFallbackEpisodeMinutes
+        else -> return 0L
+    }
+    return minutes * ProfileInsightsMinuteMs
+}
+
+private fun profileFallbackDurationMs(kind: String?, isEpisode: Boolean): Long = when {
+    kind == null -> 0L
+    kind == "movie" && !isEpisode -> ProfileInsightsFallbackMovieMinutes * ProfileInsightsMinuteMs
+    kind == "series" && isEpisode -> ProfileInsightsFallbackEpisodeMinutes * ProfileInsightsMinuteMs
+    else -> 0L
 }
 
 private fun profileCachedMeta(type: String?, id: String?): MetaDetails? {
@@ -1933,6 +1965,9 @@ private fun ProfileTasteDnaChip.localizedLabel(): String =
 
 private const val ProfileInsightsMinuteMs = 60_000L
 private const val ProfileInsightsRecentWindowMs = 7L * 24L * 60L * 60L * 1000L
+
+private const val ProfileInsightsFallbackMovieMinutes = 115L
+private const val ProfileInsightsFallbackEpisodeMinutes = 42L
 private val profileHourTokenRegex = Regex("""(?i)(\d+)\s*h(?:ours?)?""")
 private val profileMinuteTokenRegex = Regex("""(?i)(\d+)\s*m(?:in(?:ute)?s?)?""")
 private val profileHourMinuteColonRegex = Regex("""^\s*(\d+)\s*:\s*(\d{1,2})\s*$""")
