@@ -734,7 +734,7 @@ final class AppNavigationCoordinator: ObservableObject {
             tabBarTransitionTask = Task { [weak self] in
                 try? await Task.sleep(nanoseconds: 340_000_000)
                 guard !Task.isCancelled, let self, self.isTabBarVisible else { return }
-                withAnimation(.easeOut(duration: 0.04)) {
+                withAnimation(.easeOut(duration: 0.12)) {
                     self.isNativeTabBarVisible = true
                 }
             }
@@ -1042,7 +1042,9 @@ struct TabContentView: View {
         .animation(
             appCoordinator.tabBarBehavior == .autoHide
                 ? .easeInOut(duration: 0.18)
-                : nil,
+                : appCoordinator.tabBarBehavior == .morphed
+                    ? .easeOut(duration: 0.12)
+                    : nil,
             value: appCoordinator.isNativeTabBarVisible
         )
     }

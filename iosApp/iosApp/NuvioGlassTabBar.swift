@@ -55,6 +55,7 @@ struct NuvioGlassTabBar: View {
             HStack(spacing: 0) {
                 ForEach(visibleTabs, id: \.self) { tab in
                     item(for: tab)
+                        .transition(.opacity)
                 }
             }
             .padding(.horizontal, 6)
@@ -98,7 +99,6 @@ struct NuvioGlassTabBar: View {
             if selected && isExpanded {
                 Capsule()
                     .fill(Color(uiColor: iconStore.accentColor).opacity(0.12))
-                    .glassEffect(.regular, in: Capsule())
             }
         }
 
