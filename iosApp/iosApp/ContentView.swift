@@ -627,6 +627,10 @@ final class AppNavigationCoordinator: ObservableObject {
             if selectedTab != oldValue {
                 setTabBarVisible(true)
                 refreshSelectedTabDepth()
+                // Home's Compose content stays mounted (just hidden) behind the other native
+                // tabs, so Compose can't reliably detect this switch on its own — tell it
+                // directly so anything playing in the background (e.g. a hero trailer) stops.
+                NativeTabBridgeKt.nativeTabVisibilityChanged(tabName: selectedTab.rawValue)
             }
         }
     }

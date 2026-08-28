@@ -197,6 +197,20 @@ fun nativeTabSelect(tabName: String) {
     NativeTabBridge.requestTab(tabName)
 }
 
+/**
+ * Called directly from Swift (`AppNavigationCoordinator.selectedTab`'s `didSet`) every time the
+ * native tab bar switches to a different tab, including when Compose's own `selectedTab` never
+ * changes because native navigation owns tab switching entirely. Home can stay mounted (just
+ * hidden) behind the other native tabs, so this is the only reliable "Home is no longer visible"
+ * signal — it calls straight into the playback controller instead of going through Compose state,
+ * which may not even be recomposing while off-screen.
+ */
+fun nativeTabVisibilityChanged(tabName: String) {
+    if (NativeNavigationTab.fromName(tabName) != NativeNavigationTab.Home) {
+        com.nuvio.app.features.home.components.HomeHeroTrailerPlaybackController.forceStop()
+    }
+}
+
 internal expect fun isLiquidGlassNativeTabBarSupported(): Boolean
 
 internal expect fun publishLiquidGlassNativeTabBarEnabled(enabled: Boolean)
