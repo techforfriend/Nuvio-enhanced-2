@@ -1,5 +1,15 @@
 package com.nuvio.app
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,15 +24,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -31,10 +46,20 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.DisintegrationRequest
-import com.nuvio.app.core.ui.NuvioLoadingIndicator
+import com.nuvio.app.core.ui.NativeTabBridge
+import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.cloud.CloudLibraryContentType
@@ -49,16 +74,21 @@ import com.nuvio.app.features.library.LibrarySection
 import com.nuvio.app.features.library.LibrarySortOption
 import com.nuvio.app.features.livetv.LiveTvChannel
 import com.nuvio.app.features.livetv.LiveTvScreen
+import com.nuvio.app.features.profiles.AvatarRepository
 import com.nuvio.app.features.profiles.NuvioProfile
 import com.nuvio.app.features.profiles.ProfileBackgroundBackdrop
 import com.nuvio.app.features.profiles.ProfileSwitcherTab
+import com.nuvio.app.features.profiles.parseHexColor
+import com.nuvio.app.features.profiles.profileAvatarImageUrl
 import com.nuvio.app.features.search.SearchScreen
 import com.nuvio.app.features.settings.AppBrandWordmark
 import com.nuvio.app.features.settings.SettingsScreen
 import com.nuvio.app.features.watchprogress.ContinueWatchingItem
 import com.nuvio.app.navigation.AppRoute
 import com.nuvio.app.navigation.NuvioNavigator
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.app_brand_name
 import nuvio.composeapp.generated.resources.compose_nav_home
@@ -406,23 +436,228 @@ private fun TabletTopPillItem(
 @Composable
 internal fun AppLoadingContent(
     modifier: Modifier = Modifier,
+    profile: NuvioProfile? = null,
+    exitTowardProfileTab: Boolean = false,
+    onExitFinished: () -> Unit = {},
 ) {
     val tokens = MaterialTheme.nuvio
+    // Netflix-style profile-select entrance, paced over a couple of seconds rather than a quick
+    // snap: the emblem drifts in from oversized-and-lifted, settles with a slow, pronounced
+    // bounce, a soft "impact" ring pulses outward the moment it lands, and the loading ring
+    // fades in right as it settles.
+    val emblemScale = remember { Animatable(1.7f) }
+    val emblemAlpha = remember { Animatable(0f) }
+    val emblemOffsetX = remember { Animatable(0f) }
+    val emblemOffsetY = remember { Animatable(-36f) }
+    val haloAlpha = remember { Animatable(0f) }
+    val ringScale = remember { Animatable(0.7f) }
+    val ringAlpha = remember { Animatable(0f) }
+    val spinnerAlpha = remember { Animatable(0f) }
+    val spinnerScale = remember { Animatable(0.85f) }
+    val density = LocalDensity.current
+    var containerSize by remember { mutableStateOf(IntSize.Zero) }
+    val profileTabIconFrame by NativeTabBridge.profileTabIconFrame.collectAsStateWithLifecycle()
+
+    suspend fun CoroutineScope.pulseRing() {
+        ringScale.snapTo(0.7f)
+        ringAlpha.snapTo(0.45f)
+        launch { ringScale.animateTo(1.9f, animationSpec = tween(900, easing = LinearOutSlowInEasing)) }
+        ringAlpha.animateTo(0f, animationSpec = tween(900))
+    }
+
+    LaunchedEffect(Unit) {
+        launch { emblemAlpha.animateTo(1f, animationSpec = tween(220, easing = FastOutSlowInEasing)) }
+        launch { haloAlpha.animateTo(1f, animationSpec = tween(420, easing = FastOutSlowInEasing)) }
+        // A snappier spring than before (higher stiffness) so the bounce actually settles inside
+        // the much shorter ~1s minimum display window instead of getting cut off mid-motion.
+        launch {
+            emblemOffsetY.animateTo(
+                0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium,
+                ),
+            )
+        }
+        launch {
+            emblemScale.animateTo(
+                1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium,
+                ),
+            )
+        }
+        // Its own space is reserved from the start (see the Box below), so fading it in never
+        // resizes — and therefore never shifts — anything above it.
+        launch { spinnerAlpha.animateTo(1f, animationSpec = tween(220, delayMillis = 120)) }
+        launch { spinnerScale.animateTo(1f, animationSpec = tween(280, delayMillis = 120, easing = FastOutSlowInEasing)) }
+        pulseRing()
+    }
+
+    LaunchedEffect(exitTowardProfileTab) {
+        if (!exitTowardProfileTab) return@LaunchedEffect
+        // Prefer the real Profile tab icon's on-screen frame, pushed live from Swift (see
+        // NativeTabBridge.publishProfileTabIconFrame) — lands pixel-perfect on the actual icon.
+        // Falls back to an approximated bottom-right corner if that frame isn't known yet (e.g.
+        // this ran before Swift ever attached the tab bar coordinator).
+        val frame = profileTabIconFrame
+        val targetX: Float
+        val targetY: Float
+        if (frame != null) {
+            val iconCenterXPx = with(density) { (frame.xDp + frame.widthDp / 2f).dp.toPx() }
+            val iconCenterYPx = with(density) { (frame.yDp + frame.heightDp / 2f).dp.toPx() }
+            targetX = iconCenterXPx - containerSize.width / 2f
+            targetY = iconCenterYPx - containerSize.height / 2f
+        } else {
+            val marginPx = with(density) { 24.dp.toPx() }
+            targetX = (containerSize.width / 2f - marginPx).coerceAtLeast(0f)
+            targetY = (containerSize.height / 2f - marginPx).coerceAtLeast(0f)
+        }
+        // The tab bar is already visible underneath by this point, so the glide is stretched out
+        // and the emblem stays fully opaque for almost the whole trip, only dissolving right at
+        // the very end — reading as the icon shrinking down and merging into the real one, not
+        // just fading away.
+        val travelDuration = 900
+        launch { haloAlpha.animateTo(0f, animationSpec = tween(220)) }
+        launch { ringAlpha.animateTo(0f, animationSpec = tween(200)) }
+        launch { spinnerAlpha.animateTo(0f, animationSpec = tween(220)) }
+        launch {
+            emblemOffsetX.animateTo(targetX, animationSpec = tween(travelDuration, easing = FastOutSlowInEasing))
+        }
+        launch {
+            emblemScale.animateTo(0.22f, animationSpec = tween(travelDuration, easing = FastOutSlowInEasing))
+        }
+        launch {
+            emblemAlpha.animateTo(0f, animationSpec = tween(180, delayMillis = travelDuration - 180))
+        }
+        emblemOffsetY.animateTo(targetY, animationSpec = tween(travelDuration, easing = FastOutSlowInEasing))
+        onExitFinished()
+    }
+
     Box(
-        modifier = modifier,
+        modifier = modifier.onSizeChanged { containerSize = it },
         contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            AppBrandWordmark(
-                contentDescription = stringResource(Res.string.app_brand_name),
-                modifier = Modifier
-                    .fillMaxWidth(0.48f)
-                    .height(44.dp),
-            )
+            Box(contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(150.dp)
+                        .graphicsLayer { alpha = haloAlpha.value }
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    tokens.colors.accent.copy(alpha = 0.28f),
+                                    tokens.colors.accent.copy(alpha = 0f),
+                                ),
+                            ),
+                            CircleShape,
+                        ),
+                )
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .graphicsLayer {
+                            scaleX = ringScale.value
+                            scaleY = ringScale.value
+                            alpha = ringAlpha.value
+                        }
+                        .border(1.5.dp, tokens.colors.accent, CircleShape),
+                )
+                val emblemModifier = Modifier
+                    .graphicsLayer {
+                        scaleX = emblemScale.value
+                        scaleY = emblemScale.value
+                        alpha = emblemAlpha.value
+                        translationX = emblemOffsetX.value
+                        translationY = emblemOffsetY.value
+                    }
+                if (profile != null) {
+                    AppLoadingProfileAvatar(
+                        profile = profile,
+                        modifier = emblemModifier.size(96.dp),
+                    )
+                } else {
+                    AppBrandWordmark(
+                        contentDescription = stringResource(Res.string.app_brand_name),
+                        modifier = emblemModifier
+                            .width(160.dp)
+                            .height(44.dp),
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(tokens.spacing.sectionGap))
-            NuvioLoadingIndicator(color = tokens.colors.accent)
+            // A fixed-size box reserved from the very first frame — fading its content in/out
+            // (rather than an AnimatedVisibility that measures 0 until entering) keeps the
+            // Column's total height constant, so the centered emblem above never shifts when the
+            // ring appears.
+            Box(
+                modifier = Modifier.size(32.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                // The classic indeterminate ring (same as everywhere else in the app), not the
+                // decorative Lottie brand mark used elsewhere for this — matching what was asked.
+                CircularProgressIndicator(
+                    color = tokens.colors.accent,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            scaleX = spinnerScale.value
+                            scaleY = spinnerScale.value
+                            alpha = spinnerAlpha.value
+                        },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppLoadingProfileAvatar(
+    profile: NuvioProfile,
+    modifier: Modifier = Modifier,
+) {
+    val avatarColor = remember(profile.avatarColorHex) { parseHexColor(profile.avatarColorHex) }
+    val avatars by remember { AvatarRepository.avatars }.collectAsStateWithLifecycle()
+    val avatarItem = remember(profile.avatarId, avatars) {
+        profile.avatarId?.let { id -> avatars.find { it.id == id } }
+    }
+    val avatarImageUrl = remember(profile.avatarUrl, avatarItem) {
+        profileAvatarImageUrl(profile, avatarItem)
+    }
+    val backgroundColor = avatarItem?.bgColor?.let(::parseHexColor) ?: avatarColor
+
+    Box(
+        modifier = modifier
+            .clip(CircleShape)
+            .background(if (avatarImageUrl != null) backgroundColor else backgroundColor.copy(alpha = 0.18f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        when {
+            avatarImageUrl != null -> NuvioAsyncImage(
+                imageUrl = avatarImageUrl,
+                contentDescription = avatarItem?.displayName ?: profile.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                // Keep an animated avatar (GIF) playing through the loading transition instead of
+                // freezing on its first frame.
+                animateIfPossible = true,
+            )
+            profile.name.isNotBlank() -> Text(
+                text = profile.name.take(1).uppercase(),
+                style = MaterialTheme.typography.headlineLarge,
+                color = avatarColor,
+                fontWeight = FontWeight.Bold,
+            )
+            else -> Icon(
+                imageVector = Icons.Filled.Person,
+                contentDescription = null,
+                tint = avatarColor,
+                modifier = Modifier.size(40.dp),
+            )
         }
     }
 }
@@ -439,6 +674,6 @@ internal fun AppLaunchOverlay(
             profile = profile,
             modifier = Modifier.fillMaxSize(),
         )
-        AppLoadingContent(modifier = Modifier.fillMaxSize())
+        AppLoadingContent(modifier = Modifier.fillMaxSize(), profile = profile)
     }
 }

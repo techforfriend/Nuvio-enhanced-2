@@ -1,4 +1,5 @@
 import SwiftUI
+import ComposeApp
 
 enum NuvioTabBarBehavior: String, CaseIterable {
     case off
@@ -64,12 +65,13 @@ struct NuvioGlassTabBar: View {
             .glassEffectID(Self.barGlassID, in: glassNamespace)
         }
         .frame(maxWidth: .infinity, alignment: isExpanded ? .center : .leading)
+        .padding(.horizontal, isExpanded ? 20 : 16)
         .padding(.bottom, bottomInset)
         .ignoresSafeArea(.container, edges: .bottom)
-        .allowsHitTesting(!isExpanded)
-        .accessibilityHidden(isExpanded)
-        .animation(.smooth(duration: 0.38), value: isExpanded)
-        .animation(.smooth(duration: 0.26), value: selectedTab)
+        // This pill is the only tab bar instrument in `morphed` — the real one stays hidden — so
+        // it must stay tappable/accessible in both its expanded and collapsed shapes.
+        .animation(.smooth(duration: 0.32), value: isExpanded)
+        .animation(.smooth(duration: 0.22), value: selectedTab)
     }
 
     private func item(for tab: NuvioAppTab) -> some View {
@@ -103,7 +105,17 @@ struct NuvioGlassTabBar: View {
         }
 
         let button = Button {
-            appCoordinator.requestTabBarVisible(true)
+            if selected {
+                if isExpanded {
+                    // Tapping the already-selected tab while expanded matches the real system tab
+                    // bar's convention (scroll-to-top) instead of doing nothing.
+                    NativeTabBridgeKt.nativeTabSelect(tabName: tab.rawValue)
+                } else {
+                    appCoordinator.requestTabBarVisible(true)
+                }
+            } else {
+                appCoordinator.selectedTab = tab
+            }
         } label: {
             content
         }

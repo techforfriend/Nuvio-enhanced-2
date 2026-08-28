@@ -554,6 +554,26 @@ final class NativeProfileTabInteractionCoordinator: NSObject, UIGestureRecognize
         self.tabBarController?.tabBar.removeGestureRecognizer(recognizer)
         tabBarController.tabBar.addGestureRecognizer(recognizer)
         self.tabBarController = tabBarController
+        publishIconFrame()
+    }
+
+    /// Measures the real Profile tab bar item's on-screen frame and pushes it to Compose (see
+    /// `NativeTabBridgeKt.publishProfileTabIconFrame`) so the profile-loading exit animation can
+    /// land pixel-perfect on the actual icon instead of an approximated corner. Converting to
+    /// window coordinates (`to: nil`) matches AppGateComposeView, which fills the same window via
+    /// `.ignoresSafeArea(.all)`.
+    func publishIconFrame() {
+        guard #available(iOS 17.0, *),
+              let tabBar = tabBarController?.tabBar,
+              let profileItem = tabBar.items?.last,
+              let itemFrame = profileItem.frame(in: tabBar) else { return }
+        let windowFrame = tabBar.convert(itemFrame, to: nil)
+        NativeTabBridgeKt.publishProfileTabIconFrame(
+            xDp: Float(windowFrame.origin.x),
+            yDp: Float(windowFrame.origin.y),
+            widthDp: Float(windowFrame.width),
+            heightDp: Float(windowFrame.height)
+        )
     }
 
     func gestureRecognizer(
@@ -647,8 +667,6 @@ final class AppNavigationCoordinator: ObservableObject {
     @Published private(set) var localizedAddProfileTitle = ""
     @Published var isProfileSwitcherPresented = false
 
-    private var tabBarTransitionTask: Task<Void, Never>?
-
     let homeCoordinator = TabNavigationCoordinator()
     let searchCoordinator = TabNavigationCoordinator()
     let libraryCoordinator = TabNavigationCoordinator()
@@ -662,6 +680,13 @@ final class AppNavigationCoordinator: ObservableObject {
         setTabBarVisible(true)
         reloadTabBarBehavior()
         reloadLiveTvTabVisibility()
+        // Direct callback from Compose's scroll listener (NativeTabBarScrollEffect.kt) — see
+        // observeNativeTabBarVisible's doc comment for why this bypasses the generic
+        // UserDefaults/NotificationCenter chrome-sync path.
+        NativeTabBridgeKt.observeNativeTabBarVisible { [weak self] visible in
+            guard let self else { return }
+            self.setTabBarVisible(visible.boolValue, animated: self.tabBarBehavior == .morphed)
+        }
         allCoordinators.forEach { coordinator in
             coordinator.onReturnedToRoot = { [weak self] in
                 self?.setTabBarVisible(true)
@@ -719,8 +744,11 @@ final class AppNavigationCoordinator: ObservableObject {
 
     private func setTabBarVisible(_ visible: Bool, animated: Bool = false) {
         UserDefaults.standard.set(visible, forKey: Self.nativeTabBarVisibleKey)
-        tabBarTransitionTask?.cancel()
-        tabBarTransitionTask = nil
+        if visible {
+            // Re-measure whenever the bar is (re)shown — e.g. right as a profile reload begins —
+            // so the exit animation's target is fresh even after a rotation or layout change.
+            profileTabInteraction.publishIconFrame()
+        }
 
         guard animated else {
             isTabBarVisible = visible
@@ -728,28 +756,14 @@ final class AppNavigationCoordinator: ObservableObject {
             return
         }
 
-        if visible {
-            guard !isTabBarVisible || !isNativeTabBarVisible else { return }
-            withAnimation(.smooth(duration: 0.38)) {
-                isTabBarVisible = visible
-            }
-            guard !isNativeTabBarVisible else { return }
-
-            tabBarTransitionTask = Task { [weak self] in
-                try? await Task.sleep(nanoseconds: 340_000_000)
-                guard !Task.isCancelled, let self, self.isTabBarVisible else { return }
-                withAnimation(.easeOut(duration: 0.12)) {
-                    self.isNativeTabBarVisible = true
-                }
-            }
-            return
-        }
-
-        guard isTabBarVisible || isNativeTabBarVisible else { return }
-        withAnimation(.smooth(duration: 0.38)) {
-            isNativeTabBarVisible = false
-            isTabBarVisible = false
-        }
+        // `animated` is only ever requested for `.morphed`. Its custom glass pill
+        // (NuvioGlassTabBar) is the sole on-screen instrument in that mode (the real system tab
+        // bar stays hidden — see the `.toolbar` visibility below), and it already morphs between
+        // its own expanded/collapsed layouts inside one glass container via its own
+        // `.animation(value: isExpanded)`. There's no second view to hand off to, so a plain
+        // state flip is enough here.
+        guard isTabBarVisible != visible else { return }
+        isTabBarVisible = visible
     }
 
     func reloadLiveTvTabVisibility() {
@@ -1038,17 +1052,17 @@ struct TabContentView: View {
             usesNativeTabBar &&
                 appCoordinator.isMainContentVisible &&
                 coordinator.path.isEmpty &&
+                // `morphed` renders its own glass pill (NuvioGlassTabBar) as the only visible tab
+                // bar at all times — the real system one stays hidden so there's never a second
+                // instrument to keep in sync with it.
+                appCoordinator.tabBarBehavior != .morphed &&
                 appCoordinator.isNativeTabBarVisible
                 ? Visibility.visible
                 : Visibility.hidden,
             for: .tabBar
         )
         .animation(
-            appCoordinator.tabBarBehavior == .autoHide
-                ? .easeInOut(duration: 0.18)
-                : appCoordinator.tabBarBehavior == .morphed
-                    ? .easeOut(duration: 0.12)
-                    : nil,
+            appCoordinator.tabBarBehavior == .autoHide ? .easeInOut(duration: 0.18) : nil,
             value: appCoordinator.isNativeTabBarVisible
         )
     }
@@ -1550,13 +1564,13 @@ struct NativeNavContentView: View {
             if appCoordinator.tabBarBehavior.usesCompactPill &&
                 appCoordinator.isAppReady &&
                 appCoordinator.isSelectedTabAtRoot {
+                // No .opacity/.accessibilityHidden gating here: this pill is the only tab bar
+                // instrument in `morphed` (the real one stays hidden), so it's always shown at
+                // this call site and morphs its own shape internally.
                 NuvioGlassTabBar(
                     appCoordinator: appCoordinator,
                     iconStore: iconStore
                 )
-                .padding(.horizontal, appCoordinator.isTabBarVisible ? 20 : 16)
-                .opacity(appCoordinator.isNativeTabBarVisible ? 0 : 1)
-                .accessibilityHidden(appCoordinator.isNativeTabBarVisible)
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)

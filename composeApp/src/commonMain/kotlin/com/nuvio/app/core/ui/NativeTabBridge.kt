@@ -14,8 +14,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
@@ -47,7 +50,14 @@ internal object NativeTabBridge {
     }
 
     fun publishTabBarVisible(visible: Boolean) {
-        publishNativeTabBarVisible(visible && isLiquidGlassNativeTabBarSupported())
+        val supported = isLiquidGlassNativeTabBarSupported()
+        // Direct, in-memory callback for the morphed pill's live scroll animation — the
+        // UserDefaults + NSNotificationCenter round trip below is fine for occasional chrome
+        // updates (behavior/accent/titles), but going through disk + a broadcast notification on
+        // every scroll direction change added enough latency to make the pill morph feel laggy
+        // and occasionally desynced from the gesture.
+        swiftTabBarVisibilityListener?.invoke(visible && supported)
+        publishNativeTabBarVisible(visible && supported)
     }
 
     fun publishLiquidGlassEnabled(enabled: Boolean) {
@@ -86,7 +96,25 @@ internal object NativeTabBridge {
             avatarBackgroundColorHex = avatarBackgroundColorHex,
         )
     }
+
+    private val _profileTabIconFrame = MutableStateFlow<ProfileTabIconFrame?>(null)
+
+    // The real on-screen position of the native Profile tab bar item, in points (== dp), pushed
+    // from Swift (see `publishProfileTabIconFrame` below). Lets the profile-loading exit animation
+    // (AppLoadingContent) land pixel-perfect on the actual icon instead of an approximated corner.
+    val profileTabIconFrame: StateFlow<ProfileTabIconFrame?> = _profileTabIconFrame.asStateFlow()
+
+    fun receiveProfileTabIconFrame(xDp: Float, yDp: Float, widthDp: Float, heightDp: Float) {
+        _profileTabIconFrame.value = ProfileTabIconFrame(xDp, yDp, widthDp, heightDp)
+    }
 }
+
+internal data class ProfileTabIconFrame(
+    val xDp: Float,
+    val yDp: Float,
+    val widthDp: Float,
+    val heightDp: Float,
+)
 
 data class NativeProfileOption(
     val profileIndex: Int,
@@ -193,8 +221,31 @@ class NativeProfileSwitcherController {
     }
 }
 
+private var swiftTabBarVisibilityListener: ((Boolean) -> Unit)? = null
+
+/**
+ * Registers a direct callback for the morphed tab bar's scroll-driven visibility signal (see
+ * NativeTabBarScrollEffect.kt). Called once from Swift at app start, this bypasses the
+ * UserDefaults + NSNotificationCenter "tab chrome changed" round trip used for other, less
+ * time-critical chrome updates — that generic path added enough latency mid-scroll to make the
+ * pill morph feel laggy and occasionally desynced from the gesture.
+ */
+fun observeNativeTabBarVisible(listener: (Boolean) -> Unit) {
+    swiftTabBarVisibilityListener = listener
+}
+
 fun nativeTabSelect(tabName: String) {
     NativeTabBridge.requestTab(tabName)
+}
+
+/**
+ * Called directly from Swift whenever the real Profile tab bar item's on-screen frame is known
+ * (or changes) — see `NativeProfileTabInteractionCoordinator` in ContentView.swift, which already
+ * reads this exact frame (`UITabBarItem.frame(in:)`) for its long-press hit-testing. All values
+ * are in points, which are numerically identical to Compose's dp on iOS.
+ */
+fun publishProfileTabIconFrame(xDp: Float, yDp: Float, widthDp: Float, heightDp: Float) {
+    NativeTabBridge.receiveProfileTabIconFrame(xDp, yDp, widthDp, heightDp)
 }
 
 /**

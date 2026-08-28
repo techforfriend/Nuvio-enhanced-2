@@ -53,6 +53,11 @@ private enum class AppGateScreen {
     Main,
 }
 
+// Keep roughly in step with AppLoadingContent's own entrance timeline (AppShellComponents.kt) —
+// this is how long the profile-select transition overlay stays up at minimum, regardless of how
+// quickly the real content underneath becomes ready.
+private const val ProfileTransitionMinDurationMs = 1000L
+
 @Composable
 internal fun AppGate(
     initialTab: AppScreenTab,
@@ -156,6 +161,49 @@ internal fun AppGate(
     var autoSkipProfileSelection by rememberSaveable { mutableStateOf(false) }
     var profileSelectionLoading by rememberSaveable { mutableStateOf(false) }
     var profileSelectionTransitionActive by rememberSaveable { mutableStateOf(false) }
+    // The profile just tapped, shown bouncing into center on the transition overlay below
+    // (Netflix-style) instead of the generic wordmark. Not `rememberSaveable`: NuvioProfile isn't
+    // a saveable type, and this is purely a transient animation cue anyway.
+    var transitioningProfile by remember { mutableStateOf<NuvioProfile?>(null) }
+    // The main content usually becomes ready well before AppLoadingContent's entrance animation
+    // finishes playing, since both start at the same moment a profile is picked — without this,
+    // the transition overlay was torn down the instant content was ready, cutting the animation
+    // off partway through instead of letting it play out. `contentReadyDuringTransition` records
+    // that signal without acting on it immediately; the overlay only actually closes once that
+    // AND the minimum duration below have both happened.
+    var contentReadyDuringTransition by remember { mutableStateOf(false) }
+    var profileTransitionMinDurationElapsed by remember { mutableStateOf(true) }
+    // Set once both of the above are true, to play AppLoadingContent's exit-toward-the-Profile-tab
+    // animation; only once *that* finishes does it actually close the overlay.
+    var profileTransitionExiting by remember { mutableStateOf(false) }
+
+    // Resetting these three flags has to happen synchronously, in the very same recomposition
+    // that flips `profileSelectionTransitionActive` on — not from a LaunchedEffect keyed on it,
+    // which only runs *after* that recomposition. On a second/third profile switch, the previous
+    // cycle leaves `profileTransitionExiting` (etc.) sitting at `true`; AppLoadingContent gets
+    // freshly recomposed for the new cycle and, if it reads that stale `true` on its very first
+    // frame, immediately plays its exit-and-close sequence instead of ever really appearing. This
+    // was the exact bug reported: the animation worked once, then silently "didn't show" after.
+    fun beginProfileTransition(profile: NuvioProfile) {
+        profileTransitionMinDurationElapsed = false
+        contentReadyDuringTransition = false
+        profileTransitionExiting = false
+        transitioningProfile = profile
+        profileSelectionLoading = true
+        profileSelectionTransitionActive = true
+    }
+
+    LaunchedEffect(profileSelectionTransitionActive) {
+        if (!profileSelectionTransitionActive) return@LaunchedEffect
+        kotlinx.coroutines.delay(ProfileTransitionMinDurationMs)
+        profileTransitionMinDurationElapsed = true
+    }
+
+    LaunchedEffect(contentReadyDuringTransition, profileTransitionMinDurationElapsed) {
+        if (contentReadyDuringTransition && profileTransitionMinDurationElapsed) {
+            profileTransitionExiting = true
+        }
+    }
     var skipProfileSelectionEnterAnimation by remember { mutableStateOf(false) }
     var mainContentStarted by rememberSaveable { mutableStateOf(false) }
     val externalMainContentReady = if (!renderMainContent && appGateController != null) {
@@ -230,8 +278,7 @@ internal fun AppGate(
                 .firstOrNull { it.profileIndex == profileIndex }
                 ?: return@collect
             autoSkipProfileSelection = false
-            profileSelectionLoading = true
-            profileSelectionTransitionActive = true
+            beginProfileTransition(profile)
             skipProfileSelectionEnterAnimation = true
             appGateController.beginContentReload()
             ProfileRepository.selectProfile(profile.profileIndex)
@@ -241,10 +288,16 @@ internal fun AppGate(
         }
     }
 
-    LaunchedEffect(externalMainContentReady, renderMainContent) {
-        if (!renderMainContent && externalMainContentReady) {
-            profileSelectionLoading = false
-            profileSelectionTransitionActive = false
+    // Keyed on `profileSelectionTransitionActive` too: on the very first profile pick, content
+    // isn't ready yet, so this fires once `externalMainContentReady` later flips true. On a
+    // subsequent switch-profile, though, Home content is usually *already* ready from the
+    // previous profile — `externalMainContentReady` never changes value again, so a LaunchedEffect
+    // keyed only on it would never re-fire, and the transition would never know content was ready
+    // this time around (the exact bug reported: the animation worked once, then got stuck/skipped
+    // on every switch after).
+    LaunchedEffect(externalMainContentReady, renderMainContent, profileSelectionTransitionActive) {
+        if (!renderMainContent && externalMainContentReady && profileSelectionTransitionActive) {
+            contentReadyDuringTransition = true
         }
     }
 
@@ -502,11 +555,10 @@ internal fun AppGate(
                             appGateController = appGateController,
                             onRootContentReady = { ready ->
                                 if (ready) {
-                                    profileSelectionLoading = false
-                                    profileSelectionTransitionActive = false
+                                    contentReadyDuringTransition = true
                                 }
                                 onAppReady?.invoke(
-                                    ready && gateScreen == AppGateScreen.Main.name,
+                                    ready && gateScreen == AppGateScreen.Main.name && !profileSelectionLoading,
                                 )
                             },
                             onSwitchProfile = {
@@ -564,8 +616,7 @@ internal fun AppGate(
                 ProfileSelectionScreen(
                     onProfileSelected = { profile ->
                         if (!profileSelectionLoading) {
-                            profileSelectionLoading = true
-                            profileSelectionTransitionActive = true
+                            beginProfileTransition(profile)
                             skipProfileSelectionEnterAnimation = false
                             selectProfile(
                                 profile = profile,
@@ -599,7 +650,15 @@ internal fun AppGate(
                     exit = fadeOut(tween(180)),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    AppLoadingContent(modifier = Modifier.fillMaxSize())
+                    AppLoadingContent(
+                        modifier = Modifier.fillMaxSize(),
+                        profile = transitioningProfile,
+                        exitTowardProfileTab = profileTransitionExiting,
+                        onExitFinished = {
+                            profileSelectionLoading = false
+                            profileSelectionTransitionActive = false
+                        },
+                    )
                 }
             }
         }
