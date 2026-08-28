@@ -126,6 +126,11 @@ object DownloadsRepository {
             return DownloadEnqueueResult.UnsupportedFormat
         }
 
+        DownloadsSettingsRepository.ensureLoaded()
+        if (!DownloadsSettingsRepository.allowMobileDataDownloads.value && !DownloadNetworkGuard.isOnWifi()) {
+            return DownloadEnqueueResult.RequiresWifi
+        }
+
         val now = DownloadsClock.nowEpochMs()
         val logicalKey = buildLogicalKey(
             parentMetaId = parentMetaId,
@@ -225,6 +230,11 @@ object DownloadsRepository {
         ensureLoaded()
         val item = _uiState.value.items.firstOrNull { it.id == downloadId } ?: return
         if (item.status != DownloadStatus.Paused && item.status != DownloadStatus.Failed) return
+
+        DownloadsSettingsRepository.ensureLoaded()
+        if (!DownloadsSettingsRepository.allowMobileDataDownloads.value && !DownloadNetworkGuard.isOnWifi()) {
+            return
+        }
 
         val reset = item.copy(
             status = DownloadStatus.Downloading,
