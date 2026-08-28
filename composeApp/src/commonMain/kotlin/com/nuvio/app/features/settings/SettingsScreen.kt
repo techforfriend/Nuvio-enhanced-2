@@ -153,6 +153,9 @@ fun SettingsScreen(
         val dynamicArtworkBackgroundEnabled by remember {
             ThemeSettingsRepository.dynamicArtworkBackgroundEnabled
         }.collectAsStateWithLifecycle()
+        val showCatalogAccentEnabled by remember {
+            ThemeSettingsRepository.showCatalogAccentEnabled
+        }.collectAsStateWithLifecycle()
         val tabBarBehavior by remember {
             ThemeSettingsRepository.tabBarBehavior
         }.collectAsStateWithLifecycle()
@@ -411,6 +414,8 @@ fun SettingsScreen(
                 onAmoledToggle = ThemeSettingsRepository::setAmoled,
                 dynamicArtworkBackgroundEnabled = dynamicArtworkBackgroundEnabled,
                 onDynamicArtworkBackgroundToggle = ThemeSettingsRepository::setDynamicArtworkBackground,
+                showCatalogAccentEnabled = showCatalogAccentEnabled,
+                onShowCatalogAccentToggle = ThemeSettingsRepository::setShowCatalogAccent,
                 liquidGlassNativeTabBarSupported = liquidGlassNativeTabBarSupported,
                 tabBarBehavior = tabBarBehavior,
                 onTabBarBehaviorSelected = ThemeSettingsRepository::setTabBarBehavior,
@@ -479,6 +484,8 @@ fun SettingsScreen(
                 onAmoledToggle = ThemeSettingsRepository::setAmoled,
                 dynamicArtworkBackgroundEnabled = dynamicArtworkBackgroundEnabled,
                 onDynamicArtworkBackgroundToggle = ThemeSettingsRepository::setDynamicArtworkBackground,
+                showCatalogAccentEnabled = showCatalogAccentEnabled,
+                onShowCatalogAccentToggle = ThemeSettingsRepository::setShowCatalogAccent,
                 liquidGlassNativeTabBarSupported = liquidGlassNativeTabBarSupported,
                 tabBarBehavior = tabBarBehavior,
                 onTabBarBehaviorSelected = ThemeSettingsRepository::setTabBarBehavior,
@@ -557,6 +564,8 @@ private fun MobileSettingsScreen(
     onAmoledToggle: (Boolean) -> Unit,
     dynamicArtworkBackgroundEnabled: Boolean,
     onDynamicArtworkBackgroundToggle: (Boolean) -> Unit,
+    showCatalogAccentEnabled: Boolean,
+    onShowCatalogAccentToggle: (Boolean) -> Unit,
     liquidGlassNativeTabBarSupported: Boolean,
     tabBarBehavior: NuvioTabBarBehavior,
     onTabBarBehaviorSelected: (NuvioTabBarBehavior) -> Unit,
@@ -774,6 +783,8 @@ private fun MobileSettingsScreen(
                     onAmoledToggle = onAmoledToggle,
                     dynamicArtworkBackgroundEnabled = dynamicArtworkBackgroundEnabled,
                     onDynamicArtworkBackgroundToggle = onDynamicArtworkBackgroundToggle,
+                    showCatalogAccentEnabled = showCatalogAccentEnabled,
+                    onShowCatalogAccentToggle = onShowCatalogAccentToggle,
                     liquidGlassNativeTabBarSupported = liquidGlassNativeTabBarSupported,
                     tabBarBehavior = tabBarBehavior,
                     onTabBarBehaviorSelected = onTabBarBehaviorSelected,
@@ -948,6 +959,8 @@ private fun TabletSettingsScreen(
     onAmoledToggle: (Boolean) -> Unit,
     dynamicArtworkBackgroundEnabled: Boolean,
     onDynamicArtworkBackgroundToggle: (Boolean) -> Unit,
+    showCatalogAccentEnabled: Boolean,
+    onShowCatalogAccentToggle: (Boolean) -> Unit,
     liquidGlassNativeTabBarSupported: Boolean,
     tabBarBehavior: NuvioTabBarBehavior,
     onTabBarBehaviorSelected: (NuvioTabBarBehavior) -> Unit,
@@ -1220,6 +1233,8 @@ private fun TabletSettingsScreen(
                         onAmoledToggle = onAmoledToggle,
                         dynamicArtworkBackgroundEnabled = dynamicArtworkBackgroundEnabled,
                         onDynamicArtworkBackgroundToggle = onDynamicArtworkBackgroundToggle,
+                        showCatalogAccentEnabled = showCatalogAccentEnabled,
+                        onShowCatalogAccentToggle = onShowCatalogAccentToggle,
                         liquidGlassNativeTabBarSupported = liquidGlassNativeTabBarSupported,
                         tabBarBehavior = tabBarBehavior,
                         onTabBarBehaviorSelected = onTabBarBehaviorSelected,

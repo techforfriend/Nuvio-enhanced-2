@@ -15,6 +15,7 @@ actual object ThemeSettingsStorage {
     private const val amoledEnabledKey = "amoled_enabled"
     private const val liquidGlassNativeTabBarEnabledKey = "liquid_glass_native_tab_bar_enabled"
     private const val dynamicArtworkBackgroundEnabledKey = "dynamic_artwork_background_enabled"
+    private const val showCatalogAccentEnabledKey = "show_catalog_accent_enabled"
     private const val tabBarBehaviorKey = "tab_bar_behavior"
     private const val selectedAppLanguageKey = "selected_app_language"
     private const val navBarStyleKey = "nav_bar_style"
@@ -24,6 +25,7 @@ actual object ThemeSettingsStorage {
         liquidGlassNativeTabBarEnabledKey,
         tabBarBehaviorKey,
         dynamicArtworkBackgroundEnabledKey,
+        showCatalogAccentEnabledKey,
         navBarStyleKey,
     )
 
@@ -92,6 +94,23 @@ actual object ThemeSettingsStorage {
         )
     }
 
+    actual fun loadShowCatalogAccentEnabled(): Boolean? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(showCatalogAccentEnabledKey)
+        return if (defaults.objectForKey(key) != null) {
+            defaults.boolForKey(key)
+        } else {
+            null
+        }
+    }
+
+    actual fun saveShowCatalogAccentEnabled(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(
+            enabled,
+            forKey = ProfileScopedKey.of(showCatalogAccentEnabledKey),
+        )
+    }
+
     actual fun loadSelectedAppLanguage(): String? {
         val value = NSUserDefaults.standardUserDefaults.stringForKey(selectedAppLanguageKey)
         if (value != null) return value
@@ -134,6 +153,7 @@ actual object ThemeSettingsStorage {
         loadLiquidGlassNativeTabBarEnabled()?.let { put(liquidGlassNativeTabBarEnabledKey, encodeSyncBoolean(it)) }
         loadTabBarBehavior()?.let { put(tabBarBehaviorKey, encodeSyncString(it)) }
         loadDynamicArtworkBackgroundEnabled()?.let { put(dynamicArtworkBackgroundEnabledKey, encodeSyncBoolean(it)) }
+        loadShowCatalogAccentEnabled()?.let { put(showCatalogAccentEnabledKey, encodeSyncBoolean(it)) }
         loadNavBarStyle()?.let { put(navBarStyleKey, encodeSyncString(it)) }
     }
 
@@ -147,6 +167,7 @@ actual object ThemeSettingsStorage {
         payload.decodeSyncBoolean(liquidGlassNativeTabBarEnabledKey)?.let(::saveLiquidGlassNativeTabBarEnabled)
         payload.decodeSyncString(tabBarBehaviorKey)?.let(::saveTabBarBehavior)
         payload.decodeSyncBoolean(dynamicArtworkBackgroundEnabledKey)?.let(::saveDynamicArtworkBackgroundEnabled)
+        payload.decodeSyncBoolean(showCatalogAccentEnabledKey)?.let(::saveShowCatalogAccentEnabled)
         payload.decodeSyncString(navBarStyleKey)?.let(::saveNavBarStyle)
         applySelectedAppLanguage(loadSelectedAppLanguage() ?: AppLanguage.DEVICE.code)
     }

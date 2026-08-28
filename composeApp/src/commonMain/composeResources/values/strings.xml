@@ -667,6 +667,8 @@
     <string name="settings_appearance_amoled_black">AMOLED Black</string>
     <string name="settings_appearance_amoled_description">Use pure black backgrounds for OLED screens.</string>
     <string name="settings_appearance_dynamic_artwork_background">Dynamic background color</string>
+    <string name="settings_appearance_catalog_accent">Catalog accent underline</string>
+    <string name="settings_appearance_catalog_accent_description">Show a small accent-colored bar under each catalog title on the home screen, matching your theme.</string>
     <string name="settings_tracking_connect_with_code">Connect with code</string>
     <string name="settings_tracking_device_code_title">Sign in with a code</string>
     <string name="settings_tracking_device_code_instruction">Open %1$s on any device and enter this code.</string>

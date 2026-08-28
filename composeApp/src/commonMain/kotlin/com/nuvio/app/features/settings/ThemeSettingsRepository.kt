@@ -33,6 +33,9 @@ object ThemeSettingsRepository {
     private val _dynamicArtworkBackgroundEnabled = MutableStateFlow(false)
     val dynamicArtworkBackgroundEnabled: StateFlow<Boolean> = _dynamicArtworkBackgroundEnabled.asStateFlow()
 
+    private val _showCatalogAccentEnabled = MutableStateFlow(false)
+    val showCatalogAccentEnabled: StateFlow<Boolean> = _showCatalogAccentEnabled.asStateFlow()
+
     private val _selectedAppLanguage = MutableStateFlow(AppLanguage.DEVICE)
     val selectedAppLanguage: StateFlow<AppLanguage> = _selectedAppLanguage.asStateFlow()
 
@@ -60,6 +63,7 @@ object ThemeSettingsRepository {
         _tabBarBehavior.value = NuvioTabBarBehavior.Default
         _liquidGlassNativeTabBarEnabled.value = NuvioTabBarBehavior.Default.isEnabled
         _dynamicArtworkBackgroundEnabled.value = false
+        _showCatalogAccentEnabled.value = false
         NativeTabBridge.publishAccentColor(AppTheme.WHITE.nativeTabAccentHex())
         NativeTabBridge.publishTabBarBehavior(NuvioTabBarBehavior.Default)
         _selectedAppLanguage.value = AppLanguage.DEVICE
@@ -89,6 +93,8 @@ object ThemeSettingsRepository {
         applyTabBarBehavior(behavior)
         _dynamicArtworkBackgroundEnabled.value =
             ThemeSettingsStorage.loadDynamicArtworkBackgroundEnabled() ?: false
+        _showCatalogAccentEnabled.value =
+            ThemeSettingsStorage.loadShowCatalogAccentEnabled() ?: false
         val appLanguage = AppLanguage.fromCode(ThemeSettingsStorage.loadSelectedAppLanguage())
         ThemeSettingsStorage.applySelectedAppLanguage(appLanguage.code)
         _selectedAppLanguage.value = appLanguage
@@ -131,6 +137,13 @@ object ThemeSettingsRepository {
         if (_dynamicArtworkBackgroundEnabled.value == enabled) return
         _dynamicArtworkBackgroundEnabled.value = enabled
         ThemeSettingsStorage.saveDynamicArtworkBackgroundEnabled(enabled)
+    }
+
+    fun setShowCatalogAccent(enabled: Boolean) {
+        ensureLoaded()
+        if (_showCatalogAccentEnabled.value == enabled) return
+        _showCatalogAccentEnabled.value = enabled
+        ThemeSettingsStorage.saveShowCatalogAccentEnabled(enabled)
     }
 
     fun setAppLanguage(language: AppLanguage) {
