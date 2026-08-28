@@ -634,6 +634,7 @@ final class AppNavigationCoordinator: ObservableObject {
     @Published private(set) var isMainContentVisible = false
     @Published private(set) var isAppReady = false
     @Published private(set) var isTabBarVisible = true
+    @Published private(set) var isNativeTabBarVisible = true
     @Published private(set) var tabBarBehavior: NuvioTabBarBehavior = NuvioTabBarBehavior.current()
     @Published private(set) var isSelectedTabAtRoot = true
     @Published private(set) var isLiveTvTabVisible = false
@@ -641,6 +642,8 @@ final class AppNavigationCoordinator: ObservableObject {
     @Published private(set) var localizedSwitchProfileTitle = ""
     @Published private(set) var localizedAddProfileTitle = ""
     @Published var isProfileSwitcherPresented = false
+
+    private var tabBarTransitionTask: Task<Void, Never>?
 
     let homeCoordinator = TabNavigationCoordinator()
     let searchCoordinator = TabNavigationCoordinator()
@@ -694,12 +697,12 @@ final class AppNavigationCoordinator: ObservableObject {
     }
 
     func requestTabBarVisible(_ visible: Bool) {
-        setTabBarVisible(visible)
+        setTabBarVisible(visible, animated: tabBarBehavior == .morphed)
     }
 
     func reloadTabBarVisibility() {
         guard tabBarBehavior.respondsToScroll else {
-            if !isTabBarVisible { isTabBarVisible = true }
+            setTabBarVisible(true)
             return
         }
         guard let visible = UserDefaults.standard.object(
@@ -707,15 +710,41 @@ final class AppNavigationCoordinator: ObservableObject {
         ) as? Bool else {
             return
         }
-        if isTabBarVisible != visible {
-            isTabBarVisible = visible
-        }
+        setTabBarVisible(visible, animated: tabBarBehavior == .morphed)
     }
 
-    private func setTabBarVisible(_ visible: Bool) {
+    private func setTabBarVisible(_ visible: Bool, animated: Bool = false) {
         UserDefaults.standard.set(visible, forKey: Self.nativeTabBarVisibleKey)
-        if isTabBarVisible != visible {
+        tabBarTransitionTask?.cancel()
+        tabBarTransitionTask = nil
+
+        guard animated else {
             isTabBarVisible = visible
+            isNativeTabBarVisible = visible
+            return
+        }
+
+        if visible {
+            guard !isTabBarVisible || !isNativeTabBarVisible else { return }
+            withAnimation(.smooth(duration: 0.38)) {
+                isTabBarVisible = visible
+            }
+            guard !isNativeTabBarVisible else { return }
+
+            tabBarTransitionTask = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: 340_000_000)
+                guard !Task.isCancelled, let self, self.isTabBarVisible else { return }
+                withAnimation(.easeOut(duration: 0.04)) {
+                    self.isNativeTabBarVisible = true
+                }
+            }
+            return
+        }
+
+        guard isTabBarVisible || isNativeTabBarVisible else { return }
+        withAnimation(.smooth(duration: 0.38)) {
+            isNativeTabBarVisible = false
+            isTabBarVisible = false
         }
     }
 
@@ -1003,15 +1032,19 @@ struct TabContentView: View {
         // full-screen on iOS 26, where a modifier on TabView itself is ignored.
         .toolbar(
             usesNativeTabBar &&
-                !appCoordinator.tabBarBehavior.usesCustomBar &&
                 appCoordinator.isMainContentVisible &&
                 coordinator.path.isEmpty &&
-                appCoordinator.isTabBarVisible
+                appCoordinator.isNativeTabBarVisible
                 ? Visibility.visible
                 : Visibility.hidden,
             for: .tabBar
         )
-        .animation(.easeInOut(duration: 0.18), value: appCoordinator.isTabBarVisible)
+        .animation(
+            appCoordinator.tabBarBehavior == .autoHide
+                ? .easeInOut(duration: 0.18)
+                : nil,
+            value: appCoordinator.isNativeTabBarVisible
+        )
     }
 }
 
@@ -1505,19 +1538,19 @@ struct NativeNavContentView: View {
         }
         .tint(Color(uiColor: iconStore.accentColor))
         .tabBarMinimizeBehavior(
-            appCoordinator.tabBarBehavior.respondsToScroll ? .onScrollDown : .never
+            appCoordinator.tabBarBehavior == .autoHide ? .onScrollDown : .never
         )
         .overlay(alignment: .bottom) {
-            if appCoordinator.tabBarBehavior.usesCustomBar &&
+            if appCoordinator.tabBarBehavior.usesCompactPill &&
                 appCoordinator.isAppReady &&
                 appCoordinator.isSelectedTabAtRoot {
                 NuvioGlassTabBar(
                     appCoordinator: appCoordinator,
-                    iconStore: iconStore,
-                    selection: tabSelection
+                    iconStore: iconStore
                 )
-                .padding(.horizontal, 16)
-                .transition(.opacity)
+                .padding(.horizontal, appCoordinator.isTabBarVisible ? 20 : 16)
+                .opacity(appCoordinator.isNativeTabBarVisible ? 0 : 1)
+                .accessibilityHidden(appCoordinator.isNativeTabBarVisible)
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)
