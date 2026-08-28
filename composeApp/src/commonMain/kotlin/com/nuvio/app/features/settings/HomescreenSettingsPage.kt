@@ -33,6 +33,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.nuvio.app.core.build.AppFeaturePolicy
+import com.nuvio.app.core.build.TrailerPlaybackMode
 import com.nuvio.app.core.ui.NuvioActionLabel
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.features.home.HomeCatalogSettingsItem
@@ -52,6 +54,8 @@ import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_card_
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_description
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_full_bleed
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_full_bleed_description
+import nuvio.composeapp.generated.resources.settings_homescreen_hero_trailer_playback
+import nuvio.composeapp.generated.resources.settings_homescreen_hero_trailer_playback_description
 import nuvio.composeapp.generated.resources.settings_homescreen_catalogs_source
 import nuvio.composeapp.generated.resources.settings_homescreen_empty_title
 import nuvio.composeapp.generated.resources.settings_homescreen_keep_home_focused
@@ -77,12 +81,15 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 internal fun LazyListScope.homescreenSettingsContent(
     isTablet: Boolean,
     heroEnabled: Boolean,
+    heroTrailerPlaybackEnabled: Boolean,
     showCatalogType: Boolean,
     hideUnreleasedContent: Boolean,
     items: List<HomeCatalogSettingsItem>,
 ) {
     val selectedHeroSourceCount = items.count { it.heroSourceEnabled }
     val enabledCatalogCount = items.count { it.enabled }
+    val showHeroTrailerPlaybackSetting = AppFeaturePolicy.heroTrailerPlaybackSupported &&
+        AppFeaturePolicy.trailerPlaybackMode == TrailerPlaybackMode.IN_APP
     item {
         HomescreenSummaryCard(
             isTablet = isTablet,
@@ -104,6 +111,16 @@ internal fun LazyListScope.homescreenSettingsContent(
                     isTablet = isTablet,
                     onCheckedChange = HomeCatalogSettingsRepository::setHeroEnabled,
                 )
+                if (heroEnabled && showHeroTrailerPlaybackSetting) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_homescreen_hero_trailer_playback),
+                        description = stringResource(Res.string.settings_homescreen_hero_trailer_playback_description),
+                        checked = heroTrailerPlaybackEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = HomeCatalogSettingsRepository::setHeroTrailerPlaybackEnabled,
+                    )
+                }
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(
                     title = stringResource(Res.string.layout_catalog_type),

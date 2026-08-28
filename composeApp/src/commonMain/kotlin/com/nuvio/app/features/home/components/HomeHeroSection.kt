@@ -1,9 +1,12 @@
 package com.nuvio.app.features.home.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,10 +30,17 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.rounded.VolumeOff
+import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.derivedStateOf
@@ -38,11 +48,13 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -54,14 +66,27 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.nuvio.app.core.build.AppFeaturePolicy
+import com.nuvio.app.core.build.TrailerPlaybackMode
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.dynamicScrimAlpha
 import com.nuvio.app.core.ui.heroStretchHeight
 import com.nuvio.app.core.ui.heroStretchZoom
+import com.nuvio.app.features.details.HeroTrailerAudioState
+import com.nuvio.app.features.details.MetaDetailsRepository
+import com.nuvio.app.features.details.components.DetailIconAction
+import com.nuvio.app.features.details.components.HeroTrailerPlayerSurface
+import com.nuvio.app.features.details.selectHeroTrailer
+import com.nuvio.app.features.details.youtubePlaybackUrl
 import com.nuvio.app.features.home.HomeHeroArtworkSource
 import com.nuvio.app.features.home.HomeHeroStyle
 import com.nuvio.app.features.home.MetaPreview
+import com.nuvio.app.features.library.LibraryRepository
+import com.nuvio.app.features.library.toLibraryItem
+import com.nuvio.app.features.trailer.TrailerPlaybackResolver
+import com.nuvio.app.features.trailer.TrailerPlaybackSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -84,6 +109,48 @@ private const val MOBILE_PORTRAIT_HERO_WIDTH_RATIO = 1.5f
 private const val MOBILE_HERO_MIN_HEIGHT_DP = 360f
 private const val MOBILE_HERO_MAX_HEIGHT_DP = 760f
 private const val TABLET_LANDSCAPE_HERO_HEIGHT_MULTIPLIER = 1.5f
+
+/**
+ * Home can stay composed underneath other screens/tabs (state preservation, fast tab switching),
+ * so a change in hero trailer settings alone isn't a reliable signal that playback should stop —
+ * Home might not even be recomposing while it's not the visible destination. The app shell (which
+ * is always alive) calls [forceStop] imperatively the moment the user navigates away from Home,
+ * regardless of whether Home's own composition reacts to it.
+ */
+internal object HomeHeroTrailerPlaybackController {
+    private var stopCallback: (() -> Unit)? = null
+
+    fun register(stop: () -> Unit) {
+        stopCallback = stop
+    }
+
+    fun unregister(stop: () -> Unit) {
+        if (stopCallback === stop) stopCallback = null
+    }
+
+    fun forceStop() {
+        stopCallback?.invoke()
+    }
+}
+
+/**
+ * Home's hero item is disposed by the LazyColumn when scrolled far enough out of view, which would
+ * otherwise reset trailer playback to the start. Positions are kept here, outside composition, so
+ * scrolling the hero back into view can resume a trailer where it left off instead of restarting it.
+ */
+private object HomeHeroTrailerPlaybackPositionStore {
+    private val positions = mutableMapOf<String, Long>()
+
+    fun get(key: String): Long = positions[key] ?: 0L
+
+    fun set(key: String, positionMs: Long) {
+        if (positionMs > 0L) positions[key] = positionMs
+    }
+
+    fun clear(key: String) {
+        positions.remove(key)
+    }
+}
 
 /** TMDB posters are 2:3, so height is width * 1.5. Shared with the skeleton/reserved placeholders. */
 internal const val TMDB_POSTER_HEIGHT_RATIO = 1.5f
@@ -144,6 +211,7 @@ internal fun HomeHeroSection(
     heroStyle: HomeHeroStyle = HomeHeroStyle.FULL_BLEED,
     listState: LazyListState? = null,
     stretchPx: () -> Float = { 0f },
+    trailerPlaybackEnabled: Boolean = false,
     onItemClick: ((MetaPreview) -> Unit)? = null,
     onActiveArtworkChange: ((String?) -> Unit)? = null,
 ) {
@@ -152,9 +220,14 @@ internal fun HomeHeroSection(
     val pagerState = rememberPagerState(pageCount = { items.size })
     val coroutineScope = rememberCoroutineScope()
     val autoScrollPage = pagerState.currentPage
+    val effectiveTrailerPlaybackEnabled = trailerPlaybackEnabled &&
+        AppFeaturePolicy.heroTrailerPlaybackSupported &&
+        AppFeaturePolicy.trailerPlaybackMode == TrailerPlaybackMode.IN_APP
 
-    LaunchedEffect(autoScrollPage, items.size) {
-        if (items.size <= 1) return@LaunchedEffect
+    LaunchedEffect(autoScrollPage, items.size, effectiveTrailerPlaybackEnabled) {
+        // The carousel only advances by itself when trailer playback is off; with it on, the
+        // current item's trailer plays and only a swipe should move to the next one.
+        if (items.size <= 1 || effectiveTrailerPlaybackEnabled) return@LaunchedEffect
         delay(HERO_AUTO_SCROLL_INTERVAL_MS)
         while (pagerState.isScrollInProgress) {
             delay(100L)
@@ -272,6 +345,64 @@ internal fun HomeHeroSection(
                 onActiveArtworkChange?.invoke(activeArtworkUrl)
             }
 
+            val libraryUiState by remember {
+                LibraryRepository.ensureLoaded()
+                LibraryRepository.uiState
+            }.collectAsStateWithLifecycle()
+            val isSavedToLibrary = remember(libraryUiState, currentItem.id, currentItem.type) {
+                LibraryRepository.isSaved(currentItem.id, currentItem.type)
+            }
+            val toggleLibrarySaved: () -> Unit = {
+                val item = currentItem.toLibraryItem(savedAtEpochMs = 0L)
+                coroutineScope.launch {
+                    runCatching { LibraryRepository.toggleSaved(item) }
+                }
+            }
+
+            val heroTrailerItemKey = "${currentItem.type}:${currentItem.id}"
+            var heroTrailerPlaybackSource by remember(currentItem.type, currentItem.id) {
+                mutableStateOf<TrailerPlaybackSource?>(null)
+            }
+            var heroTrailerReady by remember(currentItem.type, currentItem.id) { mutableStateOf(false) }
+            var heroTrailerFinished by remember(currentItem.type, currentItem.id) { mutableStateOf(false) }
+            val heroTrailerMuted by HeroTrailerAudioState.muted.collectAsStateWithLifecycle()
+
+            val latestForceStopTrailer = rememberUpdatedState {
+                if (heroTrailerPlaybackSource != null || !heroTrailerFinished) {
+                    heroTrailerPlaybackSource = null
+                    heroTrailerReady = false
+                    heroTrailerFinished = true
+                }
+            }
+            DisposableEffect(Unit) {
+                val callback: () -> Unit = { latestForceStopTrailer.value.invoke() }
+                HomeHeroTrailerPlaybackController.register(callback)
+                onDispose { HomeHeroTrailerPlaybackController.unregister(callback) }
+            }
+
+            LaunchedEffect(effectiveTrailerPlaybackEnabled, currentItem.type, currentItem.id) {
+                heroTrailerPlaybackSource = null
+                heroTrailerReady = false
+                heroTrailerFinished = false
+                if (!effectiveTrailerPlaybackEnabled) return@LaunchedEffect
+                val meta = runCatching {
+                    MetaDetailsRepository.fetch(currentItem.type, currentItem.id)
+                }.getOrNull()
+                val trailer = meta?.trailers?.let(::selectHeroTrailer)
+                if (trailer == null) {
+                    heroTrailerFinished = true
+                    return@LaunchedEffect
+                }
+                val resolvedSource = runCatching {
+                    TrailerPlaybackResolver.resolveFromYouTubeUrl(trailer.youtubePlaybackUrl())
+                }.getOrNull()
+                if (resolvedSource == null) {
+                    heroTrailerFinished = true
+                } else {
+                    heroTrailerPlaybackSource = resolvedSource
+                }
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -321,6 +452,54 @@ internal fun HomeHeroSection(
                                     contentScale = ContentScale.Crop,
                                 )
                             }
+                        }
+
+                        val heroTrailerSourceUrl = heroTrailerPlaybackSource
+                            ?.videoUrl
+                            ?.takeIf { it.isNotBlank() && effectiveTrailerPlaybackEnabled && !heroTrailerFinished }
+                        if (heroTrailerSourceUrl != null) {
+                            val trailerReadyAlpha by animateFloatAsState(
+                                targetValue = if (heroTrailerReady) 1f else 0f,
+                                animationSpec = tween(durationMillis = 300),
+                                label = "home_hero_trailer_alpha",
+                            )
+                            val currentPageOffset = pagerState.currentPageOffsetFraction
+                            val currentPageVisibility = (1f - abs(currentPageOffset)).coerceIn(0f, 1f)
+                            val isHeroScrolledAway = scrollOffsetPx >= heroHeightPx * 0.6f
+                            HeroTrailerPlayerSurface(
+                                sourceUrl = heroTrailerSourceUrl,
+                                sourceAudioUrl = heroTrailerPlaybackSource?.audioUrl,
+                                playWhenReady = !heroTrailerFinished && !isHeroScrolledAway,
+                                muted = heroTrailerMuted,
+                                startPositionMs = remember(heroTrailerItemKey) {
+                                    HomeHeroTrailerPlaybackPositionStore.get(heroTrailerItemKey)
+                                },
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        alpha = trailerReadyAlpha * currentPageVisibility
+                                        translationX = -currentPageOffset * heroWidthPx * artworkParallax
+                                        translationY = if (isCardStyle) 0f else heroScrollTranslationY
+                                        scaleX = artworkBaseScale * if (isCardStyle) 1f else heroScrollScale
+                                        scaleY = artworkBaseScale * if (isCardStyle) 1f else heroScrollScale
+                                    },
+                                onReady = {
+                                    if (!heroTrailerFinished) heroTrailerReady = true
+                                },
+                                onEnded = {
+                                    heroTrailerReady = false
+                                    heroTrailerFinished = true
+                                    HomeHeroTrailerPlaybackPositionStore.clear(heroTrailerItemKey)
+                                },
+                                onError = {
+                                    heroTrailerReady = false
+                                    heroTrailerFinished = true
+                                    HomeHeroTrailerPlaybackPositionStore.clear(heroTrailerItemKey)
+                                },
+                                onPositionUpdate = { positionMs ->
+                                    HomeHeroTrailerPlaybackPositionStore.set(heroTrailerItemKey, positionMs)
+                                },
+                            )
                         }
                     }
 
@@ -400,20 +579,40 @@ internal fun HomeHeroSection(
 
                             if (!layout.isTablet) {
                                 Spacer(modifier = Modifier.height(14.dp))
-                                Surface(
-                                    modifier = Modifier
-                                        .clickable(enabled = onItemClick != null) {
-                                            onItemClick?.invoke(currentItem)
-                                        },
-                                    color = MaterialTheme.colorScheme.onBackground,
-                                    contentColor = MaterialTheme.colorScheme.background,
-                                    shape = RoundedCornerShape(40.dp),
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Text(
-                                        text = stringResource(Res.string.home_view_details),
-                                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 12.dp),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
+                                    Surface(
+                                        modifier = Modifier
+                                            .clickable(enabled = onItemClick != null) {
+                                                onItemClick?.invoke(currentItem)
+                                            },
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                        contentColor = MaterialTheme.colorScheme.background,
+                                        shape = RoundedCornerShape(40.dp),
+                                    ) {
+                                        Text(
+                                            text = stringResource(Res.string.home_view_details),
+                                            modifier = Modifier.padding(horizontal = 28.dp, vertical = 12.dp),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                    }
+
+                                    DetailIconAction(
+                                        label = stringResource(
+                                            if (isSavedToLibrary) {
+                                                Res.string.hero_remove_from_library
+                                            } else {
+                                                Res.string.hero_add_to_library
+                                            },
+                                        ),
+                                        icon = if (isSavedToLibrary) Icons.Default.Check else Icons.Default.Add,
+                                        active = isSavedToLibrary,
+                                        progress = 1f,
+                                        size = 52.dp,
+                                        onClick = toggleLibrarySaved,
                                     )
                                 }
                             }
@@ -426,6 +625,34 @@ internal fun HomeHeroSection(
                                     coroutineScope = coroutineScope,
                                 )
                             }
+                        }
+                    }
+
+                    if (heroTrailerReady && heroTrailerPlaybackSource != null) {
+                        val muteIconSize = 20.dp
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(
+                                    top = statusBarTopPadding + 12.dp,
+                                    end = if (layout.isTablet) 32.dp else 18.dp,
+                                )
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.35f))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) {
+                                    HeroTrailerAudioState.toggleMuted()
+                                }
+                                .padding(8.dp),
+                        ) {
+                            Icon(
+                                imageVector = if (heroTrailerMuted) Icons.Rounded.VolumeOff else Icons.Rounded.VolumeUp,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(muteIconSize),
+                            )
                         }
                     }
                 }

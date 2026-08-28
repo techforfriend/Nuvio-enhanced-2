@@ -923,6 +923,11 @@ fun HomeScreen(
                                 heroStyle = homeSettingsUiState.heroStyle,
                                 listState = homeListState,
                                 stretchPx = { heroStretchState.stretchPx },
+                                // animateCollectionGifs doubles as "Home is the visible route" — it already
+                                // turns false whenever a screen (like Details) is pushed on top of it, which
+                                // is also exactly when hero trailer playback must stop, not just pause.
+                                trailerPlaybackEnabled = homeSettingsUiState.heroTrailerPlaybackEnabled &&
+                                    animateCollectionGifs,
                                 onItemClick = onPosterClick,
                                 onActiveArtworkChange = onActiveHeroArtworkChange,
                             )

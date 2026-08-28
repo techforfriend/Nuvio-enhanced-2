@@ -27,13 +27,16 @@ actual fun HeroTrailerPlayerSurface(
     playWhenReady: Boolean,
     muted: Boolean,
     modifier: Modifier,
+    startPositionMs: Long,
     onReady: () -> Unit,
     onEnded: () -> Unit,
     onError: () -> Unit,
+    onPositionUpdate: (Long) -> Unit,
 ) {
     val latestOnReady = rememberUpdatedState(onReady)
     val latestOnEnded = rememberUpdatedState(onEnded)
     val latestOnError = rememberUpdatedState(onError)
+    val latestOnPositionUpdate = rememberUpdatedState(onPositionUpdate)
     val bridge = remember { NuvioPlayerBridgeFactory.create() }
 
     if (bridge == null) {
@@ -93,6 +96,11 @@ actual fun HeroTrailerPlayerSurface(
                 val isPlaying = runCatching { bridge.getIsPlaying() }.getOrDefault(false)
                 if (hasVideo || isPlaying) {
                     readyReported = true
+                    // Only safe to seek once the file is actually loaded — seeking right after
+                    // loadFileWithAudio() is issued is silently ignored since nothing is ready yet.
+                    if (startPositionMs > 0L) {
+                        runCatching { bridge.seekTo(startPositionMs) }
+                    }
                     latestOnReady.value()
                 }
             }
@@ -100,6 +108,9 @@ actual fun HeroTrailerPlayerSurface(
             if (runCatching { bridge.getIsEnded() }.getOrDefault(false)) {
                 latestOnEnded.value()
                 return@LaunchedEffect
+            }
+            if (readyReported) {
+                runCatching { bridge.getPositionMs() }.getOrNull()?.let(latestOnPositionUpdate.value)
             }
             delay(250L)
         }
@@ -109,6 +120,7 @@ actual fun HeroTrailerPlayerSurface(
         onDispose {
             runCatching {
                 bridge.pause()
+                latestOnPositionUpdate.value(bridge.getPositionMs())
                 bridge.destroy()
             }.onFailure { error ->
                 Logger.w(HERO_TRAILER_IOS_TAG, error) { "Failed to dispose iOS hero trailer preview" }

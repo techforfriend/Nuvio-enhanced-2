@@ -96,6 +96,7 @@ import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.downloads.DownloadItem
 import com.nuvio.app.features.downloads.DownloadsRepository
 import com.nuvio.app.features.home.HomeCatalogSection
+import com.nuvio.app.features.home.components.HomeHeroTrailerPlaybackController
 import com.nuvio.app.features.home.components.shouldBlurContinueWatchingArtwork
 import com.nuvio.app.features.library.LibraryItem
 import com.nuvio.app.features.library.LibraryRepository
@@ -442,6 +443,16 @@ internal fun MainAppContent(
         NativeTabBridge.publishSelectedTab(selectedTab.toNativeNavigationTab())
         if (selectedTab != AppScreenTab.Search) {
             searchFocusRequestCount = 0
+        }
+    }
+
+    // Home can stay composed underneath other screens/tabs for state preservation, so it isn't a
+    // reliable place to detect "the user navigated away" — it may not even be recomposing while
+    // hidden. This effect lives at the app-shell root, which is always active, and stops the hero
+    // trailer the instant Home is no longer the visible tab/route, regardless of Home's own state.
+    LaunchedEffect(selectedTab, currentRoute) {
+        if (selectedTab != AppScreenTab.Home || currentRoute !is TabsRoute) {
+            HomeHeroTrailerPlaybackController.forceStop()
         }
     }
 

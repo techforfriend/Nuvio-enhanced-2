@@ -34,6 +34,7 @@ data class HomeCatalogSettingsItem(
 internal data class HomeCatalogSettingsUiState(
     val heroEnabled: Boolean = true,
     val heroStyle: HomeHeroStyle = HomeHeroStyle.FULL_BLEED,
+    val heroTrailerPlaybackEnabled: Boolean = false,
     val showCatalogType: Boolean = true,
     val hideUnreleasedContent: Boolean = false,
     val items: List<HomeCatalogSettingsItem> = emptyList(),
@@ -43,6 +44,8 @@ internal data class HomeCatalogSettingsUiState(
             append(heroEnabled)
             append('|')
             append(heroStyle.storageValue)
+            append('|')
+            append(heroTrailerPlaybackEnabled)
             append('|')
             append(showCatalogType)
             append('|')
@@ -118,6 +121,7 @@ private data class StoredHomeCatalogPreference(
 private data class StoredHomeCatalogSettingsPayload(
     val heroEnabled: Boolean = true,
     val heroStyle: String = HomeHeroStyle.FULL_BLEED.storageValue,
+    val heroTrailerPlaybackEnabled: Boolean = false,
     val showCatalogType: Boolean = true,
     val hideUnreleasedContent: Boolean = false,
     val items: List<StoredHomeCatalogPreference> = emptyList(),
@@ -145,6 +149,7 @@ object HomeCatalogSettingsRepository {
         }
     private var heroEnabled = true
     private var heroStyle = HomeHeroStyle.FULL_BLEED
+    private var heroTrailerPlaybackEnabled = false
     private var showCatalogType = true
     private var hideUnreleasedContent = false
 
@@ -153,6 +158,7 @@ object HomeCatalogSettingsRepository {
         preferences = emptyMap()
         heroEnabled = true
         heroStyle = HomeHeroStyle.FULL_BLEED
+        heroTrailerPlaybackEnabled = false
         showCatalogType = true
         hideUnreleasedContent = false
         definitions = emptyList()
@@ -167,6 +173,7 @@ object HomeCatalogSettingsRepository {
         preferences = emptyMap()
         heroEnabled = true
         heroStyle = HomeHeroStyle.FULL_BLEED
+        heroTrailerPlaybackEnabled = false
         showCatalogType = true
         hideUnreleasedContent = false
         _uiState.value = HomeCatalogSettingsUiState()
@@ -232,6 +239,14 @@ object HomeCatalogSettingsRepository {
         HomeCatalogSettingsSyncService.triggerPush()
     }
 
+    fun setHeroTrailerPlaybackEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (heroTrailerPlaybackEnabled == enabled) return
+        heroTrailerPlaybackEnabled = enabled
+        publish()
+        persist()
+    }
+
     fun setShowCatalogType(enabled: Boolean) {
         ensureLoaded()
         if (showCatalogType == enabled) return
@@ -280,6 +295,7 @@ object HomeCatalogSettingsRepository {
         ensureLoaded()
         heroEnabled = true
         heroStyle = HomeHeroStyle.FULL_BLEED
+        heroTrailerPlaybackEnabled = false
         showCatalogType = true
         hideUnreleasedContent = false
         preferences = emptyMap()
@@ -332,6 +348,7 @@ object HomeCatalogSettingsRepository {
         if (parsedPayload != null) {
             heroEnabled = parsedPayload.heroEnabled
             heroStyle = HomeHeroStyle.fromStorageValue(parsedPayload.heroStyle)
+            heroTrailerPlaybackEnabled = parsedPayload.heroTrailerPlaybackEnabled
             showCatalogType = parsedPayload.showCatalogType
             hideUnreleasedContent = parsedPayload.hideUnreleasedContent
             preferences = parsedPayload.items.associateBy { it.key }
@@ -433,6 +450,7 @@ object HomeCatalogSettingsRepository {
         _uiState.value = HomeCatalogSettingsUiState(
             heroEnabled = heroEnabled,
             heroStyle = heroStyle,
+            heroTrailerPlaybackEnabled = heroTrailerPlaybackEnabled,
             showCatalogType = showCatalogType,
             hideUnreleasedContent = hideUnreleasedContent,
             items = items,
@@ -445,6 +463,7 @@ object HomeCatalogSettingsRepository {
                 StoredHomeCatalogSettingsPayload(
                     heroEnabled = heroEnabled,
                     heroStyle = heroStyle.storageValue,
+                    heroTrailerPlaybackEnabled = heroTrailerPlaybackEnabled,
                     showCatalogType = showCatalogType,
                     hideUnreleasedContent = hideUnreleasedContent,
                     items = preferences.values.sortedBy { it.order },
