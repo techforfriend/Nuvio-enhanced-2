@@ -52,6 +52,10 @@ internal data class StreamCandidate(
     val height: Int,
     val fps: Int,
     val ext: String,
+    // Only meaningful for audio candidates: false means this format is an
+    // alternate-language dub track, not the video's original/default audio.
+    // Always true for video/progressive candidates, so it never affects them.
+    val isDefaultAudioTrack: Boolean = true,
 )
 
 private data class ManifestBestVariant(
@@ -273,6 +277,12 @@ class InAppYouTubeExtractor {
                             ?: format.numberValue("averageBitrate")
                             ?: 0.0
                         val audioSampleRate = format.numberValue("audioSampleRate") ?: 0.0
+                        // Multi-language uploads (common for major-studio trailers)
+                        // expose each dub as a separate adaptiveFormats entry with an
+                        // audioTrack.audioIsDefault flag. Formats with no audioTrack
+                        // are the only audio for that video, so treat them as default.
+                        val isDefaultAudioTrack = format.objectValue("audioTrack")
+                            ?.booleanValue("audioIsDefault") ?: true
 
                         adaptiveAudio += StreamCandidate(
                             client = client.key,
@@ -284,6 +294,7 @@ class InAppYouTubeExtractor {
                             height = 0,
                             fps = 0,
                             ext = if (mimeType.contains("webm")) "webm" else "m4a",
+                            isDefaultAudioTrack = isDefaultAudioTrack,
                         )
                     }
                 }
@@ -634,9 +645,10 @@ class InAppYouTubeExtractor {
         return bitrate * 1_000_000.0 + audioSampleRate
     }
 
-    private fun sortCandidates(items: List<StreamCandidate>): List<StreamCandidate> {
+    internal fun sortCandidates(items: List<StreamCandidate>): List<StreamCandidate> {
         return items.sortedWith(
-            compareBy<StreamCandidate> { if (it.height > MAX_VIDEO_HEIGHT) 1 else 0 }
+            compareBy<StreamCandidate> { if (it.isDefaultAudioTrack) 0 else 1 }
+                .thenBy { if (it.height > MAX_VIDEO_HEIGHT) 1 else 0 }
                 .thenBy { if (it.height > MAX_VIDEO_HEIGHT) it.height else 0 }
                 .thenByDescending { it.score }
                 .thenBy { if (it.hasN) 1 else 0 }
@@ -739,6 +751,11 @@ private fun JsonObject.stringValue(key: String): String? {
 private fun JsonObject.numberValue(key: String): Double? {
     val primitive = this[key] as? JsonPrimitive ?: return null
     return primitive.toString().trim('"').toDoubleOrNull()
+}
+
+private fun JsonObject.booleanValue(key: String): Boolean? {
+    val primitive = this[key] as? JsonPrimitive ?: return null
+    return primitive.content.toBooleanStrictOrNull()
 }
 
 private fun jsonObjectOf(vararg pairs: Pair<String, Any?>): JsonObject {

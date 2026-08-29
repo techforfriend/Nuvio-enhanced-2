@@ -95,7 +95,7 @@ internal class PlayerScreenRuntime(
 
     var gestureController: PlayerGestureController? = null
 
-    var controlsVisible by mutableStateOf(true)
+    var controlsVisible by mutableStateOf(false)
     var playerControlsLocked by mutableStateOf(false)
     private val shouldResolveInitialPlayerQuality: Boolean
         get() = torrentInfoHash == null &&

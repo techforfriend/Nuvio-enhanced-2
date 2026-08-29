@@ -64,6 +64,7 @@ data class MetaTrailer(
     val publishedAt: String? = null,
     val seasonNumber: Int? = null,
     val displayName: String? = null,
+    val iso6391: String? = null,
 )
 
 data class MetaPerson(
