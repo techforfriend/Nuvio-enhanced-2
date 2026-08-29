@@ -124,6 +124,7 @@ import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.player.SubtitleLanguageOption
 import com.nuvio.app.features.player.prepareExternalPlayerLaunch
 import com.nuvio.app.features.player.rememberExternalPlayerLauncher
+import com.nuvio.app.features.profiles.ProfileEditScreen
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.settings.AccountSettingsScreen
 import com.nuvio.app.features.settings.AddonsSettingsScreen
@@ -321,6 +322,12 @@ internal fun MainAppContent(
     val addonsSettingsTitle = stringResource(Res.string.compose_settings_page_addons)
     val pluginsSettingsTitle = stringResource(Res.string.compose_settings_page_plugins)
     val accountSettingsTitle = stringResource(Res.string.compose_settings_page_account)
+    val editProfileTitle = stringResource(Res.string.profile_edit_edit_title)
+    // Pushes Edit Profile as a real native-navigation destination (see entry<ProfileEditRoute>
+    // below) instead of the old Compose-only crossfade the app gate used to switch to, so it gets
+    // the same native slide push/pop transition as every other settings screen. Falls back to the
+    // gate-driven crossfade on layouts without native navigation (tablet / non-iOS).
+    val pushEditProfile: () -> Unit = { navController.navigate(ProfileEditRoute(editProfileTitle)) }
     val supportersSettingsTitle = stringResource(Res.string.compose_settings_page_supporters_contributors)
     val licensesSettingsTitle = stringResource(Res.string.compose_settings_page_licenses_attributions)
     val collectionsTitle = stringResource(Res.string.collections_header)
@@ -1423,7 +1430,11 @@ internal fun MainAppContent(
                                 onContinueWatchingLongPress = onContinueWatchingLongPress,
                                 onLiveTvChannelClick = onLiveTvChannelClick,
                                 onSwitchProfile = onSwitchProfile,
-                                onEditProfile = onEditProfile,
+                                onEditProfile = if (useNativeNavigation && !isTabletLayout) {
+                                    pushEditProfile
+                                } else {
+                                    onEditProfile
+                                },
                                 onSettingsPageClick = if (useNativeNavigation && !isTabletLayout) {
                                     { pageName, title ->
                                         navController.navigate(SettingsPageRoute(pageName, title))
@@ -1597,8 +1608,20 @@ internal fun MainAppContent(
                             AppFeaturePolicy.inAppUpdaterEnabled && AppUpdaterPlatform.isDebugBuild
                         ) appUpdaterController::showDebugTestUpdate else null,
                         onSwitchProfile = onSwitchProfile,
-                        onEditProfile = onEditProfile,
+                        // This route is only ever reached by pushing it (see onSettingsPageClick
+                        // above), which only happens when native navigation is active and we're
+                        // not on the tablet layout — so Edit Profile can always push natively too.
+                        onEditProfile = pushEditProfile,
                     )
+                }
+                entry<ProfileEditRoute> { route ->
+                    SettingsDestination(route, navController) { onBack ->
+                        ProfileEditScreen(
+                            profile = ProfileRepository.state.value.activeProfile,
+                            onBack = onBack,
+                            onSaved = onBack,
+                        )
+                    }
                 }
                 entry<DownloadsSettingsRoute> { route ->
                     DownloadsDestination(
