@@ -667,6 +667,8 @@ final class AppNavigationCoordinator: ObservableObject {
     @Published private(set) var localizedAddProfileTitle = ""
     @Published var isProfileSwitcherPresented = false
 
+    private var tabBarTransitionTask: Task<Void, Never>?
+
     let homeCoordinator = TabNavigationCoordinator()
     let searchCoordinator = TabNavigationCoordinator()
     let libraryCoordinator = TabNavigationCoordinator()
@@ -750,20 +752,42 @@ final class AppNavigationCoordinator: ObservableObject {
             profileTabInteraction.publishIconFrame()
         }
 
+        tabBarTransitionTask?.cancel()
+        tabBarTransitionTask = nil
+
         guard animated else {
             isTabBarVisible = visible
             isNativeTabBarVisible = visible
             return
         }
 
-        // `animated` is only ever requested for `.morphed`. Its custom glass pill
-        // (NuvioGlassTabBar) is the sole on-screen instrument in that mode (the real system tab
-        // bar stays hidden — see the `.toolbar` visibility below), and it already morphs between
-        // its own expanded/collapsed layouts inside one glass container via its own
-        // `.animation(value: isExpanded)`. There's no second view to hand off to, so a plain
-        // state flip is enough here.
-        guard isTabBarVisible != visible else { return }
-        isTabBarVisible = visible
+        // `animated` is only ever requested for `.morphed`, which is a two-instrument mode: the
+        // glass pill owns the collapsed shape, and the REAL system tab bar owns the expanded one
+        // so that dragging across tabs keeps its native liquid-glass highlight. Expanding is
+        // therefore staged — grow the pill first, then hand off to the native bar once the grow
+        // animation has landed — instead of a plain state flip.
+        if visible {
+            guard !isTabBarVisible || !isNativeTabBarVisible else { return }
+            withAnimation(.smooth(duration: 0.38)) {
+                isTabBarVisible = visible
+            }
+            guard !isNativeTabBarVisible else { return }
+
+            tabBarTransitionTask = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: 340_000_000)
+                guard !Task.isCancelled, let self, self.isTabBarVisible else { return }
+                withAnimation(.easeOut(duration: 0.12)) {
+                    self.isNativeTabBarVisible = true
+                }
+            }
+            return
+        }
+
+        guard isTabBarVisible || isNativeTabBarVisible else { return }
+        withAnimation(.smooth(duration: 0.38)) {
+            isNativeTabBarVisible = false
+            isTabBarVisible = false
+        }
     }
 
     func reloadLiveTvTabVisibility() {
@@ -1052,17 +1076,17 @@ struct TabContentView: View {
             usesNativeTabBar &&
                 appCoordinator.isMainContentVisible &&
                 coordinator.path.isEmpty &&
-                // `morphed` renders its own glass pill (NuvioGlassTabBar) as the only visible tab
-                // bar at all times — the real system one stays hidden so there's never a second
-                // instrument to keep in sync with it.
-                appCoordinator.tabBarBehavior != .morphed &&
                 appCoordinator.isNativeTabBarVisible
                 ? Visibility.visible
                 : Visibility.hidden,
             for: .tabBar
         )
         .animation(
-            appCoordinator.tabBarBehavior == .autoHide ? .easeInOut(duration: 0.18) : nil,
+            appCoordinator.tabBarBehavior == .autoHide
+                ? .easeInOut(duration: 0.18)
+                : appCoordinator.tabBarBehavior == .morphed
+                    ? .easeOut(duration: 0.12)
+                    : nil,
             value: appCoordinator.isNativeTabBarVisible
         )
     }
@@ -1564,13 +1588,15 @@ struct NativeNavContentView: View {
             if appCoordinator.tabBarBehavior.usesCompactPill &&
                 appCoordinator.isAppReady &&
                 appCoordinator.isSelectedTabAtRoot {
-                // No .opacity/.accessibilityHidden gating here: this pill is the only tab bar
-                // instrument in `morphed` (the real one stays hidden), so it's always shown at
-                // this call site and morphs its own shape internally.
+                // Cross-faded out once the real system tab bar has taken over the expanded
+                // shape, so the two instruments are never both on screen.
                 NuvioGlassTabBar(
                     appCoordinator: appCoordinator,
                     iconStore: iconStore
                 )
+                .padding(.horizontal, appCoordinator.isTabBarVisible ? 20 : 16)
+                .opacity(appCoordinator.isNativeTabBarVisible ? 0 : 1)
+                .accessibilityHidden(appCoordinator.isNativeTabBarVisible)
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)
