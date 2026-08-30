@@ -12,7 +12,6 @@ data class MetaDetails(
     val logo: String? = null,
     val description: String? = null,
     val releaseInfo: String? = null,
-    /** TV: ISO last air date from TMDB (or addon) for year-range display. */
     val lastAirDate: String? = null,
     val status: String? = null,
     val imdbRating: String? = null,
@@ -28,7 +27,6 @@ data class MetaDetails(
     val country: String? = null,
     val awards: String? = null,
     val language: String? = null,
-    /** Movies only, in whole US dollars, from TMDB. Null when unknown or not applicable. */
     val budget: Long? = null,
     val revenue: Long? = null,
     val website: String? = null,
@@ -36,6 +34,7 @@ data class MetaDetails(
     val defaultVideoId: String? = null,
     val moreLikeThis: List<MetaPreview> = emptyList(),
     val moreLikeThisSource: MoreLikeThisSource? = null,
+    val moreLikeThisHasMore: Boolean = false,
     val collectionName: String? = null,
     val collectionItems: List<MetaPreview> = emptyList(),
     val trailers: List<MetaTrailer> = emptyList(),
@@ -47,6 +46,11 @@ enum class MoreLikeThisSource {
     TMDB,
     TRAKT,
 }
+
+data class MoreLikeThisPage(
+    val items: List<MetaPreview> = emptyList(),
+    val hasMore: Boolean = false,
+)
 
 data class MetaExternalRating(
     val source: String,

@@ -14,6 +14,7 @@ import com.nuvio.app.features.mdblist.MdbListSettingsRepository
 import com.nuvio.app.features.tmdb.TmdbMetadataService
 import com.nuvio.app.features.tmdb.TmdbService
 import com.nuvio.app.features.tmdb.TmdbSettingsRepository
+import com.nuvio.app.features.tmdb.TMDB_RECOMMENDATIONS_PAGE_SIZE
 import com.nuvio.app.features.trakt.TraktAuthRepository
 import com.nuvio.app.features.trakt.TraktConnectionMode
 import com.nuvio.app.features.trakt.TraktRelatedRepository
@@ -452,31 +453,38 @@ object MetaDetailsRepository {
         ) && supportsMoreLikeThis(meta, fallbackItemType)
 
         if (shouldUseTrakt) {
-            val items = runCatching {
+            val page = runCatching {
                 TraktRelatedRepository.getRelated(
-                    meta = meta,
+                    itemId = meta.id,
+                    itemType = meta.type,
                     fallbackItemId = fallbackItemId,
                     fallbackItemType = fallbackItemType,
                 )
             }.onFailure { error ->
                 log.w { "Failed to load Trakt related titles for ${meta.id}: ${error.message}" }
                 InAppLogger.warn("Metadata/Trakt", "Failed related titles id=${meta.id} error=${InAppLogger.throwableSummary(error)}")
-            }.getOrDefault(emptyList())
-            InAppLogger.info("Metadata/Trakt", "Related titles id=${meta.id} count=${items.size}")
+            }.getOrDefault(MoreLikeThisPage())
+            InAppLogger.info("Metadata/Trakt", "Related titles id=${meta.id} count=${page.items.size} hasMore=${page.hasMore}")
 
             return meta.copy(
-                moreLikeThis = items,
-                moreLikeThisSource = MoreLikeThisSource.TRAKT.takeIf { items.isNotEmpty() },
+                moreLikeThis = page.items,
+                moreLikeThisSource = MoreLikeThisSource.TRAKT.takeIf { page.items.isNotEmpty() },
+                moreLikeThisHasMore = page.hasMore,
             )
         }
 
         val tmdbSettings = TmdbSettingsRepository.snapshot()
         if (!tmdbSettings.enabled || !tmdbSettings.useMoreLikeThis) {
-            return meta.copy(moreLikeThis = emptyList(), moreLikeThisSource = null)
+            return meta.copy(
+                moreLikeThis = emptyList(),
+                moreLikeThisSource = null,
+                moreLikeThisHasMore = false,
+            )
         }
 
         return meta.copy(
             moreLikeThisSource = MoreLikeThisSource.TMDB.takeIf { meta.moreLikeThis.isNotEmpty() },
+            moreLikeThisHasMore = meta.moreLikeThis.size >= TMDB_RECOMMENDATIONS_PAGE_SIZE,
         )
     }
 

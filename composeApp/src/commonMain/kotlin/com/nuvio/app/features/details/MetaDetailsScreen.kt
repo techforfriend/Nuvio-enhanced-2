@@ -159,6 +159,7 @@ fun MetaDetailsScreen(
     onPlay: ((type: String, videoId: String, parentMetaId: String, parentMetaType: String, title: String, logo: String?, poster: String?, background: String?, seasonNumber: Int?, episodeNumber: Int?, episodeTitle: String?, episodeThumbnail: String?, pauseDescription: String?, resumePositionMs: Long?) -> Unit)? = null,
     onPlayManually: ((type: String, videoId: String, parentMetaId: String, parentMetaType: String, title: String, logo: String?, poster: String?, background: String?, seasonNumber: Int?, episodeNumber: Int?, episodeTitle: String?, episodeThumbnail: String?, pauseDescription: String?, resumePositionMs: Long?) -> Unit)? = null,
     onOpenMeta: ((MetaPreview) -> Unit)? = null,
+    onOpenMoreLikeThis: ((MetaDetails) -> Unit)? = null,
     onCastClick: ((MetaPerson, String?) -> Unit)? = null,
     onCompanyClick: ((MetaCompany, String) -> Unit)? = null,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -1094,6 +1095,7 @@ fun MetaDetailsScreen(
                                 },
                                 onSeasonLongPress = { season -> selectedSeasonForActions = season },
                                 onOpenMeta = onOpenMeta,
+                                onOpenMoreLikeThis = onOpenMoreLikeThis,
                                 onCastClick = onCastClick,
                                 onCompanyClick = onCompanyClick,
                                 sharedTransitionScope = sharedTransitionScope,
@@ -1711,6 +1713,7 @@ private fun LazyListScope.configuredMetaSectionItems(
     onEpisodeLongPress: (MetaVideo) -> Unit,
     onSeasonLongPress: (Int) -> Unit,
     onOpenMeta: ((MetaPreview) -> Unit)?,
+    onOpenMoreLikeThis: ((MetaDetails) -> Unit)?,
     onCastClick: ((MetaPerson, String?) -> Unit)?,
     onCompanyClick: ((MetaCompany, String) -> Unit)?,
     sharedTransitionScope: SharedTransitionScope?,
@@ -1786,6 +1789,7 @@ private fun LazyListScope.configuredMetaSectionItems(
                     onEpisodeLongPress = onEpisodeLongPress,
                     onSeasonLongPress = onSeasonLongPress,
                     onOpenMeta = onOpenMeta,
+                    onOpenMoreLikeThis = onOpenMoreLikeThis,
                     onCastClick = onCastClick,
                     onCompanyClick = onCompanyClick,
                     sharedTransitionScope = sharedTransitionScope,
@@ -1934,6 +1938,7 @@ private fun ConfiguredMetaSections(
     onEpisodeLongPress: (MetaVideo) -> Unit,
     onSeasonLongPress: (Int) -> Unit,
     onOpenMeta: ((MetaPreview) -> Unit)?,
+    onOpenMoreLikeThis: ((MetaDetails) -> Unit)?,
     onCastClick: ((MetaPerson, String?) -> Unit)?,
     onCompanyClick: ((MetaCompany, String) -> Unit)?,
     sharedTransitionScope: SharedTransitionScope?,
@@ -2094,6 +2099,9 @@ private fun ConfiguredMetaSections(
                         showHeader = showHeader,
                         horizontalScrollPadding = horizontalScrollPadding,
                         sourceLabel = sourceLabel,
+                        onViewAllClick = onOpenMoreLikeThis
+                            ?.takeIf { meta.moreLikeThisHasMore && meta.moreLikeThisSource != null }
+                            ?.let { open -> { open(meta) } },
                         onPosterClick = onOpenMeta,
                     )
                 }
