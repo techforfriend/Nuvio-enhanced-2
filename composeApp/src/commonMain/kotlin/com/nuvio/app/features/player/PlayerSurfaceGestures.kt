@@ -122,10 +122,12 @@ internal fun Modifier.playerSurfaceDragGestures(
                         viewConfiguration.touchSlop * PlayerVerticalGestureTouchSlopMultiplier,
                         height * PlayerVerticalGestureMinHeightFraction,
                     )
+                    val horizontalGestureActivationSlop =
+                        viewConfiguration.touchSlop * PlayerHorizontalGestureTouchSlopMultiplier
                     val horizontalDominant =
                         !holdToSpeedActive &&
-                            abs(totalDx) > viewConfiguration.touchSlop &&
-                            abs(totalDx) > abs(totalDy)
+                            abs(totalDx) > horizontalGestureActivationSlop &&
+                            abs(totalDx) > abs(totalDy) * PlayerHorizontalGestureDominanceRatio
                     val verticalDominant =
                         !holdToSpeedActive &&
                             abs(totalDy) > verticalGestureActivationSlop &&
