@@ -427,6 +427,16 @@ private fun PlaybackSettingsSection(
                     isTablet = isTablet,
                     onCheckedChange = PlayerSettingsRepository::setTouchGesturesEnabled,
                 )
+                if (touchGesturesEnabled && !autoPlayPlayerSettings.externalPlayerEnabled) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_playback_swipe_to_seek),
+                        description = stringResource(Res.string.settings_playback_swipe_to_seek_description),
+                        checked = autoPlayPlayerSettings.swipeToSeekEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = PlayerSettingsRepository::setSwipeToSeekEnabled,
+                    )
+                }
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(
                     title = stringResource(Res.string.settings_playback_hold_to_speed),

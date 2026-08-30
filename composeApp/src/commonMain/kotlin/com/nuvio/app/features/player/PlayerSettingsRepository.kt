@@ -38,6 +38,7 @@ data class PlayerSettingsUiState(
     val holdToSpeedEnabled: Boolean = true,
     val holdToSpeedValue: Float = 2f,
     val touchGesturesEnabled: Boolean = true,
+    val swipeToSeekEnabled: Boolean = true,
     val externalPlayerEnabled: Boolean = false,
     val externalPlayerForwardSubtitles: Boolean = false,
     val externalPlayerSendSkipSegments: Boolean = false,
@@ -104,6 +105,7 @@ object PlayerSettingsRepository {
     private var holdToSpeedEnabled = true
     private var holdToSpeedValue = 2f
     private var touchGesturesEnabled = true
+    private var swipeToSeekEnabled = true
     private var externalPlayerEnabled = false
     private var externalPlayerForwardSubtitles = false
     private var externalPlayerSendSkipSegments = false
@@ -175,6 +177,7 @@ object PlayerSettingsRepository {
         holdToSpeedEnabled = true
         holdToSpeedValue = 2f
         touchGesturesEnabled = true
+        swipeToSeekEnabled = true
         externalPlayerEnabled = false
         externalPlayerForwardSubtitles = false
         externalPlayerSendSkipSegments = false
@@ -241,6 +244,7 @@ object PlayerSettingsRepository {
         holdToSpeedEnabled = PlayerSettingsStorage.loadHoldToSpeedEnabled() ?: true
         holdToSpeedValue = PlayerSettingsStorage.loadHoldToSpeedValue() ?: 2f
         touchGesturesEnabled = PlayerSettingsStorage.loadTouchGesturesEnabled() ?: true
+        swipeToSeekEnabled = PlayerSettingsStorage.loadSwipeToSeekEnabled() ?: true
         externalPlayerEnabled = PlayerSettingsStorage.loadExternalPlayerEnabled() ?: false
         externalPlayerForwardSubtitles = PlayerSettingsStorage.loadExternalPlayerForwardSubtitles() ?: false
         externalPlayerSendSkipSegments = PlayerSettingsStorage.loadExternalPlayerSendSkipSegments() ?: false
@@ -413,6 +417,14 @@ object PlayerSettingsRepository {
         touchGesturesEnabled = enabled
         publish()
         PlayerSettingsStorage.saveTouchGesturesEnabled(enabled)
+    }
+
+    fun setSwipeToSeekEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (swipeToSeekEnabled == enabled) return
+        swipeToSeekEnabled = enabled
+        publish()
+        PlayerSettingsStorage.saveSwipeToSeekEnabled(enabled)
     }
 
     fun setExternalPlayerEnabled(enabled: Boolean) {
@@ -918,6 +930,7 @@ object PlayerSettingsRepository {
             holdToSpeedEnabled = holdToSpeedEnabled,
             holdToSpeedValue = holdToSpeedValue,
             touchGesturesEnabled = touchGesturesEnabled,
+            swipeToSeekEnabled = swipeToSeekEnabled,
             externalPlayerEnabled = externalPlayerEnabled,
             externalPlayerForwardSubtitles = externalPlayerForwardSubtitles,
             externalPlayerSendSkipSegments = externalPlayerSendSkipSegments,

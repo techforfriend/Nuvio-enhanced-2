@@ -575,6 +575,11 @@ internal fun settingsSearchEntries(
                 stringResource(Res.string.settings_playback_touch_gestures),
                 stringResource(Res.string.settings_playback_touch_gestures_description),
             ),
+            PlaybackSearchRow(
+                "swipe-to-seek",
+                stringResource(Res.string.settings_playback_swipe_to_seek),
+                stringResource(Res.string.settings_playback_swipe_to_seek_description),
+            ),
             PlaybackSearchRow("hold-speed", stringResource(Res.string.settings_playback_hold_speed)),
         ),
     )

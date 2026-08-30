@@ -213,6 +213,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
                 sideGestureSystemEdgeExclusionPx = sideGestureSystemEdgeExclusionPx,
                 playerControlsLockedState = gestureCallbacks.playerControlsLocked,
                 touchGesturesEnabledState = gestureCallbacks.touchGesturesEnabled,
+                swipeToSeekEnabledState = gestureCallbacks.swipeToSeekEnabled,
                 isHoldToSpeedGestureActiveState = gestureCallbacks.isHoldToSpeedGestureActive,
                 currentPositionMsState = gestureCallbacks.currentPositionMs,
                 currentDurationMsState = gestureCallbacks.currentDurationMs,
