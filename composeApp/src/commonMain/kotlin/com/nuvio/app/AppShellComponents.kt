@@ -31,7 +31,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -44,9 +43,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -88,6 +89,7 @@ import com.nuvio.app.navigation.AppRoute
 import com.nuvio.app.navigation.NuvioNavigator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.app_brand_name
@@ -439,14 +441,14 @@ private fun TabletTopPillItem(
 internal fun AppLoadingContent(
     modifier: Modifier = Modifier,
     profile: NuvioProfile? = null,
+    entryOrigin: Offset? = null,
     exitTowardProfileTab: Boolean = false,
     onExitFinished: () -> Unit = {},
 ) {
     val tokens = MaterialTheme.nuvio
     // Netflix-style profile-select entrance, paced over a couple of seconds rather than a quick
     // snap: the emblem drifts in from oversized-and-lifted, settles with a slow, pronounced
-    // bounce, a soft "impact" ring pulses outward the moment it lands, and the loading ring
-    // fades in right as it settles.
+    // bounce, and a soft "impact" ring pulses outward the moment it lands.
     val emblemScale = remember { Animatable(1.7f) }
     val emblemAlpha = remember { Animatable(0f) }
     val emblemOffsetX = remember { Animatable(0f) }
@@ -454,8 +456,6 @@ internal fun AppLoadingContent(
     val haloAlpha = remember { Animatable(0f) }
     val ringScale = remember { Animatable(0.7f) }
     val ringAlpha = remember { Animatable(0f) }
-    val spinnerAlpha = remember { Animatable(0f) }
-    val spinnerScale = remember { Animatable(0.85f) }
     val density = LocalDensity.current
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
     val profileTabIconFrame by NativeTabBridge.profileTabIconFrame.collectAsStateWithLifecycle()
@@ -467,34 +467,51 @@ internal fun AppLoadingContent(
         ringAlpha.animateTo(0f, animationSpec = tween(900))
     }
 
-    LaunchedEffect(Unit) {
-        launch { emblemAlpha.animateTo(1f, animationSpec = tween(220, easing = FastOutSlowInEasing)) }
-        launch { haloAlpha.animateTo(1f, animationSpec = tween(420, easing = FastOutSlowInEasing)) }
-        // A snappier spring than before (higher stiffness) so the bounce actually settles inside
-        // the much shorter ~1s minimum display window instead of getting cut off mid-motion.
-        launch {
-            emblemOffsetY.animateTo(
-                0f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMedium,
-                ),
-            )
+    LaunchedEffect(entryOrigin) {
+        if (entryOrigin != null) {
+            // Tap-to-center transition: this emblem *is* the avatar the user just tapped —
+            // already fully on-screen at that spot — so it glides straight into the center
+            // instead of fading in out of nowhere the way the no-origin case below does. Waits
+            // for the container's real size before computing how far that glide needs to travel
+            // (mirrors the math `exitTowardProfileTab` below uses, just in reverse).
+            val size = snapshotFlow { containerSize }.first { it != IntSize.Zero }
+            val startX = entryOrigin.x - size.width / 2f
+            val startY = entryOrigin.y - size.height / 2f
+            emblemAlpha.snapTo(1f)
+            emblemScale.snapTo(1f)
+            emblemOffsetX.snapTo(startX)
+            emblemOffsetY.snapTo(startY)
+            val travelDuration = 550
+            launch { emblemOffsetX.animateTo(0f, animationSpec = tween(travelDuration, easing = FastOutSlowInEasing)) }
+            launch { haloAlpha.animateTo(1f, animationSpec = tween(260, delayMillis = travelDuration - 160, easing = FastOutSlowInEasing)) }
+            emblemOffsetY.animateTo(0f, animationSpec = tween(travelDuration, easing = FastOutSlowInEasing))
+            pulseRing()
+        } else {
+            launch { emblemAlpha.animateTo(1f, animationSpec = tween(220, easing = FastOutSlowInEasing)) }
+            launch { haloAlpha.animateTo(1f, animationSpec = tween(420, easing = FastOutSlowInEasing)) }
+            // A snappier spring than before (higher stiffness) so the bounce actually settles
+            // inside the much shorter ~1s minimum display window instead of getting cut off
+            // mid-motion.
+            launch {
+                emblemOffsetY.animateTo(
+                    0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium,
+                    ),
+                )
+            }
+            launch {
+                emblemScale.animateTo(
+                    1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium,
+                    ),
+                )
+            }
+            pulseRing()
         }
-        launch {
-            emblemScale.animateTo(
-                1f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMedium,
-                ),
-            )
-        }
-        // Its own space is reserved from the start (see the Box below), so fading it in never
-        // resizes — and therefore never shifts — anything above it.
-        launch { spinnerAlpha.animateTo(1f, animationSpec = tween(220, delayMillis = 120)) }
-        launch { spinnerScale.animateTo(1f, animationSpec = tween(280, delayMillis = 120, easing = FastOutSlowInEasing)) }
-        pulseRing()
     }
 
     LaunchedEffect(exitTowardProfileTab) {
@@ -516,14 +533,14 @@ internal fun AppLoadingContent(
             targetX = (containerSize.width / 2f - marginPx).coerceAtLeast(0f)
             targetY = (containerSize.height / 2f - marginPx).coerceAtLeast(0f)
         }
-        // The tab bar is already visible underneath by this point, so the glide is stretched out
-        // and the emblem stays fully opaque for almost the whole trip, only dissolving right at
-        // the very end — reading as the icon shrinking down and merging into the real one, not
-        // just fading away.
-        val travelDuration = 900
+        // The tab bar is already visible underneath by this point, so the emblem stays fully
+        // opaque for almost the whole trip, only dissolving right at the very end — reading as the
+        // icon shrinking down and merging into the real one, not just fading away. Kept brisk
+        // (rather than the ~900ms this used to run) so the overlay doesn't overstay once content
+        // is ready — still long enough at 550ms for that shrink-and-merge motion to read clearly.
+        val travelDuration = 550
         launch { haloAlpha.animateTo(0f, animationSpec = tween(220)) }
         launch { ringAlpha.animateTo(0f, animationSpec = tween(200)) }
-        launch { spinnerAlpha.animateTo(0f, animationSpec = tween(220)) }
         launch {
             emblemOffsetX.animateTo(targetX, animationSpec = tween(travelDuration, easing = FastOutSlowInEasing))
         }
@@ -590,28 +607,6 @@ internal fun AppLoadingContent(
                             .height(44.dp),
                     )
                 }
-            }
-            Spacer(modifier = Modifier.height(tokens.spacing.sectionGap))
-            // A fixed-size box reserved from the very first frame — fading its content in/out
-            // (rather than an AnimatedVisibility that measures 0 until entering) keeps the
-            // Column's total height constant, so the centered emblem above never shifts when the
-            // ring appears.
-            Box(
-                modifier = Modifier.size(32.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                // The classic indeterminate ring (same as everywhere else in the app), not the
-                // decorative Lottie brand mark used elsewhere for this — matching what was asked.
-                CircularProgressIndicator(
-                    color = tokens.colors.accent,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            scaleX = spinnerScale.value
-                            scaleY = spinnerScale.value
-                            alpha = spinnerAlpha.value
-                        },
-                )
             }
         }
     }

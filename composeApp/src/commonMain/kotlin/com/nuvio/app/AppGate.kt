@@ -20,6 +20,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.auth.AuthRepository
@@ -55,7 +56,12 @@ private enum class AppGateScreen {
 
 // Keep roughly in step with AppLoadingContent's own entrance timeline (AppShellComponents.kt) —
 // this is how long the profile-select transition overlay stays up at minimum, regardless of how
-// quickly the real content underneath becomes ready.
+// quickly the real content underneath becomes ready. Two budgets: the tap→center flow's own
+// entrance glide already takes ~550ms on its own, so it only needs a brief settle on top of that
+// before the exit is allowed to start; the no-origin (native profile switcher) path instead plays
+// a slower spring-bounce entrance and needs the longer runway to fully settle before being cut
+// off — shortening it regressed into exactly that cut-off-mid-bounce glitch once before.
+private const val ProfileTransitionMinDurationWithOriginMs = 650L
 private const val ProfileTransitionMinDurationMs = 1000L
 
 @Composable
@@ -161,6 +167,11 @@ internal fun AppGate(
     // (Netflix-style) instead of the generic wordmark. Not `rememberSaveable`: NuvioProfile isn't
     // a saveable type, and this is purely a transient animation cue anyway.
     var transitioningProfile by remember { mutableStateOf<NuvioProfile?>(null) }
+    // Where the tapped avatar sat on screen at the moment of the tap (window coordinates), so the
+    // transition overlay can glide its emblem in from there instead of just appearing in place.
+    // Null for transitions with no such originating tap (e.g. the native profile switcher), in
+    // which case the overlay falls back to its old drift-down-from-above entrance.
+    var profileTransitionOrigin by remember { mutableStateOf<Offset?>(null) }
     // The main content usually becomes ready well before AppLoadingContent's entrance animation
     // finishes playing, since both start at the same moment a profile is picked — without this,
     // the transition overlay was torn down the instant content was ready, cutting the animation
@@ -180,18 +191,24 @@ internal fun AppGate(
     // freshly recomposed for the new cycle and, if it reads that stale `true` on its very first
     // frame, immediately plays its exit-and-close sequence instead of ever really appearing. This
     // was the exact bug reported: the animation worked once, then silently "didn't show" after.
-    fun beginProfileTransition(profile: NuvioProfile) {
+    fun beginProfileTransition(profile: NuvioProfile, origin: Offset? = null) {
         profileTransitionMinDurationElapsed = false
         contentReadyDuringTransition = false
         profileTransitionExiting = false
         transitioningProfile = profile
+        profileTransitionOrigin = origin
         profileSelectionLoading = true
         profileSelectionTransitionActive = true
     }
 
     LaunchedEffect(profileSelectionTransitionActive) {
         if (!profileSelectionTransitionActive) return@LaunchedEffect
-        kotlinx.coroutines.delay(ProfileTransitionMinDurationMs)
+        val minDuration = if (profileTransitionOrigin != null) {
+            ProfileTransitionMinDurationWithOriginMs
+        } else {
+            ProfileTransitionMinDurationMs
+        }
+        kotlinx.coroutines.delay(minDuration)
         profileTransitionMinDurationElapsed = true
     }
 
@@ -585,9 +602,9 @@ internal fun AppGate(
                     }
                 }
                 ProfileSelectionScreen(
-                    onProfileSelected = { profile ->
+                    onProfileSelected = { profile, tapCenter ->
                         if (!profileSelectionLoading) {
-                            beginProfileTransition(profile)
+                            beginProfileTransition(profile, tapCenter)
                             skipProfileSelectionEnterAnimation = false
                             selectProfile(
                                 profile = profile,
@@ -612,7 +629,17 @@ internal fun AppGate(
                         gateScreen = AppGateScreen.ProfileEdit.name
                     },
                     interactionEnabled = !profileSelectionLoading,
-                    contentVisible = !profileSelectionTransitionActive,
+                    // Also gated on `gateScreen`, not just `profileSelectionTransitionActive`:
+                    // `onExitFinished` below resets that flag to false the moment
+                    // AppLoadingContent's exit glide finishes, which — with no other guard — made
+                    // this flip back to true and fade the profile grid back in for a frame while
+                    // the overlay Box around all of this was *also* fading out underneath it
+                    // (profileOverlayVisible, driven by profileSelectionLoading), reading as a
+                    // flicker of the profile-select screen right before the tab bar appeared.
+                    // Once `gateScreen` has moved on to Main there's no legitimate reason for this
+                    // content to ever reappear, regardless of what the transition flag does next.
+                    contentVisible = !profileSelectionTransitionActive &&
+                        gateScreen != AppGateScreen.Main.name,
                     modifier = Modifier.fillMaxSize(),
                 )
                 androidx.compose.animation.AnimatedVisibility(
@@ -624,6 +651,7 @@ internal fun AppGate(
                     AppLoadingContent(
                         modifier = Modifier.fillMaxSize(),
                         profile = transitioningProfile,
+                        entryOrigin = profileTransitionOrigin,
                         exitTowardProfileTab = profileTransitionExiting,
                         onExitFinished = {
                             profileSelectionLoading = false

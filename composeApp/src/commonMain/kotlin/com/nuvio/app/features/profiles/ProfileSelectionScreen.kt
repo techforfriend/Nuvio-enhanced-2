@@ -1,11 +1,8 @@
 package com.nuvio.app.features.profiles
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -49,9 +46,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,7 +60,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.features.membership.CosmeticEntitlement
-import com.nuvio.app.features.settings.MemberBrandWordmark
+import com.nuvio.app.features.settings.AppBrandWordmark
+import com.nuvio.app.features.settings.SupporterBadgeIfPresent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
@@ -68,7 +69,7 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ProfileSelectionScreen(
-    onProfileSelected: (NuvioProfile) -> Unit,
+    onProfileSelected: (NuvioProfile, Offset) -> Unit,
     onEditProfile: (NuvioProfile) -> Unit,
     onAddProfile: () -> Unit,
     interactionEnabled: Boolean = true,
@@ -77,20 +78,27 @@ fun ProfileSelectionScreen(
 ) {
     val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
-    var pinDialogProfile by remember { mutableStateOf<NuvioProfile?>(null) }
+    // Paired with the tapped avatar's on-screen center at the moment of the tap, so once the PIN
+    // is verified the caller can still glide the transition emblem out from that exact spot.
+    var pendingPinSelection by remember { mutableStateOf<Pair<NuvioProfile, Offset>?>(null) }
     var isEditMode by remember { mutableStateOf(false) }
 
     val titleAlpha = remember { Animatable(0f) }
     val titleOffset = remember { Animatable(20f) }
     val manageAlpha = remember { Animatable(0f) }
-    val onProfileClick: (NuvioProfile) -> Unit = { profile ->
+    // Drives the fade-out of everything below the header once a profile is tapped (Netflix-style
+    // transition into AppLoadingContent). A plain Animatable rather than AnimatedVisibility's
+    // built-in enter/exit so the supporter badge next to the wordmark — rendered as a sibling, not
+    // a descendant, of whatever this is applied to — can sit outside it and stay fully visible.
+    val contentFadeAlpha = remember { Animatable(1f) }
+    val onProfileClick: (NuvioProfile, Offset) -> Unit = { profile, tapCenter ->
         if (interactionEnabled) {
             routeProfileSelection(
                 profile = profile,
                 isEditMode = isEditMode,
                 onEditProfile = onEditProfile,
-                onPinRequired = { pinDialogProfile = it },
-                onProfileSelected = onProfileSelected,
+                onPinRequired = { pendingPinSelection = it to tapCenter },
+                onProfileSelected = { onProfileSelected(it, tapCenter) },
             )
         }
     }
@@ -106,6 +114,10 @@ fun ProfileSelectionScreen(
         manageAlpha.animateTo(1f, tween(500))
     }
 
+    LaunchedEffect(contentVisible) {
+        contentFadeAlpha.animateTo(if (contentVisible) 1f else 0f, tween(180))
+    }
+
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val backgroundProfile = profileState.activeProfile ?: profileState.profiles.firstOrNull()
 
@@ -119,12 +131,7 @@ fun ProfileSelectionScreen(
             modifier = Modifier.fillMaxSize(),
         )
 
-        AnimatedVisibility(
-            visible = contentVisible,
-            enter = fadeIn(tween(180)),
-            exit = fadeOut(tween(180)),
-            modifier = Modifier.fillMaxSize(),
-        ) {
+        run {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -142,16 +149,35 @@ fun ProfileSelectionScreen(
             ) {
                 Spacer(modifier = Modifier.height(if (isTabletLayout) 0.dp else 60.dp))
 
-                MemberBrandWordmark(
-                    height = if (isTabletLayout) 42.dp else 34.dp,
-                    modifier = Modifier.graphicsLayer {
-                        alpha = titleAlpha.value
-                        translationY = titleOffset.value
-                    },
-                )
+                // Not wrapped in `contentFadeAlpha` like the rest of this screen below: the
+                // wordmark and the Supporter badge next to it both stay fully visible through the
+                // tap→center transition, while everything underneath fades away.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AppBrandWordmark(
+                        modifier = Modifier
+                            .height(if (isTabletLayout) 42.dp else 34.dp)
+                            .graphicsLayer {
+                                alpha = titleAlpha.value
+                                translationY = titleOffset.value
+                            },
+                    )
+                    SupporterBadgeIfPresent(
+                        height = if (isTabletLayout) 42.dp else 34.dp,
+                        modifier = Modifier.graphicsLayer {
+                            alpha = titleAlpha.value
+                            translationY = titleOffset.value
+                        },
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(if (isTabletLayout) 22.dp else 18.dp))
 
+              Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { alpha = contentFadeAlpha.value },
+                horizontalAlignment = Alignment.CenterHorizontally,
+              ) {
                 Text(
                     text = stringResource(Res.string.profile_who_is_watching),
                     style = MaterialTheme.typography.headlineLarge.copy(
@@ -190,8 +216,8 @@ fun ProfileSelectionScreen(
                                         isEditMode = isEditMode,
                                         animDelay = currentIndex * 80,
                                         enabled = interactionEnabled,
-                                        onClick = {
-                                            onProfileClick(profile)
+                                        onClick = { tapCenter ->
+                                            onProfileClick(profile, tapCenter)
                                         },
                                     )
                                 } else {
@@ -226,8 +252,8 @@ fun ProfileSelectionScreen(
                                                 isEditMode = isEditMode,
                                                 animDelay = currentIndex * 80,
                                                 enabled = interactionEnabled,
-                                                onClick = {
-                                                    onProfileClick(profile)
+                                                onClick = { tapCenter ->
+                                                    onProfileClick(profile, tapCenter)
                                                 },
                                             )
                                         } else {
@@ -282,19 +308,20 @@ fun ProfileSelectionScreen(
                 }
 
                 Spacer(modifier = Modifier.height(if (isTabletLayout) 0.dp else 32.dp))
+              }
             }
         }
     }
 
-    pinDialogProfile?.let { profile ->
+    pendingPinSelection?.let { (profile, tapCenter) ->
         PinEntryDialog(
             profileName = profile.name,
             onVerify = { pin -> ProfileRepository.verifyPin(profile.profileIndex, pin) },
             onVerified = {
-                pinDialogProfile = null
-                onProfileSelected(profile)
+                pendingPinSelection = null
+                onProfileSelected(profile, tapCenter)
             },
-            onDismiss = { pinDialogProfile = null },
+            onDismiss = { pendingPinSelection = null },
         )
     }
 }
@@ -305,7 +332,7 @@ private fun ProfileAvatarCard(
     isEditMode: Boolean,
     animDelay: Int,
     enabled: Boolean,
-    onClick: () -> Unit,
+    onClick: (Offset) -> Unit,
 ) {
     val avatarColor = remember(profile.avatarColorHex) {
         parseHexColor(profile.avatarColorHex)
@@ -333,6 +360,10 @@ private fun ProfileAvatarCard(
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale = if (isPressed) 0.95f else 1f
 
+    // Kept up to date on every layout pass so the tap handler below can hand back exactly where
+    // on screen this avatar sits — that's where AppLoadingContent glides its emblem in from.
+    var avatarCenterInWindow by remember { mutableStateOf(Offset.Zero) }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -348,12 +379,19 @@ private fun ProfileAvatarCard(
                 enabled = enabled,
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = onClick,
+                onClick = { onClick(avatarCenterInWindow) },
             )
             .padding(8.dp),
     ) {
         Box(
-            modifier = Modifier.size(110.dp),
+            modifier = Modifier
+                .size(110.dp)
+                .onGloballyPositioned { coordinates ->
+                    avatarCenterInWindow = coordinates.positionInWindow() + Offset(
+                        coordinates.size.width / 2f,
+                        coordinates.size.height / 2f,
+                    )
+                },
             contentAlignment = Alignment.Center,
         ) {
             if (avatarImageUrl != null) {
