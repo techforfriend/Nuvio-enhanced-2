@@ -928,6 +928,7 @@ fun HomeScreen(
                                 // is also exactly when hero trailer playback must stop, not just pause.
                                 trailerPlaybackEnabled = homeSettingsUiState.heroTrailerPlaybackEnabled &&
                                     animateCollectionGifs,
+                                trailerStartDelaySeconds = homeSettingsUiState.heroTrailerStartDelaySeconds,
                                 onItemClick = onPosterClick,
                                 onActiveArtworkChange = onActiveHeroArtworkChange,
                             )

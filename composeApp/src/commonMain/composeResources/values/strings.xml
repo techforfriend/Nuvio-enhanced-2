@@ -757,6 +757,10 @@
     <string name="settings_homescreen_show_hero_description">Display hero carousel at top of home.</string>
     <string name="settings_homescreen_hero_trailer_playback">Hero Trailer Playback</string>
     <string name="settings_homescreen_hero_trailer_playback_description">Autoplay trailers in the hero carousel. When on, the carousel only advances when you swipe.</string>
+    <string name="settings_hero_trailer_start_delay">Trailer Start Delay</string>
+    <string name="settings_hero_trailer_start_delay_description">Wait this long after the hero appears before the trailer starts.</string>
+    <string name="settings_hero_trailer_start_delay_instant">Instant</string>
+    <string name="settings_hero_trailer_start_delay_value">%1$d s</string>
     <string name="layout_hide_unreleased">Hide Unreleased Content</string>
     <string name="layout_hide_unreleased_sub">Hide movies and shows that haven't been released yet.</string>
     <string name="layout_catalog_type">Show Catalog Type</string>

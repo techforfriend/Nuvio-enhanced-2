@@ -45,6 +45,7 @@ data class MetaScreenSettingsUiState(
     val backgroundMode: MetaScreenBackgroundMode = MetaScreenBackgroundMode.Normal,
     val cinematicBackground: Boolean = false,
     val heroTrailerPlayback: Boolean = false,
+    val heroTrailerStartDelaySeconds: Int = MetaScreenSettingsRepository.DEFAULT_HERO_TRAILER_START_DELAY_SECONDS,
     val tabLayout: Boolean = false,
     val episodeCardStyle: MetaEpisodeCardStyle = MetaEpisodeCardStyle.Horizontal,
     val blurUnwatchedEpisodes: Boolean = false,
@@ -113,6 +114,8 @@ private data class StoredMetaScreenSettingsPayload(
     val cinematicBackground: Boolean = false,
     @SerialName("hero_trailer_playback")
     val heroTrailerPlayback: Boolean = false,
+    @SerialName("hero_trailer_start_delay_seconds")
+    val heroTrailerStartDelaySeconds: Int = MetaScreenSettingsRepository.DEFAULT_HERO_TRAILER_START_DELAY_SECONDS,
     @SerialName("tvStyleLayout")
     val tabLayout: Boolean = false,
     val episodeCardStyle: String = "horizontal",
@@ -127,6 +130,11 @@ private data class MetaScreenSectionDefinition(
 )
 
 object MetaScreenSettingsRepository {
+    /** Bounds for the "start hero trailer after N seconds" preference. */
+    const val MIN_HERO_TRAILER_START_DELAY_SECONDS = 0
+    const val MAX_HERO_TRAILER_START_DELAY_SECONDS = 10
+    const val DEFAULT_HERO_TRAILER_START_DELAY_SECONDS = 0
+
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -192,6 +200,7 @@ object MetaScreenSettingsRepository {
     private var preferences: MutableMap<MetaScreenSectionKey, StoredMetaScreenSectionPreference> = mutableMapOf()
     private var backgroundMode: MetaScreenBackgroundMode = MetaScreenBackgroundMode.Normal
     private var heroTrailerPlayback: Boolean = false
+    private var heroTrailerStartDelaySeconds: Int = DEFAULT_HERO_TRAILER_START_DELAY_SECONDS
     private var tabLayout: Boolean = false
     private var episodeCardStyle: MetaEpisodeCardStyle = MetaEpisodeCardStyle.Horizontal
     private var blurUnwatchedEpisodes: Boolean = false
@@ -210,6 +219,10 @@ object MetaScreenSettingsRepository {
                 backgroundMode = MetaScreenBackgroundMode.parse(parsed.backgroundMode)
                     ?: MetaScreenBackgroundMode.fromLegacyCinematic(parsed.cinematicBackground)
                 heroTrailerPlayback = parsed.heroTrailerPlayback
+                heroTrailerStartDelaySeconds = parsed.heroTrailerStartDelaySeconds.coerceIn(
+                    MIN_HERO_TRAILER_START_DELAY_SECONDS,
+                    MAX_HERO_TRAILER_START_DELAY_SECONDS,
+                )
                 tabLayout = parsed.tabLayout
                 episodeCardStyle = MetaEpisodeCardStyle.parse(parsed.episodeCardStyle)
                     ?: MetaEpisodeCardStyle.Horizontal
@@ -231,6 +244,7 @@ object MetaScreenSettingsRepository {
         preferences.clear()
         backgroundMode = MetaScreenBackgroundMode.Normal
         heroTrailerPlayback = false
+        heroTrailerStartDelaySeconds = DEFAULT_HERO_TRAILER_START_DELAY_SECONDS
         tabLayout = false
         episodeCardStyle = MetaEpisodeCardStyle.Horizontal
         blurUnwatchedEpisodes = false
@@ -252,6 +266,22 @@ object MetaScreenSettingsRepository {
     fun setHeroTrailerPlayback(enabled: Boolean) {
         ensureLoaded()
         heroTrailerPlayback = enabled
+        publish()
+        persist()
+    }
+
+    /**
+     * How long the detail hero waits, once the trailer candidate is known, before playback starts.
+     * Clamped to [MIN_HERO_TRAILER_START_DELAY_SECONDS]..[MAX_HERO_TRAILER_START_DELAY_SECONDS].
+     */
+    fun setHeroTrailerStartDelaySeconds(seconds: Int) {
+        ensureLoaded()
+        val clamped = seconds.coerceIn(
+            MIN_HERO_TRAILER_START_DELAY_SECONDS,
+            MAX_HERO_TRAILER_START_DELAY_SECONDS,
+        )
+        if (heroTrailerStartDelaySeconds == clamped) return
+        heroTrailerStartDelaySeconds = clamped
         publish()
         persist()
     }
@@ -295,6 +325,7 @@ object MetaScreenSettingsRepository {
         preferences.clear()
         backgroundMode = MetaScreenBackgroundMode.Normal
         heroTrailerPlayback = false
+        heroTrailerStartDelaySeconds = DEFAULT_HERO_TRAILER_START_DELAY_SECONDS
         tabLayout = false
         episodeCardStyle = MetaEpisodeCardStyle.Horizontal
         blurUnwatchedEpisodes = false
@@ -305,6 +336,7 @@ object MetaScreenSettingsRepository {
         items: List<MetaScreenSectionItem>,
         cinematicBackground: Boolean,
         heroTrailerPlayback: Boolean = false,
+        heroTrailerStartDelaySeconds: Int = DEFAULT_HERO_TRAILER_START_DELAY_SECONDS,
         tabLayout: Boolean,
         episodeCardStyle: MetaEpisodeCardStyle = MetaEpisodeCardStyle.Horizontal,
         blurUnwatchedEpisodes: Boolean = false,
@@ -313,6 +345,10 @@ object MetaScreenSettingsRepository {
         ensureLoaded()
         this.backgroundMode = backgroundMode ?: MetaScreenBackgroundMode.fromLegacyCinematic(cinematicBackground)
         this.heroTrailerPlayback = heroTrailerPlayback
+        this.heroTrailerStartDelaySeconds = heroTrailerStartDelaySeconds.coerceIn(
+            MIN_HERO_TRAILER_START_DELAY_SECONDS,
+            MAX_HERO_TRAILER_START_DELAY_SECONDS,
+        )
         this.tabLayout = tabLayout
         this.episodeCardStyle = episodeCardStyle
         this.blurUnwatchedEpisodes = blurUnwatchedEpisodes
@@ -340,6 +376,7 @@ object MetaScreenSettingsRepository {
         preferences.clear()
         backgroundMode = MetaScreenBackgroundMode.Normal
         heroTrailerPlayback = false
+        heroTrailerStartDelaySeconds = DEFAULT_HERO_TRAILER_START_DELAY_SECONDS
         tabLayout = false
         episodeCardStyle = MetaEpisodeCardStyle.Horizontal
         blurUnwatchedEpisodes = false
@@ -409,6 +446,7 @@ object MetaScreenSettingsRepository {
             backgroundMode = backgroundMode,
             cinematicBackground = backgroundMode.usesBackdropBackground,
             heroTrailerPlayback = heroTrailerPlayback,
+            heroTrailerStartDelaySeconds = heroTrailerStartDelaySeconds,
             tabLayout = tabLayout,
             episodeCardStyle = episodeCardStyle,
             blurUnwatchedEpisodes = blurUnwatchedEpisodes,
@@ -423,6 +461,7 @@ object MetaScreenSettingsRepository {
                     backgroundMode = MetaScreenBackgroundMode.persist(backgroundMode),
                     cinematicBackground = backgroundMode.usesBackdropBackground,
                     heroTrailerPlayback = heroTrailerPlayback,
+                    heroTrailerStartDelaySeconds = heroTrailerStartDelaySeconds,
                     tabLayout = tabLayout,
                     episodeCardStyle = MetaEpisodeCardStyle.persist(episodeCardStyle),
                     blurUnwatchedEpisodes = blurUnwatchedEpisodes,

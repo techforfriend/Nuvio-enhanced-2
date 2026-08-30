@@ -212,6 +212,7 @@ internal fun HomeHeroSection(
     listState: LazyListState? = null,
     stretchPx: () -> Float = { 0f },
     trailerPlaybackEnabled: Boolean = false,
+    trailerStartDelaySeconds: Int = 0,
     onItemClick: ((MetaPreview) -> Unit)? = null,
     onActiveArtworkChange: ((String?) -> Unit)? = null,
 ) {
@@ -380,11 +381,22 @@ internal fun HomeHeroSection(
                 onDispose { HomeHeroTrailerPlaybackController.unregister(callback) }
             }
 
-            LaunchedEffect(effectiveTrailerPlaybackEnabled, currentItem.type, currentItem.id) {
+            LaunchedEffect(
+                effectiveTrailerPlaybackEnabled,
+                currentItem.type,
+                currentItem.id,
+                trailerStartDelaySeconds,
+            ) {
                 heroTrailerPlaybackSource = null
                 heroTrailerReady = false
                 heroTrailerFinished = false
                 if (!effectiveTrailerPlaybackEnabled) return@LaunchedEffect
+                // User-configured lead-in: the hero artwork stays still for this long after the item
+                // becomes current. Swiping to another item cancels this effect, so the timer restarts
+                // with the new item instead of leaking a trailer start into it.
+                if (trailerStartDelaySeconds > 0) {
+                    delay(trailerStartDelaySeconds.toLong() * 1000L)
+                }
                 val meta = runCatching {
                     MetaDetailsRepository.fetch(currentItem.type, currentItem.id)
                 }.getOrNull()

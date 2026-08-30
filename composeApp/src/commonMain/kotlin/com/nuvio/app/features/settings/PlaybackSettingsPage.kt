@@ -208,7 +208,7 @@ fun ValueBox(
 }
 
 @Composable
-private fun SettingsSliderRow(
+internal fun SettingsSliderRow(
     title: String,
     value: Int,
     valueText: String,
@@ -216,6 +216,7 @@ private fun SettingsSliderRow(
     step: Int,
     isTablet: Boolean,
     enabled: Boolean = true,
+    description: String? = null,
     onValueChange: (Int) -> Unit,
 ) {
     val horizontalPadding = if (isTablet) 20.dp else 16.dp
@@ -240,6 +241,13 @@ private fun SettingsSliderRow(
                 modifier = Modifier.weight(1f),
             )
             ValueBox(text = valueText, modifier = Modifier.wrapContentWidth())
+        }
+        if (description != null) {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         Slider(
             value = sliderValue.coerceIn(valueRange.first.toFloat(), valueRange.last.toFloat()),

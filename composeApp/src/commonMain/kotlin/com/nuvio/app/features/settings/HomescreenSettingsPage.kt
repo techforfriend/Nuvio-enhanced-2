@@ -54,6 +54,10 @@ import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_card_
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_description
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_full_bleed
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_full_bleed_description
+import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay
+import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay_description
+import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay_instant
+import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay_value
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_trailer_playback
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_trailer_playback_description
 import nuvio.composeapp.generated.resources.settings_homescreen_catalogs_source
@@ -82,6 +86,7 @@ internal fun LazyListScope.homescreenSettingsContent(
     isTablet: Boolean,
     heroEnabled: Boolean,
     heroTrailerPlaybackEnabled: Boolean,
+    heroTrailerStartDelaySeconds: Int,
     showCatalogType: Boolean,
     hideUnreleasedContent: Boolean,
     items: List<HomeCatalogSettingsItem>,
@@ -120,6 +125,27 @@ internal fun LazyListScope.homescreenSettingsContent(
                         isTablet = isTablet,
                         onCheckedChange = HomeCatalogSettingsRepository::setHeroTrailerPlaybackEnabled,
                     )
+                    if (heroTrailerPlaybackEnabled) {
+                        SettingsGroupDivider(isTablet = isTablet)
+                        SettingsSliderRow(
+                            title = stringResource(Res.string.settings_hero_trailer_start_delay),
+                            description = stringResource(Res.string.settings_hero_trailer_start_delay_description),
+                            value = heroTrailerStartDelaySeconds,
+                            valueText = if (heroTrailerStartDelaySeconds <= 0) {
+                                stringResource(Res.string.settings_hero_trailer_start_delay_instant)
+                            } else {
+                                stringResource(
+                                    Res.string.settings_hero_trailer_start_delay_value,
+                                    heroTrailerStartDelaySeconds,
+                                )
+                            },
+                            valueRange = HomeCatalogSettingsRepository.MIN_HERO_TRAILER_START_DELAY_SECONDS..
+                                HomeCatalogSettingsRepository.MAX_HERO_TRAILER_START_DELAY_SECONDS,
+                            step = 1,
+                            isTablet = isTablet,
+                            onValueChange = HomeCatalogSettingsRepository::setHeroTrailerStartDelaySeconds,
+                        )
+                    }
                 }
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(

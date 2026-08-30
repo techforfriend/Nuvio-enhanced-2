@@ -616,17 +616,22 @@ fun MetaDetailsScreen(
                 var heroTrailerReady by remember(meta.id, heroTrailerCandidate?.id) { mutableStateOf(false) }
                 var heroTrailerFinished by remember(meta.id, heroTrailerCandidate?.id) { mutableStateOf(false) }
                 val heroTrailerMuted by HeroTrailerAudioState.muted.collectAsStateWithLifecycle()
+                val heroTrailerStartDelaySeconds = metaScreenSettingsUiState.heroTrailerStartDelaySeconds
                 LaunchedEffect(
                     heroTrailerPlaybackEnabled,
                     heroTrailerCandidate?.id,
                     heroTrailerCandidate?.key,
                     deferredMetaWorkAllowed,
+                    heroTrailerStartDelaySeconds,
                 ) {
                     heroTrailerPlaybackSource = null
                     heroTrailerReady = false
                     heroTrailerFinished = false
                     if (!deferredMetaWorkAllowed || !heroTrailerPlaybackEnabled || heroTrailerCandidate == null) {
                         return@LaunchedEffect
+                    }
+                    if (heroTrailerStartDelaySeconds > 0) {
+                        delay(heroTrailerStartDelaySeconds.toLong() * 1000L)
                     }
                     val resolvedSource = runCatching {
                         TrailerPlaybackResolver.resolveFromYouTubeUrl(heroTrailerCandidate.youtubePlaybackUrl())
@@ -859,8 +864,6 @@ fun MetaDetailsScreen(
                         .toPx()
                 }
                 val heroHeightPx = remember(meta.id) { mutableIntStateOf(0) }
-                // Keep pixel-by-pixel list state reads out of this composition. Reading the
-                // offset here would recompose every metadata section on every scroll frame.
                 val detailScrollOffsetPx = remember(listState, heroHeightPx) {
                     {
                         if (listState.firstVisibleItemIndex == 0) {
@@ -1938,7 +1941,6 @@ private fun ConfiguredMetaSections(
 ) {
     val enabledItems = settings.items.filter { it.enabled }
 
-    // Helper to check if a section actually has content to show
     val sectionHasContent: (MetaScreenSectionKey) -> Boolean = { key ->
         when (key) {
             MetaScreenSectionKey.ACTIONS -> true
