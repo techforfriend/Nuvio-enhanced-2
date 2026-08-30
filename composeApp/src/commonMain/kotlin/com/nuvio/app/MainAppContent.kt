@@ -80,6 +80,8 @@ import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.platformExitApp
 import com.nuvio.app.features.addons.AddAddonResult
 import com.nuvio.app.features.addons.AddonRepository
+import com.nuvio.app.features.addons.enabledAddons
+import com.nuvio.app.features.addons.isWaitingForFirstEnabledManifest
 import com.nuvio.app.features.catalog.CatalogTarget
 import com.nuvio.app.features.cloud.CloudLibraryContentType
 import com.nuvio.app.features.cloud.CloudLibraryFile
@@ -96,6 +98,9 @@ import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.downloads.DownloadItem
 import com.nuvio.app.features.downloads.DownloadsRepository
 import com.nuvio.app.features.home.HomeCatalogSection
+import com.nuvio.app.features.home.HomeCatalogSettingsRepository
+import com.nuvio.app.features.home.HomeRepository
+import com.nuvio.app.features.home.buildAddonCatalogRefreshSignature
 import com.nuvio.app.features.home.components.HomeHeroTrailerPlaybackController
 import com.nuvio.app.features.home.components.shouldBlurContinueWatchingArtwork
 import com.nuvio.app.features.library.LibraryItem
@@ -347,6 +352,17 @@ internal fun MainAppContent(
     var networkToastBaselineReady by rememberSaveable { mutableStateOf(false) }
     var lastNetworkToastCondition by rememberSaveable { mutableStateOf(NetworkCondition.Unknown.name) }
     var watchSourceReconnectPending by remember { mutableStateOf(false) }
+    val homeCatalogRefreshKey = remember(addonsUiState.addons) {
+        buildAddonCatalogRefreshSignature(addonsUiState.addons)
+    }
+
+    LaunchedEffect(appContentGeneration, homeCatalogRefreshKey) {
+        if (!ownsAppRuntime) return@LaunchedEffect
+        val enabledAddons = addonsUiState.addons.enabledAddons()
+        if (enabledAddons.isWaitingForFirstEnabledManifest()) return@LaunchedEffect
+        HomeCatalogSettingsRepository.syncCatalogs(enabledAddons)
+        HomeRepository.refresh(enabledAddons)
+    }
 
     fun activateTab(tab: AppScreenTab) {
         val destination = if (tab == AppScreenTab.LiveTv && !showLiveTvInNavigation) {
