@@ -512,6 +512,7 @@
     <string name="compose_settings_page_licenses_attributions">Licenses &amp; Attribution</string>
     <string name="compose_settings_page_live_tv">Live TV</string>
     <string name="compose_settings_page_mdblist_ratings">MDBList Ratings</string>
+    <string name="compose_settings_page_omdb">OMDb Ratings</string>
     <string name="compose_settings_page_meta_screen">Detail Page</string>
     <string name="settings_appearance_section_detail_page">DETAIL PAGE</string>
     <string name="compose_settings_page_notifications">Notifications</string>
@@ -876,6 +877,7 @@
     <string name="settings_integrations_section_title">INTEGRATIONS</string>
     <string name="settings_integrations_tmdb_description">Metadata enrichment controls</string>
     <string name="settings_integrations_mdblist_description">External ratings providers</string>
+    <string name="settings_integrations_omdb_description">Personal API key for accurate IMDb episode ratings</string>
     <string name="settings_integrations_debrid_description">Connect accounts for links and library access</string>
     <string name="settings_integrations_live_tv_description">Add M3U playlists for live channels.</string>
     <string name="live_tv_title">Live TV</string>
@@ -1328,7 +1330,11 @@
     <string name="settings_tmdb_module_episodes">Episodes</string>
     <string name="settings_tmdb_module_episodes_description">Episode titles, overviews, thumbnails, and runtime from TMDB</string>
     <string name="settings_tmdb_module_episode_ratings">Episode ratings</string>
-    <string name="settings_tmdb_module_episode_ratings_description">Show TMDB vote averages on episode cards</string>
+    <string name="settings_tmdb_module_episode_ratings_description">Try IMDb ratings from OMDb on episode cards, falls back to TMDB</string>
+    <string name="settings_omdb_section_title">OMDB RATINGS</string>
+    <string name="settings_omdb_api_key_label">OMDb API Key</string>
+    <string name="settings_omdb_personal_api_key">Personal OMDb API key</string>
+    <string name="settings_omdb_enter_api_key">Key from omdbapi.com/apikey.aspx to retrieve IMDb ratings per episode.</string>
     <string name="settings_tmdb_module_more_like_this">More Like This</string>
     <string name="settings_tmdb_module_more_like_this_description">TMDB recommendation backdrops on detail page</string>
     <string name="settings_tmdb_module_networks">Networks</string>

@@ -342,6 +342,7 @@ fun DetailSeriesContent(
                                     fallbackImage = meta.background ?: meta.poster,
                                     progressEntry = progressByVideoId[episodeVideoId],
                                     tmdbRating = episode.tmdbRating,
+                                    ratingIsImdb = episode.ratingIsImdb,
                                     isWatched = progressByVideoId[episodeVideoId]?.isEffectivelyCompleted == true ||
                                         WatchingState.isEpisodeWatched(
                                             watchedKeys = watchedKeys,
@@ -699,6 +700,7 @@ private fun EpisodeHorizontalRow(
                 fallbackImage = fallbackImage,
                 progressEntry = progressByVideoId[episodeVideoId],
                 tmdbRating = episode.tmdbRating,
+                ratingIsImdb = episode.ratingIsImdb,
                 isWatched = progressByVideoId[episodeVideoId]?.isEffectivelyCompleted == true ||
                     WatchingState.isEpisodeWatched(
                         watchedKeys = watchedKeys,
@@ -722,6 +724,7 @@ private fun EpisodeHorizontalCard(
     fallbackImage: String?,
     progressEntry: WatchProgressEntry?,
     tmdbRating: Double?,
+    ratingIsImdb: Boolean,
     isWatched: Boolean,
     blurUnwatchedEpisodes: Boolean,
     metrics: EpisodeHorizontalCardMetrics,
@@ -857,6 +860,7 @@ private fun EpisodeHorizontalCard(
                     ratingLabel?.let { rating ->
                         TmdbEpisodeRatingBadge(
                             rating = rating,
+                            isImdb = ratingIsImdb,
                             logoSize = metrics.tmdbLogoSize,
                             textSize = metrics.metaTextSize,
                         )
@@ -1050,6 +1054,7 @@ private fun EpisodeCodeBadge(
 @Composable
 private fun TmdbEpisodeRatingBadge(
     rating: String,
+    isImdb: Boolean,
     logoSize: Dp,
     textSize: androidx.compose.ui.unit.TextUnit,
 ) {
@@ -1058,8 +1063,8 @@ private fun TmdbEpisodeRatingBadge(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(
-            painter = painterResource(Res.drawable.rating_tmdb),
-            contentDescription = stringResource(Res.string.source_tmdb),
+            painter = painterResource(if (isImdb) Res.drawable.rating_imdb else Res.drawable.rating_tmdb),
+            contentDescription = stringResource(if (isImdb) Res.string.source_imdb else Res.string.source_tmdb),
             modifier = Modifier.size(logoSize),
             contentScale = ContentScale.Fit,
         )
@@ -1069,7 +1074,7 @@ private fun TmdbEpisodeRatingBadge(
                 fontSize = textSize,
                 fontWeight = FontWeight.SemiBold,
             ),
-            color = Color(0xFF01B4E4),
+            color = if (isImdb) Color(0xFFF5C518) else Color(0xFF01B4E4),
             maxLines = 1,
         )
     }
@@ -1082,6 +1087,7 @@ private fun EpisodeListCard(
     fallbackImage: String?,
     progressEntry: WatchProgressEntry?,
     tmdbRating: Double?,
+    ratingIsImdb: Boolean,
     isWatched: Boolean,
     blurUnwatchedEpisodes: Boolean,
     sizing: SeriesContentSizing,
@@ -1203,6 +1209,7 @@ private fun EpisodeListCard(
                         ratingLabel?.let { rating ->
                             TmdbEpisodeRatingBadge(
                                 rating = rating,
+                                isImdb = ratingIsImdb,
                                 logoSize = 12.dp,
                                 textSize = sizing.metaTextSize,
                             )

@@ -113,6 +113,7 @@ internal fun settingsSearchEntries(
     val collectionsPage = stringResource(Res.string.collections_header)
     val tmdbPage = stringResource(Res.string.compose_settings_page_tmdb_enrichment)
     val mdbListPage = stringResource(Res.string.compose_settings_page_mdblist_ratings)
+    val omdbPage = stringResource(Res.string.compose_settings_page_omdb)
 
     val entries = mutableListOf<SettingsSearchEntry>()
 
@@ -826,6 +827,13 @@ internal fun settingsSearchEntries(
         description = stringResource(Res.string.settings_integrations_mdblist_description),
         icon = Icons.Rounded.Link,
     )
+    addPage(
+        page = SettingsPage.Omdb,
+        key = "omdb",
+        title = omdbPage,
+        description = stringResource(Res.string.settings_integrations_omdb_description),
+        icon = Icons.Rounded.Link,
+    )
     val tmdbModulesSection = stringResource(Res.string.settings_tmdb_section_modules)
     listOf(
         PlaybackSearchRow("tmdb-enable", stringResource(Res.string.settings_tmdb_enable_enrichment), stringResource(Res.string.settings_tmdb_enable_enrichment_description), stringResource(Res.string.settings_tmdb_section_title)),
@@ -872,6 +880,20 @@ internal fun settingsSearchEntries(
             description = row.description,
             pageLabel = mdbListPage,
             section = row.sectionOverride ?: stringResource(Res.string.settings_mdb_section_title),
+            icon = Icons.Rounded.Link,
+        )
+    }
+
+    listOf(
+        PlaybackSearchRow("omdb-api-key", stringResource(Res.string.settings_omdb_personal_api_key), stringResource(Res.string.settings_omdb_enter_api_key), stringResource(Res.string.settings_omdb_section_title)),
+    ).forEach { row ->
+        addRow(
+            page = SettingsPage.Omdb,
+            key = row.key,
+            title = row.title,
+            description = row.description,
+            pageLabel = omdbPage,
+            section = row.sectionOverride ?: stringResource(Res.string.settings_omdb_section_title),
             icon = Icons.Rounded.Link,
         )
     }

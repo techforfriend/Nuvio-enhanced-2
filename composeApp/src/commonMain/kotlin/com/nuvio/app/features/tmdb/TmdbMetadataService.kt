@@ -9,6 +9,7 @@ import com.nuvio.app.features.details.MetaTrailer
 import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.details.MoreLikeThisPage
 import com.nuvio.app.features.details.MoreLikeThisSource
+import com.nuvio.app.features.details.OmdbEpisodeRatingsService
 import com.nuvio.app.features.details.PersonDetail
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.PosterShape
@@ -662,7 +663,13 @@ object TmdbMetadataService {
         val needsEpisodes = (
             settings.useEpisodes || settings.useEpisodeRatings || settings.useReleaseDates || settings.useSeasonPosters
         ) && tmdbType == "tv"
-        val (enrichment, episodeMap) = coroutineScope {
+        val needsImdbEpisodeRatings = needsEpisodes && settings.useEpisodeRatings && OmdbEpisodeRatingsService.hasApiKey
+        val imdbId = if (needsImdbEpisodeRatings) {
+            OmdbEpisodeRatingsService.extractImdbId(meta.id, fallbackItemId)
+        } else {
+            null
+        }
+        val (enrichment, episodeMap, imdbEpisodeRatings) = coroutineScope {
             val enrichmentDeferred = async {
                 fetchEnrichment(
                     tmdbId = tmdbId,
@@ -683,13 +690,37 @@ object TmdbMetadataService {
             } else {
                 null
             }
-            enrichmentDeferred.await() to episodeDeferred?.await()
+            val imdbEpisodeRatingsDeferred = if (imdbId != null) {
+                async {
+                    OmdbEpisodeRatingsService.fetchRatings(
+                        imdbId = imdbId,
+                        seasonNumbers = meta.videos.mapNotNull { it.season }.distinct(),
+                    )
+                }
+            } else {
+                null
+            }
+            Triple(
+                enrichmentDeferred.await(),
+                episodeDeferred?.await(),
+                imdbEpisodeRatingsDeferred?.await(),
+            )
+        }
+
+        val mergedEpisodeMap = if (imdbEpisodeRatings.isNullOrEmpty()) {
+            episodeMap.orEmpty()
+        } else {
+            episodeMap.orEmpty().mapValues { (key, episode) ->
+                imdbEpisodeRatings[key]?.let { imdbRating ->
+                    episode.copy(voteAverage = imdbRating, voteAverageIsImdb = true)
+                } ?: episode
+            }
         }
 
         return applyEnrichment(
             meta = meta,
             enrichment = enrichment,
-            episodeMap = episodeMap.orEmpty(),
+            episodeMap = mergedEpisodeMap,
             settings = settings,
         )
     }
@@ -868,6 +899,15 @@ object TmdbMetadataService {
                                 enrichmentForEpisode.voteAverage?.takeIf { it > 0.0 } ?: video.tmdbRating
                             } else {
                                 null
+                            },
+                            ratingIsImdb = if (settings.useEpisodeRatings) {
+                                if (enrichmentForEpisode.voteAverage != null) {
+                                    enrichmentForEpisode.voteAverageIsImdb
+                                } else {
+                                    video.ratingIsImdb
+                                }
+                            } else {
+                                false
                             },
                         )
                     }
@@ -1482,6 +1522,7 @@ internal data class TmdbEpisodeEnrichment(
     val airDate: String?,
     val runtimeMinutes: Int?,
     val voteAverage: Double? = null,
+    val voteAverageIsImdb: Boolean = false,
 )
 
 private fun normalizeMetaType(type: String): String =
