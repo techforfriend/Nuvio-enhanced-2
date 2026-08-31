@@ -61,6 +61,9 @@ internal fun SettingsRootDestination(
         showInternalHeader = !useNativeNavigation,
         onSwitchProfile = onSwitchProfile,
         onEditProfile = onEditProfile,
+        onPosterClick = { meta ->
+            navController.navigate(DetailRoute(type = meta.type, id = meta.id, title = meta.name))
+        },
         onDownloadsClick = {
             navController.navigate(DownloadsSettingsRoute(downloadsTitle))
         },

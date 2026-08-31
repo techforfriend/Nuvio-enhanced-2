@@ -245,6 +245,7 @@ internal fun AppTabHost(
                         onNavigatePage = actions.onSettingsPageClick,
                         onSwitchProfile = actions.onSwitchProfile,
                         onEditProfile = actions.onEditProfile,
+                        onPosterClick = actions.onPosterClick,
                         onHomescreenClick = actions.onHomescreenSettingsClick,
                         onMetaScreenClick = actions.onMetaScreenSettingsClick,
                         onContinueWatchingClick = actions.onContinueWatchingSettingsClick,

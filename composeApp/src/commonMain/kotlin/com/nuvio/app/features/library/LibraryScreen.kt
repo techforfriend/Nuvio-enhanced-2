@@ -88,6 +88,7 @@ import coil3.compose.AsyncImage
 import com.nuvio.app.core.i18n.localizedMonthName
 import com.nuvio.app.core.i18n.localizedShortMonthName
 import com.nuvio.app.core.i18n.localizedByteUnit
+import com.nuvio.app.core.format.resolveReleaseInfoForDisplay
 import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.ui.DisintegratingContainer
@@ -160,7 +161,9 @@ fun LibraryScreen(
         LibraryDisplaySettingsRepository.uiState
     }.collectAsStateWithLifecycle()
     val networkStatusUiState by NetworkStatusRepository.uiState.collectAsStateWithLifecycle()
+    val unknownReleaseLabel = stringResource(Res.string.generic_unknown)
     var observedOfflineState by remember { mutableStateOf(false) }
+    var hydratedReleaseInfo by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var sourceModeName by rememberSaveable { mutableStateOf(LibraryViewMode.Saved.name) }
     val sourceMode = remember(sourceModeName) {
         runCatching { LibraryViewMode.valueOf(sourceModeName) }.getOrDefault(LibraryViewMode.Saved)
@@ -218,6 +221,15 @@ fun LibraryScreen(
             sortOption = displaySettings.sortOption,
         )
     }
+    val releaseInfoFor = remember(hydratedReleaseInfo, unknownReleaseLabel) {
+        { item: LibraryItem ->
+            resolveReleaseInfoForDisplay(
+                stored = item.releaseInfo,
+                hydrated = hydratedReleaseInfo[item.libraryReleaseInfoKey()],
+                fallback = unknownReleaseLabel,
+            )
+        }
+    }
     val retryLibraryLoad: () -> Unit = {
         NetworkStatusRepository.requestRefresh(force = true)
         coroutineScope.launch {
@@ -255,6 +267,40 @@ fun LibraryScreen(
     LaunchedEffect(scrollToTopRequests) {
         scrollToTopRequests.collect {
             listState.animateScrollToItem(0)
+        }
+    }
+
+    LaunchedEffect(sourceMode, uiState.items) {
+        if (sourceMode == LibraryViewMode.Cloud) return@LaunchedEffect
+        val missingItems = uiState.items
+            .filter { item -> item.releaseInfo.isNullOrBlank() }
+            .distinctBy(LibraryItem::libraryReleaseInfoKey)
+        if (missingItems.isEmpty()) {
+            hydratedReleaseInfo = emptyMap()
+            return@LaunchedEffect
+        }
+
+        val resolved = mutableMapOf<String, String>()
+        missingItems.chunked(4).forEach { chunk ->
+            kotlinx.coroutines.coroutineScope {
+                chunk.map { item ->
+                    async {
+                        val releaseInfo = MetaDetailsRepository.peek(item.type, item.id)
+                            ?.releaseInfo
+                            ?.trim()
+                            ?.takeIf { it.isNotBlank() }
+                            ?: runCatching { MetaDetailsRepository.fetch(item.type, item.id) }
+                                .getOrNull()
+                                ?.releaseInfo
+                                ?.trim()
+                                ?.takeIf { it.isNotBlank() }
+                        releaseInfo?.let { item.libraryReleaseInfoKey() to it }
+                    }
+                }.awaitAll().filterNotNull().forEach { (key, releaseInfo) ->
+                    resolved[key] = releaseInfo
+                }
+            }
+            hydratedReleaseInfo = resolved.toMap()
         }
     }
 
@@ -493,6 +539,7 @@ fun LibraryScreen(
                         when (displaySettings.layoutMode) {
                             LibraryLayoutMode.HORIZONTAL -> librarySections(
                                 displaySections = librarySectionsDisplay,
+                                releaseInfoFor = releaseInfoFor,
                                 watchedKeys = watchedUiState.watchedKeys,
                                 fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                                 sortOption = effectiveSortOption,
@@ -504,6 +551,7 @@ fun LibraryScreen(
                             LibraryLayoutMode.VERTICAL -> libraryVerticalContent(
                                 projection = verticalProjection,
                                 columns = gridColumns,
+                                releaseInfoFor = releaseInfoFor,
                                 watchedKeys = watchedUiState.watchedKeys,
                                 fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                                 onPosterClick = onPosterClick,
@@ -1599,6 +1647,7 @@ private fun LibraryCalendarGlyph(
 
 private fun LazyListScope.librarySections(
     displaySections: List<LibraryDisplaySection>,
+    releaseInfoFor: (LibraryItem) -> String,
     watchedKeys: Set<String>,
     fullyWatchedSeriesKeys: Set<String>,
     sortOption: LibrarySortOption,
@@ -1625,7 +1674,7 @@ private fun LazyListScope.librarySections(
             animatePlacement = true,
         ) { entry ->
             val item = entry.item
-            val posterItem = item.toMetaPreview()
+            val posterItem = item.toMetaPreview().copy(releaseInfo = releaseInfoFor(item))
             val entrySource = entry.section
             DisintegratingContainer(
                 disintegrating = entry.exiting,
@@ -1649,6 +1698,8 @@ private fun LazyListScope.librarySections(
         }
     }
 }
+
+private fun LibraryItem.libraryReleaseInfoKey(): String = "${type.lowercase()}:$id"
 
 @Composable
 private fun LibraryCalendarLoadingState() {
