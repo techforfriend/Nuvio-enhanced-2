@@ -520,11 +520,9 @@ private fun ProfileHeroMetric(
         )
         Text(
             text = label,
-            autoSize = TextAutoSize.StepBased(
-                minFontSize = 8.sp,
-                maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
-            ),
             style = MaterialTheme.typography.labelSmall,
+            fontSize = 8.sp,
+            letterSpacing = 0.sp,
             color = Color.White.copy(alpha = 0.70f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -679,11 +677,9 @@ private fun ProfileInsightStatCard(
             )
             Text(
                 text = tile.caption,
-                autoSize = TextAutoSize.StepBased(
-                    minFontSize = 8.sp,
-                    maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
-                ),
                 style = MaterialTheme.typography.labelSmall,
+                fontSize = 8.sp,
+                letterSpacing = 0.sp,
                 color = tokens.colors.textMuted,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
