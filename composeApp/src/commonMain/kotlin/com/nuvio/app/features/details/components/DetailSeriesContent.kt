@@ -92,6 +92,10 @@ import kotlin.math.roundToInt
 
 private val log = Logger.withTag("SeriesContent")
 
+// How many episode cards the "Vertical" episode style composes eagerly before requiring the
+// viewer to tap "Show all" — see the Vertical branch in the season-episodes AnimatedContent below.
+private const val VerticalEpisodesInitialVisibleCount = 15
+
 @Composable
 fun DetailSeriesContent(
     meta: MetaDetails,
@@ -310,10 +314,23 @@ fun DetailSeriesContent(
                             onEpisodeLongPress = onEpisodeLongPress,
                         )
                     } else {
+                        // Long-running/anime seasons can have 100+ episodes; composing and
+                        // kicking off image loads for all of them the instant the season opens
+                        // is wasted work for the common case where the viewer only cares about
+                        // the next few. Cap what's composed eagerly and let the viewer opt into
+                        // the rest instead of paying for it up front.
+                        var episodesExpanded by remember(seasonForContent) { mutableStateOf(false) }
+                        val visibleEpisodes = if (
+                            episodesExpanded || seasonEpisodes.size <= VerticalEpisodesInitialVisibleCount
+                        ) {
+                            seasonEpisodes
+                        } else {
+                            seasonEpisodes.take(VerticalEpisodesInitialVisibleCount)
+                        }
                         Column(
                             verticalArrangement = Arrangement.spacedBy(sizing.cardGap),
                         ) {
-                            seasonEpisodes.forEach { episode ->
+                            visibleEpisodes.forEach { episode ->
                                 val episodeVideoId = buildPlaybackVideoId(
                                     parentMetaId = meta.id,
                                     seasonNumber = episode.season,
@@ -336,6 +353,21 @@ fun DetailSeriesContent(
                                     sizing = sizing,
                                     onClick = { onEpisodeClick?.invoke(episode) },
                                     onLongPress = { onEpisodeLongPress?.invoke(episode) },
+                                )
+                            }
+                            if (!episodesExpanded && seasonEpisodes.size > VerticalEpisodesInitialVisibleCount) {
+                                Text(
+                                    text = stringResource(
+                                        Res.string.details_show_all_episodes,
+                                        seasonEpisodes.size,
+                                    ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { episodesExpanded = true }
+                                        .padding(vertical = 12.dp),
                                 )
                             }
                         }

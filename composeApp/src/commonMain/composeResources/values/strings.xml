@@ -1582,6 +1582,7 @@
     <string name="details_servers_unreachable">Your device is online, but Nuvio could not reach required servers.</string>
     <string name="details_show_less">Show Less</string>
     <string name="details_show_more">Show More ▾</string>
+    <string name="details_show_all_episodes">Show all %1$d episodes</string>
     <string name="details_writer">Writer</string>
     <string name="discover_all_genres">All Genres</string>
     <string name="discover_catalog">Catalog</string>

@@ -528,9 +528,15 @@ internal fun MainAppContent(
         InAppLogger.info("App/Runtime", "Starting main app runtime services")
         NetworkStatusRepository.ensureStarted()
         EpisodeReleaseNotificationsRepository.refreshAsync()
+        // Safety-net timeout only: the real signal is onInitialHomeContentRendered below, which
+        // flips initialHomeReady as soon as the first catalog section renders (often well under
+        // 5s) so it always wins the race on its own. This just bounds how long a user can get
+        // stuck on the loading screen if catalogs never resolve (e.g. every addon manifest fails).
         kotlinx.coroutines.delay(5_000)
-        initialHomeReady = true
-        InAppLogger.info("App/Runtime", "Initial home ready")
+        if (!initialHomeReady) {
+            initialHomeReady = true
+            InAppLogger.info("App/Runtime", "Initial home ready (fallback timeout, catalogs still loading)")
+        }
     }
 
     LaunchedEffect(networkStatusUiState.condition) {
