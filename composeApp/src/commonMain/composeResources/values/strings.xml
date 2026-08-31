@@ -676,6 +676,9 @@
     <string name="settings_account_sign_out">Sign Out</string>
     <string name="settings_account_sign_out_confirm_message">You will be returned to the login screen.</string>
     <string name="settings_account_sign_out_confirm_title">Sign Out?</string>
+    <string name="settings_account_sign_in_with_account">Sign In with an Account</string>
+    <string name="settings_account_sign_in_with_account_confirm_title">Sign In with an Account?</string>
+    <string name="settings_account_sign_in_with_account_confirm_message">You'll return to the login screen. Profiles and data created while browsing without an account won't carry over.</string>
     <string name="settings_account_status">Status</string>
     <string name="settings_account_status_anonymous">Anonymous</string>
     <string name="settings_account_status_signed_in">Signed in</string>
