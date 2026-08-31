@@ -104,6 +104,7 @@ import com.nuvio.app.features.home.buildAddonCatalogRefreshSignature
 import com.nuvio.app.features.home.components.HomeHeroTrailerPlaybackController
 import com.nuvio.app.features.home.components.shouldBlurContinueWatchingArtwork
 import com.nuvio.app.features.library.LibraryItem
+import com.nuvio.app.features.library.LibraryReleaseCalendarScreen
 import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.library.LibrarySection
 import com.nuvio.app.features.library.LibrarySortOption
@@ -330,6 +331,7 @@ internal fun MainAppContent(
     val pushEditProfile: () -> Unit = { navController.navigate(ProfileEditRoute(editProfileTitle)) }
     val supportersSettingsTitle = stringResource(Res.string.compose_settings_page_supporters_contributors)
     val licensesSettingsTitle = stringResource(Res.string.compose_settings_page_licenses_attributions)
+    val libraryCalendarTitle = stringResource(Res.string.library_calendar_title)
     val collectionsTitle = stringResource(Res.string.collections_header)
     val newCollectionTitle = stringResource(Res.string.collections_new)
     val detailsFallbackTitle = stringResource(Res.string.meta_section_details_title)
@@ -1165,6 +1167,12 @@ internal fun MainAppContent(
             LibrarySourceMode.SIMKL -> stringResource(Res.string.compose_catalog_subtitle_simkl_library)
         }
 
+        val openLibraryItem: (LibraryItem) -> Unit = { item ->
+            navController.navigate(
+                DetailRoute(type = item.type, id = item.id, title = item.name),
+            )
+        }
+
         val onLibrarySectionViewAllClick: (LibrarySection, LibrarySortOption) -> Unit = { section, sortOption ->
             val launchId = CatalogLaunchStore.put(
                 CatalogLaunch(
@@ -1387,11 +1395,7 @@ internal fun MainAppContent(
                                 onPosterLongClick = { meta ->
                                     openPosterActions(PosterActionTarget(preview = meta))
                                 },
-                                onLibraryPosterClick = { item ->
-                                    navController.navigate(
-                                        DetailRoute(type = item.type, id = item.id, title = item.name),
-                                    )
-                                },
+                                onLibraryPosterClick = openLibraryItem,
                                 onLibraryPosterLongClick = { item, section ->
                                     openPosterActions(
                                         PosterActionTarget(
@@ -1402,6 +1406,9 @@ internal fun MainAppContent(
                                     )
                                 },
                                 onLibrarySectionViewAllClick = onLibrarySectionViewAllClick,
+                                onOpenLibraryCalendar = {
+                                    navController.navigate(LibraryCalendarRoute(libraryCalendarTitle))
+                                },
                                 onCloudFilePlay = { item, file ->
                                     coroutineScope.launch {
                                         val resumeItem = WatchProgressRepository
@@ -1616,6 +1623,14 @@ internal fun MainAppContent(
                         ) appUpdaterController::showDebugTestUpdate else null,
                         onSwitchProfile = onSwitchProfile,
                         onEditProfile = pushEditProfile,
+                    )
+                }
+                entry<LibraryCalendarRoute> { route ->
+                    val onBack = rememberGuardedPopBackStack(navController, route)
+                    LibraryReleaseCalendarScreen(
+                        onBack = onBack,
+                        onPosterClick = openLibraryItem,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
                 entry<ProfileEditRoute> { route ->

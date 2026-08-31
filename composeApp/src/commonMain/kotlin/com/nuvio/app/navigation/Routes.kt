@@ -123,6 +123,12 @@ data class CollectionEditorPageRoute(
 ) : AppRoute
 
 @Serializable
+data class LibraryCalendarRoute(override val title: String = "") : AppRoute {
+    override val preferredTabName: String
+        get() = "Library"
+}
+
+@Serializable
 data class FolderDetailRoute(
     val collectionId: String,
     val folderId: String,
