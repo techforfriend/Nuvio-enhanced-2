@@ -539,6 +539,10 @@
     <string name="compose_settings_root_downloads_description">Manage your downloaded movies and episodes.</string>
     <string name="compose_settings_root_downloads_description_appstore">Manage what you’ve saved on this device.</string>
     <string name="compose_settings_root_downloads_title">Downloads</string>
+    <string name="settings_downloads_location_title">Download Location</string>
+    <string name="settings_downloads_location_private">Internal Storage (Private)</string>
+    <string name="settings_downloads_location_reset">Reset to Default</string>
+    <string name="downloads_error_cannot_write_location">Cannot write to selected download location</string>
     <string name="compose_settings_root_general_section">GENERAL</string>
     <string name="compose_settings_root_integrations_description">Manage available integrations</string>
     <string name="compose_settings_root_notifications_description">Manage episode release alerts and send a test notification.</string>

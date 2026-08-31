@@ -3,7 +3,6 @@ package com.nuvio.app.features.settings
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -35,6 +34,7 @@ import nuvio.composeapp.generated.resources.compose_settings_page_supporters_con
 import nuvio.composeapp.generated.resources.compose_settings_page_tmdb_enrichment
 import nuvio.composeapp.generated.resources.compose_settings_page_trakt
 import nuvio.composeapp.generated.resources.compose_settings_page_tracking
+import nuvio.composeapp.generated.resources.compose_settings_root_downloads_title
 import nuvio.composeapp.generated.resources.settings_account
 import org.jetbrains.compose.resources.StringResource
 
@@ -105,6 +105,11 @@ internal enum class SettingsPage(
     ),
     Notifications(
         titleRes = Res.string.compose_settings_page_notifications,
+        category = SettingsCategory.General,
+        parentPage = Root,
+    ),
+    Downloads(
+        titleRes = Res.string.compose_settings_root_downloads_title,
         category = SettingsCategory.General,
         parentPage = Root,
     ),

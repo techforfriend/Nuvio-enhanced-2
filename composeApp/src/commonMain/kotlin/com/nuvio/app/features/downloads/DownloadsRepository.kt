@@ -23,10 +23,12 @@ object DownloadsRepository {
 
     fun ensureLoaded() {
         if (hasLoaded) return
+        DownloadsSettingsRepository.ensureLoaded()
         loadFromDisk()
     }
 
     fun onProfileChanged() {
+        DownloadsSettingsRepository.onProfileChanged()
         loadFromDisk()
     }
 

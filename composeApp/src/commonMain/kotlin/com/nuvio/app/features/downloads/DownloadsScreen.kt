@@ -18,6 +18,8 @@ import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -42,6 +44,10 @@ import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.NuvioToastController
+import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.features.settings.DownloadsSettingsScreen
+import com.nuvio.app.features.settings.SettingsGroup
+import com.nuvio.app.features.settings.SettingsSwitchRow
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -61,6 +67,7 @@ fun DownloadsScreen(
     var selectedShowId by rememberSaveable(initialShowId) { mutableStateOf(initialShowId) }
     var downloadPendingDeletionId by rememberSaveable { mutableStateOf<String?>(null) }
     val openDownloadsDirectoryFailedText = stringResource(Res.string.downloads_open_directory_failed)
+    var showSettings by rememberSaveable { mutableStateOf(false) }
 
     val completedEpisodes = remember(uiState.items) {
         uiState.completedItems
@@ -73,6 +80,15 @@ fun DownloadsScreen(
             completedEpisodes.firstOrNull { it.parentMetaId == showId }?.title
         }
     }
+
+    if (showSettings) {
+        DownloadsSettingsScreen(
+            onBack = { showSettings = false },
+        )
+        return
+    }
+
+    val tokens = MaterialTheme.nuvio
 
     NuvioScreen {
         stickyHeader {
@@ -101,6 +117,15 @@ fun DownloadsScreen(
                             imageVector = Icons.Rounded.Folder,
                             contentDescription = stringResource(Res.string.downloads_open_directory),
                         )
+                    }
+                    if (selectedShowId == null) {
+                        IconButton(onClick = { showSettings = true }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Settings,
+                                contentDescription = stringResource(Res.string.compose_settings_page_root),
+                                tint = tokens.colors.textPrimary,
+                            )
+                        }
                     }
                 },
             )

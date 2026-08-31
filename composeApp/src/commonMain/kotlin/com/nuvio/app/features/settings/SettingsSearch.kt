@@ -237,6 +237,15 @@ internal fun settingsSearchEntries(
         icon = Icons.Rounded.CloudDownload,
         target = SettingsSearchTarget.Downloads,
     )
+    addRow(
+        page = SettingsPage.Downloads,
+        key = "download-location",
+        title = stringResource(Res.string.settings_downloads_location_title),
+        description = stringResource(Res.string.compose_settings_root_downloads_description),
+        pageLabel = downloadsPage,
+        section = downloadsPage,
+        icon = Icons.Rounded.CloudDownload,
+    )
     addPage(
         page = SettingsPage.Playback,
         key = "playback",

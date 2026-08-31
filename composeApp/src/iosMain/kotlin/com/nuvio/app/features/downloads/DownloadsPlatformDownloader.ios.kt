@@ -77,11 +77,14 @@ internal actual object DownloadsPlatformDownloader {
         val handle = IosDownloadsTaskHandle(job)
 
         scope.launch {
-            val downloadsDirectory = downloadsDirectoryPath()
-            val destinationPath = "$downloadsDirectory/${request.destinationFileName}"
-            val tempPath = "$downloadsDirectory/${request.destinationFileName}.part"
+            val base = resolveDownloadsBaseDirectory()
+            val scopedAccessStarted = base.scopedUrl?.startAccessingSecurityScopedResource() ?: false
 
             try {
+                val downloadsDirectory = base.path
+                val destinationPath = "$downloadsDirectory/${request.destinationFileName}"
+                val tempPath = "$downloadsDirectory/${request.destinationFileName}.part"
+
                 var resumeFromBytes = fileSizeOrNull(tempPath)?.coerceAtLeast(0L) ?: 0L
 
                 var attemptedRangeRequest = resumeFromBytes > 0L
@@ -138,6 +141,8 @@ internal actual object DownloadsPlatformDownloader {
                 handle.cancelNativeTask()
             } catch (error: Throwable) {
                 onFailure(error.message ?: runBlocking { getString(Res.string.download_failed) })
+            } finally {
+                if (scopedAccessStarted) base.scopedUrl?.stopAccessingSecurityScopedResource()
             }
         }
 
@@ -146,47 +151,51 @@ internal actual object DownloadsPlatformDownloader {
 
     actual fun removeFile(localFileUri: String?): Boolean {
         if (localFileUri.isNullOrBlank()) return false
-        val path = localFileUri.toLocalPath() ?: return false
-        if (NSFileManager.defaultManager.fileExistsAtPath(path)) {
-            return removePathIfExists(path)
-        }
-
-        val fileName = path.substringAfterLast('/').takeIf { it.isNotBlank() } ?: return false
-        return removePathIfExists("${downloadsDirectoryPath()}/$fileName")
-    }
-
-    actual fun removePartialFile(destinationFileName: String): Boolean {
-        val tempPath = "${downloadsDirectoryPath()}/$destinationFileName.part"
-        return removePathIfExists(tempPath)
-    }
-
-    actual fun resolveLocalFileUri(localFileUri: String?, destinationFileName: String): String? {
-        localFileUri?.toLocalPath()
-            ?.takeIf { NSFileManager.defaultManager.fileExistsAtPath(it) }
-            ?.let { path ->
-                return NSURL.fileURLWithPath(path).absoluteString ?: "file://$path"
+        return resolveDownloadsBaseDirectory().withAccess { downloadsDirectory ->
+            val path = localFileUri.toLocalPath() ?: return@withAccess false
+            if (NSFileManager.defaultManager.fileExistsAtPath(path)) {
+                return@withAccess removePathIfExists(path)
             }
 
-        val fileName = destinationFileName.trim().takeIf { it.isNotBlank() }
-            ?: localFileUri?.toLocalPath()?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
-            ?: return null
-        val currentPath = "${downloadsDirectoryPath()}/$fileName"
-        return if (NSFileManager.defaultManager.fileExistsAtPath(currentPath)) {
-            NSURL.fileURLWithPath(currentPath).absoluteString ?: "file://$currentPath"
-        } else {
-            null
+            val fileName = path.substringAfterLast('/').takeIf { it.isNotBlank() } ?: return@withAccess false
+            removePathIfExists("$downloadsDirectory/$fileName")
         }
     }
 
-    actual fun openDownloadsDirectory(): Boolean {
-        val url = NSURL.fileURLWithPath(downloadsDirectoryPath())
-        UIApplication.sharedApplication.openURL(
-            url = url,
-            options = emptyMap<Any?, Any>(),
-            completionHandler = null,
-        )
-        return true
-    }
+    actual fun removePartialFile(destinationFileName: String): Boolean =
+        resolveDownloadsBaseDirectory().withAccess { downloadsDirectory ->
+            removePathIfExists("$downloadsDirectory/$destinationFileName.part")
+        }
+
+    actual fun resolveLocalFileUri(localFileUri: String?, destinationFileName: String): String? =
+        resolveDownloadsBaseDirectory().withAccess { downloadsDirectory ->
+            localFileUri?.toLocalPath()
+                ?.takeIf { NSFileManager.defaultManager.fileExistsAtPath(it) }
+                ?.let { path ->
+                    return@withAccess NSURL.fileURLWithPath(path).absoluteString ?: "file://$path"
+                }
+
+            val fileName = destinationFileName.trim().takeIf { it.isNotBlank() }
+                ?: localFileUri?.toLocalPath()?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+                ?: return@withAccess null
+            val currentPath = "$downloadsDirectory/$fileName"
+            if (NSFileManager.defaultManager.fileExistsAtPath(currentPath)) {
+                NSURL.fileURLWithPath(currentPath).absoluteString ?: "file://$currentPath"
+            } else {
+                null
+            }
+        }
+
+    actual fun openDownloadsDirectory(): Boolean =
+        resolveDownloadsBaseDirectory().withAccess { downloadsDirectory ->
+            val url = NSURL.fileURLWithPath(downloadsDirectory)
+            UIApplication.sharedApplication.openURL(
+                url = url,
+                options = emptyMap<Any?, Any>(),
+                completionHandler = null,
+            )
+            true
+        }
 }
 
 private class IosDownloadsTaskHandle(
@@ -394,6 +403,38 @@ private fun downloadsDirectoryPath(): String {
         error = null,
     )
     return path
+}
+
+/**
+ * Where downloads currently live: either the app's own internal folder, or a folder the user
+ * picked via [DownloadLocationPicker] — in which case [scopedUrl] must have
+ * `startAccessingSecurityScopedResource()` active for as long as [path] is being read from or
+ * written to (see [withAccess] and the manual bracketing in `start()`).
+ */
+private data class DownloadsBaseDirectory(val path: String, val scopedUrl: NSURL?)
+
+@OptIn(ExperimentalForeignApi::class)
+private fun resolveDownloadsBaseDirectory(): DownloadsBaseDirectory {
+    val bookmarkBase64 = DownloadsSettingsRepository.downloadLocationUri.value
+    val resolvedUrl = bookmarkBase64?.let(::resolveDownloadLocationBookmark)
+    val resolvedPath = resolvedUrl?.path
+    return if (resolvedUrl != null && resolvedPath != null) {
+        DownloadsBaseDirectory(resolvedPath, resolvedUrl)
+    } else {
+        // No custom location, or the bookmark no longer resolves (folder deleted/moved out from
+        // under us, external volume unplugged, etc.) — fall back to internal storage rather than
+        // fail every download outright.
+        DownloadsBaseDirectory(downloadsDirectoryPath(), null)
+    }
+}
+
+private fun <T> DownloadsBaseDirectory.withAccess(block: (String) -> T): T {
+    val started = scopedUrl?.startAccessingSecurityScopedResource() ?: false
+    try {
+        return block(path)
+    } finally {
+        if (started) scopedUrl?.stopAccessingSecurityScopedResource()
+    }
 }
 
 @OptIn(ExperimentalForeignApi::class)
