@@ -614,7 +614,7 @@ private fun ProfileInsightStatCard(
     val tokens = MaterialTheme.nuvio
     Surface(
         modifier = modifier
-            .heightIn(min = 116.dp)
+            .height(136.dp)
             .then(
                 if (onClick != null) {
                     Modifier.clickable(onClick = onClick)
@@ -678,7 +678,7 @@ private fun ProfileInsightStatCard(
             Text(
                 text = tile.caption,
                 style = MaterialTheme.typography.labelSmall,
-                fontSize = 8.sp,
+                fontSize = 9.sp,
                 letterSpacing = 0.sp,
                 color = tokens.colors.textMuted,
                 maxLines = 2,
