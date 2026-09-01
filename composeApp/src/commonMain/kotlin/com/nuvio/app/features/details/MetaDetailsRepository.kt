@@ -447,6 +447,7 @@ object MetaDetailsRepository {
 
         val trackingSettings = TrackingSettingsRepository.uiState.value
         val isTraktAuthenticated = TraktAuthRepository.uiState.value.mode == TraktConnectionMode.CONNECTED
+        val tmdbSettings = TmdbSettingsRepository.snapshot()
         val shouldUseTrakt = shouldUseTraktMoreLikeThis(
             isAuthenticated = isTraktAuthenticated,
             source = trackingSettings.moreLikeThisSource,
@@ -466,14 +467,15 @@ object MetaDetailsRepository {
             }.getOrDefault(MoreLikeThisPage())
             InAppLogger.info("Metadata/Trakt", "Related titles id=${meta.id} count=${page.items.size} hasMore=${page.hasMore}")
 
-            return meta.copy(
-                moreLikeThis = page.items,
-                moreLikeThisSource = MoreLikeThisSource.TRAKT.takeIf { page.items.isNotEmpty() },
-                moreLikeThisHasMore = page.hasMore,
-            )
+            if (page.items.isNotEmpty()) {
+                return meta.copy(
+                    moreLikeThis = page.items,
+                    moreLikeThisSource = MoreLikeThisSource.TRAKT,
+                    moreLikeThisHasMore = page.hasMore,
+                )
+            }
         }
 
-        val tmdbSettings = TmdbSettingsRepository.snapshot()
         if (!tmdbSettings.enabled || !tmdbSettings.useMoreLikeThis) {
             return meta.copy(
                 moreLikeThis = emptyList(),
@@ -482,6 +484,10 @@ object MetaDetailsRepository {
             )
         }
 
+        InAppLogger.info(
+            "Metadata/TMDB",
+            "More Like This fallback id=${meta.id} count=${meta.moreLikeThis.size}",
+        )
         return meta.copy(
             moreLikeThisSource = MoreLikeThisSource.TMDB.takeIf { meta.moreLikeThis.isNotEmpty() },
             moreLikeThisHasMore = meta.moreLikeThis.size >= TMDB_RECOMMENDATIONS_PAGE_SIZE,
