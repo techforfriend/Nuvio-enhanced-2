@@ -219,7 +219,7 @@ jobs:
     if: inputs.mode != 'dry-run' && (inputs.target == 'all' || inputs.target == 'ios-only')
     needs: prepare
     runs-on: macos-26
-    timeout-minutes: 75
+    timeout-minutes: 120
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       GRADLE_OPTS: -Dfile.encoding=UTF-8
