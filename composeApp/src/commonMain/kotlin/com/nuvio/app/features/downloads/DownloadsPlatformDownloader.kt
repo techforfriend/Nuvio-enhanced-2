@@ -1,6 +1,7 @@
 package com.nuvio.app.features.downloads
 
 internal data class DownloadPlatformRequest(
+    val downloadId: String,
     val sourceUrl: String,
     val sourceHeaders: Map<String, String>,
     val destinationFileName: String,

@@ -302,63 +302,74 @@ object DownloadsRepository {
     }
 
     private fun startDownload(item: DownloadItem) {
-        val request = DownloadPlatformRequest(
-            sourceUrl = item.sourceUrl,
-            sourceHeaders = item.sourceHeaders,
-            destinationFileName = item.fileName,
-        )
-
         val handle = DownloadsPlatformDownloader.start(
-            request = request,
-            onProgress = { downloadedBytes, totalBytes ->
-                mutateItem(item.id) { current ->
-                    if (current.status != DownloadStatus.Downloading) {
-                        current
-                    } else {
-                        current.copy(
-                            downloadedBytes = downloadedBytes.coerceAtLeast(0L),
-                            totalBytes = totalBytes?.takeIf { it > 0L },
-                            updatedAtEpochMs = DownloadsClock.nowEpochMs(),
-                            errorMessage = null,
-                        )
-                    }
-                }
-            },
-            onSuccess = { localFileUri, totalBytes ->
-                activeHandles.remove(item.id)
-                mutateItem(item.id) { current ->
-                    current.copy(
-                        status = DownloadStatus.Completed,
-                        localFileUri = localFileUri,
-                        downloadedBytes = if (totalBytes != null && totalBytes > 0L) {
-                            totalBytes
-                        } else {
-                            current.downloadedBytes
-                        },
-                        totalBytes = totalBytes?.takeIf { it > 0L } ?: current.totalBytes,
-                        errorMessage = null,
-                        updatedAtEpochMs = DownloadsClock.nowEpochMs(),
-                    )
-                }
-            },
-            onFailure = { message ->
-                activeHandles.remove(item.id)
-                mutateItem(item.id) { current ->
-                    if (current.status != DownloadStatus.Downloading) {
-                        current
-                    } else {
-                        current.copy(
-                            status = DownloadStatus.Failed,
-                            errorMessage = message.ifBlank { runBlocking { getString(Res.string.download_failed) } },
-                            updatedAtEpochMs = DownloadsClock.nowEpochMs(),
-                        )
-                    }
-                }
-            },
+            request = item.toPlatformRequest(),
+            onProgress = { downloadedBytes, totalBytes -> reportPlatformProgress(item.id, downloadedBytes, totalBytes) },
+            onSuccess = { localFileUri, totalBytes -> reportPlatformSuccess(item.id, localFileUri, totalBytes) },
+            onFailure = { message -> reportPlatformFailure(item.id, message) },
         )
 
         activeHandles[item.id] = handle
     }
+
+    internal fun reportPlatformProgress(downloadId: String, downloadedBytes: Long, totalBytes: Long?) {
+        ensureLoaded()
+        mutateItem(downloadId) { current ->
+            if (current.status != DownloadStatus.Downloading) {
+                current
+            } else {
+                current.copy(
+                    downloadedBytes = downloadedBytes.coerceAtLeast(0L),
+                    totalBytes = totalBytes?.takeIf { it > 0L },
+                    updatedAtEpochMs = DownloadsClock.nowEpochMs(),
+                    errorMessage = null,
+                )
+            }
+        }
+    }
+
+    internal fun reportPlatformSuccess(downloadId: String, localFileUri: String, totalBytes: Long?) {
+        ensureLoaded()
+        activeHandles.remove(downloadId)
+        mutateItem(downloadId) { current ->
+            current.copy(
+                status = DownloadStatus.Completed,
+                localFileUri = localFileUri,
+                downloadedBytes = if (totalBytes != null && totalBytes > 0L) totalBytes else current.downloadedBytes,
+                totalBytes = totalBytes?.takeIf { it > 0L } ?: current.totalBytes,
+                errorMessage = null,
+                updatedAtEpochMs = DownloadsClock.nowEpochMs(),
+            )
+        }
+    }
+
+    internal fun reportPlatformFailure(downloadId: String, message: String) {
+        ensureLoaded()
+        activeHandles.remove(downloadId)
+        mutateItem(downloadId) { current ->
+            if (current.status != DownloadStatus.Downloading) {
+                current
+            } else {
+                current.copy(
+                    status = DownloadStatus.Failed,
+                    errorMessage = message.ifBlank { runBlocking { getString(Res.string.download_failed) } },
+                    updatedAtEpochMs = DownloadsClock.nowEpochMs(),
+                )
+            }
+        }
+    }
+
+    internal fun platformRequestForResume(downloadId: String): DownloadPlatformRequest? {
+        ensureLoaded()
+        return _uiState.value.items.firstOrNull { it.id == downloadId }?.toPlatformRequest()
+    }
+
+    private fun DownloadItem.toPlatformRequest(): DownloadPlatformRequest = DownloadPlatformRequest(
+        downloadId = id,
+        sourceUrl = sourceUrl,
+        sourceHeaders = sourceHeaders,
+        destinationFileName = fileName,
+    )
 
     private fun mutateItem(downloadId: String, transform: (DownloadItem) -> DownloadItem) {
         var changed = false
