@@ -121,6 +121,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
@@ -162,10 +165,20 @@ fun LibraryScreen(
         runCatching { LibraryViewMode.valueOf(sourceModeName) }.getOrDefault(LibraryViewMode.Saved)
     }
     var showReleaseCalendar by rememberSaveable { mutableStateOf(false) }
-    var releaseCalendarEvents by remember(uiState.items) {
-        mutableStateOf(buildLibraryReleaseCalendarFallbackEvents(uiState.items))
+    val releaseCalendarCacheState by LibraryReleaseCalendarCache.state.collectAsStateWithLifecycle()
+    val releaseCalendarCacheKey = remember(uiState.items) {
+        LibraryReleaseCalendarCache.cacheKeyFor(uiState.items)
     }
-    var releaseCalendarLoading by remember(uiState.items) { mutableStateOf(false) }
+    val fallbackCalendarEvents = remember(uiState.items) {
+        buildLibraryReleaseCalendarFallbackEvents(uiState.items)
+    }
+    val releaseCalendarEvents = if (releaseCalendarCacheState.cacheKey == releaseCalendarCacheKey) {
+        releaseCalendarCacheState.events
+    } else {
+        fallbackCalendarEvents
+    }
+    val releaseCalendarLoading =
+        releaseCalendarCacheState.cacheKey == releaseCalendarCacheKey && releaseCalendarCacheState.isWarming
     var selectedProviderId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedTypeName by rememberSaveable { mutableStateOf<String?>(null) }
     var cloudSearchQuery by rememberSaveable { mutableStateOf("") }
@@ -251,15 +264,9 @@ fun LibraryScreen(
         }
     }
 
-    LaunchedEffect(showReleaseCalendar, uiState.items) {
-        if (!showReleaseCalendar) return@LaunchedEffect
-        val itemsSnapshot = uiState.items
-        releaseCalendarEvents = buildLibraryReleaseCalendarFallbackEvents(itemsSnapshot)
-        releaseCalendarLoading = true
-        try {
-            releaseCalendarEvents = buildLibraryReleaseCalendarEvents(itemsSnapshot)
-        } finally {
-            releaseCalendarLoading = false
+    LaunchedEffect(uiState.items) {
+        if (uiState.items.isNotEmpty()) {
+            LibraryReleaseCalendarCache.warm(uiState.items)
         }
     }
 
@@ -2161,12 +2168,86 @@ private data class LibraryCalendarMonth(
         if (month == 12) LibraryCalendarMonth(year + 1, 1) else copy(month = month + 1)
 }
 
-private suspend fun buildLibraryReleaseCalendarEvents(items: List<LibraryItem>): List<LibraryCalendarEvent> {
+private data class LibraryReleaseCalendarCacheState(
+    val cacheKey: String? = null,
+    val events: List<LibraryCalendarEvent> = emptyList(),
+    val isWarming: Boolean = false,
+    val isReady: Boolean = false,
+)
+
+/**
+ * Keeps the nearby release window ready while Library is visible, so opening the calendar does
+ * not wait for metadata requests. MetaDetailsRepository supplies the lower-level meta cache;
+ * this cache stores the calendar-ready event projection for the previous, current, and next month.
+ */
+private object LibraryReleaseCalendarCache {
+    private val _state = MutableStateFlow(LibraryReleaseCalendarCacheState())
+    val state: StateFlow<LibraryReleaseCalendarCacheState> = _state.asStateFlow()
+    private var activeCacheKey: String? = null
+
+    fun cacheKeyFor(items: List<LibraryItem>): String {
+        val nearbyMonths = libraryCalendarWarmMonthKeys().joinToString(separator = ",")
+        val itemFingerprint = items.joinToString(separator = "|") { item ->
+            "${item.type}:${item.id}:${item.releaseInfo.orEmpty()}"
+        }
+        return "${ProfileRepository.activeProfileId}:$nearbyMonths:$itemFingerprint"
+    }
+
+    suspend fun warm(items: List<LibraryItem>) {
+        val cacheKey = cacheKeyFor(items)
+        if ((_state.value.cacheKey == cacheKey && _state.value.isReady) || activeCacheKey == cacheKey) return
+
+        activeCacheKey = cacheKey
+        val fallbackEvents = buildLibraryReleaseCalendarFallbackEvents(items)
+        _state.value = LibraryReleaseCalendarCacheState(
+            cacheKey = cacheKey,
+            events = fallbackEvents,
+            isWarming = true,
+        )
+
+        try {
+            val warmedEvents = buildLibraryReleaseCalendarEvents(
+                items = items,
+                targetMonthKeys = libraryCalendarWarmMonthKeys(),
+            )
+            if (activeCacheKey == cacheKey) {
+                _state.value = LibraryReleaseCalendarCacheState(
+                    cacheKey = cacheKey,
+                    events = warmedEvents,
+                    isReady = true,
+                )
+            }
+        } finally {
+            if (activeCacheKey == cacheKey && _state.value.isWarming) {
+                _state.value = _state.value.copy(isWarming = false)
+            }
+            if (activeCacheKey == cacheKey) {
+                activeCacheKey = null
+            }
+        }
+    }
+}
+
+private fun libraryCalendarWarmMonthKeys(): Set<String> {
+    val currentMonth = initialLibraryCalendarMonth()
+    return setOf(
+        currentMonth.previous().key,
+        currentMonth.key,
+        currentMonth.next().key,
+    )
+}
+
+private suspend fun buildLibraryReleaseCalendarEvents(
+    items: List<LibraryItem>,
+    targetMonthKeys: Set<String>,
+): List<LibraryCalendarEvent> {
     val fallbackEvents = buildLibraryReleaseCalendarFallbackEvents(items)
-    val episodeEvents = buildLibraryEpisodeCalendarEvents(items)
+    val episodeEvents = buildLibraryEpisodeCalendarEvents(items, targetMonthKeys)
     val seriesWithEpisodeEvents = episodeEvents.map { it.item.id to it.item.type.lowercase() }.toSet()
     return (episodeEvents + fallbackEvents.filterNot { event ->
-        event.item.isLibrarySeries() && (event.item.id to event.item.type.lowercase()) in seriesWithEpisodeEvents
+        event.date.iso.take(7) in targetMonthKeys &&
+            event.item.isLibrarySeries() &&
+            (event.item.id to event.item.type.lowercase()) in seriesWithEpisodeEvents
     })
         .distinctBy { it.key }
         .sortedWith(compareBy<LibraryCalendarEvent> { it.date.iso }.thenBy { it.sortTitle.lowercase() })
@@ -2191,7 +2272,10 @@ private fun buildLibraryReleaseCalendarFallbackEvents(items: List<LibraryItem>):
         .sortedWith(compareBy<LibraryCalendarEvent> { it.date.iso }.thenBy { it.item.name.lowercase() })
         .toList()
 
-private suspend fun buildLibraryEpisodeCalendarEvents(items: List<LibraryItem>): List<LibraryCalendarEvent> =
+private suspend fun buildLibraryEpisodeCalendarEvents(
+    items: List<LibraryItem>,
+    targetMonthKeys: Set<String>,
+): List<LibraryCalendarEvent> =
     coroutineScope {
         val events = mutableListOf<LibraryCalendarEvent>()
         items
@@ -2201,7 +2285,9 @@ private suspend fun buildLibraryEpisodeCalendarEvents(items: List<LibraryItem>):
                 events += chunk.map { item ->
                     async {
                         val details = MetaDetailsRepository.fetch(item.type, item.id) ?: return@async emptyList()
-                        details.videos.mapNotNull { video -> video.toLibraryCalendarEvent(item) }
+                        details.videos
+                            .mapNotNull { video -> video.toLibraryCalendarEvent(item) }
+                            .filter { event -> event.date.iso.take(7) in targetMonthKeys }
                     }
                 }.awaitAll().flatten()
             }
