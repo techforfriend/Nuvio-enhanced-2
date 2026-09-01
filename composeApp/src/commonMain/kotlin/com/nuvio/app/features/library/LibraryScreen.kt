@@ -17,19 +17,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -1296,26 +1297,37 @@ private fun LibraryReleaseCalendarPanel(
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
-            dismissOnClickOutside = true,
+            dismissOnClickOutside = false,
             usePlatformDefaultWidth = false,
         ),
     ) {
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.36f))
-                .clickable(onClick = onDismiss)
-                .padding(WindowInsets.safeDrawing.asPaddingValues())
-                .padding(16.dp),
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+                )
+                .padding(start = 16.dp, top = 16.dp, end = 16.dp),
         ) {
             val useHorizontalLayout = maxWidth >= 600.dp || maxWidth > maxHeight
+            val panelHeight = if (useHorizontalLayout) {
+                minOf(maxHeight, 500.dp)
+            } else {
+                minOf(maxHeight, 700.dp)
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(onClick = onDismiss),
+            )
 
             Surface(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .widthIn(max = 760.dp)
                     .fillMaxWidth()
-                    .fillMaxHeight()
+                    .height(panelHeight)
                     .clickable(onClick = {}),
                 color = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(28.dp),
@@ -1496,17 +1508,6 @@ private fun LibraryCalendarTopBar(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        IconButton(
-            onClick = onDismiss,
-            modifier = Modifier.size(40.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Close,
-                contentDescription = stringResource(Res.string.action_close),
-                modifier = Modifier.size(22.dp),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
-        }
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -1527,6 +1528,17 @@ private fun LibraryCalendarTopBar(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+            )
+        }
+        IconButton(
+            onClick = onDismiss,
+            modifier = Modifier.size(40.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Close,
+                contentDescription = stringResource(Res.string.action_close),
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.onSurface,
             )
         }
     }
