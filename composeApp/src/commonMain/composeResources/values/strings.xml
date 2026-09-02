@@ -634,6 +634,7 @@
     <string name="detail_comments_spoiler_card">This comment contains spoilers.</string>
     <string name="detail_comments_spoiler_hidden_sheet">This comment contains spoilers and has been hidden.</string>
     <string name="detail_comments_title">Comments</string>
+    <string name="detail_play_random_episode">Play random episode</string>
     <string name="detail_tab_trailer">Trailer</string>
     <string name="detail_trailer_category_count">%1$s (%2$d)</string>
     <string name="detail_trailers_title">Trailers</string>

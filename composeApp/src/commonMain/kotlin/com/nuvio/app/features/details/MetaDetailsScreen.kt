@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAddCheckCircle
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -855,6 +856,15 @@ fun MetaDetailsScreen(
                         savedProgress?.lastPositionMs,
                     )
                 }
+                val onRandomEpisodeClick: (() -> Unit)? = if (meta.type == "series" || hasEpisodes) {
+                    {
+                        meta.releasedPlayableEpisodes(todayIsoDate)
+                            .randomOrNull()
+                            ?.let(onEpisodePlayClick)
+                    }
+                } else {
+                    null
+                }
                 val listState = rememberLazyListState()
                 val heroStretchState = rememberHeroStretchState(listState)
                 val density = LocalDensity.current
@@ -1034,6 +1044,7 @@ fun MetaDetailsScreen(
                                 isWatched = isWatched,
                                 onPrimaryPlayClick = onPrimaryPlayClick,
                                 onPrimaryPlayLongClick = onPrimaryPlayLongClick,
+                                onRandomEpisodeClick = onRandomEpisodeClick,
                                 onSaveClick = toggleSaved,
                                 onSaveLongClick = openLibraryListPicker,
                                 onWatchedClick = toggleWatched,
@@ -1683,6 +1694,7 @@ private fun LazyListScope.configuredMetaSectionItems(
     isWatched: Boolean,
     onPrimaryPlayClick: () -> Unit,
     onPrimaryPlayLongClick: (() -> Unit)?,
+    onRandomEpisodeClick: (() -> Unit)?,
     onSaveClick: () -> Unit,
     onSaveLongClick: (() -> Unit)?,
     onWatchedClick: () -> Unit,
@@ -1759,6 +1771,7 @@ private fun LazyListScope.configuredMetaSectionItems(
                     isWatched = isWatched,
                     onPrimaryPlayClick = onPrimaryPlayClick,
                     onPrimaryPlayLongClick = onPrimaryPlayLongClick,
+                    onRandomEpisodeClick = onRandomEpisodeClick,
                     onSaveClick = onSaveClick,
                     onSaveLongClick = onSaveLongClick,
                     onWatchedClick = onWatchedClick,
@@ -1908,6 +1921,7 @@ private fun ConfiguredMetaSections(
     isWatched: Boolean,
     onPrimaryPlayClick: () -> Unit,
     onPrimaryPlayLongClick: (() -> Unit)?,
+    onRandomEpisodeClick: (() -> Unit)?,
     onSaveClick: () -> Unit,
     onSaveLongClick: (() -> Unit)?,
     onWatchedClick: () -> Unit,
@@ -1982,6 +1996,13 @@ private fun ConfiguredMetaSections(
                             isActive = isWatched,
                             onClick = onWatchedClick,
                         ))
+                        onRandomEpisodeClick?.let { playRandomEpisode ->
+                            add(DetailSecondaryAction(
+                                label = stringResource(Res.string.detail_play_random_episode),
+                                icon = Icons.Default.Shuffle,
+                                onClick = playRandomEpisode,
+                            ))
+                        }
                         add(DetailSecondaryAction(
                             label = if (isSaved) {
                                 stringResource(Res.string.hero_remove_from_library)
