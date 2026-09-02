@@ -32,6 +32,9 @@ import org.jetbrains.compose.resources.getString
 
 @Composable
 internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
+    LaunchedEffect(parentMetaId, videoId) {
+        randomEpisodePlayback = RandomEpisodePlaybackTracker.consume(parentMetaId)
+    }
     val currentFeedback = liveGestureFeedback ?: gestureFeedback
     LaunchedEffect(currentFeedback) {
         if (currentFeedback != null) {
@@ -522,6 +525,8 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         activeEpisodeNumber,
         watchProgressUiState.entries,
         watchedUiState.watchedKeys,
+        playerSettingsUiState.randomEpisodesIncludeWatched,
+        randomEpisodePlayback,
     ) {
         if (!isSeries || playerMetaVideos.isEmpty()) {
             nextEpisodeInfo = null
@@ -529,7 +534,24 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         }
         val curSeason = activeSeasonNumber ?: return@LaunchedEffect
         val curEpisode = activeEpisodeNumber ?: return@LaunchedEffect
-        val nextVideo = PlayerNextEpisodeRules.resolveNextEpisode(
+        val nextVideo = if (randomEpisodePlayback) {
+            val candidates = playerMetaVideos.filter { video ->
+                video.season != null && video.episode != null &&
+                    !(video.season == curSeason && video.episode == curEpisode) &&
+                    PlayerNextEpisodeRules.hasEpisodeAired(video.released) &&
+                    (playerSettingsUiState.randomEpisodesIncludeWatched || !WatchingState.isEpisodeWatched(
+                        watchedKeys = watchedUiState.watchedKeys,
+                        metaType = parentMetaType,
+                        metaId = parentMetaId,
+                        episode = video,
+                    ))
+            }
+            candidates.randomOrNull() ?: playerMetaVideos.firstOrNull { video ->
+                video.season != null && video.episode != null &&
+                    !(video.season == curSeason && video.episode == curEpisode) &&
+                    PlayerNextEpisodeRules.hasEpisodeAired(video.released)
+            }
+        } else PlayerNextEpisodeRules.resolveNextEpisode(
             videos = playerMetaVideos,
             currentSeason = curSeason,
             currentEpisode = curEpisode,

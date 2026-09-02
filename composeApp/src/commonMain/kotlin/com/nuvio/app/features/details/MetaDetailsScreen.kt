@@ -115,6 +115,7 @@ import com.nuvio.app.features.library.executeTrackingMembershipOperation
 import com.nuvio.app.features.library.showTrackingMembershipRewriteFeedback
 import com.nuvio.app.features.library.toLibraryItem
 import com.nuvio.app.features.player.PlayerSettingsRepository
+import com.nuvio.app.features.player.RandomEpisodePlaybackTracker
 import com.nuvio.app.features.streams.StreamAutoPlayPolicy
 import com.nuvio.app.features.tmdb.TmdbSettingsRepository
 import com.nuvio.app.features.trakt.TraktAuthRepository
@@ -858,8 +859,22 @@ fun MetaDetailsScreen(
                 }
                 val onRandomEpisodeClick: (() -> Unit)? = if (meta.type == "series" || hasEpisodes) {
                     {
-                        meta.releasedPlayableEpisodes(todayIsoDate)
-                            .randomOrNull()
+                        RandomEpisodePlaybackTracker.mark(meta.id)
+                        val episodes = meta.releasedPlayableEpisodes(todayIsoDate)
+                        val unwatched = episodes.filterNot { episode ->
+                            WatchingState.isEpisodeWatched(
+                                watchedKeys = watchedUiState.watchedKeys,
+                                metaType = meta.type,
+                                metaId = meta.id,
+                                episode = episode,
+                            )
+                        }
+                        val candidates = if (playerSettingsUiState.randomEpisodesIncludeWatched) {
+                            episodes
+                        } else {
+                            unwatched.ifEmpty { episodes }
+                        }
+                        candidates.randomOrNull()
                             ?.let(onEpisodePlayClick)
                     }
                 } else {

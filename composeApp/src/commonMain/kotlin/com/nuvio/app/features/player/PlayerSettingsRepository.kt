@@ -69,6 +69,7 @@ data class PlayerSettingsUiState(
     val introDbApiKey: String = "",
     val introSubmitEnabled: Boolean = false,
     val streamAutoPlayNextEpisodeEnabled: Boolean = false,
+    val randomEpisodesIncludeWatched: Boolean = false,
     val streamAutoPlayNextEpisodeFallbackEnabled: Boolean = true,
     val streamAutoPlayPreferBingeGroup: Boolean = true,
     val streamAutoPlayReuseBingeGroup: Boolean = true,
@@ -136,6 +137,7 @@ object PlayerSettingsRepository {
     private var introDbApiKey = ""
     private var introSubmitEnabled = false
     private var streamAutoPlayNextEpisodeEnabled = false
+    private var randomEpisodesIncludeWatched = false
     private var streamAutoPlayNextEpisodeFallbackEnabled = true
     private var streamAutoPlayPreferBingeGroup = true
     private var streamAutoPlayReuseBingeGroup = true
@@ -693,6 +695,13 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveStreamAutoPlayNextEpisodeEnabled(enabled)
     }
 
+    fun setRandomEpisodesIncludeWatched(enabled: Boolean) {
+        ensureLoaded()
+        if (randomEpisodesIncludeWatched == enabled) return
+        randomEpisodesIncludeWatched = enabled
+        publish()
+    }
+
     fun setStreamAutoPlayNextEpisodeFallbackEnabled(enabled: Boolean) {
         ensureLoaded()
         if (streamAutoPlayNextEpisodeFallbackEnabled == enabled) return
@@ -961,6 +970,7 @@ object PlayerSettingsRepository {
             introDbApiKey = introDbApiKey,
             introSubmitEnabled = introSubmitEnabled,
             streamAutoPlayNextEpisodeEnabled = streamAutoPlayNextEpisodeEnabled,
+            randomEpisodesIncludeWatched = randomEpisodesIncludeWatched,
             streamAutoPlayNextEpisodeFallbackEnabled = streamAutoPlayNextEpisodeFallbackEnabled,
             streamAutoPlayPreferBingeGroup = streamAutoPlayPreferBingeGroup,
             streamAutoPlayReuseBingeGroup = streamAutoPlayReuseBingeGroup,

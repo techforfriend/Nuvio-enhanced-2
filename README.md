@@ -96,6 +96,8 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 | **More Like This → View All** — the recommendation rail's header opens the full list as a paged grid that keeps loading as you scroll, instead of stopping at one page. | — | Always on when the rail has more to show |
 | **Budget and revenue** — added to the details block for movies. | Shown with Settings → Layout → Detail Page → **Details** | — |
 | **Episode ratings** — TMDB vote averages on episode cards. | Settings → Content & Discovery → TMDB Enrichment → **Episode ratings** | — |
+| **Random Episode** — Play random episode for series. | 3 dots next to play button → **random icon** | — |
+| **Include watched episodes toggle** — Include watched episodes in random playback. | Settings → Playback → **Include watched episodes in random playback**| Off |
 
 ### Library
 
