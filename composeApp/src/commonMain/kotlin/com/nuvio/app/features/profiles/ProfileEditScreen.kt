@@ -113,8 +113,11 @@ fun ProfileEditScreen(
 
     val customAvatarUrl = remember(avatarUrl) { normalizedAvatarUrl(avatarUrl) }
     val avatarUrlIsInvalid = avatarUrl.isNotBlank() && customAvatarUrl == null
-    val customBackgroundUrl = remember(customBackgroundUrlInput) { normalizedAvatarUrl(customBackgroundUrlInput) }
-    val customBackgroundUrlIsInvalid = customBackgroundUrlInput.isNotBlank() && customBackgroundUrl == null
+    val customBackgroundUrl = remember(canChooseBackground, customBackgroundUrlInput) {
+        if (canChooseBackground) normalizedAvatarUrl(customBackgroundUrlInput) else null
+    }
+    val customBackgroundUrlIsInvalid =
+        canChooseBackground && customBackgroundUrlInput.isNotBlank() && customBackgroundUrl == null
     val selectedAvatarItem = remember(selectedAvatarId, avatars) {
         selectedAvatarId?.let { id -> avatars.find { it.id == id } }
     }
@@ -215,7 +218,7 @@ fun ProfileEditScreen(
             }
         }
 
-        if (!isNew) {
+        if (canChooseBackground) {
             item {
                 NuvioSurfaceCard {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
