@@ -1109,6 +1109,7 @@
     <string name="community_load_contributors_failed">Couldn&apos;t load contributors</string>
     <string name="community_load_supporters_failed">Couldn&apos;t load supporters</string>
     <string name="community_empty_contributors">No contributors found.</string>
+    <string name="community_contributor_contributions">%1$d contributions</string>
     <string name="community_empty_supporters">No supporters found.</string>
     <string name="community_error_unable_load_contributors">Unable to load contributors.</string>
     <string name="community_error_unable_load_supporters">Unable to load supporters.</string>
