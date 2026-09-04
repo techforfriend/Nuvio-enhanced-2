@@ -144,6 +144,7 @@ import com.nuvio.app.features.watching.application.WatchingActions
 import com.nuvio.app.features.watching.application.WatchingState
 import com.kmpalette.rememberDominantColorState
 import com.kmpalette.extensions.painter.rememberPainterDominantColorState
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
@@ -633,16 +634,19 @@ fun MetaDetailsScreen(
                     if (!deferredMetaWorkAllowed || !heroTrailerPlaybackEnabled || heroTrailerCandidate == null) {
                         return@LaunchedEffect
                     }
+                    val resolvedSource = async {
+                        runCatching {
+                            TrailerPlaybackResolver.resolveFromYouTubeUrl(heroTrailerCandidate.youtubePlaybackUrl())
+                        }.getOrNull()
+                    }
                     if (heroTrailerStartDelaySeconds > 0) {
                         delay(heroTrailerStartDelaySeconds.toLong() * 1000L)
                     }
-                    val resolvedSource = runCatching {
-                        TrailerPlaybackResolver.resolveFromYouTubeUrl(heroTrailerCandidate.youtubePlaybackUrl())
-                    }.getOrNull()
-                    if (resolvedSource == null) {
+                    val source = resolvedSource.await()
+                    if (source == null) {
                         heroTrailerFinished = true
                     } else {
-                        heroTrailerPlaybackSource = resolvedSource
+                        heroTrailerPlaybackSource = source
                     }
                 }
                 val onBackFromDetails: () -> Unit = {

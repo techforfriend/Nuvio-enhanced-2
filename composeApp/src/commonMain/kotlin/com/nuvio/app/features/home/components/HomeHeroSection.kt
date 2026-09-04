@@ -88,6 +88,7 @@ import com.nuvio.app.features.library.toLibraryItem
 import com.nuvio.app.features.trailer.TrailerPlaybackResolver
 import com.nuvio.app.features.trailer.TrailerPlaybackSource
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
@@ -391,27 +392,26 @@ internal fun HomeHeroSection(
                 heroTrailerReady = false
                 heroTrailerFinished = false
                 if (!effectiveTrailerPlaybackEnabled) return@LaunchedEffect
-                // User-configured lead-in: the hero artwork stays still for this long after the item
-                // becomes current. Swiping to another item cancels this effect, so the timer restarts
-                // with the new item instead of leaking a trailer start into it.
+                // Fetch metadata and resolve the playable source while the configured delay is
+                // running. Playback still waits for both conditions, avoiding delay + fetch +
+                // resolver latency being added serially.
+                val resolvedSource = async {
+                    val meta = runCatching {
+                        MetaDetailsRepository.fetch(currentItem.type, currentItem.id)
+                    }.getOrNull()
+                    val trailer = meta?.trailers?.let(::selectHeroTrailer) ?: return@async null
+                    runCatching {
+                        TrailerPlaybackResolver.resolveFromYouTubeUrl(trailer.youtubePlaybackUrl())
+                    }.getOrNull()
+                }
                 if (trailerStartDelaySeconds > 0) {
                     delay(trailerStartDelaySeconds.toLong() * 1000L)
                 }
-                val meta = runCatching {
-                    MetaDetailsRepository.fetch(currentItem.type, currentItem.id)
-                }.getOrNull()
-                val trailer = meta?.trailers?.let(::selectHeroTrailer)
-                if (trailer == null) {
-                    heroTrailerFinished = true
-                    return@LaunchedEffect
-                }
-                val resolvedSource = runCatching {
-                    TrailerPlaybackResolver.resolveFromYouTubeUrl(trailer.youtubePlaybackUrl())
-                }.getOrNull()
-                if (resolvedSource == null) {
+                val source = resolvedSource.await()
+                if (source == null) {
                     heroTrailerFinished = true
                 } else {
-                    heroTrailerPlaybackSource = resolvedSource
+                    heroTrailerPlaybackSource = source
                 }
             }
 
