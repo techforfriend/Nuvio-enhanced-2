@@ -659,10 +659,7 @@ private fun PlayerScreenRuntime.saveDirectStreamForReuse(
         videoSize = stream.behaviorHints.videoSize,
         bingeGroup = stream.behaviorHints.bingeGroup,
         streamType = stream.streamType,
-        contentLanguage = resolveContentLanguage(
-            language = metaUiState.meta?.language,
-            country = metaUiState.meta?.country,
-        ),
+        contentLanguage = contentLanguage,
     )
 }
 

@@ -252,6 +252,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
                 },
                 onSnapshot = { snapshot ->
                     playbackSnapshot = snapshot
+                    refreshAudioTracksIfChanged()
                     if (!snapshot.isLoading) initialLoadCompleted = true
                     if (snapshot.isEnded) {
                         shouldPlay = false
@@ -560,6 +561,7 @@ private fun BoxScope.RenderPlaybackOverlays(
         },
         onDismissNextEpisode = {
             nextEpisodeAutoPlayJob?.cancel()
+            nextEpisodeCardDismissed = true
             showNextEpisodeCard = false
             nextEpisodeAutoPlaySearching = false
             nextEpisodeAutoPlaySourceName = null
@@ -663,7 +665,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         },
         onAddonSubtitleSelected = { addon ->
             isUserExplicitSubtitleSelection = true
-            selectedAddonSubtitleId = addon.id
+            selectedAddonSubtitleId = addon.selectionKey
             selectedSubtitleIndex = -1
             useCustomSubtitles = true
             preferredSubtitleSelectionApplied = true

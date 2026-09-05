@@ -93,6 +93,9 @@ object SkipIntroRepository {
         malId: String,
         episode: Int,
         requireSkipIntroEnabled: Boolean = true,
+        imdbId: String? = null,
+        imdbSeason: Int? = null,
+        imdbEpisode: Int? = null,
     ): List<SkipInterval> = coroutineScope {
         val settings = PlayerSettingsRepository.uiState.value
         if (requireSkipIntroEnabled && !settings.skipIntroEnabled) {
@@ -149,6 +152,9 @@ object SkipIntroRepository {
         kitsuId: String,
         episode: Int,
         requireSkipIntroEnabled: Boolean = true,
+        imdbId: String? = null,
+        imdbSeason: Int? = null,
+        imdbEpisode: Int? = null,
     ): List<SkipInterval> = coroutineScope {
         val settings = PlayerSettingsRepository.uiState.value
         if (requireSkipIntroEnabled && !settings.skipIntroEnabled) {

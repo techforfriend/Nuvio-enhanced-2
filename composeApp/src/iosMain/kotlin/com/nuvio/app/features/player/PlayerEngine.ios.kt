@@ -247,6 +247,10 @@ actual fun PlatformPlayerSurface(
                 }
             }
 
+            override fun applyAudioLanguagePreferences(languages: List<String>) {
+                bridge.applyAudioLanguagePreferences(languages)
+            }
+
             override fun selectSubtitleTrack(index: Int) {
                 InAppLogger.info("Player/iOS", "select subtitle track index=$index")
                 if (index < 0) {
