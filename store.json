@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.15",
+          "buildVersion": "120",
+          "date": "2026-09-09T13:20:51Z",
+          "localizedDescription": "## Upstream changelog:\r\n- fix(auth): synchronize shared client initialization @tapframe\r\n- fix(home): restore hero position when switching profiles @tapframe\r\n- fix(playback): disable play when no source is available @tapframe\r\n- fix(home): reduce hero height without continue watching @tapframe\r\n- Fix NetworkOnMainThreadException when starting a download (#1893) @Axl-Lvy\r\n- feat: custom static colours @tapframe\r\n- feat(members): custom gradient @tapframe\r\n- Added Russian translation (#1886) @zamalatb\r\n- fix(downloads): exclude foreground service from playstore builds @tapframe\r\n- fix(player): preserve each foreground service start notification @tapframe\r\n- fix(player): synchronize native subtitle rendering @tapframe\r\n- fix(player): resolve subtitle formats off the main thread @tapframe\r\n- feat(ui): unify skeleton loading states @tapframe\r\n- perf(home): improve lazy list item reuse @tapframe\r\n- perf(startup): avoid redundant collection and catalog processing @tapframe\r\n- perf(ios): release temporary GIF decoding resources @tapframe\r\n- perf(loading): cache bundled animation resource reads @tapframe\r\n- perf(ui): defer loading and parallax state reads @tapframe\r\n- fix(streams): refresh resume position Fixes #1866 @tapframe\r\n- fix(android): background downloads @tapframe\r\n\r\n## Enhanced changelog:\r\n- All changes from the upstream\r\n- fix(discover): keep discover filters visible while scrolling @luqmanfadlli\r\n- fix(navigation): hide native navigation bar on stream route @albertovinaroz\r\n- fix(calendar): open series detail at selected episode from library calendar @luqmanfadlli\r\n- fix(calendar): load calendar releases on demand by month @luqmanfadlli\r\n- feat(calendar): add swipe calendar month navigation @luqmanfadlli\r\n- feat(player): auto-show subtitles on rewind and mute @albertovinaroz\r\n- fix(details): stop hero trailer when leaving details to play something @albertovinaroz\r\n- fix(merge): reconcile upstream changes @luqmanfadlli",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.4.15/Nuvio-v0.4.15-Enhanced.ipa",
+          "size": 67833285,
+          "sha256": "a4f3b9db642efa8a9f6e85479ea6fc9f10cbcebd5a5397883319e968cf0be333",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.14",
           "buildVersion": "118",
           "date": "2026-09-05T11:51:54Z",
