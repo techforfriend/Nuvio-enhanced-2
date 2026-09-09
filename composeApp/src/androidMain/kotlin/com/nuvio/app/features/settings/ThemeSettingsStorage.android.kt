@@ -16,6 +16,7 @@ import kotlinx.serialization.json.put
 actual object ThemeSettingsStorage {
     private const val preferencesName = "nuvio_theme_settings"
     private const val selectedThemeKey = "selected_theme"
+    private const val customThemeColorsKey = "custom_theme_colors"
     private const val amoledEnabledKey = "amoled_enabled"
     private const val liquidGlassNativeTabBarEnabledKey = "liquid_glass_native_tab_bar_enabled"
     private const val dynamicArtworkBackgroundEnabledKey = "dynamic_artwork_background_enabled"
@@ -25,6 +26,7 @@ actual object ThemeSettingsStorage {
     private const val NAV_BAR_STYLE_KEY = "nav_bar_style"
     private val profileScopedSyncKeys = listOf(
         selectedThemeKey,
+        customThemeColorsKey,
         amoledEnabledKey,
         liquidGlassNativeTabBarEnabledKey,
         tabBarBehaviorKey,
@@ -47,6 +49,16 @@ actual object ThemeSettingsStorage {
         preferences
             ?.edit()
             ?.putString(ProfileScopedKey.of(selectedThemeKey), themeName)
+            ?.apply()
+    }
+
+    actual fun loadCustomThemeColors(): String? =
+        preferences?.getString(ProfileScopedKey.of(customThemeColorsKey), null)
+
+    actual fun saveCustomThemeColors(colors: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(customThemeColorsKey), colors)
             ?.apply()
     }
 
@@ -149,6 +161,7 @@ actual object ThemeSettingsStorage {
 
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {
         loadSelectedTheme()?.let { put(selectedThemeKey, encodeSyncString(it)) }
+        loadCustomThemeColors()?.let { put(customThemeColorsKey, encodeSyncString(it)) }
         loadAmoledEnabled()?.let { put(amoledEnabledKey, encodeSyncBoolean(it)) }
         loadLiquidGlassNativeTabBarEnabled()?.let { put(liquidGlassNativeTabBarEnabledKey, encodeSyncBoolean(it)) }
         loadTabBarBehavior()?.let { put(tabBarBehaviorKey, encodeSyncString(it)) }
@@ -163,6 +176,7 @@ actual object ThemeSettingsStorage {
         }?.apply()
 
         payload.decodeSyncString(selectedThemeKey)?.let(::saveSelectedTheme)
+        payload.decodeSyncString(customThemeColorsKey)?.let(::saveCustomThemeColors)
         payload.decodeSyncBoolean(amoledEnabledKey)?.let(::saveAmoledEnabled)
         payload.decodeSyncBoolean(liquidGlassNativeTabBarEnabledKey)?.let(::saveLiquidGlassNativeTabBarEnabled)
         payload.decodeSyncString(tabBarBehaviorKey)?.let(::saveTabBarBehavior)

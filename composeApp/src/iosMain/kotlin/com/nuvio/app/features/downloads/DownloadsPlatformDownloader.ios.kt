@@ -58,6 +58,7 @@ internal actual object DownloadsPlatformDownloader {
         onProgress: (downloadedBytes: Long, totalBytes: Long?) -> Unit,
         onSuccess: (localFileUri: String, totalBytes: Long?) -> Unit,
         onFailure: (message: String) -> Unit,
+        onPaused: () -> Unit,
     ): DownloadsTaskHandle {
         IosBackgroundDownloadCoordinator.startOrResume(
             downloadId = request.downloadId,
@@ -67,6 +68,13 @@ internal actual object DownloadsPlatformDownloader {
         )
         return IosDownloadsTaskHandle(request.downloadId)
     }
+
+    actual fun restoreItem(item: DownloadItem): DownloadItem =
+        if (item.status == DownloadStatus.Downloading) {
+            item.copy(status = DownloadStatus.Paused, errorMessage = null)
+        } else {
+            item
+        }
 
     actual fun removeFile(localFileUri: String?): Boolean {
         if (localFileUri.isNullOrBlank()) return false
