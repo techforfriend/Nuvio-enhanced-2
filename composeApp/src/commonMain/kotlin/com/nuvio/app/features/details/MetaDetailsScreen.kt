@@ -407,6 +407,7 @@ fun MetaDetailsScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .detailsContentReveal(displayedMeta != null)
                 .then(
                     if (selectedEpisodeZoomAnchor != null) {
                         Modifier.hazeSource(state = episodeOverlayHazeState)

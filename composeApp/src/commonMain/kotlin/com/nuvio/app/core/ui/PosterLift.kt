@@ -1,6 +1,7 @@
 package com.nuvio.app.core.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.RememberObserver
@@ -8,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -21,6 +23,8 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalGraphicsContext
 import androidx.compose.ui.unit.Dp
 
+internal val LocalPosterClickAnchor = staticCompositionLocalOf<((PosterZoomAnchor) -> Unit)?> { null }
+
 internal class PosterLiftSource(private val graphicsContext: GraphicsContext) : RememberObserver {
     val layer = graphicsContext.createGraphicsLayer()
     var bounds: Rect? = null
@@ -28,8 +32,11 @@ internal class PosterLiftSource(private val graphicsContext: GraphicsContext) : 
         private set
     private var rememberCount = 0
 
+    val canLift: Boolean
+        get() = rememberCount > 0 && !layer.isReleased && layer.size.width > 0 && layer.size.height > 0
+
     fun lift(): Boolean {
-        if (rememberCount == 0 || layer.isReleased || layer.size.width <= 0 || layer.size.height <= 0) return false
+        if (!canLift) return false
         isLifted = true
         return true
     }
@@ -67,6 +74,7 @@ internal fun Modifier.posterCardClickable(
 ): Modifier {
     val graphicsContext = LocalGraphicsContext.current
     val source = remember(graphicsContext, zoomImageUrl) { PosterLiftSource(graphicsContext) }
+    val onPosterClickAnchor = LocalPosterClickAnchor.current
     val posterModifier = Modifier
         .drawWithContent {
             source.layer.record { this@drawWithContent.drawContent() }
@@ -85,7 +93,18 @@ internal fun Modifier.posterCardClickable(
     if (onClick == null && onLongClick == null) return posterModifier
     return posterModifier
         .combinedClickable(
-            onClick = { onClick?.invoke() },
+            interactionSource = null,
+            indication = if (onPosterClickAnchor == null) LocalIndication.current else null,
+            onClick = {
+                if (onClick != null) {
+                    source.bounds?.let { bounds ->
+                        onPosterClickAnchor?.invoke(
+                            PosterZoomAnchor(bounds, zoomImageUrl, zoomCornerRadius).also { it.source = source },
+                        )
+                    }
+                    onClick()
+                }
+            },
             onLongClick = onLongClick?.let { longClick ->
                 {
                     source.bounds?.let { cardBounds ->
