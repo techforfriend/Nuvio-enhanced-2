@@ -5,6 +5,7 @@ import com.nuvio.app.core.ui.CustomThemeColors
 import com.nuvio.app.core.ui.NativeTabBridge
 import com.nuvio.app.core.ui.ThemeColors
 import com.nuvio.app.features.membership.MemberAccessRepository
+import com.nuvio.app.features.membership.resolveCustomThemeColors
 import com.nuvio.app.features.membership.resolveAppTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -93,7 +94,6 @@ object ThemeSettingsRepository {
         }
         _selectedThemePreference.value = theme
         _customThemePreference.value = CustomThemeColors.decode(ThemeSettingsStorage.loadCustomThemeColors())
-        _customThemeColors.value = _customThemePreference.value
         applyEffectiveTheme()
         _amoledEnabled.value = ThemeSettingsStorage.loadAmoledEnabled() ?: false
         // The four-way behavior replaced the old on/off toggle; fall back to it for existing profiles.
@@ -114,9 +114,15 @@ object ThemeSettingsRepository {
 
     fun setCustomTheme(colors: CustomThemeColors) {
         ensureLoaded()
-        _customThemePreference.value = colors
-        _customThemeColors.value = colors
-        ThemeSettingsStorage.saveCustomThemeColors(colors.encode())
+        val selectedColors = resolveCustomThemeColors(
+            colors,
+            MemberAccessRepository.access.value.tier,
+        )
+        ThemeSettingsStorage.saveCustomThemeColors(selectedColors.encode())
+        ThemeSettingsStorage.saveSelectedTheme(AppTheme.CUSTOM.name)
+        _customThemePreference.value = selectedColors
+        _selectedThemePreference.value = AppTheme.CUSTOM
+        applyEffectiveTheme()
     }
 
     fun setTheme(theme: AppTheme) {
@@ -192,12 +198,16 @@ object ThemeSettingsRepository {
     }
 
     private fun applyEffectiveTheme() {
+        val access = MemberAccessRepository.access.value
         val effective = resolveAppTheme(
             selectedTheme = _selectedThemePreference.value,
-            entitlements = MemberAccessRepository.access.value.entitlements,
+            entitlements = access.entitlements,
         )
+        _customThemeColors.value = resolveCustomThemeColors(_customThemePreference.value, access.tier)
         _selectedTheme.value = effective
-        NativeTabBridge.publishAccentColor(effective.nativeTabAccentHex())
+        NativeTabBridge.publishAccentColor(
+            ThemeColors.getColorPalette(effective, _customThemeColors.value).nativeAccentHex,
+        )
     }
 }
 
