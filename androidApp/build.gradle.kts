@@ -114,8 +114,11 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            val minifyRelease = providers.gradleProperty("releaseMinifyEnabled")
+                .map(String::toBooleanStrict)
+                .getOrElse(true)
+            isMinifyEnabled = minifyRelease
+            isShrinkResources = minifyRelease
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "../composeApp/proguard-rules.pro",
