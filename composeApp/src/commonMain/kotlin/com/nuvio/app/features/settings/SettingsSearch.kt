@@ -983,7 +983,7 @@ private fun addContinueWatchingRows(
 
 internal fun LazyListScope.settingsSearchRootContent(
     query: String,
-    entries: List<SettingsSearchEntry>,
+    entries: @Composable () -> List<SettingsSearchEntry>,
     isTablet: Boolean,
     showSearchField: Boolean,
     animateSearchField: Boolean,
@@ -1003,12 +1003,11 @@ internal fun LazyListScope.settingsSearchRootContent(
 
     if (query.isBlank()) return
 
-    val results = settingsSearchResults(
-        query = query,
-        entries = entries,
-    )
-
     item(key = "settings-search-results") {
+        val results = settingsSearchResults(
+            query = query,
+            entries = entries(),
+        )
         if (results.isEmpty()) {
             SettingsSearchEmptyState(isTablet = isTablet)
         } else {
