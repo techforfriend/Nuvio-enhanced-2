@@ -103,6 +103,10 @@ fun HomeHeroSection(
     val coroutineScope = rememberCoroutineScope()
     val autoScrollPage = pagerState.currentPage
 
+    LaunchedEffect(pagerState) {
+        pagerState.scrollToPage(pagerState.currentPage)
+    }
+
     LaunchedEffect(autoScrollPage, items.size) {
         if (items.size <= 1) return@LaunchedEffect
         delay(HERO_AUTO_SCROLL_INTERVAL_MS)
