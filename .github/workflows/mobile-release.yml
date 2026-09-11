@@ -46,7 +46,6 @@ jobs:
     outputs:
       tag: ${{ steps.release.outputs.tag }}
       version: ${{ steps.release.outputs.version }}
-      release_commit: ${{ steps.release.outputs.release_commit }}
     env:
       GH_TOKEN: ${{ github.token }}
       RELEASE_PROPERTIES_BASE64: ${{ secrets.NUVIO_LOCAL_PROPERTIES_BASE64 }}
@@ -308,7 +307,7 @@ jobs:
       RELEASE_MODE: ${{ inputs.mode }}
       RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
       RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
-      RELEASE_COMMIT: ${{ needs.prepare.outputs.release_commit }}
+      RELEASE_BRANCH: ${{ github.ref_name }}
 
     steps:
       - name: Download release artifacts
@@ -328,7 +327,7 @@ jobs:
           release_args=(
             "${RELEASE_TAG}"
             --repo "${GITHUB_REPOSITORY}"
-            --target "${RELEASE_COMMIT}"
+            --target "${RELEASE_BRANCH}"
             --title "${RELEASE_VERSION}"
             --notes-file release-assets/release-notes.md
           )

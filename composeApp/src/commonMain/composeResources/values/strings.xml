@@ -1029,6 +1029,8 @@
     <string name="settings_meta_cinematic_background_description">Blurred backdrop behind content, similar to stream screen.</string>
     <string name="settings_meta_background_mode">Background Mode</string>
     <string name="settings_meta_background_mode_description">Choose how artwork appears behind metadata pages.</string>
+    <string name="settings_meta_poster_transition">Poster Transition</string>
+    <string name="settings_meta_poster_transition_description">Expand and blur posters when opening details.</string>
     <string name="settings_meta_background_mode_normal">Normal</string>
     <string name="settings_meta_background_mode_normal_description">Use the standard app background.</string>
     <string name="settings_meta_background_mode_cinematic">Cinematic</string>
@@ -1401,6 +1403,7 @@
     <string name="settings_tracking_simkl_library_description">Use your Simkl plan-to-watch and status lists.</string>
     <string name="settings_tracking_nuvio_progress_description">Resume with progress stored by Nuvio Sync.</string>
     <string name="settings_tracking_trakt_progress_description">Resume with playback progress from Trakt.</string>
+    <string name="settings_tracking_trakt_progress_required">Available when Trakt is the Watch Progress source</string>
     <string name="settings_tracking_simkl_progress_description">Resume with playback progress from Simkl.</string>
     <string name="settings_tracking_tmdb_recommendations_description">Use TMDB recommendations on details pages.</string>
     <string name="settings_tracking_trakt_recommendations_description">Use personalized related titles from Trakt.</string>
