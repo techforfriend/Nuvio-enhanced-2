@@ -76,7 +76,6 @@ actual object PluginRepository {
     actual val uiState: StateFlow<PluginsUiState> = _uiState.asStateFlow()
 
     private var initialized = false
-    private var pulledFromServer = false
     private var currentProfileId = 1
     private val activeRefreshJobs = mutableMapOf<String, Job>()
     private val persistenceGeneration = atomic(0L)
@@ -106,7 +105,6 @@ actual object PluginRepository {
         cancelActiveRefreshes()
         currentProfileId = effectiveProfileId
         initialized = false
-        pulledFromServer = false
         _uiState.value = PluginsUiState()
     }
 
@@ -115,7 +113,6 @@ actual object PluginRepository {
         persistenceGeneration.incrementAndGet()
         currentProfileId = 1
         initialized = false
-        pulledFromServer = false
         _uiState.value = PluginsUiState()
     }
 
@@ -132,16 +129,6 @@ actual object PluginRepository {
                 .decodeList<PluginRow>()
 
             val urls = dedupeManifestUrls(rows.map { it.url })
-            if (urls.isEmpty() && !pulledFromServer) {
-                val localUrls = _uiState.value.repositories.map { it.manifestUrl }
-                if (localUrls.isNotEmpty()) {
-                    initialize()
-                    pulledFromServer = true
-                    pushToServer()
-                    return
-                }
-            }
-
             val existingState = _uiState.value
             val existingReposByUrl = existingState.repositories.associateBy { it.manifestUrl }
             val nowEpochMs = currentEpochMillis()
@@ -181,7 +168,6 @@ actual object PluginRepository {
                 refreshRepository(repository.manifestUrl, pushAfterRefresh = false)
             }
 
-            pulledFromServer = true
             initialized = true
         }.onFailure { error ->
             log.e(error) { "pullFromServer failed" }
@@ -264,6 +250,7 @@ actual object PluginRepository {
                 }
 
                 _uiState.update { state ->
+                    if (state.repositories.none { it.manifestUrl == manifestUrl }) return@update state
                     result.fold(
                         onSuccess = { (repo, scrapers) ->
                             val updatedRepos = state.repositories.map { existing ->
@@ -580,7 +567,6 @@ actual object PluginRepository {
 
         if (currentProfileId != profileId) {
             cancelActiveRefreshes()
-            pulledFromServer = false
         }
 
         currentProfileId = profileId

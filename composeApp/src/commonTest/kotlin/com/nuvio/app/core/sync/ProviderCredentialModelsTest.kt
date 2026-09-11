@@ -2,14 +2,12 @@ package com.nuvio.app.core.sync
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 class ProviderCredentialModelsTest {
     @Test
-    fun `complete remote snapshot does not require seeding`() {
+    fun `complete remote snapshot replaces cached credentials`() {
         val snapshot = ProviderCredentialSnapshot(
             profileId = 1,
             values = listOf(
@@ -22,11 +20,11 @@ class ProviderCredentialModelsTest {
             SupabaseProviderCredential("animeskip", buildJsonObject { put("client_id", "remote") }),
         )
 
-        assertFalse(shouldSeedProviderCredentials(snapshot, rows))
+        assertEquals(listOf("remote", "remote"), snapshot.mergeRemote(rows).values.map { it.value })
     }
 
     @Test
-    fun `missing remote provider requires seeding`() {
+    fun `missing remote provider clears its cached credential`() {
         val snapshot = ProviderCredentialSnapshot(
             profileId = 1,
             values = listOf(
@@ -38,7 +36,7 @@ class ProviderCredentialModelsTest {
             SupabaseProviderCredential("debrid:torbox", buildJsonObject { put("api_key", "remote") }),
         )
 
-        assertTrue(shouldSeedProviderCredentials(snapshot, rows))
+        assertEquals(listOf("remote", ""), snapshot.mergeRemote(rows).values.map { it.value })
     }
 
     @Test
@@ -64,7 +62,20 @@ class ProviderCredentialModelsTest {
         val merged = local.mergeRemote(remote)
 
         assertEquals("remote-torbox", merged.values[0].value)
-        assertEquals("local-anime", merged.values[1].value)
+        assertEquals("", merged.values[1].value)
+    }
+
+    @Test
+    fun `empty remote snapshot clears all cached credentials`() {
+        val local = ProviderCredentialSnapshot(
+            profileId = 1,
+            values = listOf(
+                ProviderCredentialValue("debrid:torbox", "api_key", "local-torbox"),
+                ProviderCredentialValue("animeskip", "client_id", "local-anime"),
+            ),
+        )
+
+        assertEquals(listOf("", ""), local.mergeRemote(emptyList()).values.map { it.value })
     }
 
     @Test
