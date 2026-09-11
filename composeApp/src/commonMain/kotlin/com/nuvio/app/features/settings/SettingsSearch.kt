@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.isIos
+import com.nuvio.app.supportsPosterNavigationMotion
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -749,6 +750,17 @@ internal fun settingsSearchEntries(
     }
 
     val detailAppearanceSection = stringResource(Res.string.settings_meta_section_appearance)
+    if (supportsPosterNavigationMotion) {
+        addRow(
+            page = SettingsPage.MetaScreen,
+            key = "meta-poster-transition",
+            title = stringResource(Res.string.settings_meta_poster_transition),
+            description = stringResource(Res.string.settings_meta_poster_transition_description),
+            pageLabel = detailPage,
+            section = detailAppearanceSection,
+            icon = Icons.Rounded.Tune,
+        )
+    }
     listOf(
         PlaybackSearchRow("meta-background-mode", stringResource(Res.string.settings_meta_background_mode), stringResource(Res.string.settings_meta_background_mode_description)),
         PlaybackSearchRow("meta-tabs", stringResource(Res.string.settings_meta_tab_layout), stringResource(Res.string.settings_meta_tab_layout_description)),

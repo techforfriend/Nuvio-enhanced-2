@@ -2,11 +2,10 @@ package com.nuvio.app.core.ui
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.ClipOp
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
@@ -34,6 +32,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
+import com.nuvio.app.core.ui.glass.GlassBarSurface
 import com.nuvio.app.core.ui.jelly.JellyMotion
 import com.nuvio.app.core.ui.jelly.JellyTabRow
 import com.nuvio.app.core.ui.jelly.JellyTabTargets
@@ -41,7 +40,6 @@ import com.nuvio.app.core.ui.jelly.drawJellyGlow
 import com.nuvio.app.core.ui.jelly.drawJellyPill
 import com.nuvio.app.core.ui.jelly.jellyPillPath
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -51,6 +49,8 @@ internal actual fun FloatingNavigationBar(
     modifier: Modifier,
     scrollState: NuvioNavBarScrollState?,
     hazeState: HazeState?,
+    contentPadding: PaddingValues,
+    compactSize: Boolean,
 ) {
     if (items.isEmpty()) return
     val tokens = MaterialTheme.nuvio
@@ -65,9 +65,8 @@ internal actual fun FloatingNavigationBar(
     val motion = remember { JellyMotion(selectedIndex, items.size) }
     val currentItems by rememberUpdatedState(items)
     val density = LocalDensity.current
-    val trackHeight = 48.dp + 16.dp * labelFraction
+    val trackHeight = 48.dp + (if (compactSize) 8.dp else 16.dp) * labelFraction
     val horizontalPadding = 58.dp - 30.dp * labelFraction
-    val bottomPadding = nuvioBottomNavigationBarInsets().asPaddingValues().calculateBottomPadding()
 
     LaunchedEffect(selectedIndex, items.size) {
         motion.select(selectedIndex)
@@ -86,7 +85,7 @@ internal actual fun FloatingNavigationBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = bottomPadding + nuvioBottomNavigationExtraVerticalPadding + 8.dp)
+            .padding(contentPadding)
             .padding(horizontal = horizontalPadding),
         contentAlignment = Alignment.BottomCenter,
     ) {
@@ -160,19 +159,13 @@ internal actual fun FloatingNavigationBar(
                         Box(
                             Modifier.matchParentSize()
                                 .clip(RoundedCornerShape(50))
-                                .then(
-                                    if (hazeState != null) {
-                                        Modifier.hazeEffect(state = hazeState) { blurRadius = 24.dp }
-                                    } else {
-                                        Modifier
-                                    },
-                                )
-                                .background(Color(0xFF1C1C1E).copy(alpha = if (hazeState != null) 0.55f else 0.82f))
                                 .drawWithContent {
                                     drawContent()
                                     drawJellyGlow(motion.frame, accentColor)
                                 },
-                        )
+                        ) {
+                            GlassBarSurface(hazeState, Modifier.matchParentSize())
+                        }
                         Box(
                             Modifier.matchParentSize().drawWithContent {
                                 if (selectedIndex >= 0) {
@@ -184,7 +177,7 @@ internal actual fun FloatingNavigationBar(
                                 }
                             },
                         ) {
-                            JellyTabRow(items, labelFraction, motion, active = false, modifier = Modifier.matchParentSize())
+                            JellyTabRow(items, labelFraction, motion, active = false, compactSize = compactSize, modifier = Modifier.matchParentSize())
                         }
                         if (selectedIndex >= 0) {
                             Box(
@@ -194,10 +187,10 @@ internal actual fun FloatingNavigationBar(
                                         drawJellyPill(motion.frame, items.size, selectedSurface, accentColor) { drawContent() }
                                     },
                             ) {
-                                JellyTabRow(items, labelFraction, motion, active = true, modifier = Modifier.matchParentSize())
+                                JellyTabRow(items, labelFraction, motion, active = true, compactSize = compactSize, modifier = Modifier.matchParentSize())
                             }
                         }
-                        JellyTabTargets(items, labelFraction, motion, Modifier.matchParentSize())
+                        JellyTabTargets(items, labelFraction, motion, compactSize, Modifier.matchParentSize())
                     }
                 }
             }

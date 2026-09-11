@@ -1,5 +1,6 @@
 package com.nuvio.app.core.ui
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dev.chrisbanes.haze.HazeState
@@ -10,8 +11,10 @@ internal actual fun FloatingNavigationBar(
     modifier: Modifier,
     scrollState: NuvioNavBarScrollState?,
     hazeState: HazeState?,
+    contentPadding: PaddingValues,
+    compactSize: Boolean,
 ) {
-    NuvioNavigationBar(modifier, scrollState, hazeState) {
+    NuvioNavigationBar(modifier, scrollState, hazeState, contentPadding, compactSize) {
         items.forEach { item ->
             when {
                 item.icon != null -> NavItem(
