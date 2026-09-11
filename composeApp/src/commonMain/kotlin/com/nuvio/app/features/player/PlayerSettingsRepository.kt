@@ -74,7 +74,7 @@ data class PlayerSettingsUiState(
     val randomEpisodesIncludeWatched: Boolean = false,
     val streamAutoPlayNextEpisodeFallbackEnabled: Boolean = true,
     val streamAutoPlayPreferBingeGroup: Boolean = true,
-    val streamAutoPlayReuseBingeGroup: Boolean = true,
+    val streamAutoPlayReuseBingeGroup: Boolean = false,
     val nextEpisodeThresholdMode: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE,
     val nextEpisodeThresholdPercent: Float = 99f,
     val nextEpisodeThresholdMinutesBeforeEnd: Float = 2f,
@@ -144,7 +144,7 @@ object PlayerSettingsRepository {
     private var randomEpisodesIncludeWatched = false
     private var streamAutoPlayNextEpisodeFallbackEnabled = true
     private var streamAutoPlayPreferBingeGroup = true
-    private var streamAutoPlayReuseBingeGroup = true
+    private var streamAutoPlayReuseBingeGroup = false
     private var nextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE
     private var nextEpisodeThresholdPercent = 99f
     private var nextEpisodeThresholdMinutesBeforeEnd = 2f
@@ -218,7 +218,7 @@ object PlayerSettingsRepository {
         streamAutoPlayNextEpisodeEnabled = false
         streamAutoPlayNextEpisodeFallbackEnabled = true
         streamAutoPlayPreferBingeGroup = true
-        streamAutoPlayReuseBingeGroup = true
+        streamAutoPlayReuseBingeGroup = false
         nextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE
         nextEpisodeThresholdPercent = 99f
         nextEpisodeThresholdMinutesBeforeEnd = 2f
@@ -344,7 +344,7 @@ object PlayerSettingsRepository {
         streamAutoPlayNextEpisodeEnabled = PlayerSettingsStorage.loadStreamAutoPlayNextEpisodeEnabled() ?: false
         streamAutoPlayNextEpisodeFallbackEnabled = PlayerSettingsStorage.loadStreamAutoPlayNextEpisodeFallbackEnabled() ?: true
         streamAutoPlayPreferBingeGroup = PlayerSettingsStorage.loadStreamAutoPlayPreferBingeGroup() ?: true
-        streamAutoPlayReuseBingeGroup = PlayerSettingsStorage.loadStreamAutoPlayReuseBingeGroup() ?: true
+        streamAutoPlayReuseBingeGroup = PlayerSettingsStorage.loadStreamAutoPlayReuseBingeGroup() ?: false
         nextEpisodeThresholdMode = PlayerSettingsStorage.loadNextEpisodeThresholdMode()
             ?.let { runCatching { NextEpisodeThresholdMode.valueOf(it) }.getOrNull() }
             ?: NextEpisodeThresholdMode.PERCENTAGE

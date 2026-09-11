@@ -47,6 +47,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -914,11 +915,16 @@ internal fun StreamList(
     val hasAnyStreams = filteredGroups.any { it.streams.isNotEmpty() }
     val anyLoading = filteredGroups.any { it.isLoading }
     val torrentNotSupportedText = stringResource(Res.string.streams_torrent_not_supported)
+    val fetchingText = stringResource(Res.string.streams_fetching)
+    val findingStreamsText = stringResource(Res.string.streams_finding_streams)
+    val checkingMoreAddonsText = stringResource(Res.string.streams_checking_more_addons)
+    val formatStreamSize = rememberStreamSizeLabelFormat()
     val streamBadgeSettings by remember {
         StreamBadgeSettingsRepository.ensureLoaded()
         StreamBadgeSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
 
+    CompositionLocalProvider(LocalStreamSizeLabelFormat provides formatStreamSize) {
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(
@@ -930,7 +936,7 @@ internal fun StreamList(
         when {
             hasGroups && anyLoading && !hasAnyStreams -> {
                 item {
-                    LoadingStateBlock()
+                    LoadingStateBlock(findingStreamsText = findingStreamsText)
                 }
             }
 
@@ -952,6 +958,7 @@ internal fun StreamList(
                         showAddonLogo = streamBadgeSettings.showAddonLogo,
                         badgePlacement = streamBadgeSettings.badgePlacement,
                         torrentNotSupportedText = torrentNotSupportedText,
+                        fetchingText = fetchingText,
                         onStreamSelected = onStreamSelected,
                         onStreamLongPress = onStreamLongPress,
                         resumePositionMs = resumePositionMs,
@@ -960,7 +967,7 @@ internal fun StreamList(
                 }
                 if (anyLoading) {
                     item {
-                        FooterLoadingBlock()
+                        FooterLoadingBlock(checkingMoreAddonsText = checkingMoreAddonsText)
                     }
                 }
                 item {
@@ -968,6 +975,7 @@ internal fun StreamList(
                 }
             }
         }
+    }
     }
 }
 
@@ -981,6 +989,7 @@ private fun LazyListScope.streamSection(
     showAddonLogo: Boolean,
     badgePlacement: StreamBadgePlacement,
     torrentNotSupportedText: String,
+    fetchingText: String,
     onStreamSelected: (stream: StreamItem, resumePositionMs: Long?, resumeProgressFraction: Float?) -> Unit,
     onStreamLongPress: (StreamItem) -> Unit,
     resumePositionMs: Long?,
@@ -993,6 +1002,7 @@ private fun LazyListScope.streamSection(
             StreamSectionHeader(
                 addonName = group.addonName,
                 isLoading = group.isLoading,
+                fetchingText = fetchingText,
             )
         }
     }
@@ -1084,6 +1094,7 @@ internal fun streamCardRenderKey(
 private fun StreamSectionHeader(
     addonName: String,
     isLoading: Boolean,
+    fetchingText: String,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -1109,7 +1120,7 @@ private fun StreamSectionHeader(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = stringResource(Res.string.streams_fetching),
+                    text = fetchingText,
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -1260,7 +1271,10 @@ private fun Long.toPlaybackClock(): String {
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun LoadingStateBlock(modifier: Modifier = Modifier) {
+private fun LoadingStateBlock(
+    findingStreamsText: String,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -1273,7 +1287,7 @@ private fun LoadingStateBlock(modifier: Modifier = Modifier) {
             modifier = Modifier.size(32.dp),
         )
         Text(
-            text = stringResource(Res.string.streams_finding_streams),
+            text = findingStreamsText,
             style = MaterialTheme.typography.bodySmall.copy(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
@@ -1341,7 +1355,10 @@ private fun EmptyStateBlock(
 }
 
 @Composable
-private fun FooterLoadingBlock(modifier: Modifier = Modifier) {
+private fun FooterLoadingBlock(
+    checkingMoreAddonsText: String,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -1355,7 +1372,7 @@ private fun FooterLoadingBlock(modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = stringResource(Res.string.streams_checking_more_addons),
+            text = checkingMoreAddonsText,
             style = MaterialTheme.typography.bodySmall.copy(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,

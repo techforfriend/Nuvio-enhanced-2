@@ -947,7 +947,7 @@ actual object PlayerSettingsStorage {
         preferences?.let { sharedPreferences ->
             val key = ProfileScopedKey.of(streamAutoPlayReuseBingeGroupKey)
             if (sharedPreferences.contains(key)) {
-                sharedPreferences.getBoolean(key, true)
+                sharedPreferences.getBoolean(key, false)
             } else {
                 null
             }
