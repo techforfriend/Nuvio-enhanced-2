@@ -49,15 +49,40 @@ class PosterOpenMotionTest {
         val viewport = Rect(0f, 177f, 1180f, 2556f)
         for (artwork in listOf(Size(330f, 459f), Size(720f, 405f), Size(300f, 300f))) {
             val start = Rect(400f, 900f, 400f + artwork.width, 900f + artwork.height)
-            for (millis in 0..260) {
+            for (millis in 16..260) {
                 val elapsed = millis.toFloat()
                 val bounds = PosterOpenMotion.bounds(start, viewport, elapsed)
                 val radius = PosterOpenMotion.artworkBlurRadius(artwork, bounds.size, elapsed)
                 val screenRadius = bounds.width * PosterOpenMotion.artworkBlurFraction(elapsed)
-                assertEquals(screenRadius, radius.width * bounds.width / artwork.width, 0.0001f)
-                assertEquals(screenRadius, radius.height * bounds.height / artwork.height, 0.0001f)
+                assertEquals(screenRadius, renderedSigma(radius.width) * bounds.width / artwork.width, 0.0001f)
+                assertEquals(screenRadius, renderedSigma(radius.height) * bounds.height / artwork.height, 0.0001f)
             }
         }
+    }
+
+    @Test
+    fun `poster blur and fade follow the first moving reference frames`() {
+        val start = Rect(738f, 923f, 1069f, 1385f)
+        val end = Rect(0f, 177f, 1180f, 2556f)
+        val samples = listOf(
+            Triple(16.666f, 1.56f, 0.969f),
+            Triple(33.333f, 7.42f, 0.847f),
+            Triple(51.666f, 14.62f, 0.739f),
+            Triple(66.666f, 16.10f, 0.739f),
+            Triple(83.333f, 28.06f, 0.626f),
+            Triple(100f, 43.76f, 0.509f),
+            Triple(116.666f, 61.85f, 0.397f),
+            Triple(133.333f, 85.74f, 0.285f),
+        )
+        val fadeErrors = samples.map { (millis, sigma, alpha) ->
+            val bounds = PosterOpenMotion.bounds(start, end, millis)
+            val radius = PosterOpenMotion.artworkBlurRadius(start.size, bounds.size, millis)
+            val screenSigma = renderedSigma(radius.width) * bounds.width / start.width
+            assertEquals(sigma, screenSigma, 3f)
+            PosterOpenMotion.artworkAlpha(millis) - alpha
+        }
+        assertTrue(sqrt(fadeErrors.sumOf { (it * it).toDouble() } / fadeErrors.size) < 0.035)
+        assertEquals(Size.Zero, PosterOpenMotion.artworkBlurRadius(start.size, start.size, 0f))
     }
 
     @Test
@@ -69,12 +94,13 @@ class PosterOpenMotionTest {
             Triple(133f, 0.953f, 0.342f),
         )
         for ((millis, scale, alpha) in samples) {
-            assertEquals(scale, PosterOpenMotion.backgroundScale(millis), 0.012f)
-            assertEquals(alpha, PosterOpenMotion.backgroundAlpha(millis), 0.04f)
+            assertEquals(scale, PosterOpenMotion.backgroundScale(millis), 0.002f)
+            assertEquals(alpha, PosterOpenMotion.backgroundAlpha(millis), 0.045f)
         }
         assertEquals(1f, PosterOpenMotion.backgroundScale(0f))
         assertEquals(0.9f, PosterOpenMotion.backgroundScale(550f))
-        assertEquals(4f, PosterOpenMotion.backgroundBlurDp(100f))
+        val radius = PosterOpenMotion.blurRadiusForSigma(PosterOpenMotion.backgroundBlurSigmaDp(100f) * 3f)
+        assertEquals(12.54f, renderedSigma(radius) * PosterOpenMotion.backgroundScale(100f), 1.1f)
     }
 
     @Test
@@ -84,4 +110,7 @@ class PosterOpenMotionTest {
         assertEquals(0f, PosterOpenMotion.artworkAlpha(260f))
         assertEquals(0f, PosterOpenMotion.backgroundAlpha(300f))
     }
+
+    private fun renderedSigma(radius: Float): Float =
+        if (radius > 0f) 0.57735f * radius + 0.5f else 0f
 }

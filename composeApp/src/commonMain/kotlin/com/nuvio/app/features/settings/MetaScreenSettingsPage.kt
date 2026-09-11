@@ -56,6 +56,7 @@ import com.nuvio.app.features.details.MetaScreenSectionItem
 import com.nuvio.app.features.details.MetaScreenSectionKey
 import com.nuvio.app.features.details.MetaScreenSettingsRepository
 import com.nuvio.app.features.details.MetaScreenSettingsUiState
+import com.nuvio.app.supportsPosterNavigationMotion
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_reorder
 import nuvio.composeapp.generated.resources.action_reset
@@ -99,6 +100,8 @@ import nuvio.composeapp.generated.resources.settings_meta_overview
 import nuvio.composeapp.generated.resources.settings_meta_overview_description
 import nuvio.composeapp.generated.resources.settings_meta_production
 import nuvio.composeapp.generated.resources.settings_meta_production_description
+import nuvio.composeapp.generated.resources.settings_meta_poster_transition
+import nuvio.composeapp.generated.resources.settings_meta_poster_transition_description
 import nuvio.composeapp.generated.resources.settings_meta_section_appearance
 import nuvio.composeapp.generated.resources.settings_meta_section_sections
 import nuvio.composeapp.generated.resources.settings_meta_tab_group_format
@@ -129,6 +132,16 @@ internal fun LazyListScope.metaScreenSettingsContent(
                     selectedMode = uiState.backgroundMode,
                     onModeSelected = MetaScreenSettingsRepository::setBackgroundMode,
                 )
+                if (supportsPosterNavigationMotion) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_meta_poster_transition),
+                        description = stringResource(Res.string.settings_meta_poster_transition_description),
+                        checked = uiState.posterTransitionEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = MetaScreenSettingsRepository::setPosterTransitionEnabled,
+                    )
+                }
                 if (showHeroTrailerPlaybackSetting) {
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsSwitchRow(

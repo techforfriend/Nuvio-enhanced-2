@@ -12,12 +12,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import com.nuvio.app.supportsPosterNavigationMotion
 
 @Composable
-internal fun Modifier.detailsContentReveal(): Modifier {
-    if (!supportsPosterNavigationMotion) return this
+internal fun Modifier.detailsContentReveal(enabled: Boolean): Modifier {
+    if (!supportsPosterNavigationMotion || !enabled) return this
     val opacity = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         withFrameNanos { }
-        opacity.animateTo(1f, tween(1000, easing = CubicBezierEasing(0.5f, 0f, 0.14f, 1f)))
+        opacity.animateTo(1f, tween(350, easing = CubicBezierEasing(0.5f, 0f, 0.14f, 1f)))
     }
     return graphicsLayer {
         alpha = opacity.value

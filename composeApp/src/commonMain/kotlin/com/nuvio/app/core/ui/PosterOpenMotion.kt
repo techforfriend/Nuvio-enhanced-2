@@ -8,16 +8,17 @@ import androidx.compose.ui.geometry.lerp
 internal object PosterOpenMotion {
     const val DurationMillis = 550
     const val ContentDelayMillis = 400
-    private val expansion = CubicBezierEasing(0.35f, 0.625f, 0.192f, 1f)
-    private val dissolve = CubicBezierEasing(0.22f, 0.05f, 0.56f, 1f)
-    private val backgroundDissolve = CubicBezierEasing(0.17f, 0.21f, 0.43f, 0.97f)
-    private val blur = CubicBezierEasing(0.2f, 0f, 0.8f, 1f)
+    private val expansion = CubicBezierEasing(0.345f, 0.602f, 0.186f, 1f)
+    private val backgroundRecede = CubicBezierEasing(0.176f, 0.258f, 0.324f, 1f)
+    private val dissolve = CubicBezierEasing(0.146f, 0f, 0.538f, 1f)
+    private val backgroundDissolve = CubicBezierEasing(0.061f, 0f, 0.435f, 1f)
+    private val blur = CubicBezierEasing(0.718f, 0.392f, 0.569f, 1f)
 
     fun bounds(start: Rect, end: Rect, elapsedMillis: Float): Rect =
         lerp(start, end, expansionProgress(elapsedMillis))
 
     fun backgroundScale(elapsedMillis: Float): Float =
-        1f - 0.1f * expansionProgress(elapsedMillis)
+        1f - 0.1f * backgroundRecede.transform((elapsedMillis / DurationMillis).coerceIn(0f, 1f))
 
     fun artworkAlpha(elapsedMillis: Float): Float =
         1f - dissolve.transform((elapsedMillis / 260f).coerceIn(0f, 1f))
@@ -31,15 +32,18 @@ internal object PosterOpenMotion {
     fun artworkBlurRadius(artwork: Size, bounds: Size, elapsedMillis: Float): Size {
         val fraction = artworkBlurFraction(elapsedMillis)
         return Size(
-            artwork.width * fraction,
-            artwork.height * bounds.width / bounds.height * fraction,
+            blurRadiusForSigma(artwork.width * fraction),
+            blurRadiusForSigma(artwork.height * bounds.width / bounds.height * fraction),
         )
     }
 
-    fun backgroundBlurDp(elapsedMillis: Float): Float {
+    fun backgroundBlurSigmaDp(elapsedMillis: Float): Float {
         val progress = (elapsedMillis / 200f).coerceIn(0f, 1f)
         return 16f * progress * progress
     }
+
+    fun blurRadiusForSigma(sigma: Float): Float =
+        ((sigma - 0.5f) / 0.57735f).coerceAtLeast(0f)
 
     private fun expansionProgress(elapsedMillis: Float): Float =
         expansion.transform((elapsedMillis / DurationMillis).coerceIn(0f, 1f))

@@ -998,7 +998,7 @@ fun MetaDetailsScreen(
                     )
 
                     Box(modifier = Modifier.fillMaxSize()) {
-                        Box(Modifier.fillMaxSize().detailsContentReveal()) {
+                        Box(Modifier.fillMaxSize().detailsContentReveal(metaScreenSettingsUiState.posterTransitionEnabled)) {
                             when (backgroundMode) {
                                 MetaScreenBackgroundMode.Normal -> Unit
                                 MetaScreenBackgroundMode.Cinematic -> if (deferredMetaWorkAllowed && backdropUrl != null) {

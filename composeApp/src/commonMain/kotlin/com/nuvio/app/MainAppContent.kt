@@ -97,6 +97,7 @@ import com.nuvio.app.features.cloud.providerPosterUrl
 import com.nuvio.app.features.collection.CollectionRepository
 import com.nuvio.app.features.collection.CollectionSyncService
 import com.nuvio.app.features.details.MetaDetailsRepository
+import com.nuvio.app.features.details.MetaScreenSettingsRepository
 import com.nuvio.app.features.downloads.DownloadItem
 import com.nuvio.app.features.downloads.DownloadsRepository
 import com.nuvio.app.features.home.HomeCatalogSection
@@ -200,7 +201,12 @@ internal fun MainAppContent(
 ) {
         val navBackStack = rememberNavBackStack(navigationSavedStateConfiguration, initialRoute)
         val posterNavigation = remember { PosterNavigationState() }
-        val posterNavigationEnabled = supportsPosterNavigationMotion && onNavigate == null
+        val metaScreenSettings by remember {
+            MetaScreenSettingsRepository.ensureLoaded()
+            MetaScreenSettingsRepository.uiState
+        }.collectAsStateWithLifecycle()
+        val posterNavigationEnabled = supportsPosterNavigationMotion &&
+            metaScreenSettings.posterTransitionEnabled && onNavigate == null
         val routeDisposalDecorator = remember {
             RouteDisposalNavEntryDecorator<NavKey> { key ->
                 if (key is AppRoute) disposeRoute(key)
@@ -240,9 +246,9 @@ internal fun MainAppContent(
         val libraryScrollToTopRequests = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
         val settingsRootActionRequests = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
         val currentRoute = navBackStack.lastOrNull() as? AppRoute
-        LaunchedEffect(currentRoute) {
+        LaunchedEffect(currentRoute, posterNavigationEnabled) {
             val request = posterNavigation.active
-            if (request != null && currentRoute != request.to) posterNavigation.clear()
+            if (!posterNavigationEnabled || (request != null && currentRoute != request.to)) posterNavigation.clear()
         }
         LaunchedEffect(posterNavigation.active?.to) {
             posterNavigation.active?.to?.let { route ->

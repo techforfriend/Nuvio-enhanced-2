@@ -74,7 +74,9 @@ private fun PosterNavigationEntry(
                     scaleX = scale
                     scaleY = scale
                     alpha = PosterOpenMotion.backgroundAlpha(request.elapsedMillis)
-                    val radius = PosterOpenMotion.backgroundBlurDp(request.elapsedMillis).dp.toPx()
+                    val radius = PosterOpenMotion.blurRadiusForSigma(
+                        PosterOpenMotion.backgroundBlurSigmaDp(request.elapsedMillis).dp.toPx(),
+                    )
                     renderEffect = if (alpha > 0f && radius > 0.1f) BlurEffect(radius, radius, TileMode.Clamp) else null
                 } else if (incoming && size.width > 0f && size.height > 0f) {
                     val end = request.viewportBounds
