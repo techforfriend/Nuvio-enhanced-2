@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.16",
+          "buildVersion": "121",
+          "date": "2026-09-11T10:13:18Z",
+          "localizedDescription": "- 8f0bfc8e fix(home): settle hero carousel when returning @tapframe  \r\n- db3da891 fix(settings): require Trakt progress for continue watching window @tapframe  \r\n- 4b0ebd92 perf(ui): replace compottie spinner with native drawing @tapframe  \r\n- ab32ed3d feat(navigation): refine tablet bar and transition defaults @tapframe  \r\n- 4aa62916 feat(navigation): add reactive bottom bar glow @tapframe  \r\n- b1f22de3 feat(navigation): add shared blur transition @tapframe  \r\n- 24920167 feat(posters): lift original cards in zoom overlay @tapframe  \r\n- 8c71a6c9 feat(navigation): update bottom tab animation @tapframe  \r\n- bb1a5ffa perf(android): add root navigation baseline profile @tapframe  \r\n- 4f814036 fix(settings): defer search indexing until needed @tapframe  \r\n- [Merged English and Dutch strings.xml and translated all remaining English text into Dutch. (#1911)](https://github.com/NuvioMedia/NuvioMobile/pull/1911) @scheperr  \r\n- [i18n(el): complete and tidy up Greek translations (#1910)](https://github.com/NuvioMedia/NuvioMobile/pull/1910) @nosvasedis  \r\n- 83c409c4 fix(ci): increase iOS release timeout @tapframe  \r\n- [i18n(vi): full Vietnamese localization refresh for Mobile (#1883)](https://github.com/NuvioMedia/NuvioMobile/pull/1883) @blueocean2308  \r\n",
+          "downloadURL": "https://github.com/NuvioMedia/NuvioMobile/releases/download/0.4.16/nuvio-0.4.16-full-release.ipa",
+          "size": 51012561,
+          "sha256": "806327fab50b9565b9681bdf34b744155e57d53c5dc41dc6a7cad16108ea774a",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.15",
           "buildVersion": "120",
           "date": "2026-09-09T13:41:42Z",
