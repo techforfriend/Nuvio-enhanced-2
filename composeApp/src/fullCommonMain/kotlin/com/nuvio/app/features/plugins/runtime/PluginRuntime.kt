@@ -31,10 +31,13 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.generic_unknown
 import org.jetbrains.compose.resources.getString
 
-private const val PLUGIN_TIMEOUT_MS = 60_000L
+internal const val PLUGIN_TIMEOUT_MS = 60_000L
+internal const val MAX_CONCURRENT_PLUGINS = 4
 
 internal object PluginRuntime {
     private val json = Json { ignoreUnknownKeys = true }
+
+    fun setSearchPaused(paused: Boolean) = Unit
 
     suspend fun executePlugin(
         code: String,
@@ -43,6 +46,7 @@ internal object PluginRuntime {
         season: Int?,
         episode: Int?,
         scraperId: String,
+        respectSearchPause: Boolean = true,
     ): List<PluginRuntimeResult> = withContext(Dispatchers.Default) {
         val scraperSettingsJson = PluginStorage.loadScraperSettings(scraperId) ?: "{}"
         val scraperSettingsMap = runCatching {
@@ -85,11 +89,7 @@ internal object PluginRuntime {
 
             try {
                 jsRuntime.use {
-                    val polyfillCode = JsBindings.buildPolyfillCode(
-                        scraperIdJson = JsonPrimitive(scraperId).toString(),
-                        settingsJson = "{}"
-                    )
-                    evaluate<Any?>(polyfillCode)
+                    evaluate<Any?>(JsBindings.staticPolyfillCode)
 
                     val wrappedCode = """
                         var module = { exports: {} };
@@ -146,7 +146,13 @@ internal object PluginRuntime {
 
         val domBridge = DomBridge()
         val hostRegistry = HostApiRegistry().apply {
-            addModule(HostFunctions(scraperId) { deferred.complete(it) })
+            addModule(
+                HostFunctions(
+                    scraperId = scraperId,
+                    scraperSettingsJson = JsonObject(scraperSettings).toString(),
+                    onResult = { deferred.complete(it) },
+                ),
+            )
             addModule(FetchBridge())
             addModule(UrlBridge())
             addModule(CryptoBridge())
@@ -159,11 +165,7 @@ internal object PluginRuntime {
                 hostRegistry.registerAll(this)
 
                 val settingsJson = JsonObject(scraperSettings).toString()
-                val polyfillCode = JsBindings.buildPolyfillCode(
-                    scraperIdJson = JsonPrimitive(scraperId).toString(),
-                    settingsJson = settingsJson,
-                )
-                evaluate<Any?>(polyfillCode)
+                evaluate<Any?>(JsBindings.staticPolyfillCode)
 
                 val wrappedCode = """
                     var module = { exports: {} };
