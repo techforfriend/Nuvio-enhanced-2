@@ -37,7 +37,8 @@ internal fun PosterNavigationArtwork(request: PosterNavigationRequest) {
                 scaleX = viewport.width / size.width
                 scaleY = viewport.height / size.height
                 alpha = PosterOpenMotion.artworkAlpha(request.elapsedMillis)
-                val radius = PosterOpenMotion.artworkBlurRadius(size, viewport, request.elapsedMillis)
+                val bounds = PosterOpenMotion.bounds(request.anchor.boundsInRoot, request.viewportBounds, request.elapsedMillis)
+                val radius = PosterOpenMotion.artworkBlurRadius(size, bounds.size, request.elapsedMillis)
                 renderEffect = if (alpha > 0f && radius.width > 0.1f && radius.height > 0.1f) {
                     BlurEffect(radius.width, radius.height, TileMode.Clamp)
                 } else {

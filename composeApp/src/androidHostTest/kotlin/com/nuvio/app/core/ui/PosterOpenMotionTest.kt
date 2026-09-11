@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 
 class PosterOpenMotionTest {
     @Test
-    fun `expansion follows the reference curve at the shorter duration`() {
+    fun `expansion follows the reference frames at their recorded times`() {
         val start = Rect(738f, 923f, 1068f, 1382f)
         val end = Rect(0f, 177f, 1180f, 2556f)
         val samples = listOf(
@@ -22,8 +22,7 @@ class PosterOpenMotionTest {
             416.3f to 11f, 449.7f to 7f, 483f to 4f,
         )
         val errors = samples.map { (millis, left) ->
-            val elapsed = millis * PosterOpenMotion.DurationMillis / 550f
-            abs(PosterOpenMotion.bounds(start, end, elapsed).left - left)
+            abs(PosterOpenMotion.bounds(start, end, millis).left - left)
         }
         assertTrue(errors.max() < 16f)
         assertTrue(sqrt(errors.sumOf { (it * it).toDouble() } / errors.size) < 5.5)
@@ -46,17 +45,36 @@ class PosterOpenMotionTest {
     }
 
     @Test
-    fun `poster sized blur preserves the screen space blur at every expansion size`() {
-        val viewport = Size(1180f, 2379f)
+    fun `poster blur stays circular in screen space throughout expansion`() {
+        val viewport = Rect(0f, 177f, 1180f, 2556f)
         for (artwork in listOf(Size(330f, 459f), Size(720f, 405f), Size(300f, 300f))) {
+            val start = Rect(400f, 900f, 400f + artwork.width, 900f + artwork.height)
             for (millis in 0..260) {
                 val elapsed = millis.toFloat()
-                val radius = PosterOpenMotion.artworkBlurRadius(artwork, viewport, elapsed)
-                val viewportRadius = viewport.width * PosterOpenMotion.artworkBlurFraction(elapsed)
-                assertEquals(viewportRadius, radius.width * viewport.width / artwork.width, 0.0001f)
-                assertEquals(viewportRadius, radius.height * viewport.height / artwork.height, 0.0001f)
+                val bounds = PosterOpenMotion.bounds(start, viewport, elapsed)
+                val radius = PosterOpenMotion.artworkBlurRadius(artwork, bounds.size, elapsed)
+                val screenRadius = bounds.width * PosterOpenMotion.artworkBlurFraction(elapsed)
+                assertEquals(screenRadius, radius.width * bounds.width / artwork.width, 0.0001f)
+                assertEquals(screenRadius, radius.height * bounds.height / artwork.height, 0.0001f)
             }
         }
+    }
+
+    @Test
+    fun `background recedes and softens with the reference frames`() {
+        val samples = listOf(
+            Triple(33f, 0.988f, 0.788f),
+            Triple(66f, 0.978f, 0.645f),
+            Triple(100f, 0.963f, 0.467f),
+            Triple(133f, 0.953f, 0.342f),
+        )
+        for ((millis, scale, alpha) in samples) {
+            assertEquals(scale, PosterOpenMotion.backgroundScale(millis), 0.012f)
+            assertEquals(alpha, PosterOpenMotion.backgroundAlpha(millis), 0.04f)
+        }
+        assertEquals(1f, PosterOpenMotion.backgroundScale(0f))
+        assertEquals(0.9f, PosterOpenMotion.backgroundScale(550f))
+        assertEquals(4f, PosterOpenMotion.backgroundBlurDp(100f))
     }
 
     @Test
@@ -64,6 +82,6 @@ class PosterOpenMotionTest {
         assertEquals(1f, PosterOpenMotion.artworkAlpha(0f))
         assertTrue(PosterOpenMotion.artworkAlpha(150f) in 0.1f..0.4f)
         assertEquals(0f, PosterOpenMotion.artworkAlpha(260f))
-        assertEquals(0f, PosterOpenMotion.backgroundAlpha(240f))
+        assertEquals(0f, PosterOpenMotion.backgroundAlpha(300f))
     }
 }

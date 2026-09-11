@@ -11,8 +11,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import com.nuvio.app.core.ui.PosterOpenMotion
+import kotlinx.coroutines.flow.first
 
 @Composable
 internal fun PosterNavigationMotion(
@@ -34,6 +36,13 @@ internal fun PosterNavigationMotion(
     SideEffect {
         if (incoming || outgoing) retainedIncoming = incoming
         if (incoming) request?.clock = elapsed
+    }
+
+    LaunchedEffect(request, incoming) {
+        if (incoming && request != null) {
+            snapshotFlow { request.elapsedMillis }.first { it >= PosterOpenMotion.ContentDelayMillis }
+            request.revealContent()
+        }
     }
 
     LaunchedEffect(request, incoming, outgoing, transition.currentState, transition.targetState, transition.isRunning) {

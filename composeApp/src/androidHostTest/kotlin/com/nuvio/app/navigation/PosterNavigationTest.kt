@@ -3,6 +3,8 @@ package com.nuvio.app.navigation
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.view.View
+import androidx.activity.OnBackPressedDispatcher
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +27,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.ui.NavDisplay
 import com.nuvio.app.core.ui.LocalPosterClickAnchor
 import com.nuvio.app.core.ui.PosterLiftSource
+import com.nuvio.app.core.ui.PosterOpenMotion
 import com.nuvio.app.core.ui.posterCardClickable
 import org.junit.Rule
 import org.junit.runner.RunWith
@@ -44,6 +47,7 @@ class PosterNavigationTest {
     val compose = createComposeRule()
     private val motion = PosterNavigationState()
     private lateinit var navigator: NuvioNavigator
+    private lateinit var backDispatcher: OnBackPressedDispatcher
     private lateinit var view: View
     private var shelfMounted = false
     private var liftedBeforeDestinationDraw = false
@@ -53,6 +57,7 @@ class PosterNavigationTest {
         compose.mainClock.autoAdvance = false
         compose.setContent {
             view = LocalView.current
+            backDispatcher = assertNotNull(LocalOnBackPressedDispatcherOwner.current).onBackPressedDispatcher
             DisposableEffect(motion) {
                 onDispose { motion.clear() }
             }
@@ -158,11 +163,21 @@ class PosterNavigationTest {
         }
         compose.mainClock.advanceTimeBy(300)
         compose.runOnIdle {
-            assertNotNull(motion.active)
+            val request = assertNotNull(motion.active)
+            assertEquals(0f, PosterOpenMotion.artworkAlpha(request.elapsedMillis))
+            assertEquals(0f, PosterOpenMotion.backgroundAlpha(request.elapsedMillis))
             assertTrue(shelfMounted)
             assertEquals(0, destinationMounts)
         }
-        compose.mainClock.advanceTimeBy(300)
+        compose.mainClock.advanceTimeBy(100)
+        compose.runOnIdle {
+            assertNotNull(motion.active)
+            assertTrue(shelfMounted)
+            assertTrue(source.isLifted)
+            assertFalse(source.layer.isReleased)
+            assertEquals(1, destinationMounts)
+        }
+        compose.mainClock.advanceTimeBy(200)
         compose.runOnIdle {
             assertNull(motion.active)
             assertFalse(source.isLifted)
@@ -192,6 +207,52 @@ class PosterNavigationTest {
             assertFalse(source.layer.isReleased)
             assertFalse(source.isLifted)
             assertEquals(0, destinationMounts)
+        }
+    }
+
+    @Test
+    fun `system back during the blank interval cancels detail composition`() {
+        setContent()
+        clickPoster()
+        compose.mainClock.advanceTimeBy(400)
+        lateinit var source: PosterLiftSource
+        compose.runOnIdle {
+            val request = assertNotNull(motion.active)
+            source = assertNotNull(request.anchor.source)
+            assertEquals(0f, PosterOpenMotion.artworkAlpha(request.elapsedMillis))
+            assertEquals(0f, PosterOpenMotion.backgroundAlpha(request.elapsedMillis))
+            backDispatcher.onBackPressed()
+        }
+        compose.mainClock.advanceTimeBy(700)
+        compose.runOnIdle {
+            assertEquals(TabsRoute, navigator.currentRoute)
+            assertNull(motion.active)
+            assertFalse(source.isLifted)
+            assertFalse(source.layer.isReleased)
+            assertTrue(shelfMounted)
+            assertEquals(0, destinationMounts)
+        }
+    }
+
+    @Test
+    fun `system back after the shortened blank restores the shelf`() {
+        setContent()
+        clickPoster()
+        compose.mainClock.advanceTimeBy(500)
+        lateinit var source: PosterLiftSource
+        compose.runOnIdle {
+            source = assertNotNull(motion.active?.anchor?.source)
+            assertEquals(1, destinationMounts)
+            backDispatcher.onBackPressed()
+        }
+        compose.mainClock.advanceTimeBy(700)
+        compose.runOnIdle {
+            assertEquals(TabsRoute, navigator.currentRoute)
+            assertNull(motion.active)
+            assertFalse(source.isLifted)
+            assertFalse(source.layer.isReleased)
+            assertTrue(shelfMounted)
+            assertEquals(1, destinationMounts)
         }
     }
 

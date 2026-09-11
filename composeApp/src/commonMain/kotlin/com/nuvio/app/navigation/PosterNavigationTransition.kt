@@ -70,6 +70,9 @@ private fun PosterNavigationEntry(
         Box(
             modifier = Modifier.fillMaxSize().graphicsLayer {
                 if (outgoing) {
+                    val scale = PosterOpenMotion.backgroundScale(request.elapsedMillis)
+                    scaleX = scale
+                    scaleY = scale
                     alpha = PosterOpenMotion.backgroundAlpha(request.elapsedMillis)
                     val radius = PosterOpenMotion.backgroundBlurDp(request.elapsedMillis).dp.toPx()
                     renderEffect = if (alpha > 0f && radius > 0.1f) BlurEffect(radius, radius, TileMode.Clamp) else null
@@ -81,14 +84,13 @@ private fun PosterNavigationEntry(
                     scaleY = bounds.height / size.height
                     translationX = bounds.left - end.left
                     translationY = bounds.top - end.top
-                    val radius = request.anchor.cornerRadius.toPx() *
-                        (1f - request.elapsedMillis / PosterOpenMotion.DurationMillis).coerceIn(0f, 1f)
+                    val radius = request.anchor.cornerRadius.toPx()
                     shape = PosterNavigationShape(radius / scaleX, radius / scaleY)
                     clip = true
                 }
             }.background(MaterialTheme.colorScheme.background),
         ) {
-            if (openingRequest == null || openingRequest.completed) {
+            if (openingRequest == null || openingRequest.contentReady) {
                 content()
             }
             if (incoming) {

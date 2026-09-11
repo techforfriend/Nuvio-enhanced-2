@@ -63,7 +63,7 @@ internal class PosterNavigationRequest(
     viewport: Rect,
 ) {
     private var finished = false
-    var completed by mutableStateOf(false)
+    var contentReady by mutableStateOf(false)
         private set
     var viewportBounds by mutableStateOf(viewport)
     var clock by mutableStateOf<State<Float>?>(null)
@@ -72,9 +72,13 @@ internal class PosterNavigationRequest(
 
     fun placeArtwork(): Boolean = !finished && anchor.source?.lift() == true
 
+    fun revealContent() {
+        if (!finished) contentReady = true
+    }
+
     fun finish(completed: Boolean = false) {
         if (finished) return
-        this.completed = completed
+        if (completed) contentReady = true
         finished = true
         anchor.source?.land()
     }
