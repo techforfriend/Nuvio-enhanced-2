@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.15",
+          "buildVersion": "120",
+          "date": "2026-09-09T13:41:42Z",
+          "localizedDescription": "- cf6cf2d6 fix(auth): synchronize shared client initialization @tapframe  \r\n- 28df1e7d fix(home): restore hero position when switching profiles @tapframe  \r\n- 972109f9 fix(playback): disable play when no source is available @tapframe  \r\n- 872a5937 fix(home): reduce hero height without continue watching @tapframe  \r\n- [Fix NetworkOnMainThreadException when starting a download (#1893)](https://github.com/NuvioMedia/NuvioMobile/pull/1893) @Axl-Lvy  \r\n- 526a5b97 feat: custom static colours @tapframe  \r\n- 68337ffa feat(members): custom gradient @tapframe  \r\n- [Added Russian translation (#1886)](https://github.com/NuvioMedia/NuvioMobile/pull/1886) @zamalatb  \r\n- 378f120e fix(downloads): exclude foreground service from playstore builds @tapframe  \r\n- 6d4ad8bb fix(player): preserve each foreground service start notification @tapframe  \r\n- 40af63ad fix(player): synchronize native subtitle rendering @tapframe  \r\n- 3554904b fix(player): resolve subtitle formats off the main thread @tapframe  \r\n- 42667b9f feat(ui): unify skeleton loading states @tapframe  \r\n- 5fa890ee perf(home): improve lazy list item reuse @tapframe  \r\n- 8b43fd89 perf(startup): avoid redundant collection and catalog processing @tapframe  \r\n- e306a0a0 perf(ios): release temporary GIF decoding resources @tapframe  \r\n- 59a13cbf perf(loading): cache bundled animation resource reads @tapframe  \r\n- 6fb5d44f perf(ui): defer loading and parallax state reads @tapframe  \r\n- d7159342 fix(streams): refresh resume position Fixes #1866 @tapframe  \r\n- 3c239664 fix(android): background downloads @tapframe  \r\n",
+          "downloadURL": "https://github.com/NuvioMedia/NuvioMobile/releases/download/0.4.15/nuvio-0.4.15-full-release.ipa",
+          "size": 52822264,
+          "sha256": "aebc751424db7b08d800188f311b88b98ff82d081637273c90b3ce339560aa2b",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.14",
           "buildVersion": "118",
           "date": "2026-09-05T10:55:58Z",
