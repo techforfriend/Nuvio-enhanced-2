@@ -48,7 +48,7 @@ data class MetaScreenSettingsUiState(
     val tabLayout: Boolean = false,
     val episodeCardStyle: MetaEpisodeCardStyle = MetaEpisodeCardStyle.Horizontal,
     val blurUnwatchedEpisodes: Boolean = false,
-    val posterTransitionEnabled: Boolean = true,
+    val posterTransitionEnabled: Boolean = false,
 )
 
 enum class MetaScreenBackgroundMode {
@@ -130,7 +130,7 @@ private data class StoredMetaScreenSettingsPayload(
     @SerialName("blur_unwatched_episodes")
     val blurUnwatchedEpisodes: Boolean = false,
     @SerialName("poster_transition_enabled")
-    val posterTransitionEnabled: Boolean = true,
+    val posterTransitionEnabled: Boolean = false,
 )
 
 private data class MetaScreenSectionDefinition(
@@ -208,7 +208,7 @@ object MetaScreenSettingsRepository {
     private var tabLayout: Boolean = false
     private var episodeCardStyle: MetaEpisodeCardStyle = MetaEpisodeCardStyle.Horizontal
     private var blurUnwatchedEpisodes: Boolean = false
-    private var posterTransitionEnabled: Boolean = true
+    private var posterTransitionEnabled: Boolean = false
     private fun localizedString(resource: StringResource): String = runBlocking { getString(resource) }
 
     fun ensureLoaded() {
@@ -249,7 +249,7 @@ object MetaScreenSettingsRepository {
         tabLayout = false
         episodeCardStyle = MetaEpisodeCardStyle.Horizontal
         blurUnwatchedEpisodes = false
-        posterTransitionEnabled = true
+        posterTransitionEnabled = false
         _uiState.value = MetaScreenSettingsUiState()
         ensureLoaded()
     }
@@ -321,7 +321,7 @@ object MetaScreenSettingsRepository {
         tabLayout = false
         episodeCardStyle = MetaEpisodeCardStyle.Horizontal
         blurUnwatchedEpisodes = false
-        posterTransitionEnabled = true
+        posterTransitionEnabled = false
         _uiState.value = MetaScreenSettingsUiState()
     }
 
@@ -333,7 +333,7 @@ object MetaScreenSettingsRepository {
         episodeCardStyle: MetaEpisodeCardStyle = MetaEpisodeCardStyle.Horizontal,
         blurUnwatchedEpisodes: Boolean = false,
         backgroundMode: MetaScreenBackgroundMode? = null,
-        posterTransitionEnabled: Boolean = true,
+        posterTransitionEnabled: Boolean = false,
     ) {
         ensureLoaded()
         this.backgroundMode = backgroundMode ?: MetaScreenBackgroundMode.fromLegacyCinematic(cinematicBackground)
@@ -369,7 +369,7 @@ object MetaScreenSettingsRepository {
         tabLayout = false
         episodeCardStyle = MetaEpisodeCardStyle.Horizontal
         blurUnwatchedEpisodes = false
-        posterTransitionEnabled = true
+        posterTransitionEnabled = false
         normalizePreferences()
         publish()
         persist()

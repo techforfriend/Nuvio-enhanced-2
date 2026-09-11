@@ -102,6 +102,7 @@ internal fun LazyListScope.appearanceSettingsContent(
         var showLanguageSheet by remember { mutableStateOf(false) }
         var showNavBarStyleSheet by remember { mutableStateOf(false) }
         var showAppIconPicker by remember { mutableStateOf(false) }
+        val navBarStyleAvailable = !isIos && !isTablet
         SettingsSection(
             title = stringResource(Res.string.settings_appearance_section_display),
             isTablet = isTablet,
@@ -149,7 +150,7 @@ internal fun LazyListScope.appearanceSettingsContent(
                     isTablet = isTablet,
                     onClick = { showLanguageSheet = true },
                 )
-                if (!isIos) {
+                if (navBarStyleAvailable) {
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_appearance_nav_bar_style),
@@ -184,7 +185,7 @@ internal fun LazyListScope.appearanceSettingsContent(
             )
         }
 
-        if (showNavBarStyleSheet) {
+        if (navBarStyleAvailable && showNavBarStyleSheet) {
             NavBarStyleBottomSheet(
                 selectedStyle = selectedNavBarStyle,
                 onStyleSelected = {

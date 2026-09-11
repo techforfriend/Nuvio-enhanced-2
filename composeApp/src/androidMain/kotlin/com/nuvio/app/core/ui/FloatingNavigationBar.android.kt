@@ -5,7 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -49,6 +49,8 @@ internal actual fun FloatingNavigationBar(
     modifier: Modifier,
     scrollState: NuvioNavBarScrollState?,
     hazeState: HazeState?,
+    contentPadding: PaddingValues,
+    compactSize: Boolean,
 ) {
     if (items.isEmpty()) return
     val tokens = MaterialTheme.nuvio
@@ -63,9 +65,8 @@ internal actual fun FloatingNavigationBar(
     val motion = remember { JellyMotion(selectedIndex, items.size) }
     val currentItems by rememberUpdatedState(items)
     val density = LocalDensity.current
-    val trackHeight = 48.dp + 16.dp * labelFraction
+    val trackHeight = 48.dp + (if (compactSize) 8.dp else 16.dp) * labelFraction
     val horizontalPadding = 58.dp - 30.dp * labelFraction
-    val bottomPadding = nuvioBottomNavigationBarInsets().asPaddingValues().calculateBottomPadding()
 
     LaunchedEffect(selectedIndex, items.size) {
         motion.select(selectedIndex)
@@ -84,7 +85,7 @@ internal actual fun FloatingNavigationBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = bottomPadding + nuvioBottomNavigationExtraVerticalPadding + 8.dp)
+            .padding(contentPadding)
             .padding(horizontal = horizontalPadding),
         contentAlignment = Alignment.BottomCenter,
     ) {
@@ -176,7 +177,7 @@ internal actual fun FloatingNavigationBar(
                                 }
                             },
                         ) {
-                            JellyTabRow(items, labelFraction, motion, active = false, modifier = Modifier.matchParentSize())
+                            JellyTabRow(items, labelFraction, motion, active = false, compactSize = compactSize, modifier = Modifier.matchParentSize())
                         }
                         if (selectedIndex >= 0) {
                             Box(
@@ -186,10 +187,10 @@ internal actual fun FloatingNavigationBar(
                                         drawJellyPill(motion.frame, items.size, selectedSurface, accentColor) { drawContent() }
                                     },
                             ) {
-                                JellyTabRow(items, labelFraction, motion, active = true, modifier = Modifier.matchParentSize())
+                                JellyTabRow(items, labelFraction, motion, active = true, compactSize = compactSize, modifier = Modifier.matchParentSize())
                             }
                         }
-                        JellyTabTargets(items, labelFraction, motion, Modifier.matchParentSize())
+                        JellyTabTargets(items, labelFraction, motion, compactSize, Modifier.matchParentSize())
                     }
                 }
             }

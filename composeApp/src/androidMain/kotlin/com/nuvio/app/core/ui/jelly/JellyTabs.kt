@@ -47,12 +47,15 @@ internal fun JellyTabRow(
     labelFraction: Float,
     motion: JellyMotion,
     active: Boolean,
+    compactSize: Boolean,
     modifier: Modifier,
 ) {
     val tokens = MaterialTheme.nuvio
     val palette = MaterialTheme.themePalette
     val color = if (active) tokens.colors.accent else tokens.colors.textMuted
-    val iconModifier = Modifier.size(28.dp)
+    val iconSize = if (compactSize) 24.dp else 28.dp
+    val labelHeight = if (compactSize) 14.dp else 16.dp
+    val iconModifier = Modifier.size(iconSize)
         .then(if (active) Modifier.gradientMask(palette.accentBrush()) else Modifier)
     val iconTint = if (active) Color.White else color
     Row(
@@ -69,19 +72,19 @@ internal fun JellyTabRow(
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.size(28.dp).graphicsLayer { translationY = 2.dp.toPx() * labelFraction }) {
+                    Box(Modifier.size(iconSize).graphicsLayer { translationY = 2.dp.toPx() * labelFraction }) {
                         when {
                             item.icon != null -> Icon(item.icon, null, iconModifier, tint = iconTint)
                             item.drawable != null -> Icon(painterResource(item.drawable), null, iconModifier, tint = iconTint)
                         }
                     }
-                    Box(Modifier.height(16.dp * labelFraction).fillMaxWidth().clipToBounds().alpha(labelFraction)) {
+                    Box(Modifier.height(labelHeight * labelFraction).fillMaxWidth().clipToBounds().alpha(labelFraction)) {
                         Text(
                             text = item.label,
                             color = color,
                             style = TextStyle(
-                                fontSize = 13.sp,
-                                lineHeight = 16.sp,
+                                fontSize = if (compactSize) 12.sp else 13.sp,
+                                lineHeight = if (compactSize) 14.sp else 16.sp,
                                 fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
                                 textAlign = TextAlign.Center,
                             ),
@@ -101,6 +104,7 @@ internal fun JellyTabTargets(
     items: List<FloatingNavigationItem>,
     labelFraction: Float,
     motion: JellyMotion,
+    compactSize: Boolean,
     modifier: Modifier,
 ) {
     Row(modifier.padding(horizontal = 4.dp).selectableGroup()) {
@@ -133,10 +137,14 @@ internal fun JellyTabTargets(
                         },
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Box(Modifier.graphicsLayer { translationY = 2.dp.toPx() * labelFraction }) {
+                        Box(
+                            Modifier
+                                .then(if (compactSize) Modifier.size(24.dp) else Modifier)
+                                .graphicsLayer { translationY = 2.dp.toPx() * labelFraction },
+                        ) {
                             item.content()
                         }
-                        Spacer(Modifier.height(16.dp * labelFraction))
+                        Spacer(Modifier.height((if (compactSize) 14.dp else 16.dp) * labelFraction))
                     }
                 }
             }

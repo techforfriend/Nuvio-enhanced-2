@@ -905,7 +905,7 @@
     <string name="settings_meta_background_mode">Background Mode</string>
     <string name="settings_meta_background_mode_description">Choose how artwork appears behind metadata pages.</string>
     <string name="settings_meta_poster_transition">Poster Transition</string>
-    <string name="settings_meta_poster_transition_description">Expand and blur posters when opening details. Turn off to use the standard transition.</string>
+    <string name="settings_meta_poster_transition_description">Expand and blur posters when opening details.</string>
     <string name="settings_meta_background_mode_normal">Normal</string>
     <string name="settings_meta_background_mode_normal_description">Use the standard app background.</string>
     <string name="settings_meta_background_mode_cinematic">Cinematic</string>
