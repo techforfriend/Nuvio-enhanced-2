@@ -333,6 +333,7 @@ internal fun StreamDestination(
             )
             if (playerSettings.externalPlayerEnabled) {
                 openExternalPlayback(playerLaunch)
+                StreamsRepository.cancelLoading()
                 StreamsRepository.setOverlayVisible(false)
                 reuseNavigated = true
                 return@LaunchedEffect

@@ -57,6 +57,7 @@ internal fun PlayerScreenRuntime.openExternalSourceUrl(stream: StreamItem): Bool
     showSourcesPanel = false
     showEpisodesPanel = false
     controlsVisible = true
+    PlayerStreamsRepository.pauseSearchForPlayback()
     return true
 }
 
@@ -190,6 +191,7 @@ internal fun PlayerScreenRuntime.switchToP2pSourceStream(stream: StreamItem) {
     activeInitialProgressFraction = null
     showSourcesPanel = false
     controlsVisible = true
+    PlayerStreamsRepository.pauseSearchForPlayback()
 }
 
 internal fun PlayerScreenRuntime.switchToP2pEpisodeStream(
@@ -280,6 +282,7 @@ internal fun PlayerScreenRuntime.switchToSource(stream: StreamItem) {
     activeInitialProgressFraction = null
     showSourcesPanel = false
     controlsVisible = true
+    PlayerStreamsRepository.pauseSearchForPlayback()
 }
 
 internal fun PlayerScreenRuntime.switchToEpisodeStream(stream: StreamItem, episode: MetaVideo) {
