@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.16",
+          "buildVersion": "121",
+          "date": "2026-09-11T12:21:04Z",
+          "localizedDescription": "- fix(home): settle hero carousel when returning @tapframe\r\n- fix(settings): require Trakt progress for continue watching window @tapframe\r\n- perf(ui): replace compottie spinner with native drawing @tapframe\r\n- feat(navigation): refine tablet bar and transition defaults @tapframe\r\n- feat(navigation): add reactive bottom bar glow @tapframe\r\n- feat(navigation): add shared blur transition @tapframe\r\n- feat(posters): lift original cards in zoom overlay @tapframe\r\n- feat(navigation): update bottom tab animation @tapframe\r\n- perf(android): add root navigation baseline profile @tapframe\r\n- fix(settings): defer search indexing until needed @tapframe\r\n- Merged English and Dutch strings.xml and translated all remaining English text into Dutch. (#1911) @scheperr\r\n- i18n(el): complete and tidy up Greek translations (#1910) @nosvasedis\r\n- fix(ci): increase iOS release timeout @tapframe\r\n- i18n(vi): full Vietnamese localization refresh for Mobile (#1883) @blueocean2308\r\n- fix(theme): apply saved custom colors @luqmanfadlli\r\n- fix(ui): fix back button position @luqmanfadlli\r\n- feat(library): pin title and filter row while scrolling @albertovinaroz\r\n- fix(ui): remove duplicate poster card clickable modifier @luqmanfadlli",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.4.16/Nuvio-v0.4.16-Enhanced.ipa",
+          "size": 66025212,
+          "sha256": "1d8ed225e92c7454c4f4a0e686e0a76fcd63be4984127b56bddf5e7aeb9ff184",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.15",
           "buildVersion": "120",
           "date": "2026-09-09T13:20:51Z",
