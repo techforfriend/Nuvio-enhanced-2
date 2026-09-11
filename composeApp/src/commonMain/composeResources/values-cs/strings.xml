@@ -1929,7 +1929,7 @@
     <string name="player_error_failed_start_torrent">Nepodařilo se spustit torrent: %1$s</string>
     <string name="player_error_torrent">Chyba torrentu: %1$s</string>
     <string name="theme_gold">Zlatá</string>
-    <string name="theme_jade">Jade</string>
+    <string name="theme_jade">Nefritová</string>
     <string name="theme_rose_gold">Růžové zlato</string>
     <string name="theme_arctic_blue">Arktická modrá</string>
     <string name="theme_graphite">Grafitová</string>
@@ -2035,7 +2035,7 @@
     <string name="downloads_open_directory_failed">Složku se staženými soubory se nepodařilo otevřít</string>
     <string name="settings_appearance_app_icon">Ikona aplikace</string>
     <string name="settings_appearance_app_icon_arctic_blue">Arktická modrá</string>
-    <string name="settings_appearance_app_icon_android_confirmation_message">Po změně na %1$s se Nuvio zavře. Pokračujte klepnutím na OK.</string>
+    <string name="settings_appearance_app_icon_android_confirmation_message">Nová ikona: %1$s. Po potvrzení se Nuvio zavře. Pokračujte klepnutím na OK.</string>
     <string name="settings_appearance_app_icon_android_confirmation_title">Změnit ikonu aplikace?</string>
     <string name="settings_appearance_app_icon_change_failed">Ikonu se nepodařilo změnit. Zkuste to znovu.</string>
     <string name="settings_appearance_app_icon_copper">Měděná</string>
