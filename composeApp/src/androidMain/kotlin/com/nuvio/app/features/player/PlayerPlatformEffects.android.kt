@@ -41,7 +41,7 @@ actual fun LockPlayerToLandscape() {
 }
 
 @Composable
-actual fun EnterImmersivePlayerMode(keepScreenAwake: Boolean) {
+actual fun HidePlayerSystemBars() {
     val activity = LocalContext.current.findActivity() ?: return
 
     DisposableEffect(activity) {
@@ -59,6 +59,9 @@ actual fun EnterImmersivePlayerMode(keepScreenAwake: Boolean) {
         }
     }
 }
+
+@Composable
+actual fun EnterImmersivePlayerMode(keepScreenAwake: Boolean) = Unit
 
 @Composable
 actual fun ManagePlayerPictureInPicture(
