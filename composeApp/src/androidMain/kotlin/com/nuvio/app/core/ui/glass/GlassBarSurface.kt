@@ -27,9 +27,9 @@ import dev.chrisbanes.haze.hazeEffect
 private val GlassSurfaceColor = Color(0xFF1C1C1E)
 
 @Composable
-internal fun GlassBarSurface(hazeState: HazeState?, modifier: Modifier = Modifier) {
+internal fun GlassBarSurface(hazeState: HazeState?, modifier: Modifier = Modifier, glowStrength: Float = 1f) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && hazeState?.blurEnabled == true) {
-        RefractedGlassBar(hazeState, modifier)
+        RefractedGlassBar(hazeState, modifier, glowStrength)
     } else {
         Box(
             modifier
@@ -48,6 +48,7 @@ internal fun GlassBarSurface(hazeState: HazeState?, modifier: Modifier = Modifie
                             size = Size(size.width - width, size.height - width),
                             cornerRadius = CornerRadius((size.height - width) / 2),
                             style = Stroke(width),
+                            alpha = glowStrength,
                         )
                     }
                 },
@@ -57,7 +58,7 @@ internal fun GlassBarSurface(hazeState: HazeState?, modifier: Modifier = Modifie
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
-private fun RefractedGlassBar(hazeState: HazeState, modifier: Modifier) {
+private fun RefractedGlassBar(hazeState: HazeState, modifier: Modifier, glowStrength: Float) {
     val shader = remember { RuntimeShader(GlassBarShader) }
     Box(
         modifier
@@ -72,6 +73,7 @@ private fun RefractedGlassBar(hazeState: HazeState, modifier: Modifier) {
                 shader.setFloatUniform("resolution", size.width, size.height)
                 shader.setFloatUniform("density", density)
                 shader.setFloatUniform("outset", 24.dp.roundToPx().toFloat())
+                shader.setFloatUniform("glowStrength", glowStrength)
                 renderEffect = RenderEffect.createRuntimeShaderEffect(shader, "backdrop").asComposeRenderEffect()
             }
             .barBackdrop(hazeState),

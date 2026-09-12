@@ -77,6 +77,7 @@ internal fun MainTabsDestination(
         val navBarScrollState = rememberNuvioNavBarScrollState()
         val navBarHazeState = rememberHazeState()
         val navBarStyleSetting by remember { ThemeSettingsRepository.navBarStyle }.collectAsStateWithLifecycle()
+        val navBarGlowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
         val floatingNavigationItems = listOf(
             FloatingNavigationItem(
                 selected = selectedTab == AppScreenTab.Home,
@@ -183,6 +184,7 @@ internal fun MainTabsDestination(
                         ),
                         compactSize = true,
                         items = floatingNavigationItems,
+                        glowEnabled = navBarGlowEnabled,
                     )
                 }
 
@@ -197,6 +199,7 @@ internal fun MainTabsDestination(
                         scrollState = navBarScrollState,
                         hazeState = navBarHazeState,
                         items = floatingNavigationItems,
+                        glowEnabled = navBarGlowEnabled,
                     )
                 }
             }

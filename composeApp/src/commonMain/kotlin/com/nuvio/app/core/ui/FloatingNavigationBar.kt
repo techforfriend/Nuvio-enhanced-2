@@ -18,6 +18,8 @@ internal class FloatingNavigationItem(
     val content: (@Composable () -> Unit)? = null,
 )
 
+internal expect val floatingNavigationGlowSupported: Boolean
+
 @Composable
 internal expect fun FloatingNavigationBar(
     items: List<FloatingNavigationItem>,
@@ -26,6 +28,7 @@ internal expect fun FloatingNavigationBar(
     hazeState: HazeState? = null,
     contentPadding: PaddingValues = floatingNavigationBarPadding(),
     compactSize: Boolean = false,
+    glowEnabled: Boolean = true,
 )
 
 @Composable

@@ -669,6 +669,13 @@
     <string name="settings_appearance_app_language_sheet_title">Choose Language</string>
     <string name="settings_appearance_nav_bar_style">Navigation Bar</string>
     <string name="settings_appearance_nav_bar_style_sheet_title">Navigation Bar Style</string>
+    <string name="settings_nav_bar_glow">Glass glow</string>
+    <string name="settings_nav_bar_glow_description">Adds soft light around the floating bar.</string>
+    <string name="settings_nav_bar_glow_on">Glow on</string>
+    <string name="settings_nav_bar_glow_off">Glow off</string>
+    <string name="settings_nav_bar_summary">%1$s · %2$s</string>
+    <string name="settings_nav_bar_preview_hint">Tap the bar to try it. Scroll the preview to try adaptive sizing.</string>
+    <string name="settings_nav_bar_preview_tap_hint">Tap the bar to try it.</string>
     <string name="settings_nav_bar_style_adaptive">Adaptive</string>
     <string name="settings_nav_bar_style_expanded">Always Expanded</string>
     <string name="settings_nav_bar_style_compact">Always Compact</string>
