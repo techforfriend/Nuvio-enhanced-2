@@ -30,7 +30,9 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.glass.GlassBarSurface
 import com.nuvio.app.core.ui.jelly.JellyMotion
@@ -61,15 +63,19 @@ internal actual fun FloatingNavigationBar(
         animationSpec = tween(NuvioTokens.Motion.sheetEnterMillis, easing = NuvioTokens.Motion.standard),
         label = "jelly_labels",
     )
+    val layoutDirection = LocalLayoutDirection.current
+    val isRtl = layoutDirection == LayoutDirection.Rtl
     val selectedIndex = items.indexOfFirst { it.selected }
-    val motion = remember { JellyMotion(selectedIndex, items.size) }
+    val visualSelectedIndex = visualNavIndex(selectedIndex, items.size, isRtl)
+    val motion = remember(items.size, isRtl) { JellyMotion(visualSelectedIndex, items.size) }
     val currentItems by rememberUpdatedState(items)
+    val currentIsRtl by rememberUpdatedState(isRtl)
     val density = LocalDensity.current
     val trackHeight = 48.dp + (if (compactSize) 8.dp else 16.dp) * labelFraction
     val horizontalPadding = 58.dp - 30.dp * labelFraction
 
-    LaunchedEffect(selectedIndex, items.size) {
-        motion.select(selectedIndex)
+    LaunchedEffect(visualSelectedIndex, items.size) {
+        motion.select(visualSelectedIndex)
     }
     LaunchedEffect(motion.running) {
         if (!motion.running) return@LaunchedEffect
@@ -97,7 +103,7 @@ internal actual fun FloatingNavigationBar(
                 .onSizeChanged {
                     motion.resize(it.width / density.density, it.height / density.density, items.size)
                 }
-                .pointerInput(motion, density, items.size) {
+                .pointerInput(motion, density, items.size, isRtl) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                         motion.begin(down.position.x / density.density, down.position.y / density.density)
@@ -116,15 +122,20 @@ internal actual fun FloatingNavigationBar(
                                 if (change.pressed && change.isConsumed && !claimed) break
                                 motion.drag(delta.x / density.density, delta.y / density.density)
                                 if (!change.pressed) {
-                                    val index = motion.finish()
+                                    val visualIndex = motion.finish()
+                                    val logicalIndex = logicalNavIndex(visualIndex, currentItems.size, currentIsRtl)
                                     finished = true
-                                    if (claimed || !change.isConsumed) currentItems.getOrNull(index)?.onClick?.invoke()
+                                    if (claimed || !change.isConsumed) currentItems.getOrNull(logicalIndex)?.onClick?.invoke()
                                     change.consume()
                                     break
                                 }
                             }
                         } finally {
-                            if (!finished) motion.cancel(currentItems.indexOfFirst { it.selected })
+                            if (!finished) {
+                                val currentSelectedIndex = currentItems.indexOfFirst { it.selected }
+                                val currentVisualIndex = visualNavIndex(currentSelectedIndex, currentItems.size, currentIsRtl)
+                                motion.cancel(currentVisualIndex)
+                            }
                         }
                     }
                 },
@@ -197,3 +208,9 @@ internal actual fun FloatingNavigationBar(
         }
     }
 }
+
+internal fun visualNavIndex(logicalIndex: Int, count: Int, isRtl: Boolean): Int =
+    if (logicalIndex in 0 until count && isRtl) count - 1 - logicalIndex else logicalIndex
+
+internal fun logicalNavIndex(visualIndex: Int, count: Int, isRtl: Boolean): Int =
+    if (visualIndex in 0 until count && isRtl) count - 1 - visualIndex else visualIndex

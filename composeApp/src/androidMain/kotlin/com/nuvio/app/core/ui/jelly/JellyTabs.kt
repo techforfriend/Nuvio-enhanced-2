@@ -31,6 +31,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nuvio.app.core.ui.FloatingNavigationItem
@@ -38,6 +40,7 @@ import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.themePalette
+import com.nuvio.app.core.ui.visualNavIndex
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.abs
 
@@ -107,6 +110,7 @@ internal fun JellyTabTargets(
     compactSize: Boolean,
     modifier: Modifier,
 ) {
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Row(modifier.padding(horizontal = 4.dp).selectableGroup()) {
         items.forEachIndexed { index, item ->
             Box(
@@ -127,10 +131,11 @@ internal fun JellyTabTargets(
                 contentAlignment = Alignment.Center,
             ) {
                 if (item.content != null) {
+                    val visualIndex = visualNavIndex(index, items.size, isRtl)
                     Column(
                         modifier = Modifier.graphicsLayer {
                             val frame = motion.frame
-                            val coverage = (1f - abs(frame.position - index)).coerceIn(0f, 1f)
+                            val coverage = (1f - abs(frame.position - visualIndex)).coerceIn(0f, 1f)
                             val scale = 1f + (frame.contentScale - 1f) * coverage
                             scaleX = scale
                             scaleY = scale

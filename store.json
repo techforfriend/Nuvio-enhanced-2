@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.17",
+          "buildVersion": "122",
+          "date": "2026-09-12T01:48:34Z",
+          "localizedDescription": "- 2d03b258 fix(plugins): restore iOS runtime compilation @tapframe  \n- d23b3c04 fix(player): disable binge group reuse by default @tapframe  \n- [perf(plugins): pause search during playback and match TV runtime (#1917)](https://github.com/NuvioMedia/NuvioMobile/pull/1917) @halibiram  \n- 1854dfc3 fix(sync): prevent automatic pulls from restoring deleted data @tapframe  \n",
+          "downloadURL": "https://github.com/NuvioMedia/NuvioMobile/releases/download/0.4.17/nuvio-0.4.17-full-release.ipa",
+          "size": 51022041,
+          "sha256": "3adcd75775637c447f16bf0d76ba51e35bd581e10fb3e99e069841298b51366c",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.16",
           "buildVersion": "121",
           "date": "2026-09-11T10:13:18Z",
