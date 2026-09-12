@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.LocalNuvioBottomNavigationOverlayPadding
 import com.nuvio.app.core.ui.LocalNuvioNavBarScrollState
+import com.nuvio.app.core.ui.NuvioNavBarScrollState
 import com.nuvio.app.core.ui.NuvioClassicNavigationBar
 import com.nuvio.app.core.ui.FloatingNavigationBar
 import com.nuvio.app.core.ui.FloatingNavigationItem
@@ -171,8 +172,10 @@ internal fun MainTabsDestination(
                 }
 
                 if (isTabletLayout && !useNativeBottomTabs) {
+                    val tabletNavBarScrollState = remember { NuvioNavBarScrollState().apply { collapse() } }
                     FloatingNavigationBar(
                         modifier = Modifier.align(Alignment.TopCenter).widthIn(max = 416.dp),
+                        scrollState = tabletNavBarScrollState,
                         hazeState = navBarHazeState,
                         contentPadding = PaddingValues(
                             top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 10.dp,
