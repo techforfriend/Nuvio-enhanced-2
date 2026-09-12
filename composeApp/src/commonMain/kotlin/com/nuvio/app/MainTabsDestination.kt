@@ -101,10 +101,10 @@ internal fun MainTabsDestination(
                 selected = selectedTab == AppScreenTab.Settings,
                 onClick = { onTabSelected(AppScreenTab.Settings) },
                 label = stringResource(Res.string.compose_nav_profile),
-                content = {
+                content = { onClick ->
                     ProfileSwitcherTab(
                         selected = selectedTab == AppScreenTab.Settings,
-                        onClick = { onTabSelected(AppScreenTab.Settings) },
+                        onClick = onClick,
                         onProfileSelected = onProfileSelected,
                         onAddProfileRequested = onAddProfileRequested,
                         hazeState = navBarHazeState,

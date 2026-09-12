@@ -40,7 +40,7 @@ internal actual fun FloatingNavigationBar(
                     onClick = item.onClick,
                     label = item.label,
                 ) {
-                    item.content?.invoke()
+                    item.content?.invoke(item.onClick)
                 }
             }
         }
