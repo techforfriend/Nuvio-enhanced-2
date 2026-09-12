@@ -568,6 +568,10 @@
     <string name="settings_licenses_attributions_section_app">APP LICENSE</string>
     <string name="settings_licenses_attributions_section_data">DATA &amp; SERVICES</string>
     <string name="settings_licenses_attributions_section_playback">PLAYBACK LICENSE</string>
+    <string name="settings_licenses_attributions_section_ui">UI LIBRARIES</string>
+    <string name="settings_licenses_attributions_haze_title">Haze 1.7.2</string>
+    <string name="settings_licenses_attributions_haze_body">Used for background blur effects. Created by Chris Banes.</string>
+    <string name="settings_licenses_attributions_haze_license">Licensed under the Apache License, Version 2.0.</string>
     <string name="settings_licenses_attributions_nuvio_title">Nuvio Mobile</string>
     <string name="settings_licenses_attributions_nuvio_body">Source code and license terms are available in the project repository.</string>
     <string name="settings_licenses_attributions_nuvio_license">Licensed under the GNU General Public License v3.0.</string>
