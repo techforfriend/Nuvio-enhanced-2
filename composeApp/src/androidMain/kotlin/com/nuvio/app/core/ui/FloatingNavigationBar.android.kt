@@ -119,13 +119,13 @@ internal actual fun FloatingNavigationBar(
                                 if (max(abs(delta.x), abs(delta.y)) > viewConfiguration.touchSlop) claimed = true
                                 if (claimed) change.consume()
                                 awaitPointerEvent(PointerEventPass.Main)
-                                if (change.pressed && change.isConsumed && !claimed) break
+                                if (change.isConsumed && !claimed) break
                                 motion.drag(delta.x / density.density, delta.y / density.density)
                                 if (!change.pressed) {
                                     val visualIndex = motion.finish()
                                     val logicalIndex = logicalNavIndex(visualIndex, currentItems.size, currentIsRtl)
                                     finished = true
-                                    if (claimed || !change.isConsumed) currentItems.getOrNull(logicalIndex)?.onClick?.invoke()
+                                    currentItems.getOrNull(logicalIndex)?.onClick?.invoke()
                                     change.consume()
                                     break
                                 }
