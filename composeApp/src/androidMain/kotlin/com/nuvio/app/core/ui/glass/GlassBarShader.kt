@@ -27,8 +27,7 @@ half4 main(float2 position) {
         / max(distanceToCenter, 0.001);
     float2 tangent = float2(-normal.y, normal.x);
     float depth = max(-distanceToEdge, 0.0) / density;
-    half3 surface = half3(0.110, 0.110, 0.118)
-        + backdrop.eval(position).rgb * 0.055;
+    half3 surface = mix(backdrop.eval(position).rgb, half3(28.0, 28.0, 30.0) / 255.0, 0.55);
     if (depth >= 16.0) return half4(surface * coverage, coverage);
 
     float rim = exp(-0.0565 * depth - 0.0322 * depth * depth);

@@ -35,21 +35,13 @@ internal fun GlassBarSurface(hazeState: HazeState?, modifier: Modifier = Modifie
             modifier
                 .then(if (hazeState != null) Modifier.barBackdrop(hazeState) else Modifier)
                 .drawWithCache {
-                    val fill = Brush.verticalGradient(
-                        0f to GlassSurfaceColor.copy(alpha = 0.64f),
-                        0.16f to GlassSurfaceColor.copy(alpha = 0.91f),
-                        1f to GlassSurfaceColor.copy(alpha = 0.94f),
-                    )
+                    val fill = GlassSurfaceColor.copy(alpha = if (hazeState != null) 0.55f else 0.82f)
                     val edge = Brush.verticalGradient(
                         listOf(Color.White.copy(alpha = 0.27f), Color.White.copy(alpha = 0.02f)),
                     )
                     val width = 0.75.dp.toPx()
                     onDrawBehind {
-                        if (hazeState?.blurEnabled == true) {
-                            drawRect(fill)
-                        } else {
-                            drawRect(GlassSurfaceColor.copy(alpha = 0.9f))
-                        }
+                        drawRect(fill)
                         drawRoundRect(
                             brush = edge,
                             topLeft = Offset(width / 2, width / 2),
@@ -87,7 +79,7 @@ private fun RefractedGlassBar(hazeState: HazeState, modifier: Modifier) {
 }
 
 private fun Modifier.barBackdrop(hazeState: HazeState): Modifier = hazeEffect(state = hazeState) {
-    blurRadius = 20.dp
+    blurRadius = 24.dp
     backgroundColor = GlassSurfaceColor
     tints = listOf(HazeTint(Color.Transparent))
     noiseFactor = 0f
