@@ -107,6 +107,8 @@ internal fun MainTabsDestination(
                         onClick = { onTabSelected(AppScreenTab.Settings) },
                         onProfileSelected = onProfileSelected,
                         onAddProfileRequested = onAddProfileRequested,
+                        hazeState = navBarHazeState,
+                        popupBelowAnchor = isTabletLayout,
                     )
                 },
             ),
