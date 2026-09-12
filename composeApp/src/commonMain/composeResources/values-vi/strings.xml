@@ -904,6 +904,8 @@
     <string name="settings_meta_cinematic_background_description">Làm mờ phông nền phía sau nội dung, tương tự màn hình truyền phát</string>
     <string name="settings_meta_background_mode">Chế độ ảnh nền</string>
     <string name="settings_meta_background_mode_description">Chọn cách ảnh hiển thị xuất hiện phía sau các trang siêu dữ liệu.</string>
+    <string name="settings_meta_poster_transition">Chuyển cảnh poster</string>
+    <string name="settings_meta_poster_transition_description">Mở rộng và làm mờ poster khi mở trang chi tiết.</string>
     <string name="settings_meta_background_mode_normal">Mặc định</string>
     <string name="settings_meta_background_mode_normal_description">Sử dụng ảnh nền mặc định của ứng dụng</string>
     <string name="settings_meta_background_mode_cinematic">Điện ảnh</string>
@@ -1247,6 +1249,7 @@
     <string name="settings_tracking_simkl_library_description">Dùng danh sách xem sau và danh sách trạng thái trên Simkl của bạn</string>
     <string name="settings_tracking_nuvio_progress_description">Xem tiếp với tiến trình được lưu bởi Đồng bộ Nuvio.</string>
     <string name="settings_tracking_trakt_progress_description">Xem tiếp với tiến trình phát lại từ Trakt.</string>
+    <string name="settings_tracking_trakt_progress_required">Khả dụng khi chọn Trakt làm nguồn tiến trình xem.</string>
     <string name="settings_tracking_simkl_progress_description">Xem tiếp với tiến trình phát lại từ Simkl</string>
     <string name="settings_tracking_tmdb_recommendations_description">Dùng đề xuất của TMDB trên trang chi tiết.</string>
     <string name="settings_tracking_trakt_recommendations_description">Dùng các tiêu đề liên quan được cá nhân hóa từ Trakt.</string>
@@ -1576,10 +1579,12 @@
     <string name="streams_open_internal_player">Mở bằng trình phát bên trong</string>
     <string name="streams_empty_load_failed_message">Các tiện ích phát trực tuyến đã cài đặt không trả về được phản hồi luồng hợp lệ.</string>
     <string name="streams_empty_load_failed_title">Không thể tải các luồng</string>
+    <string name="playback_unavailable">Không thể phát nội dung</string>
+    <string name="playback_unavailable_message">Không thể phát nội dung này với thiết lập hiện tại.</string>
     <string name="streams_empty_no_addons_message">Cài đặt một tiện ích trước để tải các luồng cho nội dung này.</string>
-    <string name="streams_empty_no_stream_addon_message">Các tiện ích bạn đã cài đặt không cung cấp luồng cho loại nội dung này.</string>
+    <string name="streams_empty_no_stream_addon_message">Các tiện ích đã cài đặt không cung cấp luồng cho loại nội dung này.</string>
     <string name="streams_empty_no_stream_addon_title">Không có sẵn tiện ích phát trực tuyến nào</string>
-    <string name="streams_empty_no_streams_message">Không có tiện ích nào bạn đã cài đặt trả về được luồng cho nội dung này.</string>
+    <string name="streams_empty_no_streams_message">Không có tiện ích đã cài đặt nào trả về được luồng cho nội dung này.</string>
     <string name="streams_episode_badge">M%1$d T%2$d</string>
     <string name="streams_episode_fallback_title">Tập</string>
     <string name="streams_episode_title_with_name">M%1$dT%2$d - %3$s</string>
@@ -1888,7 +1893,7 @@
     <string name="parental_severity_moderate">Vừa phải</string>
     <string name="parental_severity_severe">Nặng</string>
     <string name="parental_violence">Bạo lực</string>
-    <string name="person_role_creator">Tác giả</string>
+    <string name="person_role_creator">Nhà sáng tạo</string>
     <string name="person_role_director">Đạo diễn</string>
     <string name="person_role_writer">Biên kịch</string>
     <string name="rating_audience_score">Điểm khán giả</string>
