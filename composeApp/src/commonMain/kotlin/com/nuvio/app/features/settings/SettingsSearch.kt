@@ -549,6 +549,11 @@ internal fun settingsSearchEntries(
                 stringResource(Res.string.settings_playback_show_loading_overlay_description),
             ),
             PlaybackSearchRow(
+                "pause-overlay",
+                stringResource(Res.string.settings_playback_pause_overlay),
+                stringResource(Res.string.settings_playback_pause_overlay_description),
+            ),
+            PlaybackSearchRow(
                 "external-player",
                 stringResource(Res.string.settings_playback_external_player),
                 stringResource(Res.string.settings_playback_external_player_description_android),
