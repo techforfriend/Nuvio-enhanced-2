@@ -10,8 +10,15 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v6
-        with:
-          submodules: recursive
+        # Do NOT use `submodules: true/recursive` here: the MPVKit submodule's pinned
+        # commit goes stale (its upstream fork rebases), so a plain submodule checkout
+        # fails with "git failed with exit code 128". We fetch the tracked branch's
+        # latest tip instead in the next step.
+
+      - name: Fetch MPVKit submodule (latest Nuvio branch)
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --remote --recursive
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
