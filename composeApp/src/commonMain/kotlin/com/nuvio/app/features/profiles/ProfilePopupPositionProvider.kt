@@ -10,6 +10,7 @@ internal class ProfilePopupPositionProvider(
     private val margin: Int,
     private val gap: Int,
     private val preferBelow: Boolean,
+    private val onPositioned: (opensBelow: Boolean, availableHeight: Int) -> Unit,
 ) : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect,
@@ -24,6 +25,7 @@ internal class ProfilePopupPositionProvider(
             spaceAbove > spaceBelow -> false
             else -> preferBelow
         }
+        onPositioned(opensBelow, (if (opensBelow) spaceBelow else spaceAbove).coerceAtLeast(0))
         val y = if (opensBelow) {
             anchorBounds.bottom + gap
         } else {

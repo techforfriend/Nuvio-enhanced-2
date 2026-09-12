@@ -63,6 +63,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -233,18 +234,23 @@ fun ProfileSwitcherTab(
 
         // Floating profile popup (stays composed during exit animation)
         if (popupVisible && profiles.isNotEmpty()) {
+            var opensBelow by remember { mutableStateOf(popupBelowAnchor) }
+            var availableHeight by remember { mutableStateOf<Dp?>(null) }
+            val dismissPopup = { if (pinProfile != null) pinProfile = null else showPopup = false }
             Popup(
                 popupPositionProvider = remember(density, popupBelowAnchor) {
                     ProfilePopupPositionProvider(
                         margin = with(density) { 16.dp.roundToPx() },
                         gap = with(density) { 18.dp.roundToPx() },
                         preferBelow = popupBelowAnchor,
+                        onPositioned = { below, height ->
+                            opensBelow = below
+                            availableHeight = with(density) { height.toDp() }
+                        },
                     )
                 },
                 properties = PopupProperties(focusable = true),
-                onDismissRequest = {
-                    if (pinProfile != null) pinProfile = null else showPopup = false
-                },
+                onDismissRequest = dismissPopup,
             ) {
                 ProfilePopupContent(
                     profiles = profiles,
@@ -253,16 +259,19 @@ fun ProfileSwitcherTab(
                     hoveredProfileIndex = dragTargetProfileIndex,
                     pinProfile = pinProfile,
                     hazeState = hazeState,
+                    opensBelow = opensBelow,
+                    availableHeight = availableHeight,
                     modifier = Modifier.graphicsLayer {
                         alpha = popupAlpha.value
                         scaleX = popupScale.value
                         scaleY = popupScale.value
                         transformOrigin = TransformOrigin(
                             0.5f,
-                            if (popupBelowAnchor) 0f else 1f,
+                            if (opensBelow) 0f else 1f,
                         )
                     },
                     onBoundsChanged = { index, bounds -> profileBubbleBounds[index] = bounds },
+                    onDismissRequest = dismissPopup,
                     onProfileSelected = ::chooseProfile,
                     onAddProfileRequested = {
                         showPopup = false
