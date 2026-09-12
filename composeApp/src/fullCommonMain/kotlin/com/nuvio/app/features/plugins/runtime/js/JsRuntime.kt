@@ -2,9 +2,10 @@ package com.nuvio.app.features.plugins.runtime.js
 
 import com.dokar.quickjs.QuickJs
 import com.dokar.quickjs.quickJs
-import com.nuvio.app.features.plugins.runtime.PLUGIN_TIMEOUT_MS
+import com.nuvio.app.features.plugins.runtime.configurePluginRuntime
 import com.nuvio.app.features.plugins.runtime.pluginDispatcher
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlin.concurrent.Volatile
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.coroutineContext
 
@@ -13,7 +14,7 @@ internal class JsRuntime {
         val dispatcher = (coroutineContext[ContinuationInterceptor] as? CoroutineDispatcher)
             ?: pluginDispatcher
         return quickJs(dispatcher) {
-            evaluationTimeoutMillis = PLUGIN_TIMEOUT_MS
+            configurePluginRuntime()
             block()
         }
     }
