@@ -6,6 +6,8 @@ import com.nuvio.app.features.addons.buildAddonResourceUrl
 import com.nuvio.app.features.addons.enabledAddons
 import com.nuvio.app.features.addons.fetchAddonResponseText
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -42,6 +44,9 @@ object SubtitleRepository {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _loadingProgress = MutableStateFlow<SubtitleLoadingProgress?>(null)
+    internal val loadingProgress: StateFlow<SubtitleLoadingProgress?> = _loadingProgress.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
@@ -49,6 +54,7 @@ object SubtitleRepository {
 
     fun fetchAddonSubtitles(type: String, videoId: String) {
         activeFetchJob?.cancel()
+        _loadingProgress.value = null
         activeFetchJob = scope.launch {
             val requestType = canonicalSubtitleType(type)
             _isLoading.value = true
@@ -67,6 +73,7 @@ object SubtitleRepository {
                 return@launch
             }
 
+            _loadingProgress.value = SubtitleLoadingProgress(total = subtitleAddons.size)
             supervisorScope {
                 subtitleAddons.map { addon ->
                     async {
@@ -119,6 +126,14 @@ object SubtitleRepository {
                             }
                         } catch (error: Throwable) {
                             if (error is CancellationException) throw error
+                        } finally {
+                            currentCoroutineContext().ensureActive()
+                            _loadingProgress.update { progress ->
+                                progress?.copy(
+                                    completed = progress.completed + 1,
+                                    addonName = addon.displayTitle,
+                                )
+                            }
                         }
                     }
                 }.awaitAll()
@@ -133,11 +148,18 @@ object SubtitleRepository {
 
     fun clear() {
         activeFetchJob?.cancel()
+        _loadingProgress.value = null
         _addonSubtitles.value = emptyList()
         _isLoading.value = false
         _error.value = null
     }
 }
+
+internal data class SubtitleLoadingProgress(
+    val total: Int,
+    val completed: Int = 0,
+    val addonName: String? = null,
+)
 
 private fun canonicalSubtitleType(type: String): String =
     if (type.equals("tv", ignoreCase = true)) "series" else type.lowercase()

@@ -45,6 +45,9 @@ import dev.chrisbanes.haze.HazeState
 import kotlin.math.abs
 import kotlin.math.max
 
+internal actual val floatingNavigationGlowSupported: Boolean
+    get() = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+
 @Composable
 internal actual fun FloatingNavigationBar(
     items: List<FloatingNavigationItem>,
@@ -53,8 +56,15 @@ internal actual fun FloatingNavigationBar(
     hazeState: HazeState?,
     contentPadding: PaddingValues,
     compactSize: Boolean,
+    glowEnabled: Boolean,
 ) {
     if (items.isEmpty()) return
+    val showGlow = !floatingNavigationGlowSupported || glowEnabled
+    val glowStrength by animateFloatAsState(
+        targetValue = if (showGlow) 1f else 0f,
+        animationSpec = tween(420, easing = NuvioTokens.Motion.standard),
+        label = "nav_glow_strength",
+    )
     val tokens = MaterialTheme.nuvio
     val accentColor = tokens.colors.accent
     val selectedSurface = accentColor.copy(alpha = NuvioTokens.Opacity.selected)
@@ -119,13 +129,13 @@ internal actual fun FloatingNavigationBar(
                                 if (max(abs(delta.x), abs(delta.y)) > viewConfiguration.touchSlop) claimed = true
                                 if (claimed) change.consume()
                                 awaitPointerEvent(PointerEventPass.Main)
-                                if (change.pressed && change.isConsumed && !claimed) break
+                                if (change.isConsumed && !claimed) break
                                 motion.drag(delta.x / density.density, delta.y / density.density)
                                 if (!change.pressed) {
                                     val visualIndex = motion.finish()
                                     val logicalIndex = logicalNavIndex(visualIndex, currentItems.size, currentIsRtl)
                                     finished = true
-                                    if (claimed || !change.isConsumed) currentItems.getOrNull(logicalIndex)?.onClick?.invoke()
+                                    currentItems.getOrNull(logicalIndex)?.onClick?.invoke()
                                     change.consume()
                                     break
                                 }
@@ -172,10 +182,10 @@ internal actual fun FloatingNavigationBar(
                                 .clip(RoundedCornerShape(50))
                                 .drawWithContent {
                                     drawContent()
-                                    drawJellyGlow(motion.frame, accentColor)
+                                    drawJellyGlow(motion.frame, accentColor.copy(alpha = accentColor.alpha * glowStrength))
                                 },
                         ) {
-                            GlassBarSurface(hazeState, Modifier.matchParentSize())
+                            GlassBarSurface(hazeState, Modifier.matchParentSize(), glowStrength)
                         }
                         Box(
                             Modifier.matchParentSize().drawWithContent {
@@ -195,7 +205,12 @@ internal actual fun FloatingNavigationBar(
                                 Modifier.matchParentSize()
                                     .clearAndSetSemantics {}
                                     .drawWithContent {
-                                        drawJellyPill(motion.frame, items.size, selectedSurface, accentColor) { drawContent() }
+                                        drawJellyPill(
+                                            motion.frame,
+                                            items.size,
+                                            selectedSurface,
+                                            accentColor.copy(alpha = accentColor.alpha * glowStrength),
+                                        ) { drawContent() }
                                     },
                             ) {
                                 JellyTabRow(items, labelFraction, motion, active = true, compactSize = compactSize, modifier = Modifier.matchParentSize())

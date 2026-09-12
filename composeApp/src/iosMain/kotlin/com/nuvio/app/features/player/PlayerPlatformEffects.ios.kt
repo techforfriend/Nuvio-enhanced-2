@@ -14,23 +14,33 @@ import platform.UIKit.UISlider
 
 private const val lockPlayerToLandscapeNotification = "NuvioPlayerLockLandscape"
 private const val unlockPlayerOrientationNotification = "NuvioPlayerUnlockOrientation"
+private var playerLandscapeLockCount = 0
 
 @Composable
 actual fun LockPlayerToLandscape() {
     DisposableEffect(Unit) {
-        NSNotificationCenter.defaultCenter.postNotificationName(
-            lockPlayerToLandscapeNotification,
-            null,
-        )
-
-        onDispose {
+        playerLandscapeLockCount += 1
+        if (playerLandscapeLockCount == 1) {
             NSNotificationCenter.defaultCenter.postNotificationName(
-                unlockPlayerOrientationNotification,
+                lockPlayerToLandscapeNotification,
                 null,
             )
         }
+
+        onDispose {
+            playerLandscapeLockCount -= 1
+            if (playerLandscapeLockCount == 0) {
+                NSNotificationCenter.defaultCenter.postNotificationName(
+                    unlockPlayerOrientationNotification,
+                    null,
+                )
+            }
+        }
     }
 }
+
+@Composable
+actual fun HidePlayerSystemBars() = Unit
 
 @Composable
 actual fun EnterImmersivePlayerMode(keepScreenAwake: Boolean) {

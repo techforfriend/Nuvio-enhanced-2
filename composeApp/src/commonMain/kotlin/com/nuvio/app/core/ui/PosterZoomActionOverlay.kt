@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
@@ -368,6 +369,7 @@ fun NuvioPosterZoomActionOverlay(
         // The travelling poster itself, drawn above the slot column.
         Box(
             modifier = Modifier
+                .align(AbsoluteAlignment.TopLeft)
                 .size(width = posterWidth, height = posterHeight)
                 .graphicsLayer {
                     val slot = slotBounds
