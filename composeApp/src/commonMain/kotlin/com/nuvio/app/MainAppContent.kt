@@ -99,6 +99,7 @@ import com.nuvio.app.features.collection.CollectionSyncService
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaScreenSettingsRepository
 import com.nuvio.app.features.downloads.DownloadItem
+import com.nuvio.app.features.downloads.DownloadSubtitles
 import com.nuvio.app.features.downloads.DownloadsRepository
 import com.nuvio.app.features.home.HomeCatalogSection
 import com.nuvio.app.features.home.HomeCatalogSettingsRepository
@@ -877,7 +878,7 @@ internal fun MainAppContent(
                 sourceUrl = sourceUrl,
                 sourceHeaders = emptyMap(),
                 sourceResponseHeaders = emptyMap(),
-                externalSubtitles = emptyList(),
+                externalSubtitles = DownloadSubtitles.localSubtitles(sourceUrl),
                 streamType = null,
                 logo = item.logo,
                 poster = item.poster,
@@ -999,7 +1000,7 @@ internal fun MainAppContent(
                         sourceUrl = localSourceUrl,
                         sourceHeaders = emptyMap(),
                         sourceResponseHeaders = emptyMap(),
-                        externalSubtitles = emptyList(),
+                        externalSubtitles = DownloadSubtitles.localSubtitles(localSourceUrl),
                         logo = logo,
                         poster = poster,
                         background = background,
