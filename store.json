@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.18",
+          "buildVersion": "123",
+          "date": "2026-09-13T02:16:59Z",
+          "localizedDescription": "- b04a1607 fix(profiles): stabilize popup size transitions @tapframe  \r\n- fbf59953 fix(details): apply poster radius to episode list cards @tapframe  \r\n- cf4674a8 fix(home): apply poster settings to continue watching cards @tapframe  \r\n- 33c0fe78 fix(streams): position sources panel below ios toolbar @tapframe  \r\n- 356d0162 fix(navigation): preserve tab animation on tap release @tapframe  \r\n- 1dd6de9b fix(profiles): correct avatar grid spacing and selection border @tapframe  \r\n- e75fa3b3 feat(player): match tv autoplay loading screen @tapframe  \r\n- 90e192ff fix(settings): match custom theme sheet background @tapframe  \r\n- bb2d16cc fix(catalog): update items after library removal @tapframe  \r\n- f815fc25 fix(navigation): correct poster zoom positioning in rtl @tapframe  \r\n- abe18e03 fix(settings): update selection indicators @tapframe  \r\n- 19aad9b2 feat(profiles): redesign compact profile picker @tapframe  \r\n- 4d876b41 feat(navigation): add glow controls and live preview @tapframe  \r\n- c35a82d9 fix(navigation): keep tablet floating bar compact @tapframe  \r\n- cb94f29b fix(navigation): restore floating bar backdrop tint @tapframe  \r\n- 76d51fa9 fix(navigation): restore tab indicator after profile long press @tapframe  \r\n- edc557fe update readme @tapframe  \r\n- ecb69a88 feat(player): add pause overlay toggle @tapframe  \r\n- 60e6a1b5 fix(details): handle null specials poster placeholders @tapframe  \r\n- a80302a7 fix(player): disable playback gestures during initial loading @tapframe  \r\n- [fix(android): correct bottom navigation behavior in RTL (#1926)](https://github.com/NuvioMedia/NuvioMobile/pull/1926) @i7xre  \r\n- [i18n(vi): update latest Vietnamese strings (#1923)](https://github.com/NuvioMedia/NuvioMobile/pull/1923) @blueocean2308  \r\n- [Update Czech translation (#1919)](https://github.com/NuvioMedia/NuvioMobile/pull/1919) @scarzxx  \r\n",
+          "downloadURL": "https://github.com/NuvioMedia/NuvioMobile/releases/download/0.4.18/nuvio-0.4.18-full-release.ipa",
+          "size": 51099484,
+          "sha256": "1f742ce8922c78c0c4d5f20348aa547a4290d80576402af6f3f395a6c6bfc9e0",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.17",
           "buildVersion": "122",
           "date": "2026-09-12T01:48:34Z",
