@@ -4,6 +4,9 @@ internal object JsBindings {
     val staticPolyfillCode: String = """
             globalThis.SCRAPER_ID = __get_scraper_id();
             globalThis.SCRAPER_SETTINGS = JSON.parse(__get_scraper_settings());
+            if (typeof TMDB_API_KEY === 'undefined') {
+                globalThis.TMDB_API_KEY = __get_tmdb_api_key();
+            }
             if (typeof globalThis.global === 'undefined') globalThis.global = globalThis;
             if (typeof globalThis.window === 'undefined') globalThis.window = globalThis;
             if (typeof globalThis.self === 'undefined') globalThis.self = globalThis;

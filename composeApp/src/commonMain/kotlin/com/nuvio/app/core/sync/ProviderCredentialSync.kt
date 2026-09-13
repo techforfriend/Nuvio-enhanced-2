@@ -12,8 +12,6 @@ import com.nuvio.app.features.mdblist.MdbListSettingsRepository
 import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.player.PlayerSettingsUiState
 import com.nuvio.app.features.profiles.ProfileRepository
-import com.nuvio.app.features.tmdb.TmdbSettings
-import com.nuvio.app.features.tmdb.TmdbSettingsRepository
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.rpc
 import kotlinx.atomicfu.locks.SynchronizedObject
@@ -153,14 +151,12 @@ object ProviderCredentialSync {
     private fun observeCredentialSnapshots() = combine(
         ProfileRepository.state,
         DebridSettingsRepository.uiState,
-        TmdbSettingsRepository.uiState,
         MdbListSettingsRepository.uiState,
         PlayerSettingsRepository.uiState,
-    ) { _, debrid, tmdb, mdbList, player ->
+    ) { _, debrid, mdbList, player ->
         buildSnapshot(
             profileId = ProfileRepository.activeProfileId,
             debrid = debrid,
-            tmdb = tmdb,
             mdbList = mdbList,
             player = player,
         )
@@ -171,7 +167,6 @@ object ProviderCredentialSync {
         val snapshot = buildSnapshot(
             profileId = profileId,
             debrid = DebridSettingsRepository.snapshot(),
-            tmdb = TmdbSettingsRepository.snapshot(),
             mdbList = MdbListSettingsRepository.snapshot(),
             player = PlayerSettingsRepository.uiState.value,
         )
@@ -182,7 +177,6 @@ object ProviderCredentialSync {
     private fun buildSnapshot(
         profileId: Int,
         debrid: DebridSettings,
-        tmdb: TmdbSettings,
         mdbList: MdbListSettings,
         player: PlayerSettingsUiState,
     ): ProviderCredentialSnapshot = ProviderCredentialSnapshot(
@@ -197,7 +191,6 @@ object ProviderCredentialSync {
                     ),
                 )
             }
-            add(ProviderCredentialValue(ProviderCredentialIds.TMDB, PROVIDER_API_KEY_FIELD, tmdb.apiKey.trim()))
             add(ProviderCredentialValue(ProviderCredentialIds.MDBLIST, PROVIDER_API_KEY_FIELD, mdbList.apiKey.trim()))
             add(
                 ProviderCredentialValue(
@@ -228,9 +221,6 @@ object ProviderCredentialSync {
                         credential.provider.substringAfter("debrid:"),
                         credential.value,
                     )
-                }
-                credential.provider == ProviderCredentialIds.TMDB -> {
-                    TmdbSettingsRepository.setApiKey(credential.value)
                 }
                 credential.provider == ProviderCredentialIds.MDBLIST -> {
                     MdbListSettingsRepository.setApiKey(credential.value)
@@ -296,7 +286,6 @@ object ProviderCredentialSync {
 
     private fun ensureRepositoriesLoaded() {
         DebridSettingsRepository.ensureLoaded()
-        TmdbSettingsRepository.ensureLoaded()
         MdbListSettingsRepository.ensureLoaded()
         PlayerSettingsRepository.ensureLoaded()
     }

@@ -1192,11 +1192,8 @@
     <string name="settings_playback_timeout_unlimited">Unlimited</string>
     <string name="settings_playback_tunneled_playback">Tunneled Playback</string>
     <string name="settings_playback_tunneled_playback_description">Hardware-level audio/video sync. May improve playback on some Android TV devices</string>
-    <string name="settings_tmdb_add_api_key_first">Add your own TMDB API key below before turning enrichment on.</string>
-    <string name="settings_tmdb_api_key_label">API Key</string>
     <string name="settings_tmdb_enable_enrichment">Enable TMDB Enrichment</string>
     <string name="settings_tmdb_enable_enrichment_description">Use TMDB as a metadata source to enhance addon data</string>
-    <string name="settings_tmdb_enter_api_key">Enter your TMDB v3 API key.</string>
     <string name="settings_tmdb_language_code_label">Language code</string>
     <string name="settings_tmdb_module_artwork">Artwork</string>
     <string name="settings_tmdb_module_artwork_description">Logo and backdrop images from TMDB</string>
@@ -1222,10 +1219,8 @@
     <string name="settings_tmdb_module_season_posters_description">Use TMDB season posters in the metadata screen season selector for series.</string>
     <string name="settings_tmdb_module_trailers">Trailers</string>
     <string name="settings_tmdb_module_trailers_description">Trailer candidates from TMDB videos for the detail trailer section</string>
-    <string name="settings_tmdb_personal_api_key">Personal API key</string>
     <string name="settings_tmdb_preferred_language">Language</string>
     <string name="settings_tmdb_preferred_language_description">TMDB metadata language for title, logo, and enabled fields</string>
-    <string name="settings_tmdb_section_credentials">CREDENTIALS</string>
     <string name="settings_tmdb_section_localization">LOCALIZATION</string>
     <string name="settings_tmdb_section_modules">MODULES</string>
     <string name="settings_tmdb_section_title">TMDB ENRICHMENT</string>
@@ -1746,7 +1741,6 @@
     <string name="trakt_error_add_list_failed">Failed to add to Trakt list</string>
     <string name="trakt_error_missing_ids">Missing compatible Trakt IDs</string>
     <string name="trakt_error_empty_response">Empty response body</string>
-    <string name="tmdb_sources_api_key_required">Add a TMDB API key in Settings to use TMDB sources.</string>
     <string name="tmdb_sources_collection_fallback_title">TMDB Collection %1$d</string>
     <string name="tmdb_sources_collection_not_found">TMDB collection not found</string>
     <string name="tmdb_sources_company_fallback_title">TMDB Production %1$d</string>
@@ -2107,7 +2101,6 @@
     <string name="collections_editor_tmdb_production_title_format">TMDB Production %1$s</string>
     <string name="collections_editor_tmdb_source_load_failed">Could not load TMDB source</string>
     <string name="collections_editor_trakt_list_id_format">ID %1$s</string>
-    <string name="collections_tmdb_api_key_required">Add a TMDB API key in Settings to use TMDB sources.</string>
     <string name="collections_tmdb_collection_not_found">TMDB collection not found</string>
     <string name="collections_tmdb_company_not_found">TMDB company not found</string>
     <string name="collections_tmdb_discover_no_data">TMDB discover returned no data</string>
@@ -2150,8 +2143,6 @@
     <string name="plugins_badge_providers">%1$d providers</string>
     <string name="plugins_badge_refreshing">Refreshing</string>
     <string name="plugins_badge_repos">%1$d repos</string>
-    <string name="plugins_badge_tmdb_key_missing">TMDB API key missing</string>
-    <string name="plugins_badge_tmdb_key_set">TMDB API key set</string>
     <string name="plugins_button_install_repo">Install Plugin Repository</string>
     <string name="plugins_button_installing">Installing…</string>
     <string name="plugins_button_test_provider">Test Provider</string>
@@ -2195,7 +2186,6 @@
     <string name="plugins_test_error_title">Error</string>
     <string name="plugins_test_failed">Provider test failed</string>
     <string name="plugins_test_results_count">Test results (%1$d)</string>
-    <string name="plugins_tmdb_required_message">Plugin providers require a TMDB API key. Set it on the TMDB screen or plugin providers will not work correctly.</string>
     <string name="search_error_no_results_for_catalog">No search results returned for %1$s.</string>
     <string name="settings_playback_introdb_invalid_key">Invalid API Key or connection failed</string>
     <string name="streams_plugin_repository_fallback">Plugin repository</string>
