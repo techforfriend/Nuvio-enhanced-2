@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.19",
+          "buildVersion": "124",
+          "date": "2026-09-13T19:40:06Z",
+          "localizedDescription": "- 579edb31 feat(downloads): add support for bundling addon subs while downloading @tapframe  \n- 00161e1d fix(streams): prevent rotation when opening manual selection @tapframe  \n- 7c1c6578 feat(search): add recent searches toggle @tapframe  \n- 60ee0160 fix(tmdb): use bundled API key @tapframe  \n",
+          "downloadURL": "https://github.com/NuvioMedia/NuvioMobile/releases/download/0.4.19/nuvio-0.4.19-full-release.ipa",
+          "size": 51091230,
+          "sha256": "7b1990dad3b5a9d8e91150aeb9de9d0adbcd1b3b5e9eed0269bf6f82fea59706",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.18",
           "buildVersion": "123",
           "date": "2026-09-13T02:16:59Z",
