@@ -230,6 +230,15 @@ internal fun settingsSearchEntries(
         description = stringResource(Res.string.compose_settings_root_content_discovery_description),
         icon = Icons.Rounded.Extension,
     )
+    addRow(
+        page = SettingsPage.ContentDiscovery,
+        key = "recent-searches",
+        title = stringResource(Res.string.settings_content_discovery_recent_searches),
+        description = stringResource(Res.string.settings_content_discovery_recent_searches_description),
+        pageLabel = contentDiscoveryPage,
+        section = stringResource(Res.string.settings_content_discovery_section_search),
+        icon = Icons.Rounded.Search,
+    )
     add(
         key = "downloads",
         title = downloadsPage,

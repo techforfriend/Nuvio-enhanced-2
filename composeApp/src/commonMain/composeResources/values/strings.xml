@@ -811,6 +811,9 @@
     <string name="settings_continue_watching_use_episode_thumbnails_title">Prefer Episode Thumbnails in Continue Watching</string>
     <string name="settings_content_discovery_section_home">HOME</string>
     <string name="settings_content_discovery_section_sources">SOURCES</string>
+    <string name="settings_content_discovery_section_search">SEARCH</string>
+    <string name="settings_content_discovery_recent_searches">Recent Searches</string>
+    <string name="settings_content_discovery_recent_searches_description">Save recent searches and show them when the search bar is focused.</string>
     <string name="settings_content_discovery_addons_description">Install, remove, refresh, and sort your content sources.</string>
     <string name="settings_content_discovery_addons_description_appstore">Add and manage the addons you use with Nuvio.</string>
     <string name="settings_content_discovery_plugins_description">Install JavaScript scraper repositories and test providers internally.</string>
