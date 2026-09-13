@@ -60,6 +60,49 @@ class StreamAutoPlayLoadingPolicyTest {
     }
 
     @Test
+    fun `predicted autoplay loading does not rotate before the request starts`() {
+        val state = StreamsUiState()
+        val settings = listOf(
+            autoPlaySettings,
+            PlayerSettingsUiState(streamReuseLastLinkEnabled = true),
+            PlayerSettingsUiState(streamAutoPlayReuseBingeGroup = true),
+        )
+
+        settings.forEach { playerSettings ->
+            assertTrue(state.shouldShowAutoPlayLoading("new", playerSettings, false))
+            assertFalse(state.shouldUseLandscapeAutoPlayLoading("new", false))
+        }
+    }
+
+    @Test
+    fun `confirmed autoplay loading rotates only for the current automatic request`() {
+        val state = StreamsUiState(
+            requestToken = "new",
+            autoPlayDecided = true,
+            isDirectAutoPlayFlow = true,
+            showDirectAutoPlayOverlay = true,
+        )
+
+        assertTrue(state.shouldUseLandscapeAutoPlayLoading("new", false))
+        assertFalse(state.shouldUseLandscapeAutoPlayLoading("other", false))
+        assertFalse(state.shouldUseLandscapeAutoPlayLoading("new", true))
+        assertFalse(state.copy(autoPlayDecided = false).shouldUseLandscapeAutoPlayLoading("new", false))
+        assertFalse(state.copy(showDirectAutoPlayOverlay = false).shouldUseLandscapeAutoPlayLoading("new", false))
+    }
+
+    @Test
+    fun `stream picker and external preparation overlays do not rotate`() {
+        val state = StreamsUiState(requestToken = "new", autoPlayDecided = true)
+
+        assertFalse(state.shouldUseLandscapeAutoPlayLoading("new", false))
+        assertFalse(state.shouldUseLandscapeAutoPlayLoading("new", true))
+        assertFalse(
+            state.copy(showDirectAutoPlayOverlay = true)
+                .shouldUseLandscapeAutoPlayLoading("new", false),
+        )
+    }
+
+    @Test
     fun `installed addons are loaded while plugins are still loading`() {
         val groups = listOf(
             group(addonId = "addon:torrentio", isLoading = false),

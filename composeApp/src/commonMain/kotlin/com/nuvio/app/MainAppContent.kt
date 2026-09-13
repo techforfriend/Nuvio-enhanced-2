@@ -306,14 +306,8 @@ internal fun MainAppContent(
         PlayerSettingsRepository.ensureLoaded()
         PlayerSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
-    var streamLoadingScreenVisible by remember(currentRoute) {
-        val launch = (currentRoute as? StreamRoute)?.let { StreamLaunchStore.get(it.launchId) }
-        mutableStateOf(
-            launch != null && !launch.manualSelection &&
-                StreamAutoPlayPolicy.isEffectivelyEnabled(playerSettingsUiState),
-        )
-    }
-    if (currentRoute is PlayerRoute || streamLoadingScreenVisible) {
+    var streamLandscapeLoadingVisible by remember(currentRoute) { mutableStateOf(false) }
+    if (currentRoute is PlayerRoute || streamLandscapeLoadingVisible) {
         LockPlayerToLandscape()
         HidePlayerSystemBars()
     }
@@ -1503,8 +1497,8 @@ internal fun MainAppContent(
                 entry<StreamRoute> { route ->
                     StreamDestination(
                         route = route,
-                        onLoadingScreenChanged = { visible ->
-                            if (currentRoute == route) streamLoadingScreenVisible = visible
+                        onLandscapeLoadingChanged = { visible ->
+                            if (currentRoute == route) streamLandscapeLoadingVisible = visible
                         },
                         navController = navController,
                         p2pEnabled = p2pSettingsUiState.p2pEnabled,

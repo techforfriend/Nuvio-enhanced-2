@@ -13,6 +13,16 @@ internal fun StreamsUiState.shouldShowAutoPlayLoading(
         !manualSelection && StreamAutoPlayPolicy.isEffectivelyEnabled(settings)
     }
 
+internal fun StreamsUiState.shouldUseLandscapeAutoPlayLoading(
+    expectedRequestToken: String,
+    manualSelection: Boolean,
+): Boolean =
+    !manualSelection &&
+        requestToken == expectedRequestToken &&
+        autoPlayDecided &&
+        isDirectAutoPlayFlow &&
+        showDirectAutoPlayOverlay
+
 internal fun List<AddonStreamGroup>.areAutoPlaySourcesLoaded(
     source: StreamAutoPlaySource,
     installedAddonIds: Set<String>,

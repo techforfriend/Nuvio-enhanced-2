@@ -38,6 +38,7 @@ import com.nuvio.app.features.streams.StreamLinkCacheRepository
 import com.nuvio.app.features.streams.StreamsRepository
 import com.nuvio.app.features.streams.StreamsScreen
 import com.nuvio.app.features.streams.shouldShowAutoPlayLoading
+import com.nuvio.app.features.streams.shouldUseLandscapeAutoPlayLoading
 import com.nuvio.app.features.streams.StreamsUiState
 import com.nuvio.app.navigation.*
 import kotlinx.coroutines.launch
@@ -61,7 +62,7 @@ internal fun StreamDestination(
     p2pEnabled: Boolean,
     openExternalPlayback: suspend (PlayerLaunch) -> Boolean,
     openExternalStreamUrl: (String) -> Boolean,
-    onLoadingScreenChanged: (Boolean) -> Unit,
+    onLandscapeLoadingChanged: (Boolean) -> Unit,
 ) {
     val onBack = rememberGuardedPopBackStack(navController, route)
     val launch = remember(route.launchId) {
@@ -364,7 +365,11 @@ internal fun StreamDestination(
         settings = playerSettings,
         manualSelection = launch.manualSelection,
     )
-    SideEffect { onLoadingScreenChanged(showLoadingScreen) }
+    val useLandscapeLoading = autoPlayNavigationStarted || streamsUiState.shouldUseLandscapeAutoPlayLoading(
+        expectedRequestToken = expectedStreamsRequestToken,
+        manualSelection = launch.manualSelection,
+    )
+    SideEffect { onLandscapeLoadingChanged(useLandscapeLoading) }
     var autoPlayHandled by rememberSaveable(launch.videoId, effectiveVideoId) { mutableStateOf(false) }
     LaunchedEffect(
         streamsUiState.autoPlayStream,
