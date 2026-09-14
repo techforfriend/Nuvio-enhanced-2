@@ -664,6 +664,7 @@ private fun MobileSettingsScreen(
                         query = settingsSearchQuery,
                         entries = {
                             settingsSearchEntries(
+                                isTablet = false,
                                 pluginsEnabled = AppFeaturePolicy.pluginsEnabled,
                                 supportersContributorsPageEnabled = AppFeaturePolicy.supportersContributorsPageEnabled,
                                 accountDeletionEnabled = AppFeaturePolicy.accountDeletionEnabled,
@@ -1084,6 +1085,7 @@ private fun TabletSettingsScreen(
                             query = settingsSearchQuery,
                             entries = {
                                 settingsSearchEntries(
+                                    isTablet = true,
                                     pluginsEnabled = AppFeaturePolicy.pluginsEnabled,
                                     supportersContributorsPageEnabled = AppFeaturePolicy.supportersContributorsPageEnabled,
                                     accountDeletionEnabled = AppFeaturePolicy.accountDeletionEnabled,
