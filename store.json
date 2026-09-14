@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.20",
+          "buildVersion": "125",
+          "date": "2026-09-14T09:40:55Z",
+          "localizedDescription": "- feat(streams): add mobile background selection @tapframe\r\n- fix(player): center loading title and logo @tapframe\r\n- feat(player): dismiss next episode prompt with a right swipe @tapframe\r\n- fix(details): match toggle styles and remove duplicate season headings @tapframe\r\n- fix(library): sync title logo @tapframe\r\n- fix(details): use localized landscape backdrops @tapframe\r\n- feat(trailer): add fullscreen playback @tapframe\r\n- perf(navigation): reduce tab switch animation stalls @tapframe\r\n- Revert \"fix(streams): position sources panel below ios toolbar\" @luqmanfadlli\r\n- fix(navigation): let navbar pass through empty-area touches on iOS @luqmanfadlli\r\n- chore(home): drop unused BoxWithConstraints import from HomeScreen.kt @luqmanfadlli \r\n- fix(library): restore BoxWithConstraints import for the release calendar in LibraryScreen.kt @luqmanfadlli ",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.4.20/Nuvio-v0.4.20-Enhanced.ipa",
+          "size": 66202899,
+          "sha256": "552f43ea15d31731713d375c498ca6f134e69ab62625579a6097c863a2cd1ae5",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.19",
           "buildVersion": "124",
           "date": "2026-09-14T04:30:29Z",
