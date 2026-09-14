@@ -710,10 +710,16 @@ object TmdbMetadataService {
         val mergedEpisodeMap = if (imdbEpisodeRatings.isNullOrEmpty()) {
             episodeMap.orEmpty()
         } else {
-            episodeMap.orEmpty().mapValues { (key, episode) ->
-                imdbEpisodeRatings[key]?.let { imdbRating ->
-                    episode.copy(voteAverage = imdbRating, voteAverageIsImdb = true)
-                } ?: episode
+            buildMap {
+                putAll(episodeMap.orEmpty())
+                imdbEpisodeRatings.forEach { (key, imdbRating) ->
+                    val existing = get(key)
+                    put(
+                        key,
+                        existing?.copy(imdbVoteAverage = imdbRating)
+                            ?: TmdbEpisodeEnrichment(imdbVoteAverage = imdbRating),
+                    )
+                }
             }
         }
 
@@ -898,14 +904,10 @@ object TmdbMetadataService {
                             } else {
                                 null
                             },
-                            ratingIsImdb = if (settings.useEpisodeRatings) {
-                                if (enrichmentForEpisode.voteAverage != null) {
-                                    enrichmentForEpisode.voteAverageIsImdb
-                                } else {
-                                    video.ratingIsImdb
-                                }
+                            imdbRating = if (settings.useEpisodeRatings) {
+                                enrichmentForEpisode.imdbVoteAverage?.takeIf { it > 0.0 } ?: video.imdbRating
                             } else {
-                                false
+                                null
                             },
                         )
                     }
@@ -1227,7 +1229,7 @@ object TmdbMetadataService {
         page: Int,
         settings: TmdbSettings,
     ): MoreLikeThisPage {
-        if (!settings.enabled || !settings.hasApiKey || !settings.useMoreLikeThis) return MoreLikeThisPage()
+        if (!settings.enabled || !settings.useMoreLikeThis) return MoreLikeThisPage()
         val mediaType = normalizeMetaType(itemType)
         if (mediaType != "movie" && mediaType != "tv") return MoreLikeThisPage()
         val tmdbId = TmdbService.ensureTmdbId(itemId, mediaType)?.toIntOrNull() ?: return MoreLikeThisPage()
@@ -1513,14 +1515,14 @@ private data class EnrichmentPayload(
 )
 
 internal data class TmdbEpisodeEnrichment(
-    val title: String?,
-    val overview: String?,
-    val thumbnail: String?,
+    val title: String? = null,
+    val overview: String? = null,
+    val thumbnail: String? = null,
     val seasonPoster: String? = null,
-    val airDate: String?,
-    val runtimeMinutes: Int?,
+    val airDate: String? = null,
+    val runtimeMinutes: Int? = null,
     val voteAverage: Double? = null,
-    val voteAverageIsImdb: Boolean = false,
+    val imdbVoteAverage: Double? = null,
 )
 
 private fun normalizeMetaType(type: String): String =

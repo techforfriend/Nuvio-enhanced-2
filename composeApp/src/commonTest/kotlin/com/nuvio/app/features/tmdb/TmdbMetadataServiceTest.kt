@@ -123,6 +123,59 @@ class TmdbMetadataServiceTest {
     }
 
     @Test
+    fun `applyEnrichment keeps TMDB and IMDb episode ratings side by side`() {
+        val base = MetaDetails(
+            id = "tt1234567",
+            type = "series",
+            name = "Original",
+            videos = listOf(
+                MetaVideo(id = "ep1", title = "Episode 1", season = 1, episode = 1),
+            ),
+        )
+        val episodes = mapOf(
+            (1 to 1) to TmdbEpisodeEnrichment(
+                voteAverage = 8.7,
+                imdbVoteAverage = 9.1,
+            ),
+        )
+
+        val result = TmdbMetadataService.applyEnrichment(
+            meta = base,
+            enrichment = null,
+            episodeMap = episodes,
+            settings = TmdbSettings(enabled = true),
+        )
+
+        assertEquals(8.7, result.videos.first().tmdbRating)
+        assertEquals(9.1, result.videos.first().imdbRating)
+    }
+
+    @Test
+    fun `applyEnrichment keeps a lone IMDb episode rating`() {
+        val base = MetaDetails(
+            id = "tt1234567",
+            type = "series",
+            name = "Original",
+            videos = listOf(
+                MetaVideo(id = "ep1", title = "Episode 1", season = 1, episode = 1),
+            ),
+        )
+        val episodes = mapOf(
+            (1 to 1) to TmdbEpisodeEnrichment(imdbVoteAverage = 9.1),
+        )
+
+        val result = TmdbMetadataService.applyEnrichment(
+            meta = base,
+            enrichment = null,
+            episodeMap = episodes,
+            settings = TmdbSettings(enabled = true),
+        )
+
+        assertNull(result.videos.first().tmdbRating)
+        assertEquals(9.1, result.videos.first().imdbRating)
+    }
+
+    @Test
     fun `applyEnrichment omits TMDB episode rating when disabled`() {
         val base = MetaDetails(
             id = "tt1234567",
@@ -160,6 +213,7 @@ class TmdbMetadataServiceTest {
         )
 
         assertEquals(null, result.videos.first().tmdbRating)
+        assertEquals(null, result.videos.first().imdbRating)
     }
 
     @Test
