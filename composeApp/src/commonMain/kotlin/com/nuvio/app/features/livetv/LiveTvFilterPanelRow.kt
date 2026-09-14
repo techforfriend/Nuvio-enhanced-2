@@ -5,13 +5,17 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -251,66 +255,81 @@ private fun LiveTvCategoryOptionsSheet(
     NuvioModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        modifier = Modifier.widthIn(max = 520.dp),
     ) {
-        Column(
+        // The width cap belongs on the content, not on the sheet: the iOS path hands the sheet
+        // modifier to a fillMaxSize() column inside a full-width presentation controller, so a
+        // sheet-level widthIn only pinned a narrow column to the leading edge of a screen-wide
+        // panel. Capping and centering the content here behaves the same on both platforms, and
+        // keeps rows away from the landscape notch, which the leading-edge layout ran under.
+        // The horizontal safe-area padding covers the narrow viewports where the panel still
+        // spans the full width and centering alone would not clear the cutout.
+        //
+        // Everything also lives in one LazyColumn now. The header used to sit in a Column above
+        // a list capped at a fixed 420dp, which overflowed any short viewport — landscape phones
+        // and tablets clipped the bottom of the panel with no way to scroll to it.
+        LazyColumn(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = tokens.spacing.screenHorizontal),
+                .align(Alignment.CenterHorizontally)
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                .widthIn(max = tokens.components.sheetMaxWidth)
+                .fillMaxWidth(),
+            contentPadding = PaddingValues(bottom = tokens.spacing.screenHorizontal),
         ) {
-            Text(
-                text = title,
-                modifier = Modifier.padding(
-                    horizontal = tokens.spacing.screenHorizontal,
-                    vertical = NuvioTokens.Space.s14,
-                ),
-                style = MaterialTheme.typography.titleLarge,
-                color = tokens.colors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-            )
-            LiveTvFilterSheetDivider()
-            LiveTvFilterSheetRow(
-                title = allLabel,
-                icon = Icons.Rounded.Tv,
-                selected = selectedGroup.isNullOrBlank() && !favoritesOnly,
-                onClick = onAllSelected,
-            )
-            LiveTvFilterSheetDivider()
-            LiveTvFilterSheetRow(
-                title = favoritesLabel,
-                icon = Icons.Rounded.Star,
-                selected = favoritesOnly,
-                onClick = onFavoritesSelected,
-            )
-            LiveTvFilterSheetDivider()
-            Text(
-                text = stringResource(Res.string.live_tv_categories),
-                modifier = Modifier.padding(
-                    horizontal = tokens.spacing.screenHorizontal,
-                    vertical = NuvioTokens.Space.s10,
-                ),
-                style = MaterialTheme.typography.labelLarge,
-                color = tokens.colors.textMuted,
-                fontWeight = FontWeight.SemiBold,
-            )
-            LiveTvFilterSheetDivider()
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 420.dp),
-            ) {
-                items(
-                    items = groups,
-                    key = { group -> group },
-                ) { group ->
-                    LiveTvFilterSheetRow(
-                        title = group,
-                        selected = group == selectedGroup,
-                        onClick = { onGroupSelected(group) },
-                    )
-                    if (group != groups.lastOrNull()) {
-                        LiveTvFilterSheetDivider()
-                    }
+            item(key = "live_tv_filter_title") {
+                Text(
+                    text = title,
+                    modifier = Modifier.padding(
+                        horizontal = tokens.spacing.screenHorizontal,
+                        vertical = NuvioTokens.Space.s14,
+                    ),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = tokens.colors.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                LiveTvFilterSheetDivider()
+            }
+            item(key = "live_tv_filter_all") {
+                LiveTvFilterSheetRow(
+                    title = allLabel,
+                    icon = Icons.Rounded.Tv,
+                    selected = selectedGroup.isNullOrBlank() && !favoritesOnly,
+                    onClick = onAllSelected,
+                )
+                LiveTvFilterSheetDivider()
+            }
+            item(key = "live_tv_filter_favorites") {
+                LiveTvFilterSheetRow(
+                    title = favoritesLabel,
+                    icon = Icons.Rounded.Star,
+                    selected = favoritesOnly,
+                    onClick = onFavoritesSelected,
+                )
+                LiveTvFilterSheetDivider()
+            }
+            item(key = "live_tv_filter_categories_header") {
+                Text(
+                    text = stringResource(Res.string.live_tv_categories),
+                    modifier = Modifier.padding(
+                        horizontal = tokens.spacing.screenHorizontal,
+                        vertical = NuvioTokens.Space.s10,
+                    ),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = tokens.colors.textMuted,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                LiveTvFilterSheetDivider()
+            }
+            items(
+                items = groups,
+                key = { group -> group },
+            ) { group ->
+                LiveTvFilterSheetRow(
+                    title = group,
+                    selected = group == selectedGroup,
+                    onClick = { onGroupSelected(group) },
+                )
+                if (group != groups.lastOrNull()) {
+                    LiveTvFilterSheetDivider()
                 }
             }
         }
