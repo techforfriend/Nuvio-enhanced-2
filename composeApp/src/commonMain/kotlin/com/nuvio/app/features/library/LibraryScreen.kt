@@ -21,7 +21,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.PaddingValues
@@ -103,6 +102,7 @@ import com.nuvio.app.core.ui.NuvioDropdownChip
 import com.nuvio.app.core.ui.NuvioDropdownOption
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
+import com.nuvio.app.core.ui.ScreenBox
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioShelfSection
 import com.nuvio.app.core.ui.NuvioViewAllPillSize
@@ -419,7 +419,11 @@ fun LibraryScreen(
             }
         }
 
-        BoxWithConstraints(modifier = Modifier.weight(1f)) {
+        // Upstream swapped the screen-root BoxWithConstraints for ScreenBox to drop a
+        // subcomposition on tab switch. This fork keeps its header outside the list, so the
+        // equivalent box is this one; it spans the full screen width, which is all the
+        // gridColumns calculation reads.
+        ScreenBox(modifier = Modifier.weight(1f)) {
             val gridColumns = remember(maxWidth) { posterGridColumnCountForWidth(maxWidth) }
 
             NuvioScreen(

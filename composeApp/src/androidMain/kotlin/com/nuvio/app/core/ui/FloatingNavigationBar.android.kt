@@ -17,12 +17,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
@@ -41,6 +41,7 @@ import com.nuvio.app.core.ui.jelly.JellyTabRow
 import com.nuvio.app.core.ui.jelly.JellyTabTargets
 import com.nuvio.app.core.ui.jelly.drawJellyGlow
 import com.nuvio.app.core.ui.jelly.drawJellyPill
+import com.nuvio.app.core.ui.jelly.jellyGlowBrush
 import com.nuvio.app.core.ui.jelly.jellyPillPath
 import dev.chrisbanes.haze.HazeState
 import kotlin.math.abs
@@ -88,15 +89,8 @@ internal actual fun FloatingNavigationBar(
     LaunchedEffect(visualSelectedIndex, items.size) {
         motion.select(visualSelectedIndex)
     }
-    LaunchedEffect(motion.running) {
-        if (!motion.running) return@LaunchedEffect
-        var previous = withFrameNanos { it }
-        while (motion.running) {
-            withFrameNanos { now ->
-                motion.advance((now - previous) / 1_000_000_000.0)
-                previous = now
-            }
-        }
+    LaunchedEffect(motion) {
+        motion.animate()
     }
 
     Box(
@@ -148,21 +142,27 @@ internal actual fun FloatingNavigationBar(
                         Box(
                             Modifier.matchParentSize()
                                 .clip(RoundedCornerShape(50))
-                                .drawWithContent {
-                                    drawContent()
-                                    drawJellyGlow(motion.frame, accentColor.copy(alpha = accentColor.alpha * glowStrength))
+                                .drawWithCache {
+                                    val glowBrush = jellyGlowBrush(accentColor)
+                                    onDrawWithContent {
+                                        drawContent()
+                                        drawJellyGlow(motion.frame, glowBrush, glowStrength)
+                                    }
                                 },
                         ) {
                             GlassBarSurface(hazeState, Modifier.matchParentSize(), glowStrength)
                         }
                         Box(
-                            Modifier.matchParentSize().drawWithContent {
-                                if (selectedIndex >= 0) {
-                                    clipPath(jellyPillPath(motion.frame, items.size), ClipOp.Difference) {
-                                        this@drawWithContent.drawContent()
+                            Modifier.matchParentSize().drawWithCache {
+                                val path = Path()
+                                onDrawWithContent {
+                                    if (selectedIndex >= 0) {
+                                        clipPath(jellyPillPath(motion.frame, items.size, path), ClipOp.Difference) {
+                                            this@onDrawWithContent.drawContent()
+                                        }
+                                    } else {
+                                        drawContent()
                                     }
-                                } else {
-                                    drawContent()
                                 }
                             },
                         ) {
@@ -172,13 +172,19 @@ internal actual fun FloatingNavigationBar(
                             Box(
                                 Modifier.matchParentSize()
                                     .clearAndSetSemantics {}
-                                    .drawWithContent {
-                                        drawJellyPill(
-                                            motion.frame,
-                                            items.size,
-                                            selectedSurface,
-                                            accentColor.copy(alpha = accentColor.alpha * glowStrength),
-                                        ) { drawContent() }
+                                    .drawWithCache {
+                                        val path = Path()
+                                        val glowBrush = jellyGlowBrush(accentColor)
+                                        onDrawWithContent {
+                                            drawJellyPill(
+                                                motion.frame,
+                                                items.size,
+                                                path,
+                                                selectedSurface,
+                                                glowBrush,
+                                                glowStrength,
+                                            ) { drawContent() }
+                                        }
                                     },
                             ) {
                                 JellyTabRow(items, labelFraction, motion, active = true, compactSize = compactSize, modifier = Modifier.matchParentSize())
