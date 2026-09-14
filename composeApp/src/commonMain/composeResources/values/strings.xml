@@ -339,6 +339,9 @@
     <string name="compose_action_off">Off</string>
     <string name="compose_action_on">On</string>
     <string name="compose_action_pause">Pause</string>
+    <string name="trailer_enter_fullscreen">Enter fullscreen</string>
+    <string name="trailer_exit_fullscreen">Exit fullscreen</string>
+    <string name="player_seek_position">Playback position</string>
     <string name="compose_action_reload">Reload</string>
     <string name="compose_auth_already_have_account">Already have an account? </string>
     <string name="compose_auth_continue_without_account">Continue Without Account</string>
