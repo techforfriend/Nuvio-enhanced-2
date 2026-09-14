@@ -23,6 +23,7 @@ private enum NuvioComposeHost {
     static func wrap(
         _ contentController: UIViewController,
         disablesInteractiveContentPopGesture: Bool = false,
+        passesThroughEmptyNavigationBarAreas: Bool = false,
         hidesContainingTabBar: Bool = false,
         onTabBarControllerAvailable: ((UITabBarController) -> Void)? = nil
     ) -> RootComposeViewController {
@@ -31,6 +32,7 @@ private enum NuvioComposeHost {
         return RootComposeViewController(
             contentController: contentController,
             disablesInteractiveContentPopGesture: disablesInteractiveContentPopGesture,
+            passesThroughEmptyNavigationBarAreas: passesThroughEmptyNavigationBarAreas,
             hidesContainingTabBar: hidesContainingTabBar,
             onTabBarControllerAvailable: onTabBarControllerAvailable
         )
@@ -40,6 +42,7 @@ private enum NuvioComposeHost {
 final class RootComposeViewController: UIViewController {
     private let contentController: UIViewController
     private let disablesInteractiveContentPopGesture: Bool
+    private let passesThroughEmptyNavigationBarAreas: Bool
     private let hidesContainingTabBar: Bool
     private let onTabBarControllerAvailable: ((UITabBarController) -> Void)?
     private var immersiveSystemUIObserver: NSObjectProtocol?
@@ -47,11 +50,13 @@ final class RootComposeViewController: UIViewController {
     init(
         contentController: UIViewController,
         disablesInteractiveContentPopGesture: Bool,
+        passesThroughEmptyNavigationBarAreas: Bool = false,
         hidesContainingTabBar: Bool,
         onTabBarControllerAvailable: ((UITabBarController) -> Void)?
     ) {
         self.contentController = contentController
         self.disablesInteractiveContentPopGesture = disablesInteractiveContentPopGesture
+        self.passesThroughEmptyNavigationBarAreas = passesThroughEmptyNavigationBarAreas
         self.hidesContainingTabBar = hidesContainingTabBar
         self.onTabBarControllerAvailable = onTabBarControllerAvailable
         super.init(nibName: nil, bundle: nil)
@@ -137,6 +142,7 @@ final class RootComposeViewController: UIViewController {
         refreshContainingTabBarVisibility()
         refreshImmersiveSystemUI()
         setInteractiveContentPopGestureEnabled(false)
+        setNavigationBarPassthroughEnabled(true)
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -155,6 +161,7 @@ final class RootComposeViewController: UIViewController {
     }
 
     override func viewWillDisappear(_ animated: Bool) {
+        setNavigationBarPassthroughEnabled(false)
         setInteractiveContentPopGestureEnabled(true)
         super.viewWillDisappear(animated)
     }
@@ -189,6 +196,11 @@ final class RootComposeViewController: UIViewController {
         if #available(iOS 26.0, *) {
             navigationController?.interactiveContentPopGestureRecognizer?.isEnabled = enabled
         }
+    }
+
+    private func setNavigationBarPassthroughEnabled(_ enabled: Bool) {
+        guard passesThroughEmptyNavigationBarAreas else { return }
+        NuvioNavigationBarPassthrough.setEnabled(enabled, on: navigationController)
     }
 
     private func immersiveController(in controller: UIViewController?) -> UIViewController? {
@@ -1020,7 +1032,8 @@ struct DetailComposeView: UIViewControllerRepresentable {
         )
         return NuvioComposeHost.wrap(
             controller,
-            disablesInteractiveContentPopGesture: true
+            disablesInteractiveContentPopGesture: true,
+            passesThroughEmptyNavigationBarAreas: true
         )
     }
 
