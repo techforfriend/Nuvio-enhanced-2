@@ -15,8 +15,10 @@ internal class FloatingNavigationItem(
     val onClick: () -> Unit,
     val icon: ImageVector? = null,
     val drawable: DrawableResource? = null,
-    val content: (@Composable () -> Unit)? = null,
+    val content: (@Composable (onClick: () -> Unit) -> Unit)? = null,
 )
+
+internal expect val floatingNavigationGlowSupported: Boolean
 
 @Composable
 internal expect fun FloatingNavigationBar(
@@ -26,6 +28,7 @@ internal expect fun FloatingNavigationBar(
     hazeState: HazeState? = null,
     contentPadding: PaddingValues = floatingNavigationBarPadding(),
     compactSize: Boolean = false,
+    glowEnabled: Boolean = true,
 )
 
 @Composable

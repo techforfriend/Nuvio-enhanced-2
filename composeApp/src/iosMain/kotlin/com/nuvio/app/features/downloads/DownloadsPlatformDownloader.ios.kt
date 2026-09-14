@@ -4,6 +4,12 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.usePinned
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.downloads_error_finalize_file_failed
@@ -41,6 +47,37 @@ private const val PROGRESS_MIN_BYTE_DELTA = 512L * 1024L
 
 private val backgroundSessionCompletionHandlers = mutableMapOf<String, () -> Unit>()
 
+/**
+ * Addon subtitles are fetched alongside the video. The download itself runs on a background
+ * NSURLSession with no coroutine of its own, so the subtitle fetch gets a scope here and is
+ * tracked per download so cancelling the download cancels it too.
+ */
+private val subtitlePreparationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+private val subtitlePreparationJobs = mutableMapOf<String, Job>()
+
+@OptIn(ExperimentalForeignApi::class)
+private fun prepareDownloadSubtitles(downloadId: String, request: DownloadPlatformRequest) {
+    subtitlePreparationJobs.remove(downloadId)?.cancel()
+    val destinationUri = resolveDownloadsBaseDirectory().withAccess { downloadsDirectory ->
+        NSURL.fileURLWithPath("$downloadsDirectory/${request.destinationFileName}").absoluteString
+    } ?: return
+    val job = subtitlePreparationScope.launch {
+        try {
+            DownloadSubtitles.prepare(request.item, destinationUri)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // Bundled subtitles are best effort; never fail the video download over them.
+        }
+    }
+    subtitlePreparationJobs[downloadId] = job
+    job.invokeOnCompletion { subtitlePreparationJobs.remove(downloadId) }
+}
+
+private fun cancelDownloadSubtitles(downloadId: String) {
+    subtitlePreparationJobs.remove(downloadId)?.cancel()
+}
+
 fun handleDownloadsBackgroundEvents(
     identifier: String,
     completionHandler: () -> Unit,
@@ -60,6 +97,7 @@ internal actual object DownloadsPlatformDownloader {
         onFailure: (message: String) -> Unit,
         onPaused: () -> Unit,
     ): DownloadsTaskHandle {
+        prepareDownloadSubtitles(request.item.id, request)
         IosBackgroundDownloadCoordinator.startOrResume(
             downloadId = request.item.id,
             request = request,
@@ -91,7 +129,11 @@ internal actual object DownloadsPlatformDownloader {
 
     actual fun removePartialFile(destinationFileName: String): Boolean =
         resolveDownloadsBaseDirectory().withAccess { downloadsDirectory ->
-            removePathIfExists("$downloadsDirectory/$destinationFileName.part")
+            val destinationPath = "$downloadsDirectory/$destinationFileName"
+            NSURL.fileURLWithPath(destinationPath).absoluteString?.let { uri ->
+                DownloadSubtitleStorage(uri).remove()
+            }
+            removePathIfExists("$destinationPath.part")
         }
 
     actual fun resolveLocalFileUri(localFileUri: String?, destinationFileName: String): String? =
@@ -129,6 +171,7 @@ private class IosDownloadsTaskHandle(
     private val downloadId: String,
 ) : DownloadsTaskHandle {
     override fun cancel() {
+        cancelDownloadSubtitles(downloadId)
         IosBackgroundDownloadCoordinator.cancelDownload(downloadId)
     }
 }

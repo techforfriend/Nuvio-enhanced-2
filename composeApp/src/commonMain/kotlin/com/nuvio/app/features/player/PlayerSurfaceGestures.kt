@@ -13,6 +13,7 @@ import kotlin.math.roundToLong
 
 internal fun Modifier.playerSurfaceTapGestures(
     layoutSize: IntSize,
+    playbackGesturesEnabled: Boolean,
     playerControlsLockedState: State<Boolean>,
     onSurfaceTap: State<(Offset) -> Unit>,
     onSurfaceDoubleTap: State<(Offset) -> Unit>,
@@ -20,21 +21,25 @@ internal fun Modifier.playerSurfaceTapGestures(
     deactivateHoldToSpeedState: State<() -> Unit>,
     revealLockedOverlayState: State<() -> Unit>,
 ): Modifier =
-    pointerInput(layoutSize) {
+    pointerInput(layoutSize, playbackGesturesEnabled) {
         detectTapGestures(
             onPress = {
                 tryAwaitRelease()
                 deactivateHoldToSpeedState.value()
             },
             onTap = { offset -> onSurfaceTap.value(offset) },
-            onDoubleTap = { offset -> onSurfaceDoubleTap.value(offset) },
-            onLongPress = {
-                if (playerControlsLockedState.value) {
-                    revealLockedOverlayState.value()
-                } else {
-                    activateHoldToSpeedState.value()
+            onDoubleTap = if (playbackGesturesEnabled) {
+                { offset -> onSurfaceDoubleTap.value(offset) }
+            } else null,
+            onLongPress = if (playbackGesturesEnabled) {
+                {
+                    if (playerControlsLockedState.value) {
+                        revealLockedOverlayState.value()
+                    } else {
+                        activateHoldToSpeedState.value()
+                    }
                 }
-            },
+            } else null,
         )
     }
 
@@ -42,6 +47,7 @@ internal fun Modifier.playerSurfaceDragGestures(
     gestureController: PlayerGestureController?,
     playerController: PlayerEngineController?,
     layoutSize: IntSize,
+    playbackGesturesEnabled: Boolean,
     sideGestureSystemEdgeExclusionPx: Float,
     playerControlsLockedState: State<Boolean>,
     touchGesturesEnabledState: State<Boolean>,
@@ -57,7 +63,14 @@ internal fun Modifier.playerSurfaceDragGestures(
     revealLockedOverlayState: State<() -> Unit>,
     commitHorizontalSeekState: State<(Long) -> Unit>,
 ): Modifier =
-    pointerInput(gestureController, playerController, layoutSize, sideGestureSystemEdgeExclusionPx) {
+    pointerInput(
+        gestureController,
+        playerController,
+        layoutSize,
+        sideGestureSystemEdgeExclusionPx,
+        playbackGesturesEnabled,
+    ) {
+        if (!playbackGesturesEnabled) return@pointerInput
         awaitEachGesture {
             val down = awaitFirstDown()
             if (playerControlsLockedState.value) {

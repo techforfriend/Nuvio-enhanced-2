@@ -904,6 +904,8 @@
     <string name="settings_meta_cinematic_background_description">Làm mờ phông nền phía sau nội dung, tương tự màn hình truyền phát</string>
     <string name="settings_meta_background_mode">Chế độ ảnh nền</string>
     <string name="settings_meta_background_mode_description">Chọn cách ảnh hiển thị xuất hiện phía sau các trang siêu dữ liệu.</string>
+    <string name="settings_meta_poster_transition">Chuyển cảnh poster</string>
+    <string name="settings_meta_poster_transition_description">Mở rộng và làm mờ poster khi mở trang chi tiết.</string>
     <string name="settings_meta_background_mode_normal">Mặc định</string>
     <string name="settings_meta_background_mode_normal_description">Sử dụng ảnh nền mặc định của ứng dụng</string>
     <string name="settings_meta_background_mode_cinematic">Điện ảnh</string>
@@ -1177,11 +1179,8 @@
     <string name="settings_playback_timeout_unlimited">Không giới hạn</string>
     <string name="settings_playback_tunneled_playback">Phát trực tiếp qua phần cứng</string>
     <string name="settings_playback_tunneled_playback_description">Đồng bộ âm thanh/video ở cấp phần cứng. Có thể cải thiện việc phát lại trên một số thiết bị Android TV</string>
-    <string name="settings_tmdb_add_api_key_first">Thêm khóa API TMDB của riêng bạn bên dưới để bật tính năng bổ sung dữ liệu</string>
-    <string name="settings_tmdb_api_key_label">Khóa API</string>
     <string name="settings_tmdb_enable_enrichment">Bật bổ sung dữ liệu TMDB</string>
     <string name="settings_tmdb_enable_enrichment_description">Dùng TMDB làm nguồn siêu dữ liệu để bổ sung dữ liệu cho tiện ích</string>
-    <string name="settings_tmdb_enter_api_key">Nhập khóa API TMDB v3</string>
     <string name="settings_tmdb_language_code_label">Mã ngôn ngữ</string>
     <string name="settings_tmdb_module_artwork">Ảnh hiển thị</string>
     <string name="settings_tmdb_module_artwork_description">Logo và phông nền hình ảnh từ TMDB</string>
@@ -1207,10 +1206,8 @@
     <string name="settings_tmdb_module_season_posters_description">Dùng poster từ TMDB cho từng mùa trong danh sách hiển thị</string>
     <string name="settings_tmdb_module_trailers">Trailer</string>
     <string name="settings_tmdb_module_trailers_description">Đề xuất trailer từ TMDB cho mục trailer chi tiết</string>
-    <string name="settings_tmdb_personal_api_key">Khóa API cá nhân</string>
     <string name="settings_tmdb_preferred_language">Ngôn ngữ</string>
     <string name="settings_tmdb_preferred_language_description">Ngôn ngữ dữ liệu TMDB cho tiêu đề, logo và các trường đã bật</string>
-    <string name="settings_tmdb_section_credentials">THÔNG TIN XÁC THỰC</string>
     <string name="settings_tmdb_section_localization">BẢN ĐỊA HÓA</string>
     <string name="settings_tmdb_section_modules">THÀNH PHẦN</string>
     <string name="settings_tmdb_section_title">BỔ SUNG DỮ LIỆU TMDB</string>
@@ -1247,6 +1244,7 @@
     <string name="settings_tracking_simkl_library_description">Dùng danh sách xem sau và danh sách trạng thái trên Simkl của bạn</string>
     <string name="settings_tracking_nuvio_progress_description">Xem tiếp với tiến trình được lưu bởi Đồng bộ Nuvio.</string>
     <string name="settings_tracking_trakt_progress_description">Xem tiếp với tiến trình phát lại từ Trakt.</string>
+    <string name="settings_tracking_trakt_progress_required">Khả dụng khi chọn Trakt làm nguồn tiến trình xem.</string>
     <string name="settings_tracking_simkl_progress_description">Xem tiếp với tiến trình phát lại từ Simkl</string>
     <string name="settings_tracking_tmdb_recommendations_description">Dùng đề xuất của TMDB trên trang chi tiết.</string>
     <string name="settings_tracking_trakt_recommendations_description">Dùng các tiêu đề liên quan được cá nhân hóa từ Trakt.</string>
@@ -1576,10 +1574,12 @@
     <string name="streams_open_internal_player">Mở bằng trình phát bên trong</string>
     <string name="streams_empty_load_failed_message">Các tiện ích phát trực tuyến đã cài đặt không trả về được phản hồi luồng hợp lệ.</string>
     <string name="streams_empty_load_failed_title">Không thể tải các luồng</string>
+    <string name="playback_unavailable">Không thể phát nội dung</string>
+    <string name="playback_unavailable_message">Không thể phát nội dung này với thiết lập hiện tại.</string>
     <string name="streams_empty_no_addons_message">Cài đặt một tiện ích trước để tải các luồng cho nội dung này.</string>
-    <string name="streams_empty_no_stream_addon_message">Các tiện ích bạn đã cài đặt không cung cấp luồng cho loại nội dung này.</string>
+    <string name="streams_empty_no_stream_addon_message">Các tiện ích đã cài đặt không cung cấp luồng cho loại nội dung này.</string>
     <string name="streams_empty_no_stream_addon_title">Không có sẵn tiện ích phát trực tuyến nào</string>
-    <string name="streams_empty_no_streams_message">Không có tiện ích nào bạn đã cài đặt trả về được luồng cho nội dung này.</string>
+    <string name="streams_empty_no_streams_message">Không có tiện ích đã cài đặt nào trả về được luồng cho nội dung này.</string>
     <string name="streams_episode_badge">M%1$d T%2$d</string>
     <string name="streams_episode_fallback_title">Tập</string>
     <string name="streams_episode_title_with_name">M%1$dT%2$d - %3$s</string>
@@ -1717,7 +1717,6 @@
     <string name="trakt_error_add_list_failed">Không thể thêm vào danh sách Trakt</string>
     <string name="trakt_error_missing_ids">Thiếu ID tương thích với Trakt</string>
     <string name="trakt_error_empty_response">Nội dung phản hồi trống</string>
-    <string name="tmdb_sources_api_key_required">Thêm khóa API TMDB trong Cài đặt để dùng nguồn TMDB</string>
     <string name="tmdb_sources_collection_fallback_title">Bộ sưu tập TMDB %1$d</string>
     <string name="tmdb_sources_collection_not_found">Không tìm thấy bộ sưu tập TMDB</string>
     <string name="tmdb_sources_company_fallback_title">Hãng sản xuất TMDB %1$d</string>
@@ -1888,7 +1887,7 @@
     <string name="parental_severity_moderate">Vừa phải</string>
     <string name="parental_severity_severe">Nặng</string>
     <string name="parental_violence">Bạo lực</string>
-    <string name="person_role_creator">Tác giả</string>
+    <string name="person_role_creator">Nhà sáng tạo</string>
     <string name="person_role_director">Đạo diễn</string>
     <string name="person_role_writer">Biên kịch</string>
     <string name="rating_audience_score">Điểm khán giả</string>
@@ -2078,7 +2077,6 @@
     <string name="collections_editor_tmdb_production_title_format">Hãng sản xuất TMDB %1$s</string>
     <string name="collections_editor_tmdb_source_load_failed">Không thể tải nguồn TMDB</string>
     <string name="collections_editor_trakt_list_id_format">ID %1$s</string>
-    <string name="collections_tmdb_api_key_required">Thêm khóa API TMDB trong phần Cài đặt để sử dụng các nguồn TMDB</string>
     <string name="collections_tmdb_collection_not_found">Không tìm thấy bộ sưu tập TMDB</string>
     <string name="collections_tmdb_company_not_found">Không tìm thấy hãng sản xuất trên TMDB</string>
     <string name="collections_tmdb_discover_no_data">Khám Phá TMDB không trả về dữ liệu</string>
@@ -2121,8 +2119,6 @@
     <string name="plugins_badge_providers">%1$d nhà cung cấp</string>
     <string name="plugins_badge_refreshing">Đang làm mới</string>
     <string name="plugins_badge_repos">%1$d kho lưu trữ</string>
-    <string name="plugins_badge_tmdb_key_missing">Thiếu khóa API TMDB</string>
-    <string name="plugins_badge_tmdb_key_set">Đã thiết lập khóa API TMDB</string>
     <string name="plugins_button_install_repo">Cài đặt kho lưu trữ trình mở rộng</string>
     <string name="plugins_button_installing">Đang cài đặt…</string>
     <string name="plugins_button_test_provider">Kiểm tra nhà cung cấp</string>
@@ -2166,7 +2162,6 @@
     <string name="plugins_test_error_title">Lỗi</string>
     <string name="plugins_test_failed">Kiểm tra nhà cung cấp thất bại</string>
     <string name="plugins_test_results_count">Kết quả kiểm tra (%1$d)</string>
-    <string name="plugins_tmdb_required_message">Các nhà cung cấp trình mở rộng yêu cầu khóa API TMDB. Thiết lập nó trong màn hình TMDB để nhà cung cấp trình mở rộng hoạt động đúng.</string>
     <string name="search_error_no_results_for_catalog">Không tìm thấy kết quả trong %1$s</string>
     <string name="settings_playback_introdb_invalid_key">Khóa API không hợp lệ hoặc lỗi kết nối</string>
     <string name="streams_plugin_repository_fallback">Kho lưu trữ trình mở rộng</string>

@@ -136,6 +136,7 @@ object StreamsRepository {
             _uiState.value = StreamsUiState(
                 requestToken = requestToken,
                 isDirectAutoPlayFlow = true,
+                autoPlayDecided = true,
                 showDirectAutoPlayOverlay = true,
             )
         }
@@ -157,6 +158,7 @@ object StreamsRepository {
             _uiState.value = StreamsUiState(
                 requestToken = requestToken,
                 groups = listOf(presentedGroup),
+                autoPlayDecided = true,
                 activeAddonIds = setOf("embedded"),
                 isAnyLoading = false,
             )
@@ -180,6 +182,7 @@ object StreamsRepository {
                 requestToken = requestToken,
                 isAnyLoading = false,
                 emptyStateReason = StreamsEmptyStateReason.NoAddonsInstalled,
+                autoPlayDecided = true,
             )
             return
         }
@@ -209,6 +212,7 @@ object StreamsRepository {
                 requestToken = requestToken,
                 isAnyLoading = false,
                 emptyStateReason = StreamsEmptyStateReason.NoCompatibleAddons,
+                autoPlayDecided = true,
             )
             return
         }
@@ -238,6 +242,7 @@ object StreamsRepository {
             isAnyLoading = isInitiallyLoading,
             emptyStateReason = null,
             isDirectAutoPlayFlow = isDirectAutoPlayFlow,
+            autoPlayDecided = true,
             showDirectAutoPlayOverlay = isDirectAutoPlayFlow,
         )
 
@@ -789,6 +794,7 @@ object StreamsRepository {
                 autoPlayCandidates = remaining,
                 isDirectAutoPlayFlow = remaining.isNotEmpty(),
                 showDirectAutoPlayOverlay = remaining.isNotEmpty(),
+                overlayMessage = null,
             )
         }
         return hasNext

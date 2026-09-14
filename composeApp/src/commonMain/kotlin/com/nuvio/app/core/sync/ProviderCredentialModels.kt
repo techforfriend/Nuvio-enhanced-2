@@ -12,7 +12,6 @@ internal const val PROVIDER_API_KEY_FIELD = "api_key"
 internal const val PROVIDER_CLIENT_ID_FIELD = "client_id"
 
 internal object ProviderCredentialIds {
-    const val TMDB = "tmdb"
     const val MDBLIST = "mdblist"
     const val ANIMESKIP = "animeskip"
     const val INTRODB = "introdb"

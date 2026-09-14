@@ -5,6 +5,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dev.chrisbanes.haze.HazeState
 
+internal actual val floatingNavigationGlowSupported: Boolean
+    get() = false
+
 @Composable
 internal actual fun FloatingNavigationBar(
     items: List<FloatingNavigationItem>,
@@ -13,6 +16,7 @@ internal actual fun FloatingNavigationBar(
     hazeState: HazeState?,
     contentPadding: PaddingValues,
     compactSize: Boolean,
+    glowEnabled: Boolean,
 ) {
     NuvioNavigationBar(modifier, scrollState, hazeState, contentPadding, compactSize) {
         items.forEach { item ->
@@ -36,7 +40,7 @@ internal actual fun FloatingNavigationBar(
                     onClick = item.onClick,
                     label = item.label,
                 ) {
-                    item.content?.invoke()
+                    item.content?.invoke(item.onClick)
                 }
             }
         }

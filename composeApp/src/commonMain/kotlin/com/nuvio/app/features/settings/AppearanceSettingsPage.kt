@@ -20,6 +20,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.core.ui.floatingNavigationGlowSupported
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.NuvioBottomSheetActionRow
 import com.nuvio.app.core.ui.NuvioBottomSheetDivider
@@ -41,7 +43,9 @@ import nuvio.composeapp.generated.resources.settings_appearance_app_icon
 import nuvio.composeapp.generated.resources.settings_appearance_tab_bar_behavior
 import nuvio.composeapp.generated.resources.settings_appearance_tab_bar_behavior_sheet_title
 import nuvio.composeapp.generated.resources.settings_appearance_nav_bar_style
-import nuvio.composeapp.generated.resources.settings_appearance_nav_bar_style_sheet_title
+import nuvio.composeapp.generated.resources.settings_nav_bar_glow_on
+import nuvio.composeapp.generated.resources.settings_nav_bar_glow_off
+import nuvio.composeapp.generated.resources.settings_nav_bar_summary
 import nuvio.composeapp.generated.resources.settings_appearance_amoled_black
 import nuvio.composeapp.generated.resources.settings_appearance_amoled_description
 import nuvio.composeapp.generated.resources.settings_appearance_dynamic_artwork_background
@@ -110,6 +114,10 @@ internal fun LazyListScope.appearanceSettingsContent(
         var showNavBarStyleSheet by remember { mutableStateOf(false) }
         var showTabBarBehaviorSheet by remember { mutableStateOf(false) }
         var showAppIconPicker by remember { mutableStateOf(false) }
+        val glowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
+        // Upstream pins tablets to COMPACT because there the bar is a top rail. This fork puts
+        // the floating pill at the bottom on every size, so the chosen style still applies.
+        val effectiveNavBarStyle = selectedNavBarStyle
         SettingsSection(
             title = stringResource(Res.string.settings_appearance_section_display),
             isTablet = isTablet,
@@ -181,7 +189,15 @@ internal fun LazyListScope.appearanceSettingsContent(
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_appearance_nav_bar_style),
-                        description = stringResource(selectedNavBarStyle.labelRes),
+                        description = if (floatingNavigationGlowSupported && effectiveNavBarStyle != NavBarStyle.CLASSIC) {
+                            stringResource(
+                                Res.string.settings_nav_bar_summary,
+                                stringResource(effectiveNavBarStyle.labelRes),
+                                stringResource(if (glowEnabled) Res.string.settings_nav_bar_glow_on else Res.string.settings_nav_bar_glow_off),
+                            )
+                        } else {
+                            stringResource(effectiveNavBarStyle.labelRes)
+                        },
                         isTablet = isTablet,
                         onClick = { showNavBarStyleSheet = true },
                     )
@@ -224,12 +240,14 @@ internal fun LazyListScope.appearanceSettingsContent(
         }
 
         if (showNavBarStyleSheet) {
-            NavBarStyleBottomSheet(
-                selectedStyle = selectedNavBarStyle,
-                onStyleSelected = {
-                    onNavBarStyleSelected(it)
-                    showNavBarStyleSheet = false
-                },
+            NavigationBarSettingsSheet(
+                // Passing false keeps the style list visible on tablets: the sheet hides it when
+                // isTablet is true, which only fits upstream's tablet top rail.
+                isTablet = false,
+                selectedStyle = effectiveNavBarStyle,
+                onStyleSelected = onNavBarStyleSelected,
+                glowEnabled = glowEnabled,
+                onGlowChanged = ThemeSettingsRepository::setNavBarGlowEnabled,
                 onDismiss = { showNavBarStyleSheet = false },
             )
         }
@@ -423,66 +441,6 @@ private fun TabBarBehaviorBottomSheet(
                     },
                     trailingContent = {
                         if (behavior == selectedBehavior) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = stringResource(Res.string.cd_selected),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    },
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun NavBarStyleBottomSheet(
-    selectedStyle: NavBarStyle,
-    onStyleSelected: (NavBarStyle) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val coroutineScope = rememberCoroutineScope()
-
-    NuvioModalBottomSheet(
-        onDismissRequest = {
-            coroutineScope.launch {
-                dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
-            }
-        },
-        sheetState = sheetState,
-    ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-        ) {
-            item {
-                Text(
-                    text = stringResource(Res.string.settings_appearance_nav_bar_style_sheet_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                )
-            }
-
-            itemsIndexed(NavBarStyle.entries.toList()) { index, style ->
-                if (index > 0) {
-                    NuvioBottomSheetDivider()
-                }
-                NuvioBottomSheetActionRow(
-                    title = stringResource(style.labelRes),
-                    onClick = {
-                        onStyleSelected(style)
-                        coroutineScope.launch {
-                            dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
-                        }
-                    },
-                    trailingContent = {
-                        if (style == selectedStyle) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = stringResource(Res.string.cd_selected),

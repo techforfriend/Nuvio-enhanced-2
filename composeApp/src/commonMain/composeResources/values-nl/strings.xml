@@ -1177,11 +1177,8 @@
     <string name="settings_playback_timeout_unlimited">Onbeperkt</string>
     <string name="settings_playback_tunneled_playback">Tunneled Playback</string>
     <string name="settings_playback_tunneled_playback_description">Audio-/videosynchronisatie op hardwareniveau. Kan de weergave op sommige Android TV-apparaten verbeteren</string>
-    <string name="settings_tmdb_add_api_key_first">Voeg hieronder je eigen TMDB API-sleutel toe voordat je verrijking inschakelt.</string>
-    <string name="settings_tmdb_api_key_label">API-sleutel</string>
     <string name="settings_tmdb_enable_enrichment">TMDB-verrijking inschakelen</string>
     <string name="settings_tmdb_enable_enrichment_description">Gebruik TMDB als metadatabron om add-on-gegevens aan te vullen</string>
-    <string name="settings_tmdb_enter_api_key">Voer je TMDB v3 API-sleutel in.</string>
     <string name="settings_tmdb_language_code_label">Taalcode</string>
     <string name="settings_tmdb_module_artwork">Afbeeldingen</string>
     <string name="settings_tmdb_module_artwork_description">Logo- en achtergrondafbeeldingen van TMDB</string>
@@ -1207,10 +1204,8 @@
     <string name="settings_tmdb_module_season_posters_description">Gebruik TMDB-seizoensposters in de seizoenskiezer op het metadatascherm voor series.</string>
     <string name="settings_tmdb_module_trailers">Trailers</string>
     <string name="settings_tmdb_module_trailers_description">Trailerkandidaten uit TMDB-video's voor de trailersectie op de detailpagina</string>
-    <string name="settings_tmdb_personal_api_key">Persoonlijke API-sleutel</string>
     <string name="settings_tmdb_preferred_language">Taal</string>
     <string name="settings_tmdb_preferred_language_description">TMDB-metadatataal voor titel, logo en ingeschakelde velden</string>
-    <string name="settings_tmdb_section_credentials">INLOGGEGEVENS</string>
     <string name="settings_tmdb_section_localization">LOKALISATIE</string>
     <string name="settings_tmdb_section_modules">MODULES</string>
     <string name="settings_tmdb_section_title">TMDB-VERRIJKING</string>
@@ -1719,7 +1714,6 @@
     <string name="trakt_error_add_list_failed">Toevoegen aan Trakt-lijst mislukt</string>
     <string name="trakt_error_missing_ids">Compatibele Trakt-ID's ontbreken</string>
     <string name="trakt_error_empty_response">Lege responsebody</string>
-    <string name="tmdb_sources_api_key_required">Voeg een TMDB API-sleutel toe in Instellingen om TMDB-bronnen te gebruiken.</string>
     <string name="tmdb_sources_collection_fallback_title">TMDB-collectie %1$d</string>
     <string name="tmdb_sources_collection_not_found">TMDB-collectie niet gevonden</string>
     <string name="tmdb_sources_company_fallback_title">TMDB-productie %1$d</string>
@@ -2080,7 +2074,6 @@
     <string name="collections_editor_tmdb_production_title_format">TMDB-productie %1$s</string>
     <string name="collections_editor_tmdb_source_load_failed">Kon TMDB-bron niet laden</string>
     <string name="collections_editor_trakt_list_id_format">ID %1$s</string>
-    <string name="collections_tmdb_api_key_required">Voeg een TMDB API-sleutel toe in Instellingen om TMDB-bronnen te gebruiken.</string>
     <string name="collections_tmdb_collection_not_found">TMDB-collectie niet gevonden</string>
     <string name="collections_tmdb_company_not_found">TMDB-bedrijf niet gevonden</string>
     <string name="collections_tmdb_discover_no_data">TMDB Ontdekken gaf geen gegevens terug</string>
@@ -2123,8 +2116,6 @@
     <string name="plugins_badge_providers">%1$d providers</string>
     <string name="plugins_badge_refreshing">Vernieuwen</string>
     <string name="plugins_badge_repos">%1$d repo's</string>
-    <string name="plugins_badge_tmdb_key_missing">TMDB API-sleutel ontbreekt</string>
-    <string name="plugins_badge_tmdb_key_set">TMDB API-sleutel ingesteld</string>
     <string name="plugins_button_install_repo">Plug-inrepository installeren</string>
     <string name="plugins_button_installing">Installeren...</string>
     <string name="plugins_button_test_provider">Provider testen</string>
@@ -2168,7 +2159,6 @@
     <string name="plugins_test_error_title">Fout</string>
     <string name="plugins_test_failed">Providertest mislukt</string>
     <string name="plugins_test_results_count">Testresultaten (%1$d)</string>
-    <string name="plugins_tmdb_required_message">Providerplug-ins vereisen een TMDB API-sleutel. Stel deze in op het TMDB-scherm, anders werken providerplug-ins niet correct.</string>
     <string name="search_error_no_results_for_catalog">Geen zoekresultaten voor %1$s.</string>
     <string name="settings_playback_introdb_invalid_key">Ongeldige API-sleutel of verbinding mislukt</string>
     <string name="streams_plugin_repository_fallback">Plug-inrepository</string>

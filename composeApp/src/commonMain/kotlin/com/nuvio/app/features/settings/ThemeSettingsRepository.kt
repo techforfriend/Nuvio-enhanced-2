@@ -49,6 +49,9 @@ object ThemeSettingsRepository {
     private val _navBarStyle = MutableStateFlow(NavBarStyle.ADAPTIVE)
     val navBarStyle: StateFlow<NavBarStyle> = _navBarStyle.asStateFlow()
 
+    private val _navBarGlowEnabled = MutableStateFlow(true)
+    val navBarGlowEnabled: StateFlow<Boolean> = _navBarGlowEnabled.asStateFlow()
+
     private var hasLoaded = false
     private var observesMembership = false
 
@@ -77,6 +80,7 @@ object ThemeSettingsRepository {
         NativeTabBridge.publishTabBarBehavior(NuvioTabBarBehavior.Default)
         NativeTabBridge.publishLiquidGlassEnabled(NuvioTabBarBehavior.Default.isEnabled)
         _selectedAppLanguage.value = AppLanguage.DEVICE
+        _navBarGlowEnabled.value = true
         _navBarStyle.value = NavBarStyle.ADAPTIVE
     }
 
@@ -109,6 +113,7 @@ object ThemeSettingsRepository {
         val appLanguage = AppLanguage.fromCode(ThemeSettingsStorage.loadSelectedAppLanguage())
         ThemeSettingsStorage.applySelectedAppLanguage(appLanguage.code)
         _selectedAppLanguage.value = appLanguage
+        _navBarGlowEnabled.value = ThemeSettingsStorage.loadNavBarGlowEnabled() ?: true
         _navBarStyle.value = NavBarStyle.fromKey(ThemeSettingsStorage.loadNavBarStyle())
     }
 
@@ -184,6 +189,13 @@ object ThemeSettingsRepository {
         if (_navBarStyle.value == style) return
         _navBarStyle.value = style
         ThemeSettingsStorage.saveNavBarStyle(style.key)
+    }
+
+    fun setNavBarGlowEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (_navBarGlowEnabled.value == enabled) return
+        _navBarGlowEnabled.value = enabled
+        ThemeSettingsStorage.saveNavBarGlowEnabled(enabled)
     }
 
     private fun observeMembership() {

@@ -725,11 +725,8 @@
     <string name="settings_playback_timeout_unlimited">Απεριόριστο</string>
     <string name="settings_playback_tunneled_playback">Αναπαραγωγή μέσω σήραγγας</string>
     <string name="settings_playback_tunneled_playback_description">Συγχρονισμός ήχου/βίντεο σε επίπεδο υλικού. Μπορεί να βελτιώσει την αναπαραγωγή σε ορισμένες συσκευές Android TV.</string>
-    <string name="settings_tmdb_add_api_key_first">Προσθέστε πρώτα το δικό σας κλειδί API TMDB παρακάτω πριν ενεργοποιήσετε τον εμπλουτισμό.</string>
-    <string name="settings_tmdb_api_key_label">Κλειδί API TMDB</string>
     <string name="settings_tmdb_enable_enrichment">Ενεργοποίηση εμπλουτισμού TMDB</string>
     <string name="settings_tmdb_enable_enrichment_description">Χρήση του TMDB ως πηγής μεταδεδομένων για εμπλουτισμό των δεδομένων των πρόσθετων</string>
-    <string name="settings_tmdb_enter_api_key">Εισάγετε το κλειδί API v3 TMDB.</string>
     <string name="settings_tmdb_language_code_label">Κωδικός γλώσσας</string>
     <string name="settings_tmdb_module_artwork">Γραφικά</string>
     <string name="settings_tmdb_module_artwork_description">Αντικατάσταση φόντου, αφίσας και λογότυπου με γραφικά TMDB.</string>
@@ -755,10 +752,8 @@
     <string name="settings_tmdb_module_season_posters_description">Χρήση αφισών σεζόν TMDB στον επιλογέα σεζόν της οθόνης μεταδεδομένων για σειρές.</string>
     <string name="settings_tmdb_module_trailers">Τρέιλερ</string>
     <string name="settings_tmdb_module_trailers_description">Λήψη και εμφάνιση ενότητας βίντεο τρέιλερ TMDB στις σελίδες λεπτομερειών.</string>
-    <string name="settings_tmdb_personal_api_key">Προσωπικό κλειδί API</string>
     <string name="settings_tmdb_preferred_language">Προτιμώμενη γλώσσα</string>
     <string name="settings_tmdb_preferred_language_description">Ορίστε τον κωδικό γλώσσας TMDB που χρησιμοποιείται για τοπικοποιημένα μεταδεδομένα, για παράδειγμα `el`, `el-GR` ή `en-US`.</string>
-    <string name="settings_tmdb_section_credentials">ΔΙΑΠΙΣΤΕΥΤΗΡΙΑ</string>
     <string name="settings_tmdb_section_localization">ΤΟΠΙΚΟΠΟΙΗΣΗ</string>
     <string name="settings_tmdb_section_modules">ΕΝΟΤΗΤΕΣ</string>
     <string name="settings_tmdb_section_title">ΕΜΠΛΟΥΤΙΣΜΟΣ TMDB</string>
@@ -1591,7 +1586,6 @@
     <string name="collections_import_error_collection_duplicate_id">Το id συλλογής '%1$s' χρησιμοποιείται περισσότερο από μία φορά.</string>
     <string name="collections_import_error_folder_duplicate_id">Το ID φακέλου «%1$s» χρησιμοποιείται περισσότερες από μία φορά στο «%2$s».</string>
     <string name="collections_import_error_trakt_list_id">Στην πηγή %1$d του φακέλου «%2$s» λείπει το ID λίστας Trakt.</string>
-    <string name="collections_tmdb_api_key_required">Προσθέστε ένα κλειδί API TMDB στις Ρυθμίσεις για να χρησιμοποιήσετε πηγές TMDB.</string>
     <string name="collections_tmdb_collection_not_found">Η συλλογή TMDB δεν βρέθηκε</string>
     <string name="collections_tmdb_company_not_found">Η εταιρεία TMDB δεν βρέθηκε</string>
     <string name="collections_tmdb_discover_no_data">Το TMDB Discover δεν επέστρεψε δεδομένα</string>
@@ -1749,8 +1743,6 @@
     <string name="plugins_badge_providers">%1$d πάροχοι</string>
     <string name="plugins_badge_refreshing">Ανανέωση</string>
     <string name="plugins_badge_repos">%1$d αποθετήρια</string>
-    <string name="plugins_badge_tmdb_key_missing">Λείπει το κλειδί API TMDB</string>
-    <string name="plugins_badge_tmdb_key_set">Το κλειδί API TMDB έχει οριστεί</string>
     <string name="plugins_button_install_repo">Εγκατάσταση αποθετηρίου πρόσθετων</string>
     <string name="plugins_button_installing">Γίνεται εγκατάσταση…</string>
     <string name="plugins_button_test_provider">Δοκιμή παρόχου</string>
@@ -1794,7 +1786,6 @@
     <string name="plugins_test_error_title">Σφάλμα</string>
     <string name="plugins_test_failed">Η δοκιμή παρόχου απέτυχε</string>
     <string name="plugins_test_results_count">Αποτελέσματα δοκιμής (%1$d)</string>
-    <string name="plugins_tmdb_required_message">Οι πάροχοι πρόσθετων απαιτούν κλειδί API TMDB. Ορίστε το στην οθόνη TMDB, διαφορετικά οι πάροχοι πρόσθετων δεν θα λειτουργούν σωστά.</string>
     <string name="profile_avatar_url_invalid">Εισαγάγετε ένα έγκυρο URL εικόνας http:// ή https://.</string>
     <string name="profile_custom_avatar_selected">Επιλέχθηκε προσαρμοσμένο URL avatar.</string>
     <string name="profile_custom_avatar_url">Προσαρμοσμένο URL avatar</string>
@@ -2148,7 +2139,6 @@
     <string name="submit_intro_start_time_label">ΩΡΑ ΕΝΑΡΞΗΣ (MM:SS)</string>
     <string name="submit_intro_submit">Υποβολή</string>
     <string name="submit_intro_title">Υποβολή χρονοσημάνσεων</string>
-    <string name="tmdb_sources_api_key_required">Προσθέστε ένα κλειδί API TMDB στις Ρυθμίσεις για να χρησιμοποιήσετε πηγές TMDB.</string>
     <string name="tmdb_sources_collection_fallback_title">Συλλογή TMDB %1$d</string>
     <string name="tmdb_sources_collection_not_found">Η συλλογή TMDB δεν βρέθηκε</string>
     <string name="tmdb_sources_company_fallback_title">Παραγωγή TMDB %1$d</string>

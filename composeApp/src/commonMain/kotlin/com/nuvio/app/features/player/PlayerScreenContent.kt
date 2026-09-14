@@ -41,8 +41,6 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun PlayerScreenContent(args: PlayerScreenArgs) {
-    LockPlayerToLandscape()
-
     val playerSettingsUiState by remember {
         PlayerSettingsRepository.ensureLoaded()
         PlayerSettingsRepository.uiState
