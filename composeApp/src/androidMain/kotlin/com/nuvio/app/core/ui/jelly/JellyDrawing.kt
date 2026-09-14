@@ -13,8 +13,8 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.min
 
 internal fun DrawScope.drawJellyGlow(frame: JellyFrame, color: Color) {
-    if (frame.glowOpacity <= 0f) return
-    val alpha = 0.15f * frame.glowOpacity
+    if (frame.glowOpacity <= 0f || color.alpha <= 0f) return
+    val alpha = 0.15f * frame.glowOpacity * color.alpha
     drawRect(
         brush = Brush.radialGradient(
             0f to color.copy(alpha = alpha),

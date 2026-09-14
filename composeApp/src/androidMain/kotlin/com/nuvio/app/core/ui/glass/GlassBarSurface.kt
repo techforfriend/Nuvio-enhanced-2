@@ -27,35 +27,28 @@ import dev.chrisbanes.haze.hazeEffect
 private val GlassSurfaceColor = Color(0xFF1C1C1E)
 
 @Composable
-internal fun GlassBarSurface(hazeState: HazeState?, modifier: Modifier = Modifier) {
+internal fun GlassBarSurface(hazeState: HazeState?, modifier: Modifier = Modifier, glowStrength: Float = 1f) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && hazeState?.blurEnabled == true) {
-        RefractedGlassBar(hazeState, modifier)
+        RefractedGlassBar(hazeState, modifier, glowStrength)
     } else {
         Box(
             modifier
                 .then(if (hazeState != null) Modifier.barBackdrop(hazeState) else Modifier)
                 .drawWithCache {
-                    val fill = Brush.verticalGradient(
-                        0f to GlassSurfaceColor.copy(alpha = 0.64f),
-                        0.16f to GlassSurfaceColor.copy(alpha = 0.91f),
-                        1f to GlassSurfaceColor.copy(alpha = 0.94f),
-                    )
+                    val fill = GlassSurfaceColor.copy(alpha = if (hazeState != null) 0.55f else 0.82f)
                     val edge = Brush.verticalGradient(
                         listOf(Color.White.copy(alpha = 0.27f), Color.White.copy(alpha = 0.02f)),
                     )
                     val width = 0.75.dp.toPx()
                     onDrawBehind {
-                        if (hazeState?.blurEnabled == true) {
-                            drawRect(fill)
-                        } else {
-                            drawRect(GlassSurfaceColor.copy(alpha = 0.9f))
-                        }
+                        drawRect(fill)
                         drawRoundRect(
                             brush = edge,
                             topLeft = Offset(width / 2, width / 2),
                             size = Size(size.width - width, size.height - width),
                             cornerRadius = CornerRadius((size.height - width) / 2),
                             style = Stroke(width),
+                            alpha = glowStrength,
                         )
                     }
                 },
@@ -65,7 +58,7 @@ internal fun GlassBarSurface(hazeState: HazeState?, modifier: Modifier = Modifie
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
-private fun RefractedGlassBar(hazeState: HazeState, modifier: Modifier) {
+private fun RefractedGlassBar(hazeState: HazeState, modifier: Modifier, glowStrength: Float) {
     val shader = remember { RuntimeShader(GlassBarShader) }
     Box(
         modifier
@@ -80,6 +73,7 @@ private fun RefractedGlassBar(hazeState: HazeState, modifier: Modifier) {
                 shader.setFloatUniform("resolution", size.width, size.height)
                 shader.setFloatUniform("density", density)
                 shader.setFloatUniform("outset", 24.dp.roundToPx().toFloat())
+                shader.setFloatUniform("glowStrength", glowStrength)
                 renderEffect = RenderEffect.createRuntimeShaderEffect(shader, "backdrop").asComposeRenderEffect()
             }
             .barBackdrop(hazeState),
@@ -87,7 +81,7 @@ private fun RefractedGlassBar(hazeState: HazeState, modifier: Modifier) {
 }
 
 private fun Modifier.barBackdrop(hazeState: HazeState): Modifier = hazeEffect(state = hazeState) {
-    blurRadius = 20.dp
+    blurRadius = 24.dp
     backgroundColor = GlassSurfaceColor
     tints = listOf(HazeTint(Color.Transparent))
     noiseFactor = 0f

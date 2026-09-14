@@ -990,11 +990,8 @@
     <string name="settings_playback_timeout_unlimited">Bez omezení</string>
     <string name="settings_playback_tunneled_playback">Tunelované přehrávání</string>
     <string name="settings_playback_tunneled_playback_description">Hardwarová synchronizace zvuku/videa. Může zlepšit přehrávání na některých zařízeních Android TV.</string>
-    <string name="settings_tmdb_add_api_key_first">Před zapnutím obohacování metadat přidejte svůj vlastní API klíč TMDB.</string>
-    <string name="settings_tmdb_api_key_label">API klíč</string>
     <string name="settings_tmdb_enable_enrichment">Povolit obohacení TMDB</string>
     <string name="settings_tmdb_enable_enrichment_description">Použije TMDB jako zdroj metadat pro vylepšení dat z doplňku.</string>
-    <string name="settings_tmdb_enter_api_key">Zadejte svůj API klíč z TMDB v3.</string>
     <string name="settings_tmdb_language_code_label">Kód jazyka</string>
     <string name="settings_tmdb_module_artwork">Grafika</string>
     <string name="settings_tmdb_module_artwork_description">Obrázky log a pozadí z TMDB.</string>
@@ -1018,10 +1015,8 @@
     <string name="settings_tmdb_module_season_posters_description">V seznamu sérií u seriálů používá plakáty sérií z TMDB.</string>
     <string name="settings_tmdb_module_trailers">Trailery</string>
     <string name="settings_tmdb_module_trailers_description">Návrhy trailerů z TMDB videí do sekce s trailery v detailech.</string>
-    <string name="settings_tmdb_personal_api_key">Osobní API klíč</string>
     <string name="settings_tmdb_preferred_language">Jazyk</string>
     <string name="settings_tmdb_preferred_language_description">Jazyk metadat z TMDB pro titulek, logo a povolené pole.</string>
-    <string name="settings_tmdb_section_credentials">POVĚŘENÍ</string>
     <string name="settings_tmdb_section_localization">LOKALIZACE</string>
     <string name="settings_tmdb_section_modules">MODULY</string>
     <string name="settings_tmdb_section_title">OBOHACENÍ TMDB</string>
@@ -1439,7 +1434,6 @@
     <string name="trakt_error_add_list_failed">Přidání do seznamu Trakt selhalo</string>
     <string name="trakt_error_missing_ids">Chybí kompatibilní Trakt ID</string>
     <string name="trakt_error_empty_response">Prázdné tělo odpovědi</string>
-    <string name="tmdb_sources_api_key_required">Přidejte API klíč TMDB v Nastavení, abyste mohli používat zdroje TMDB.</string>
     <string name="tmdb_sources_collection_fallback_title">Sbírka TMDB %1$d</string>
     <string name="tmdb_sources_collection_not_found">Sbírka TMDB nenalezena</string>
     <string name="tmdb_sources_company_fallback_title">Produkce TMDB %1$d</string>
@@ -1782,7 +1776,6 @@
     <string name="collections_editor_tmdb_production_title_format">Produkce TMDB %1$s</string>
     <string name="collections_editor_tmdb_source_load_failed">Zdroj TMDB se nepodařilo načíst</string>
     <string name="collections_editor_trakt_list_id_format">ID %1$s</string>
-    <string name="collections_tmdb_api_key_required">Přidejte API klíč TMDB v Nastavení, abyste mohli používat zdroje TMDB.</string>
     <string name="collections_tmdb_collection_not_found">Sbírka TMDB nenalezena</string>
     <string name="collections_tmdb_company_not_found">Společnost TMDB nenalezena</string>
     <string name="collections_tmdb_discover_no_data">Objevování (Discover) na TMDB nevrátilo žádná data</string>
@@ -1825,8 +1818,6 @@
     <string name="plugins_badge_providers">%1$d poskytovatelů</string>
     <string name="plugins_badge_refreshing">Obnovování</string>
     <string name="plugins_badge_repos">%1$d repozitářů</string>
-    <string name="plugins_badge_tmdb_key_missing">Chybí API klíč TMDB</string>
-    <string name="plugins_badge_tmdb_key_set">API klíč TMDB nastaven</string>
     <string name="plugins_button_install_repo">Instalovat repozitář pluginů</string>
     <string name="plugins_button_installing">Instalace…</string>
     <string name="plugins_button_test_provider">Otestovat poskytovatele</string>
@@ -1870,7 +1861,6 @@
     <string name="plugins_test_error_title">Chyba</string>
     <string name="plugins_test_failed">Test poskytovatele selhal</string>
     <string name="plugins_test_results_count">Výsledky testu (%1$d)</string>
-    <string name="plugins_tmdb_required_message">Pluginy poskytovatelů vyžadují API klíč k TMDB. Nastavte jej na obrazovce TMDB, jinak nebudou pluginy správně fungovat.</string>
     <string name="search_error_no_results_for_catalog">Pro %1$s nebyly vráceny žádné výsledky vyhledávání.</string>
     <string name="settings_playback_introdb_invalid_key">Neplatný API klíč nebo selhalo připojení</string>
     <string name="streams_plugin_repository_fallback">Repozitář pluginů</string>

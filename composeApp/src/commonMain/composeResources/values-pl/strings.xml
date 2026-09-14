@@ -905,11 +905,8 @@
     <string name="settings_playback_timeout_unlimited">Bez limitu</string>
     <string name="settings_playback_tunneled_playback">Odtwarzanie tunelowane</string>
     <string name="settings_playback_tunneled_playback_description">Włącz odtwarzanie tunelowane dla niższego opóźnienia synchronizacji audio/wideo.</string>
-    <string name="settings_tmdb_add_api_key_first">Dodaj własny klucz API TMDB poniżej przed włączeniem wzbogacania.</string>
-    <string name="settings_tmdb_api_key_label">Klucz API TMDB</string>
     <string name="settings_tmdb_enable_enrichment">Włącz wzbogacanie TMDB</string>
-    <string name="settings_tmdb_enable_enrichment_description">Użyj klucza API TMDB, aby wzbogacić metadane dodatków na ekranie szczegółów, gdy dostępne jest ID TMDB lub IMDb.</string>
-    <string name="settings_tmdb_enter_api_key">Wprowadź klucz API TMDB v3.</string>
+    <string name="settings_tmdb_enable_enrichment_description">Używaj TMDB jako źródła metadanych do uzupełniania danych z dodatków</string>
     <string name="settings_tmdb_language_code_label">Kod języka</string>
     <string name="settings_tmdb_module_artwork">Grafiki</string>
     <string name="settings_tmdb_module_artwork_description">Zastąp tło, plakat i logo grafikami TMDB.</string>
@@ -933,10 +930,8 @@
     <string name="settings_tmdb_module_season_posters_description">Użyj plakatów sezonów TMDB w selektorze sezonów na ekranie metadanych dla seriali.</string>
     <string name="settings_tmdb_module_trailers">Zwiastuny</string>
     <string name="settings_tmdb_module_trailers_description">Pobierz i pokaż sekcję zwiastunów TMDB na stronach szczegółów.</string>
-    <string name="settings_tmdb_personal_api_key">Osobisty klucz API</string>
     <string name="settings_tmdb_preferred_language">Preferowany język</string>
     <string name="settings_tmdb_preferred_language_description">Ustaw kod języka TMDB używany do zlokalizowanych metadanych, na przykład `en`, `en-US` lub `pt-BR`.</string>
-    <string name="settings_tmdb_section_credentials">DANE UWIERZYTELNIAJĄCE</string>
     <string name="settings_tmdb_section_localization">LOKALIZACJA</string>
     <string name="settings_tmdb_section_modules">MODUŁY</string>
     <string name="settings_tmdb_section_title">TMDB</string>
@@ -1521,7 +1516,6 @@
     <string name="collections_editor_watch_region_placeholder">US, KR, JP, IN</string>
     <string name="collections_folder_trakt_movie_list">Lista filmów Trakt</string>
     <string name="collections_folder_trakt_series_list">Lista seriali Trakt</string>
-    <string name="collections_tmdb_api_key_required">Dodaj klucz API TMDB w Ustawieniach, aby korzystać ze źródeł TMDB.</string>
     <string name="collections_tmdb_collection_not_found">Nie znaleziono kolekcji TMDB</string>
     <string name="collections_tmdb_company_not_found">Nie znaleziono firmy TMDB</string>
     <string name="collections_tmdb_discover_no_data">TMDB Odkrywaj nie zwrócił danych</string>
@@ -1623,8 +1617,6 @@
     <string name="plugins_badge_providers">%1$d dostawców</string>
     <string name="plugins_badge_refreshing">Odświeżanie</string>
     <string name="plugins_badge_repos">%1$d repozytoriów</string>
-    <string name="plugins_badge_tmdb_key_missing">Brak klucza API TMDB</string>
-    <string name="plugins_badge_tmdb_key_set">Klucz API TMDB ustawiony</string>
     <string name="plugins_button_installing">Instalowanie…</string>
     <string name="plugins_button_install_repo">Zainstaluj repozytorium wtyczek</string>
     <string name="plugins_button_testing">Testowanie…</string>
@@ -1668,7 +1660,6 @@
     <string name="plugins_test_error_title">Błąd</string>
     <string name="plugins_test_failed">Test dostawcy nie powiódł się</string>
     <string name="plugins_test_results_count">Wyniki testu (%1$d)</string>
-    <string name="plugins_tmdb_required_message">Dostawcy wtyczek wymagają klucza API TMDB. Ustaw go na ekranie TMDB, w przeciwnym razie dostawcy nie będą działać poprawnie.</string>
     <string name="search_error_no_results_for_catalog">Brak wyników wyszukiwania dla %1$s.</string>
     <string name="settings_advanced_clear_cw_cache">Wyczyść pamięć Kontynuuj oglądanie</string>
     <string name="settings_advanced_clear_cw_cache_done">Pamięć wyczyszczona</string>
@@ -1826,7 +1817,6 @@
     <string name="submit_intro_start_time_label">CZAS STARTU (MM:SS)</string>
     <string name="submit_intro_submit">Wyślij</string>
     <string name="submit_intro_title">Zgłoś znaczniki czasu</string>
-    <string name="tmdb_sources_api_key_required">Dodaj klucz API TMDB w Ustawieniach, aby korzystać ze źródeł TMDB.</string>
     <string name="tmdb_sources_collection_fallback_title">Kolekcja TMDB %1$d</string>
     <string name="tmdb_sources_collection_not_found">Nie znaleziono kolekcji TMDB</string>
     <string name="tmdb_sources_company_fallback_title">Produkcja TMDB %1$d</string>

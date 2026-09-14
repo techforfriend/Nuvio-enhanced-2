@@ -113,6 +113,11 @@ internal fun JellyTabTargets(
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Row(modifier.padding(horizontal = 4.dp).selectableGroup()) {
         items.forEachIndexed { index, item ->
+            val visualIndex = visualNavIndex(index, items.size, isRtl)
+            val onClick = {
+                motion.select(visualIndex)
+                item.onClick()
+            }
             Box(
                 modifier = Modifier.weight(1f).fillMaxHeight()
                     .selectable(
@@ -120,18 +125,17 @@ internal fun JellyTabTargets(
                         role = Role.Tab,
                         interactionSource = null,
                         indication = null,
-                        onClick = item.onClick,
+                        onClick = onClick,
                     )
                     .clearAndSetSemantics {
                         role = Role.Tab
                         selected = item.selected
                         contentDescription = item.label
-                        onClick { item.onClick(); true }
+                        onClick { onClick(); true }
                     },
                 contentAlignment = Alignment.Center,
             ) {
                 if (item.content != null) {
-                    val visualIndex = visualNavIndex(index, items.size, isRtl)
                     Column(
                         modifier = Modifier.graphicsLayer {
                             val frame = motion.frame
@@ -147,7 +151,7 @@ internal fun JellyTabTargets(
                                 .then(if (compactSize) Modifier.size(24.dp) else Modifier)
                                 .graphicsLayer { translationY = 2.dp.toPx() * labelFraction },
                         ) {
-                            item.content()
+                            item.content(onClick)
                         }
                         Spacer(Modifier.height((if (compactSize) 14.dp else 16.dp) * labelFraction))
                     }
