@@ -44,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -94,6 +95,7 @@ fun ProfileSwitcherTab(
     popupBelowAnchor: Boolean = false,
 ) {
     val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
     val activeProfile = profileState.activeProfile
     val profiles = profileState.profiles
     val avatars by AvatarRepository.avatars.collectAsStateWithLifecycle()
@@ -132,7 +134,7 @@ fun ProfileSwitcherTab(
         val trigger = triggerCoordinates ?: return
         val screenPosition = trigger.localToScreen(localPosition)
         val nextTargetProfileIndex = profileBubbleBounds.entries
-            .firstOrNull { (index, bounds) -> index != activeProfile?.profileIndex && bounds.contains(screenPosition) }
+            .firstOrNull { (_, bounds) -> bounds.contains(screenPosition) }
             ?.key
         if (nextTargetProfileIndex != null && nextTargetProfileIndex != dragTargetProfileIndex) {
             performProfileHoverHaptic()
@@ -146,6 +148,12 @@ fun ProfileSwitcherTab(
             isEditMode = false,
             activeProfileIndex = ProfileRepository.state.value.activeProfile?.profileIndex,
             onEditProfile = {},
+            onActiveProfileSelected = {
+                scope.launch {
+                    showAlreadyActiveProfileToast(it)
+                    showPopup = false
+                }
+            },
             onPinRequired = { pinProfile = it },
             onProfileSelected = {
                 showPopup = false
@@ -308,6 +316,7 @@ fun NativeProfileSwitcherPopup(
     modifier: Modifier = Modifier,
 ) {
     val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
     val activeProfile = profileState.activeProfile
     val profiles = profileState.profiles
     val avatars by AvatarRepository.avatars.collectAsStateWithLifecycle()
@@ -343,6 +352,13 @@ fun NativeProfileSwitcherPopup(
             isEditMode = false,
             activeProfileIndex = ProfileRepository.state.value.activeProfile?.profileIndex,
             onEditProfile = {},
+            onActiveProfileSelected = {
+                scope.launch {
+                    showAlreadyActiveProfileToast(it)
+                    showPopup = false
+                    onDismissRequest()
+                }
+            },
             onPinRequired = { pinProfile = it },
             onProfileSelected = {
                 showPopup = false
@@ -612,7 +628,6 @@ private fun PopupProfileBubble(
             }
             .clip(tokens.shapes.compactCard)
             .clickable(
-                enabled = !isActive,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick,

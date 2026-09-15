@@ -1585,6 +1585,7 @@
     <string name="profile_use_primary_addons">Use Primary Addons</string>
     <string name="profile_use_primary_addons_description">Share the main profile's addon setup instead of managing a separate list.</string>
     <string name="profile_who_is_watching">Who&apos;s watching?</string>
+    <string name="profile_already_active">You&apos;re already on &quot;%1$s&quot;</string>
     <string name="provider_downloaded">Downloaded</string>
     <string name="resume_prompt_action">Resume</string>
     <string name="streams_active_scrapers">Active scrapers</string>

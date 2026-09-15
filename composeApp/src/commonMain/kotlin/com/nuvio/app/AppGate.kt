@@ -512,13 +512,18 @@ internal fun AppGate(
                 .zIndex(NuvioTokens.Z.dialog),
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                PlatformBackHandler(
-                    enabled = gateScreen == AppGateScreen.ProfileSelection.name && !profileSelectionLoading,
-                ) {
-                    if (!autoSkipProfileSelection) {
+                val onBack: (() -> Unit)? = if (!autoSkipProfileSelection) {
+                    {
                         skipProfileSelectionEnterAnimation = false
                         gateScreen = AppGateScreen.Main.name
                     }
+                } else {
+                    null
+                }
+                PlatformBackHandler(
+                    enabled = gateScreen == AppGateScreen.ProfileSelection.name && !profileSelectionLoading,
+                ) {
+                    onBack?.invoke()
                 }
                 ProfileSelectionScreen(
                     onProfileSelected = { profile ->
@@ -550,6 +555,7 @@ internal fun AppGate(
                         gateScreen = AppGateScreen.ProfileEdit.name
                     },
                     interactionEnabled = !profileSelectionLoading,
+                    onBack = onBack,
                     activeProfileIndex = if (autoSkipProfileSelection) null else profileState.activeProfile?.profileIndex,
                     contentVisible = !profileSelectionTransitionActive,
                     modifier = Modifier.fillMaxSize(),

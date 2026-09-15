@@ -979,7 +979,7 @@ private final class NativeProfileSwitcherViewModel: ObservableObject {
     }
 
     func choose(_ profile: NativeProfileItem, onComplete: @escaping () -> Void) {
-        if profile.pinEnabled {
+        if profile.pinEnabled && !profile.active {
             lockedProfile = profile
             pin = ""
             errorMessage = nil
@@ -1127,7 +1127,7 @@ private struct NativeProfileSwitcherView: View {
                                 }
                             }
                             .buttonStyle(.plain)
-                            .disabled(model.isSubmitting || profile.active)
+                            .disabled(model.isSubmitting)
                         }
 
                         if model.canAddProfile {

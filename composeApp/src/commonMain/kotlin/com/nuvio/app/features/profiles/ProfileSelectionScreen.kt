@@ -59,6 +59,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.nuvio.app.core.ui.NuvioBackButton
+import com.nuvio.app.core.ui.NuvioToastHost
 import com.nuvio.app.features.membership.CosmeticEntitlement
 import com.nuvio.app.features.settings.MemberBrandWordmark
 import kotlinx.coroutines.delay
@@ -71,6 +73,7 @@ fun ProfileSelectionScreen(
     onProfileSelected: (NuvioProfile) -> Unit,
     onEditProfile: (NuvioProfile) -> Unit,
     onAddProfile: () -> Unit,
+    onBack: (() -> Unit)? = null,
     interactionEnabled: Boolean = true,
     activeProfileIndex: Int? = null,
     contentVisible: Boolean = true,
@@ -91,6 +94,7 @@ fun ProfileSelectionScreen(
                 isEditMode = isEditMode,
                 activeProfileIndex = activeProfileIndex,
                 onEditProfile = onEditProfile,
+                onActiveProfileSelected = { scope.launch { showAlreadyActiveProfileToast(it) } },
                 onPinRequired = { pinDialogProfile = it },
                 onProfileSelected = onProfileSelected,
             )
@@ -191,7 +195,7 @@ fun ProfileSelectionScreen(
                                         profile = profile,
                                         isEditMode = isEditMode,
                                         animDelay = currentIndex * 80,
-                                        enabled = interactionEnabled && (isEditMode || profile.profileIndex != activeProfileIndex),
+                                        enabled = interactionEnabled,
                                         onClick = {
                                             onProfileClick(profile)
                                         },
@@ -227,7 +231,7 @@ fun ProfileSelectionScreen(
                                                 profile = profile,
                                                 isEditMode = isEditMode,
                                                 animDelay = currentIndex * 80,
-                                                enabled = interactionEnabled && (isEditMode || profile.profileIndex != activeProfileIndex),
+                                                enabled = interactionEnabled,
                                                 onClick = {
                                                     onProfileClick(profile)
                                                 },
@@ -286,6 +290,17 @@ fun ProfileSelectionScreen(
                 Spacer(modifier = Modifier.height(if (isTabletLayout) 0.dp else 32.dp))
             }
         }
+
+        if (onBack != null && interactionEnabled && contentVisible) {
+            NuvioBackButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 16.dp, top = statusBarTop + 8.dp),
+            )
+        }
+
+        NuvioToastHost(modifier = Modifier.align(Alignment.TopCenter))
     }
 
     pinDialogProfile?.let { profile ->

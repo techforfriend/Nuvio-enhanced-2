@@ -16,6 +16,7 @@ class ProfileSelectionRoutingTest {
             isEditMode = false,
             activeProfileIndex = 1,
             onEditProfile = { editRequests += 1 },
+            onActiveProfileSelected = { error("Another profile should not show an active profile toast") },
             onPinRequired = { pinRequests += 1 },
             onProfileSelected = { selectionRequests += 1 },
         )
@@ -36,6 +37,7 @@ class ProfileSelectionRoutingTest {
             isEditMode = false,
             activeProfileIndex = 1,
             onEditProfile = {},
+            onActiveProfileSelected = { error("Another profile should not show an active profile toast") },
             onPinRequired = { pinRequests += 1 },
             onProfileSelected = { selectionRequests += 1 },
         )
@@ -56,6 +58,7 @@ class ProfileSelectionRoutingTest {
             isEditMode = true,
             activeProfileIndex = profile.profileIndex,
             onEditProfile = { editRequests += 1 },
+            onActiveProfileSelected = { error("Editing should not show an active profile toast") },
             onPinRequired = { pinRequests += 1 },
             onProfileSelected = { selectionRequests += 1 },
         )
@@ -66,9 +69,9 @@ class ProfileSelectionRoutingTest {
     }
 
     @Test
-    fun `active profile does not request selection or PIN verification`() {
+    fun `active profile only requests a toast with its name`() {
         for (pinEnabled in listOf(false, true)) {
-            val profile = NuvioProfile(profileIndex = 2, pinEnabled = pinEnabled)
+            val profile = NuvioProfile(profileIndex = 2, name = "Alex", pinEnabled = pinEnabled)
             val requests = mutableListOf<String>()
 
             routeProfileSelection(
@@ -76,11 +79,12 @@ class ProfileSelectionRoutingTest {
                 isEditMode = false,
                 activeProfileIndex = profile.profileIndex,
                 onEditProfile = { requests += "edit" },
+                onActiveProfileSelected = { requests += "toast:${it.name}" },
                 onPinRequired = { requests += "pin" },
                 onProfileSelected = { requests += "select" },
             )
 
-            assertEquals(emptyList(), requests)
+            assertEquals(listOf("toast:Alex"), requests)
         }
     }
 
@@ -94,6 +98,7 @@ class ProfileSelectionRoutingTest {
                 profile = profile,
                 isEditMode = false,
                 onEditProfile = { requests += "edit" },
+                onActiveProfileSelected = { requests += "toast" },
                 onPinRequired = { requests += "pin" },
                 onProfileSelected = { requests += "select" },
             )

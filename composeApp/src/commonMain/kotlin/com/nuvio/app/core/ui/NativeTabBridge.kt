@@ -7,6 +7,7 @@ import com.nuvio.app.features.profiles.NuvioProfile
 import com.nuvio.app.features.profiles.PinVerifyResult
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.profiles.profileAvatarImageUrl
+import com.nuvio.app.features.profiles.showAlreadyActiveProfileToast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -162,7 +163,9 @@ class NativeProfileSwitcherController {
         completion: (PinVerifyResult) -> Unit,
     ) {
         scope.launch {
-            if (profileIndex == ProfileRepository.state.value.activeProfile?.profileIndex) {
+            val activeProfile = ProfileRepository.state.value.activeProfile
+            if (activeProfile != null && profileIndex == activeProfile.profileIndex) {
+                showAlreadyActiveProfileToast(activeProfile)
                 completion(PinVerifyResult(unlocked = true))
                 return@launch
             }

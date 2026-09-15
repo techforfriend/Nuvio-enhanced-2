@@ -216,7 +216,7 @@ private fun ProfilePopupItem(
         modifier.graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(tokens.shapes.compactCard)
             .background(if (isHovered) tokens.colors.accent.copy(alpha = 0.14f) else Color.Transparent)
-            .selectable(selected = isActive, enabled = !isActive, onClick = onClick)
+            .selectable(selected = isActive, onClick = onClick)
             .padding(horizontal = 4.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
