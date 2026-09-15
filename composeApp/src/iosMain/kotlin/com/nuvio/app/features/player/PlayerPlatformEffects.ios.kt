@@ -45,7 +45,11 @@ actual fun LockPlayerToLandscape() {
 actual fun FullscreenPlayerDialog(onDismiss: () -> Unit, content: @Composable () -> Unit) {
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            usePlatformInsets = false,
+            useSoftwareKeyboardInset = false,
+        ),
         content = content,
     )
 }
