@@ -45,6 +45,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -95,6 +96,7 @@ fun ProfileSwitcherTab(
     popupBelowAnchor: Boolean = false,
 ) {
     val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
     val activeProfile = profileState.activeProfile
     val profiles = profileState.profiles
     val avatars by AvatarRepository.avatars.collectAsStateWithLifecycle()
@@ -142,12 +144,23 @@ fun ProfileSwitcherTab(
     }
 
     fun chooseProfile(profile: NuvioProfile) {
-        if (profile.pinEnabled) {
-            pinProfile = profile
-        } else {
-            showPopup = false
-            onProfileSelected(profile)
-        }
+        routeProfileSelection(
+            profile = profile,
+            isEditMode = false,
+            activeProfileIndex = ProfileRepository.state.value.activeProfile?.profileIndex,
+            onEditProfile = {},
+            onActiveProfileSelected = {
+                scope.launch {
+                    showAlreadyActiveProfileToast(it)
+                    showPopup = false
+                }
+            },
+            onPinRequired = { pinProfile = it },
+            onProfileSelected = {
+                showPopup = false
+                onProfileSelected(it)
+            },
+        )
     }
 
     fun chooseDragTarget() {
@@ -194,7 +207,7 @@ fun ProfileSwitcherTab(
                 indication = null,
                 onClick = onClick,
             )
-            .pointerInput(profiles) {
+            .pointerInput(profiles, activeProfile?.profileIndex) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = { startOffset ->
                         if (profiles.isNotEmpty()) {
@@ -280,7 +293,10 @@ fun ProfileSwitcherTab(
                     },
                     onPinCancelled = { pinProfile = null },
                     onPinVerified = { profile ->
-                        if (showPopup && pinProfile?.profileIndex == profile.profileIndex) {
+                        if (
+                            showPopup && pinProfile?.profileIndex == profile.profileIndex &&
+                            profile.profileIndex != ProfileRepository.state.value.activeProfile?.profileIndex
+                        ) {
                             onProfileSelected(profile)
                             showPopup = false
                         }
@@ -301,6 +317,7 @@ fun NativeProfileSwitcherPopup(
     modifier: Modifier = Modifier,
 ) {
     val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
     val activeProfile = profileState.activeProfile
     val profiles = profileState.profiles
     val avatars by AvatarRepository.avatars.collectAsStateWithLifecycle()
@@ -331,13 +348,25 @@ fun NativeProfileSwitcherPopup(
     }
 
     fun chooseProfile(profile: NuvioProfile) {
-        if (profile.pinEnabled) {
-            pinProfile = profile
-        } else {
-            showPopup = false
-            onDismissRequest()
-            onProfileSelected(profile)
-        }
+        routeProfileSelection(
+            profile = profile,
+            isEditMode = false,
+            activeProfileIndex = ProfileRepository.state.value.activeProfile?.profileIndex,
+            onEditProfile = {},
+            onActiveProfileSelected = {
+                scope.launch {
+                    showAlreadyActiveProfileToast(it)
+                    showPopup = false
+                    onDismissRequest()
+                }
+            },
+            onPinRequired = { pinProfile = it },
+            onProfileSelected = {
+                showPopup = false
+                onDismissRequest()
+                onProfileSelected(it)
+            },
+        )
     }
 
     val popupAlpha = remember { Animatable(0f) }
@@ -454,7 +483,9 @@ fun NativeProfileSwitcherPopup(
                                         onVerified = {
                                             showPopup = false
                                             onDismissRequest()
-                                            onProfileSelected(profile)
+                                            if (profile.profileIndex != ProfileRepository.state.value.activeProfile?.profileIndex) {
+                                                onProfileSelected(profile)
+                                            }
                                         },
                                         onCancel = { pinProfile = null },
                                         verifyPin = { pin ->

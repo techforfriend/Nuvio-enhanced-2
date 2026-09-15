@@ -38,6 +38,7 @@ import com.nuvio.app.features.player.LockPlayerToLandscape
 import com.nuvio.app.features.trailer.TrailerPlaybackState
 import com.nuvio.app.features.trailer.TrailerPlayer
 import com.nuvio.app.features.trailer.TrailerPlaybackSource
+import com.nuvio.app.isIos
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -76,9 +77,18 @@ fun TrailerPlayerPopup(
         fullscreen = !fullscreen
     }
 
-    if (fullscreen) {
+    val exitFullscreen = {
+        if (isIos) {
+            playbackState.controller?.pause()
+            onDismiss()
+        } else {
+            toggleFullscreen()
+        }
+    }
+
+    if (isIos || fullscreen) {
         LockPlayerToLandscape()
-        FullscreenPlayerDialog(onDismiss = toggleFullscreen) {
+        FullscreenPlayerDialog(onDismiss = exitFullscreen) {
             TrailerPlayer(
                 source = playbackSource,
                 state = playbackState,
@@ -87,7 +97,7 @@ fun TrailerPlayerPopup(
                 onRetry = onRetry,
                 modifier = Modifier.fillMaxSize(),
                 title = headerSubtitle.ifBlank { headerType },
-                onExitFullscreen = toggleFullscreen,
+                onExitFullscreen = exitFullscreen,
             )
         }
         return

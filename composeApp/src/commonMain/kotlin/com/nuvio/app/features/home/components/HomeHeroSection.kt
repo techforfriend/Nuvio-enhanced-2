@@ -4,8 +4,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -73,6 +75,7 @@ import com.nuvio.app.core.build.TrailerPlaybackMode
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.dynamicScrimAlpha
 import com.nuvio.app.core.ui.heroStretchHeight
+import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.heroStretchZoom
 import com.nuvio.app.features.details.HeroTrailerAudioState
 import com.nuvio.app.features.details.MetaDetailsRepository
@@ -221,24 +224,33 @@ internal fun HomeHeroSection(
 
     val pagerState = rememberPagerState(pageCount = { items.size })
     val coroutineScope = rememberCoroutineScope()
-    val autoScrollPage = pagerState.currentPage
+    val autoScrollPage = pagerState.settledPage
     val effectiveTrailerPlaybackEnabled = trailerPlaybackEnabled &&
         AppFeaturePolicy.heroTrailerPlaybackSupported &&
         AppFeaturePolicy.trailerPlaybackMode == TrailerPlaybackMode.IN_APP
 
-    LaunchedEffect(autoScrollPage, items.size, effectiveTrailerPlaybackEnabled) {
-        // The carousel only advances by itself when trailer playback is off; with it on, the
-        // current item's trailer plays and only a swipe should move to the next one.
-        if (items.size <= 1 || effectiveTrailerPlaybackEnabled) return@LaunchedEffect
+    LaunchedEffect(pagerState) {
+        pagerState.scrollToPage(pagerState.currentPage)
+    }
+
+    ScreenActivityEffect(pagerState) { active ->
+        if (!active) {
+            pagerState.stopScroll(MutatePriority.PreventUserInput)
+            pagerState.scrollToPage(pagerState.currentPage)
+        }
+    }
+
+    ScreenActivityEffect(autoScrollPage, items.size, effectiveTrailerPlaybackEnabled) { active ->
+        // The carousel only advances by itself when the screen is active and trailer playback is
+        // off; with it on, the current item's trailer plays and only a swipe should move on.
+        if (!active || items.size <= 1 || effectiveTrailerPlaybackEnabled) return@ScreenActivityEffect
         delay(HERO_AUTO_SCROLL_INTERVAL_MS)
         while (pagerState.isScrollInProgress) {
             delay(100L)
         }
 
         val nextPage = (pagerState.currentPage + 1) % items.size
-        coroutineScope.launch {
-            pagerState.animateScrollToPage(nextPage)
-        }
+        pagerState.animateScrollToPage(nextPage)
     }
 
     val isCardStyle = heroStyle == HomeHeroStyle.CARD

@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
+import com.nuvio.app.core.ui.LocalScreenActive
 import com.nuvio.app.core.ui.NuvioShelfSection
 import com.nuvio.app.core.ui.PosterLandscapeAspectRatio
 import com.nuvio.app.core.ui.landscapePosterWidth
@@ -151,7 +152,9 @@ private fun CollectionFolderCard(
                             contentDescription = folder.title,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
-                            animateIfPossible = animateGifs && isAnimatedCollectionFolderImage(folder, imageUrl),
+                            animateIfPossible = animateGifs &&
+                                isAnimatedCollectionFolderImage(folder, imageUrl) &&
+                                LocalScreenActive.current,
                         )
                     }
                     !folder.coverEmoji.isNullOrBlank() -> {

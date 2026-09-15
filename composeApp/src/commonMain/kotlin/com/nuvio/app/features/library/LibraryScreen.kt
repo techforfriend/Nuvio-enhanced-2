@@ -65,7 +65,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -93,6 +93,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.i18n.localizedMonthName
 import com.nuvio.app.core.i18n.localizedShortMonthName
+import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.i18n.localizedByteUnit
 import com.nuvio.app.core.format.resolveReleaseInfoForDisplay
 import com.nuvio.app.core.network.NetworkCondition
@@ -103,7 +104,6 @@ import com.nuvio.app.core.ui.NuvioDropdownChip
 import com.nuvio.app.core.ui.NuvioDropdownOption
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
-import com.nuvio.app.core.ui.ScreenBox
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioShelfSection
 import com.nuvio.app.core.ui.NuvioViewAllPillSize
@@ -202,32 +202,50 @@ fun LibraryScreen(
     var selectedLibraryType by rememberSaveable { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+    ScreenActivityEffect(listState) { screenActive ->
+        if (!screenActive) listState.stopScroll()
+    }
     val isRemoteSource = uiState.sourceMode != LibrarySourceMode.LOCAL
     val effectiveSortOption = effectiveLibrarySortOption(
         selected = displaySettings.sortOption,
         sourceMode = uiState.sourceMode,
     )
-    val sortedSections = remember(uiState.sections, displaySettings.sortOption, uiState.sourceMode) {
-        sortLibrarySections(
-            sections = uiState.sections,
-            selected = displaySettings.sortOption,
-            sourceMode = uiState.sourceMode,
-        )
+    val sortedSections = remember(uiState.sections, displaySettings, uiState.sourceMode, sourceMode) {
+        if (sourceMode == LibraryViewMode.Saved && displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
+            sortLibrarySections(
+                sections = uiState.sections,
+                selected = displaySettings.sortOption,
+                sourceMode = uiState.sourceMode,
+            )
+        } else {
+            emptyList()
+        }
     }
     val verticalProjection = remember(
         uiState.sections,
         uiState.sourceMode,
         selectedLibrarySectionKey,
         selectedLibraryType,
-        displaySettings.sortOption,
+        displaySettings,
+        sourceMode,
     ) {
-        buildLibraryVerticalProjection(
-            sections = uiState.sections,
-            sourceMode = uiState.sourceMode,
-            selectedSectionKey = selectedLibrarySectionKey,
-            selectedType = selectedLibraryType,
-            sortOption = displaySettings.sortOption,
-        )
+        if (sourceMode == LibraryViewMode.Saved && displaySettings.layoutMode == LibraryLayoutMode.VERTICAL) {
+            buildLibraryVerticalProjection(
+                sections = uiState.sections,
+                sourceMode = uiState.sourceMode,
+                selectedSectionKey = selectedLibrarySectionKey,
+                selectedType = selectedLibraryType,
+                sortOption = displaySettings.sortOption,
+            )
+        } else {
+            LibraryVerticalProjection(
+                availableSections = emptyList(),
+                selectedSectionKey = null,
+                availableTypes = emptyList(),
+                selectedType = null,
+                entries = emptyList(),
+            )
+        }
     }
     val releaseInfoFor = remember(hydratedReleaseInfo, unknownReleaseLabel) {
         { item: LibraryItem ->
@@ -248,7 +266,8 @@ fun LibraryScreen(
         }
     }
 
-    LaunchedEffect(networkStatusUiState.condition, isRemoteSource) {
+    ScreenActivityEffect(networkStatusUiState.condition, isRemoteSource) { screenActive ->
+        if (!screenActive) return@ScreenActivityEffect
         when (networkStatusUiState.condition) {
             NetworkCondition.NoInternet,
             NetworkCondition.ServersUnreachable,
@@ -257,7 +276,7 @@ fun LibraryScreen(
             }
 
             NetworkCondition.Online -> {
-                if (!observedOfflineState) return@LaunchedEffect
+                if (!observedOfflineState) return@ScreenActivityEffect
                 observedOfflineState = false
                 if (isRemoteSource) {
                     coroutineScope.launch {
@@ -272,7 +291,8 @@ fun LibraryScreen(
         }
     }
 
-    LaunchedEffect(scrollToTopRequests) {
+    ScreenActivityEffect(scrollToTopRequests) { screenActive ->
+        if (!screenActive) return@ScreenActivityEffect
         scrollToTopRequests.collect {
             listState.animateScrollToItem(0)
         }
@@ -312,8 +332,8 @@ fun LibraryScreen(
         }
     }
 
-    LaunchedEffect(sourceMode, cloudSettings.cloudLibraryEnabled, cloudSettings.providerApiKeys) {
-        if (sourceMode == LibraryViewMode.Cloud) {
+    ScreenActivityEffect(sourceMode, cloudSettings.cloudLibraryEnabled, cloudSettings.providerApiKeys) { screenActive ->
+        if (screenActive && sourceMode == LibraryViewMode.Cloud) {
             CloudLibraryRepository.ensureLoaded()
             selectedCloudItemKey = null
         }
@@ -420,11 +440,7 @@ fun LibraryScreen(
             }
         }
 
-        // Upstream swapped the screen-root BoxWithConstraints for ScreenBox to drop a
-        // subcomposition on tab switch. This fork keeps its header outside the list, so the
-        // equivalent box is this one; it spans the full screen width, which is all the
-        // gridColumns calculation reads.
-        ScreenBox(modifier = Modifier.weight(1f)) {
+        BoxWithConstraints(modifier = Modifier.weight(1f)) {
             val gridColumns = remember(maxWidth) { posterGridColumnCountForWidth(maxWidth) }
 
             NuvioScreen(

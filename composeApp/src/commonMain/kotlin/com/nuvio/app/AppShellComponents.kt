@@ -41,7 +41,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -125,6 +124,7 @@ internal fun rememberGuardedPopBackStack(
 internal data class AppTabState(
     val searchListState: LazyListState,
     val homeContentGeneration: Int = 0,
+    val profileId: Int? = null,
     val searchFocusRequestCount: Int = 0,
     val rootActionsEnabled: Boolean = true,
     val animateHomeCollectionGifs: Boolean = true,
@@ -182,86 +182,87 @@ internal fun AppTabHost(
     actions: AppTabActions,
     modifier: Modifier = Modifier,
 ) {
-    val tabStateHolder = rememberSaveableStateHolder()
-
-    TabContentHost(selectedTab = selectedTab, modifier = modifier.fillMaxSize()) { tab ->
-        tabStateHolder.SaveableStateProvider(tab.name) {
-            when (tab) {
-                AppScreenTab.Home -> {
-                    key(state.homeContentGeneration) {
-                        HomeScreen(
-                            modifier = Modifier.fillMaxSize(),
-                            animateCollectionGifs = state.animateHomeCollectionGifs,
-                            scrollToTopRequests = requests.homeScrollToTopRequests,
-                            onCatalogClick = actions.onCatalogClick,
-                            onPosterClick = actions.onPosterClick,
-                            onPosterLongClick = actions.onPosterLongClick,
-                            onContinueWatchingClick = actions.onContinueWatchingClick,
-                            onContinueWatchingLongPress = actions.onContinueWatchingLongPress,
-                            continueWatchingDisintegrationRequest = state.continueWatchingDisintegrationRequest,
-                            onFolderClick = actions.onFolderClick,
-                            onFirstCatalogRendered = actions.onInitialHomeContentRendered,
-                        )
-                    }
-                }
-
-                AppScreenTab.Search -> {
-                    SearchScreen(
+    RootTabHost(
+        selectedTab = selectedTab,
+        modifier = modifier,
+        active = state.rootActionsEnabled,
+        profileId = state.profileId,
+    ) { tab ->
+        when (tab) {
+            AppScreenTab.Home -> {
+                key(state.homeContentGeneration) {
+                    HomeScreen(
                         modifier = Modifier.fillMaxSize(),
-                        listState = state.searchListState,
+                        animateCollectionGifs = state.animateHomeCollectionGifs,
+                        scrollToTopRequests = requests.homeScrollToTopRequests,
+                        onCatalogClick = actions.onCatalogClick,
                         onPosterClick = actions.onPosterClick,
                         onPosterLongClick = actions.onPosterLongClick,
-                        searchFocusRequestCount = state.searchFocusRequestCount,
-                        scrollToTopRequests = requests.searchScrollToTopRequests,
+                        onContinueWatchingClick = actions.onContinueWatchingClick,
+                        onContinueWatchingLongPress = actions.onContinueWatchingLongPress,
+                        continueWatchingDisintegrationRequest = state.continueWatchingDisintegrationRequest,
+                        onFolderClick = actions.onFolderClick,
+                        onFirstCatalogRendered = actions.onInitialHomeContentRendered,
                     )
                 }
+            }
 
-                AppScreenTab.Library -> {
-                    LibraryScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        scrollToTopRequests = requests.libraryScrollToTopRequests,
-                        onPosterClick = actions.onLibraryPosterClick,
-                        onCalendarEpisodeClick = actions.onLibraryCalendarEpisodeClick,
-                        onPosterLongClick = actions.onLibraryPosterLongClick,
-                        onSectionViewAllClick = actions.onLibrarySectionViewAllClick,
-                        onCloudFilePlay = actions.onCloudFilePlay,
-                        onConnectCloudClick = actions.onConnectCloudClick,
-                        disintegrationRequest = state.libraryDisintegrationRequest,
-                    )
-                }
+            AppScreenTab.Search -> {
+                SearchScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    listState = state.searchListState,
+                    onPosterClick = actions.onPosterClick,
+                    onPosterLongClick = actions.onPosterLongClick,
+                    searchFocusRequestCount = state.searchFocusRequestCount,
+                    scrollToTopRequests = requests.searchScrollToTopRequests,
+                )
+            }
 
-                AppScreenTab.LiveTv -> {
-                    LiveTvScreen(
-                        scrollToTopRequests = requests.liveTvScrollToTopRequests,
-                        onChannelClick = actions.onLiveTvChannelClick,
-                    )
-                }
+            AppScreenTab.Library -> {
+                LibraryScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    scrollToTopRequests = requests.libraryScrollToTopRequests,
+                    onPosterClick = actions.onLibraryPosterClick,
+                    onCalendarEpisodeClick = actions.onLibraryCalendarEpisodeClick,
+                    onPosterLongClick = actions.onLibraryPosterLongClick,
+                    onSectionViewAllClick = actions.onLibrarySectionViewAllClick,
+                    onCloudFilePlay = actions.onCloudFilePlay,
+                    onConnectCloudClick = actions.onConnectCloudClick,
+                    disintegrationRequest = state.libraryDisintegrationRequest,
+                )
+            }
 
-                AppScreenTab.Settings -> {
-                    SettingsScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        rootActionRequests = requests.settingsRootActionRequests,
-                        requestedPageName = state.requestedSettingsPageName,
-                        onRequestedPageConsumed = actions.onRequestedSettingsPageConsumed,
-                        rootActionsEnabled = state.rootActionsEnabled,
-                        onNavigatePage = actions.onSettingsPageClick,
-                        onSwitchProfile = actions.onSwitchProfile,
-                        onEditProfile = actions.onEditProfile,
-                        onPosterClick = actions.onPosterClick,
-                        onHomescreenClick = actions.onHomescreenSettingsClick,
-                        onMetaScreenClick = actions.onMetaScreenSettingsClick,
-                        onContinueWatchingClick = actions.onContinueWatchingSettingsClick,
-                        onDownloadsClick = actions.onDownloadsSettingsClick,
-                        onAddonsClick = actions.onAddonsSettingsClick,
-                        onPluginsClick = actions.onPluginsSettingsClick,
-                        onAccountClick = actions.onAccountSettingsClick,
-                        onSupportersContributorsClick = actions.onSupportersContributorsSettingsClick,
-                        onLicensesAttributionsClick = actions.onLicensesAttributionsSettingsClick,
-                        onCheckForUpdatesClick = actions.onCheckForUpdatesClick,
-                        onTestUpdateBannerClick = actions.onTestUpdateBannerClick,
-                        onCollectionsClick = actions.onCollectionsSettingsClick,
-                    )
-                }
+            AppScreenTab.LiveTv -> {
+                LiveTvScreen(
+                    scrollToTopRequests = requests.liveTvScrollToTopRequests,
+                    onChannelClick = actions.onLiveTvChannelClick,
+                )
+            }
+
+            AppScreenTab.Settings -> {
+                SettingsScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    rootActionRequests = requests.settingsRootActionRequests,
+                    requestedPageName = state.requestedSettingsPageName,
+                    onRequestedPageConsumed = actions.onRequestedSettingsPageConsumed,
+                    rootActionsEnabled = state.rootActionsEnabled,
+                    onNavigatePage = actions.onSettingsPageClick,
+                    onSwitchProfile = actions.onSwitchProfile,
+                    onEditProfile = actions.onEditProfile,
+                    onPosterClick = actions.onPosterClick,
+                    onHomescreenClick = actions.onHomescreenSettingsClick,
+                    onMetaScreenClick = actions.onMetaScreenSettingsClick,
+                    onContinueWatchingClick = actions.onContinueWatchingSettingsClick,
+                    onDownloadsClick = actions.onDownloadsSettingsClick,
+                    onAddonsClick = actions.onAddonsSettingsClick,
+                    onPluginsClick = actions.onPluginsSettingsClick,
+                    onAccountClick = actions.onAccountSettingsClick,
+                    onSupportersContributorsClick = actions.onSupportersContributorsSettingsClick,
+                    onLicensesAttributionsClick = actions.onLicensesAttributionsSettingsClick,
+                    onCheckForUpdatesClick = actions.onCheckForUpdatesClick,
+                    onTestUpdateBannerClick = actions.onTestUpdateBannerClick,
+                    onCollectionsClick = actions.onCollectionsSettingsClick,
+                )
             }
         }
     }
