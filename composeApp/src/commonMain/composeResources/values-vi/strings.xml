@@ -1587,7 +1587,7 @@
     <string name="profile_use_primary_addons">Dùng tiện ích chính</string>
     <string name="profile_use_primary_addons_description">Dùng cấu hình tiện ích của hồ sơ chính thay vì quản lý riêng</string>
     <string name="profile_who_is_watching">Ai đang xem?</string>
-    <string name="profile_already_active">Bạn đang trong hồ sơ "%1$s"</string>
+    <string name="profile_already_active">Bạn đang trong hồ sơ &quot;%1$s&quot;</string>
     <string name="provider_downloaded">Đã tải xuống</string>
     <string name="resume_prompt_action">Xem tiếp</string>
     <string name="streams_active_scrapers">Trình thu thập dữ liệu đang hoạt động</string>
