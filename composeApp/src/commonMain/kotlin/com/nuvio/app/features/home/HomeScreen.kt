@@ -2,6 +2,7 @@ package com.nuvio.app.features.home
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
@@ -25,7 +26,6 @@ import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.ui.LocalNuvioBottomNavigationOverlayPadding
 import com.nuvio.app.core.ui.NuvioScreen
-import com.nuvio.app.core.ui.ScreenBox
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
 import com.nuvio.app.core.ui.nuvioSafeBottomPadding
 import com.nuvio.app.core.ui.rememberHeroStretchState
@@ -861,7 +861,7 @@ fun HomeScreen(
         homeCatalogLoading = homeUiState.isLoading,
     )
 
-    ScreenBox(modifier = modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val homeSectionPadding = homeSectionHorizontalPaddingForWidth(maxWidth.value)
         val posterCardStyle = rememberPosterCardStyleUiState()
         val continueWatchingLayout = rememberContinueWatchingLayout(maxWidth.value, posterCardStyle)

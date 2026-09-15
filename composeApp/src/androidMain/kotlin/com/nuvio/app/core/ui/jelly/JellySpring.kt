@@ -11,9 +11,6 @@ internal class JellySpring(
     private val stiffness: Double,
     private val dampingRatio: Double,
 ) {
-    private val frequency = sqrt(stiffness)
-    private val damping = dampingRatio * frequency
-    private val damped = frequency * sqrt(1 - dampingRatio * dampingRatio)
     var velocity = 0.0
 
     fun isAtRest(target: Double): Boolean = abs(value - target) < 0.0001 && abs(velocity) < 0.0001
@@ -29,12 +26,15 @@ internal class JellySpring(
             return
         }
         val displacement = value - target
+        val frequency = sqrt(stiffness)
         if (dampingRatio == 1.0) {
             val decay = exp(-frequency * seconds)
             val coefficient = velocity + frequency * displacement
             value = target + (displacement + coefficient * seconds) * decay
             velocity = (velocity - frequency * coefficient * seconds) * decay
         } else {
+            val damping = dampingRatio * frequency
+            val damped = frequency * sqrt(1 - dampingRatio * dampingRatio)
             val decay = exp(-damping * seconds)
             val cosine = cos(damped * seconds)
             val sine = sin(damped * seconds)

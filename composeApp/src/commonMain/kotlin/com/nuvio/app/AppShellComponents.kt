@@ -123,9 +123,9 @@ internal fun AppTabHost(
 ) {
     val tabStateHolder = rememberSaveableStateHolder()
 
-    TabContentHost(selectedTab = selectedTab, modifier = modifier.fillMaxSize()) { tab ->
-        tabStateHolder.SaveableStateProvider(tab.name) {
-            when (tab) {
+    Box(modifier = modifier.fillMaxSize()) {
+        tabStateHolder.SaveableStateProvider(selectedTab.name) {
+            when (selectedTab) {
                 AppScreenTab.Home -> {
                     key(state.homeContentGeneration) {
                         HomeScreen(

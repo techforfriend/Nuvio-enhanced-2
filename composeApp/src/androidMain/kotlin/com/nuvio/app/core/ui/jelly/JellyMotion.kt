@@ -4,11 +4,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.withFrameNanos
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.isActive
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.max
@@ -64,19 +59,6 @@ internal class JellyMotion(initialIndex: Int, count: Int) {
         private set
     var frame by mutableStateOf(JellyFrame(position.value.toFloat()))
         private set
-
-    suspend fun animate() {
-        while (currentCoroutineContext().isActive) {
-            snapshotFlow { running }.first { it }
-            var previous = withFrameNanos { it }
-            while (running) {
-                withFrameNanos { now ->
-                    advance((now - previous) / 1_000_000_000.0)
-                    previous = now
-                }
-            }
-        }
-    }
 
     fun resize(width: Float, height: Float, count: Int) {
         this.width = width.toDouble()
