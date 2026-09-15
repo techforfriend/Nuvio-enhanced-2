@@ -1465,11 +1465,13 @@ internal fun MainAppContent(
                         },
                         onTabSelected = ::handleRootTabClick,
                         onProfileSelected = { profile ->
-                            profileSwitchLoading = true
-                            NativeTabBridge.publishTabBarVisible(false)
-                            activateTab(AppScreenTab.Home)
-                            ProfileRepository.selectProfile(profile.profileIndex)
-                            SyncManager.pullAllForProfile(profile.profileIndex)
+                            if (profile.profileIndex != ProfileRepository.state.value.activeProfile?.profileIndex) {
+                                profileSwitchLoading = true
+                                NativeTabBridge.publishTabBarVisible(false)
+                                activateTab(AppScreenTab.Home)
+                                ProfileRepository.selectProfile(profile.profileIndex)
+                                SyncManager.pullAllForProfile(profile.profileIndex)
+                            }
                         },
                         onAddProfileRequested = onSwitchProfile,
                     )

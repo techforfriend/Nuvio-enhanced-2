@@ -132,7 +132,7 @@ fun ProfileSwitcherTab(
         val trigger = triggerCoordinates ?: return
         val screenPosition = trigger.localToScreen(localPosition)
         val nextTargetProfileIndex = profileBubbleBounds.entries
-            .firstOrNull { (_, bounds) -> bounds.contains(screenPosition) }
+            .firstOrNull { (index, bounds) -> index != activeProfile?.profileIndex && bounds.contains(screenPosition) }
             ?.key
         if (nextTargetProfileIndex != null && nextTargetProfileIndex != dragTargetProfileIndex) {
             performProfileHoverHaptic()
@@ -141,12 +141,17 @@ fun ProfileSwitcherTab(
     }
 
     fun chooseProfile(profile: NuvioProfile) {
-        if (profile.pinEnabled) {
-            pinProfile = profile
-        } else {
-            showPopup = false
-            onProfileSelected(profile)
-        }
+        routeProfileSelection(
+            profile = profile,
+            isEditMode = false,
+            activeProfileIndex = ProfileRepository.state.value.activeProfile?.profileIndex,
+            onEditProfile = {},
+            onPinRequired = { pinProfile = it },
+            onProfileSelected = {
+                showPopup = false
+                onProfileSelected(it)
+            },
+        )
     }
 
     fun chooseDragTarget() {
@@ -193,7 +198,7 @@ fun ProfileSwitcherTab(
                 indication = null,
                 onClick = onClick,
             )
-            .pointerInput(profiles) {
+            .pointerInput(profiles, activeProfile?.profileIndex) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = { startOffset ->
                         if (profiles.isNotEmpty()) {
@@ -279,7 +284,10 @@ fun ProfileSwitcherTab(
                     },
                     onPinCancelled = { pinProfile = null },
                     onPinVerified = { profile ->
-                        if (showPopup && pinProfile?.profileIndex == profile.profileIndex) {
+                        if (
+                            showPopup && pinProfile?.profileIndex == profile.profileIndex &&
+                            profile.profileIndex != ProfileRepository.state.value.activeProfile?.profileIndex
+                        ) {
                             onProfileSelected(profile)
                             showPopup = false
                         }
@@ -330,13 +338,18 @@ fun NativeProfileSwitcherPopup(
     }
 
     fun chooseProfile(profile: NuvioProfile) {
-        if (profile.pinEnabled) {
-            pinProfile = profile
-        } else {
-            showPopup = false
-            onDismissRequest()
-            onProfileSelected(profile)
-        }
+        routeProfileSelection(
+            profile = profile,
+            isEditMode = false,
+            activeProfileIndex = ProfileRepository.state.value.activeProfile?.profileIndex,
+            onEditProfile = {},
+            onPinRequired = { pinProfile = it },
+            onProfileSelected = {
+                showPopup = false
+                onDismissRequest()
+                onProfileSelected(it)
+            },
+        )
     }
 
     val popupAlpha = remember { Animatable(0f) }
@@ -453,7 +466,9 @@ fun NativeProfileSwitcherPopup(
                                         onVerified = {
                                             showPopup = false
                                             onDismissRequest()
-                                            onProfileSelected(profile)
+                                            if (profile.profileIndex != ProfileRepository.state.value.activeProfile?.profileIndex) {
+                                                onProfileSelected(profile)
+                                            }
                                         },
                                         onCancel = { pinProfile = null },
                                         verifyPin = { pin ->
@@ -597,6 +612,7 @@ private fun PopupProfileBubble(
             }
             .clip(tokens.shapes.compactCard)
             .clickable(
+                enabled = !isActive,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick,

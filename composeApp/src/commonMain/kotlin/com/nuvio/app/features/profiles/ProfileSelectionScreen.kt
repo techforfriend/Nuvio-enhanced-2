@@ -72,6 +72,7 @@ fun ProfileSelectionScreen(
     onEditProfile: (NuvioProfile) -> Unit,
     onAddProfile: () -> Unit,
     interactionEnabled: Boolean = true,
+    activeProfileIndex: Int? = null,
     contentVisible: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
@@ -88,6 +89,7 @@ fun ProfileSelectionScreen(
             routeProfileSelection(
                 profile = profile,
                 isEditMode = isEditMode,
+                activeProfileIndex = activeProfileIndex,
                 onEditProfile = onEditProfile,
                 onPinRequired = { pinDialogProfile = it },
                 onProfileSelected = onProfileSelected,
@@ -189,7 +191,7 @@ fun ProfileSelectionScreen(
                                         profile = profile,
                                         isEditMode = isEditMode,
                                         animDelay = currentIndex * 80,
-                                        enabled = interactionEnabled,
+                                        enabled = interactionEnabled && (isEditMode || profile.profileIndex != activeProfileIndex),
                                         onClick = {
                                             onProfileClick(profile)
                                         },
@@ -225,7 +227,7 @@ fun ProfileSelectionScreen(
                                                 profile = profile,
                                                 isEditMode = isEditMode,
                                                 animDelay = currentIndex * 80,
-                                                enabled = interactionEnabled,
+                                                enabled = interactionEnabled && (isEditMode || profile.profileIndex != activeProfileIndex),
                                                 onClick = {
                                                     onProfileClick(profile)
                                                 },
@@ -292,7 +294,9 @@ fun ProfileSelectionScreen(
             onVerify = { pin -> ProfileRepository.verifyPin(profile.profileIndex, pin) },
             onVerified = {
                 pinDialogProfile = null
-                onProfileSelected(profile)
+                if (interactionEnabled && profile.profileIndex != activeProfileIndex) {
+                    onProfileSelected(profile)
+                }
             },
             onDismiss = { pinDialogProfile = null },
         )

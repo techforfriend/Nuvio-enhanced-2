@@ -1127,7 +1127,7 @@ private struct NativeProfileSwitcherView: View {
                                 }
                             }
                             .buttonStyle(.plain)
-                            .disabled(model.isSubmitting)
+                            .disabled(model.isSubmitting || profile.active)
                         }
 
                         if model.canAddProfile {

@@ -153,7 +153,7 @@ internal fun ProfilePopupContent(
                                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                         row.forEach { profile ->
                                             val isActive = profile != null && profile.profileIndex == activeProfileIndex
-                                            val isHovered = profile != null && profile.profileIndex == hoveredProfileIndex
+                                            val isHovered = profile != null && !isActive && profile.profileIndex == hoveredProfileIndex
                                             ProfilePopupItem(
                                                 name = profile?.name?.ifBlank { stringResource(Res.string.profile_label_number, profile.profileIndex) }
                                                     ?: stringResource(Res.string.compose_profile_add_profile),
@@ -216,7 +216,7 @@ private fun ProfilePopupItem(
         modifier.graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(tokens.shapes.compactCard)
             .background(if (isHovered) tokens.colors.accent.copy(alpha = 0.14f) else Color.Transparent)
-            .selectable(selected = isActive, onClick = onClick)
+            .selectable(selected = isActive, enabled = !isActive, onClick = onClick)
             .padding(horizontal = 4.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

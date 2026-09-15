@@ -162,6 +162,10 @@ class NativeProfileSwitcherController {
         completion: (PinVerifyResult) -> Unit,
     ) {
         scope.launch {
+            if (profileIndex == ProfileRepository.state.value.activeProfile?.profileIndex) {
+                completion(PinVerifyResult(unlocked = true))
+                return@launch
+            }
             val profile = ProfileRepository.state.value.profiles
                 .firstOrNull { it.profileIndex == profileIndex }
             if (profile == null) {
@@ -173,7 +177,7 @@ class NativeProfileSwitcherController {
             } else {
                 PinVerifyResult(unlocked = true)
             }
-            if (result.unlocked) {
+            if (result.unlocked && profileIndex != ProfileRepository.state.value.activeProfile?.profileIndex) {
                 profileSelections.trySend(profileIndex)
             }
             completion(result)

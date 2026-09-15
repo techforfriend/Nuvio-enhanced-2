@@ -14,6 +14,7 @@ class ProfileSelectionRoutingTest {
         routeProfileSelection(
             profile = profile,
             isEditMode = false,
+            activeProfileIndex = 1,
             onEditProfile = { editRequests += 1 },
             onPinRequired = { pinRequests += 1 },
             onProfileSelected = { selectionRequests += 1 },
@@ -33,6 +34,7 @@ class ProfileSelectionRoutingTest {
         routeProfileSelection(
             profile = profile,
             isEditMode = false,
+            activeProfileIndex = 1,
             onEditProfile = {},
             onPinRequired = { pinRequests += 1 },
             onProfileSelected = { selectionRequests += 1 },
@@ -52,6 +54,7 @@ class ProfileSelectionRoutingTest {
         routeProfileSelection(
             profile = profile,
             isEditMode = true,
+            activeProfileIndex = profile.profileIndex,
             onEditProfile = { editRequests += 1 },
             onPinRequired = { pinRequests += 1 },
             onProfileSelected = { selectionRequests += 1 },
@@ -60,5 +63,42 @@ class ProfileSelectionRoutingTest {
         assertEquals(1, editRequests)
         assertEquals(0, pinRequests)
         assertEquals(0, selectionRequests)
+    }
+
+    @Test
+    fun `active profile does not request selection or PIN verification`() {
+        for (pinEnabled in listOf(false, true)) {
+            val profile = NuvioProfile(profileIndex = 2, pinEnabled = pinEnabled)
+            val requests = mutableListOf<String>()
+
+            routeProfileSelection(
+                profile = profile,
+                isEditMode = false,
+                activeProfileIndex = profile.profileIndex,
+                onEditProfile = { requests += "edit" },
+                onPinRequired = { requests += "pin" },
+                onProfileSelected = { requests += "select" },
+            )
+
+            assertEquals(emptyList(), requests)
+        }
+    }
+
+    @Test
+    fun `startup selection still allows entering a profile`() {
+        for (pinEnabled in listOf(false, true)) {
+            val profile = NuvioProfile(profileIndex = 1, pinEnabled = pinEnabled)
+            val requests = mutableListOf<String>()
+
+            routeProfileSelection(
+                profile = profile,
+                isEditMode = false,
+                onEditProfile = { requests += "edit" },
+                onPinRequired = { requests += "pin" },
+                onProfileSelected = { requests += "select" },
+            )
+
+            assertEquals(listOf(if (pinEnabled) "pin" else "select"), requests)
+        }
     }
 }
