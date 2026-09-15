@@ -339,6 +339,9 @@
     <string name="compose_action_off">Tắt</string>
     <string name="compose_action_on">Bật</string>
     <string name="compose_action_pause">Tạm dừng</string>
+    <string name="trailer_enter_fullscreen">Mở toàn màn hình</string>
+    <string name="trailer_exit_fullscreen">Thoát toàn màn hình</string>
+    <string name="player_seek_position">Vị trí phát lại</string>
     <string name="compose_action_reload">Tải lại</string>
     <string name="compose_auth_already_have_account">Đã có tài khoản? </string>
     <string name="compose_auth_continue_without_account">Tiếp tục không cần tài khoản</string>
@@ -568,6 +571,10 @@
     <string name="settings_licenses_attributions_section_app">GIẤY PHÉP ỨNG DỤNG</string>
     <string name="settings_licenses_attributions_section_data">DỮ LIỆU &amp; DỊCH VỤ</string>
     <string name="settings_licenses_attributions_section_playback">GIẤY PHÉP PHÁT LẠI</string>
+    <string name="settings_licenses_attributions_section_ui">THƯ VIỆN GIAO DIỆN NGƯỜI DÙNG</string>
+    <string name="settings_licenses_attributions_haze_title">Haze 1.7.2</string>
+    <string name="settings_licenses_attributions_haze_body">Dùng cho hiệu ứng làm mờ ảnh nền. Được tạo bởi Chris Banes.</string>
+    <string name="settings_licenses_attributions_haze_license">Được cấp phép theo Giấy phép Apache, Phiên bản 2.0.</string>
     <string name="settings_licenses_attributions_nuvio_title">Nuvio Mobile</string>
     <string name="settings_licenses_attributions_nuvio_body">Mã nguồn và điều khoản cấp phép có trong kho lưu trữ của dự án</string>
     <string name="settings_licenses_attributions_nuvio_license">Cấp phép theo GNU General Public License v3.0</string>
@@ -669,6 +676,13 @@
     <string name="settings_appearance_app_language_sheet_title">Chọn ngôn ngữ</string>
     <string name="settings_appearance_nav_bar_style">Thanh điều hướng</string>
     <string name="settings_appearance_nav_bar_style_sheet_title">Kiểu thanh điều hướng</string>
+    <string name="settings_nav_bar_glow">Hiệu ứng vệt sáng mờ</string>
+    <string name="settings_nav_bar_glow_description">Thêm vệt sáng mờ quanh thanh điều hướng nổi.</string>
+    <string name="settings_nav_bar_glow_on">Bật phát sáng</string>
+    <string name="settings_nav_bar_glow_off">Tắt phát sáng</string>
+    <string name="settings_nav_bar_summary">%1$s · %2$s</string>
+    <string name="settings_nav_bar_preview_hint">Chạm vào thanh điều hướng để dùng thử. Cuộn phần xem trước để thử tự động thay đổi kích thước</string>
+    <string name="settings_nav_bar_preview_tap_hint">Chạm vào thanh điều hướng để dùng thử.</string>
     <string name="settings_nav_bar_style_adaptive">Tự thích ứng</string>
     <string name="settings_nav_bar_style_expanded">Luôn mở rộng</string>
     <string name="settings_nav_bar_style_compact">Luôn thu gọn</string>
@@ -800,6 +814,9 @@
     <string name="settings_continue_watching_use_episode_thumbnails_title">Ưu tiên ảnh thu nhỏ trong Tiếp tục xem</string>
     <string name="settings_content_discovery_section_home">TRANG CHỦ</string>
     <string name="settings_content_discovery_section_sources">NGUỒN</string>
+    <string name="settings_content_discovery_section_search">TÌM KIẾM</string>
+    <string name="settings_content_discovery_recent_searches">Các tìm kiếm gần đây</string>
+    <string name="settings_content_discovery_recent_searches_description">Lưu các tìm kiếm gần đây và hiển thị khi chọn vào thanh tìm kiếm.</string>
     <string name="settings_content_discovery_addons_description">Cài đặt, xóa, làm mới và sắp xếp các nguồn nội dung của bạn.</string>
     <string name="settings_content_discovery_addons_description_appstore">Thêm và quản lý các tiện ích bạn dùng với Nuvio.</string>
     <string name="settings_content_discovery_plugins_description">Cài đặt các kho lưu trữ trình thu thập dữ liệu bằng JavaScript và kiểm tra các nhà cung cấp nội bộ</string>
@@ -859,6 +876,8 @@
     <string name="settings_stream_addon_logo_title">Biểu tượng tiện ích</string>
     <string name="settings_stream_addon_logo_description">Hiển thị biểu tượng và tên tiện ích bên cạnh mỗi nguồn phát</string>
     <string name="settings_stream_display_section">HIỂN THỊ</string>
+    <string name="settings_stream_background_title">Ảnh nền</string>
+    <string name="settings_stream_background_description">Chọn ảnh nền cho màn hình luồng phát.</string>
     <string name="settings_stream_badge_position_title">Vị trí nhãn</string>
     <string name="settings_stream_badge_position_description">Chọn vị trí hiển thị nhãn Fusion và dung lượng xuất hiện phía trên hoặc phía dưới thẻ luồng.</string>
     <string name="settings_stream_badge_position_dialog_title">Vị trí nhãn</string>
@@ -1129,6 +1148,8 @@
     <string name="settings_playback_selected_count">Đã chọn %1$d</string>
     <string name="settings_playback_show_loading_overlay">Lớp phủ Đang tải</string>
     <string name="settings_playback_show_loading_overlay_description">Hiển thị màn hình tải đến khi khung hình video đầu tiên xuất hiện.</string>
+    <string name="settings_playback_pause_overlay">Lớp phủ Tạm dừng</string>
+    <string name="settings_playback_pause_overlay_description">Hiển thị lớp phủ chi tiết sau 5 giây khi đang tạm dừng.</string>
     <string name="settings_playback_parental_guide">Cảnh báo nội dung</string>
     <string name="settings_playback_parental_guide_description">Hiển thị lớp phủ khuyến cáo phụ huynh khi phát lại bắt đầu.</string>
     <string name="settings_playback_subtitle_background_color">Màu nền</string>
@@ -1179,11 +1200,8 @@
     <string name="settings_playback_timeout_unlimited">Không giới hạn</string>
     <string name="settings_playback_tunneled_playback">Phát trực tiếp qua phần cứng</string>
     <string name="settings_playback_tunneled_playback_description">Đồng bộ âm thanh/video ở cấp phần cứng. Có thể cải thiện việc phát lại trên một số thiết bị Android TV</string>
-    <string name="settings_tmdb_add_api_key_first">Thêm khóa API TMDB của riêng bạn bên dưới để bật tính năng bổ sung dữ liệu</string>
-    <string name="settings_tmdb_api_key_label">Khóa API</string>
     <string name="settings_tmdb_enable_enrichment">Bật bổ sung dữ liệu TMDB</string>
     <string name="settings_tmdb_enable_enrichment_description">Dùng TMDB làm nguồn siêu dữ liệu để bổ sung dữ liệu cho tiện ích</string>
-    <string name="settings_tmdb_enter_api_key">Nhập khóa API TMDB v3</string>
     <string name="settings_tmdb_language_code_label">Mã ngôn ngữ</string>
     <string name="settings_tmdb_module_artwork">Ảnh hiển thị</string>
     <string name="settings_tmdb_module_artwork_description">Logo và phông nền hình ảnh từ TMDB</string>
@@ -1209,10 +1227,8 @@
     <string name="settings_tmdb_module_season_posters_description">Dùng poster từ TMDB cho từng mùa trong danh sách hiển thị</string>
     <string name="settings_tmdb_module_trailers">Trailer</string>
     <string name="settings_tmdb_module_trailers_description">Đề xuất trailer từ TMDB cho mục trailer chi tiết</string>
-    <string name="settings_tmdb_personal_api_key">Khóa API cá nhân</string>
     <string name="settings_tmdb_preferred_language">Ngôn ngữ</string>
     <string name="settings_tmdb_preferred_language_description">Ngôn ngữ dữ liệu TMDB cho tiêu đề, logo và các trường đã bật</string>
-    <string name="settings_tmdb_section_credentials">THÔNG TIN XÁC THỰC</string>
     <string name="settings_tmdb_section_localization">BẢN ĐỊA HÓA</string>
     <string name="settings_tmdb_section_modules">THÀNH PHẦN</string>
     <string name="settings_tmdb_section_title">BỔ SUNG DỮ LIỆU TMDB</string>
@@ -1263,6 +1279,8 @@
     <string name="settings_tracking_anime_id_mal_description">Mỗi mùa anime sẽ có một ID MAL riêng làm định danh chính.</string>
     <string name="settings_tracking_anime_id_kitsu">Ưu tiên Kitsu</string>
     <string name="settings_tracking_anime_id_kitsu_description">Mỗi mùa anime sẽ có một ID Kitsu riêng làm định danh chính.</string>
+    <string name="settings_tracking_anime_id_tvdb">Ưu tiên TVDB</string>
+    <string name="settings_tracking_anime_id_tvdb_description">Dùng ID TVDB để nhóm các mùa phim. Tùy chọn này ổn định hơn IMDb đối với anime bị IMDb tách riêng theo mùa.</string>
     <string name="settings_tracking_anime_section">Tính năng Simkl</string>
     <string name="settings_simkl_connect">Kết nối Simkl</string>
     <string name="settings_simkl_connected_as">Đã kết nối với %1$s</string>
@@ -1569,6 +1587,7 @@
     <string name="profile_use_primary_addons">Dùng tiện ích chính</string>
     <string name="profile_use_primary_addons_description">Dùng cấu hình tiện ích của hồ sơ chính thay vì quản lý riêng</string>
     <string name="profile_who_is_watching">Ai đang xem?</string>
+    <string name="profile_already_active">Bạn đang trong hồ sơ "%1$s"</string>
     <string name="provider_downloaded">Đã tải xuống</string>
     <string name="resume_prompt_action">Xem tiếp</string>
     <string name="streams_active_scrapers">Trình thu thập dữ liệu đang hoạt động</string>
@@ -1593,6 +1612,17 @@
     <string name="streams_loading_subtitles">Đang tải phụ đề từ tiện ích…</string>
     <string name="streams_loading_skip_segments">Đang tải các đoạn bỏ qua…</string>
     <string name="streams_finding_streams">Đang tìm luồng…</string>
+    <string name="playback_show_loading_status">Hiển thị trạng thái tải</string>
+    <string name="playback_show_loading_status_sub">Hiển thị tiến trình từng bước trong khi trình phát đang khởi tạo.</string>
+    <string name="player_loading_preparing">Đang chuẩn bị luồng phát…</string>
+    <string name="player_loading_subtitles">Đang tải phụ đề…</string>
+    <string name="player_loading_subtitles_from">Đang tải phụ đề từ %1$d tiện ích…</string>
+    <string name="player_loading_subtitles_progress">Đang tải phụ đề… (%1$d / %2$d)</string>
+    <string name="player_loading_subtitles_addon">Phụ đề: %1$s (%2$d / %3$d)</string>
+    <string name="player_loading_building">Đang khởi tạo trình phát…</string>
+    <string name="player_loading_starting">Bắt đầu phát…</string>
+    <string name="player_loading_buffering">Đang tải bộ đệm…</string>
+    <string name="debrid_resolving_stream">Đang phân giải luồng debrid</string>
     <string name="streams_link_copied">Đã sao chép liên kết luồng</string>
     <string name="streams_no_direct_link">Không có sẵn liên kết phát trực tiếp nào</string>
     <string name="streams_no_metadata">Không có thông tin</string>
@@ -1722,7 +1752,6 @@
     <string name="trakt_error_add_list_failed">Không thể thêm vào danh sách Trakt</string>
     <string name="trakt_error_missing_ids">Thiếu ID tương thích với Trakt</string>
     <string name="trakt_error_empty_response">Nội dung phản hồi trống</string>
-    <string name="tmdb_sources_api_key_required">Thêm khóa API TMDB trong Cài đặt để dùng nguồn TMDB</string>
     <string name="tmdb_sources_collection_fallback_title">Bộ sưu tập TMDB %1$d</string>
     <string name="tmdb_sources_collection_not_found">Không tìm thấy bộ sưu tập TMDB</string>
     <string name="tmdb_sources_company_fallback_title">Hãng sản xuất TMDB %1$d</string>
@@ -2083,7 +2112,6 @@
     <string name="collections_editor_tmdb_production_title_format">Hãng sản xuất TMDB %1$s</string>
     <string name="collections_editor_tmdb_source_load_failed">Không thể tải nguồn TMDB</string>
     <string name="collections_editor_trakt_list_id_format">ID %1$s</string>
-    <string name="collections_tmdb_api_key_required">Thêm khóa API TMDB trong phần Cài đặt để sử dụng các nguồn TMDB</string>
     <string name="collections_tmdb_collection_not_found">Không tìm thấy bộ sưu tập TMDB</string>
     <string name="collections_tmdb_company_not_found">Không tìm thấy hãng sản xuất trên TMDB</string>
     <string name="collections_tmdb_discover_no_data">Khám Phá TMDB không trả về dữ liệu</string>
@@ -2126,8 +2154,6 @@
     <string name="plugins_badge_providers">%1$d nhà cung cấp</string>
     <string name="plugins_badge_refreshing">Đang làm mới</string>
     <string name="plugins_badge_repos">%1$d kho lưu trữ</string>
-    <string name="plugins_badge_tmdb_key_missing">Thiếu khóa API TMDB</string>
-    <string name="plugins_badge_tmdb_key_set">Đã thiết lập khóa API TMDB</string>
     <string name="plugins_button_install_repo">Cài đặt kho lưu trữ trình mở rộng</string>
     <string name="plugins_button_installing">Đang cài đặt…</string>
     <string name="plugins_button_test_provider">Kiểm tra nhà cung cấp</string>
@@ -2171,7 +2197,6 @@
     <string name="plugins_test_error_title">Lỗi</string>
     <string name="plugins_test_failed">Kiểm tra nhà cung cấp thất bại</string>
     <string name="plugins_test_results_count">Kết quả kiểm tra (%1$d)</string>
-    <string name="plugins_tmdb_required_message">Các nhà cung cấp trình mở rộng yêu cầu khóa API TMDB. Thiết lập nó trong màn hình TMDB để nhà cung cấp trình mở rộng hoạt động đúng.</string>
     <string name="search_error_no_results_for_catalog">Không tìm thấy kết quả trong %1$s</string>
     <string name="settings_playback_introdb_invalid_key">Khóa API không hợp lệ hoặc lỗi kết nối</string>
     <string name="streams_plugin_repository_fallback">Kho lưu trữ trình mở rộng</string>
