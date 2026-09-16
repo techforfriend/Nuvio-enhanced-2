@@ -19,8 +19,7 @@ internal fun SkipInterval.internalSkipAction(
         intervals.filter {
             it.type.trim().lowercase() == "post-credits" && it.hasValidSeekTimes() &&
                 it.startTime >= endTime &&
-                (durationMs <= 0L ||
-                    (it.startTime < durationMs / 1000.0 && it.endTime <= durationMs / 1000.0 + 1.0))
+                (durationMs <= 0L || it.startTime < durationMs / 1000.0)
         }.minByOrNull { it.startTime }
     } else null
     return InternalSkipAction(
