@@ -120,13 +120,11 @@ internal fun autoSkipSelectionSummary(selectedTypes: Set<AutoSkipSegmentType>): 
     val recapLabel = stringResource(Res.string.settings_playback_auto_skip_recap)
     val outroLabel = stringResource(Res.string.settings_playback_auto_skip_outro)
     val movieCreditsLabel = stringResource(Res.string.settings_playback_auto_skip_movie_credits)
-    val postCreditsLabel = stringResource(Res.string.settings_playback_auto_skip_post_credits)
     return buildList {
         if (AutoSkipSegmentType.INTRO in selectedTypes) add(introLabel)
         if (AutoSkipSegmentType.RECAP in selectedTypes) add(recapLabel)
         if (AutoSkipSegmentType.OUTRO in selectedTypes) add(outroLabel)
         if (AutoSkipSegmentType.MOVIE_CREDITS in selectedTypes) add(movieCreditsLabel)
-        if (AutoSkipSegmentType.POST_CREDITS in selectedTypes) add(postCreditsLabel)
     }.joinToString(", ")
 }
 
@@ -136,7 +134,6 @@ private fun autoSkipTypeLabel(segmentType: AutoSkipSegmentType): String = when (
     AutoSkipSegmentType.RECAP -> stringResource(Res.string.settings_playback_auto_skip_recap)
     AutoSkipSegmentType.OUTRO -> stringResource(Res.string.settings_playback_auto_skip_outro)
     AutoSkipSegmentType.MOVIE_CREDITS -> stringResource(Res.string.settings_playback_auto_skip_movie_credits)
-    AutoSkipSegmentType.POST_CREDITS -> stringResource(Res.string.settings_playback_auto_skip_post_credits)
 }
 
 @Composable
@@ -145,5 +142,4 @@ private fun autoSkipTypeDescription(segmentType: AutoSkipSegmentType): String = 
     AutoSkipSegmentType.RECAP -> stringResource(Res.string.settings_playback_auto_skip_recap_description)
     AutoSkipSegmentType.OUTRO -> stringResource(Res.string.settings_playback_auto_skip_outro_description)
     AutoSkipSegmentType.MOVIE_CREDITS -> stringResource(Res.string.settings_playback_auto_skip_movie_credits_description)
-    AutoSkipSegmentType.POST_CREDITS -> stringResource(Res.string.settings_playback_auto_skip_post_credits_description)
 }

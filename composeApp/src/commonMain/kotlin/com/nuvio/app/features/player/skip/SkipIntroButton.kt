@@ -43,7 +43,7 @@ import nuvio.composeapp.generated.resources.player_skip_intro
 import nuvio.composeapp.generated.resources.player_skip_outro
 import nuvio.composeapp.generated.resources.player_skip_recap
 import nuvio.composeapp.generated.resources.player_skip_movie_credits
-import nuvio.composeapp.generated.resources.player_skip_post_credits
+import nuvio.composeapp.generated.resources.player_skip_to_post_credits
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -54,10 +54,16 @@ fun SkipIntroButton(
     onSkip: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    skipsToPostCredits: Boolean = false,
 ) {
     var lastType by remember { mutableStateOf(interval?.type) }
-    if (interval != null) lastType = interval.type
-    val shouldShow = interval != null && (!dismissed || controlsVisible)
+    var lastSkipsToPostCredits by remember { mutableStateOf(skipsToPostCredits) }
+    val canSkip = interval?.internalSkipAction(emptyList()) != null
+    if (canSkip) {
+        lastType = interval?.type
+        lastSkipsToPostCredits = skipsToPostCredits
+    }
+    val shouldShow = canSkip && (!dismissed || controlsVisible)
 
     var autoHidden by remember { mutableStateOf(false) }
     var manuallyDismissed by remember { mutableStateOf(false) }
@@ -107,7 +113,7 @@ fun SkipIntroButton(
                 .width(IntrinsicSize.Max)
                 .clip(shape)
                 .background(Color(0xFF1E1E1E).copy(alpha = 0.85f))
-                .clickable { onSkip() },
+                .clickable(enabled = canSkip) { onSkip() },
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
@@ -120,7 +126,7 @@ fun SkipIntroButton(
                     modifier = Modifier.size(20.dp),
                 )
                 Text(
-                    text = skipLabel(lastType),
+                    text = skipLabel(lastType, lastSkipsToPostCredits),
                     color = Color.White,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(start = 8.dp),
@@ -149,12 +155,13 @@ fun SkipIntroButton(
 }
 
 @Composable
-private fun skipLabel(type: String?): String =
+private fun skipLabel(type: String?, skipsToPostCredits: Boolean): String =
     when (type?.lowercase()) {
         "intro", "op", "mixed-op" -> stringResource(Res.string.player_skip_intro)
         "outro", "ed", "mixed-ed", "credits" -> stringResource(Res.string.player_skip_outro)
         "recap" -> stringResource(Res.string.player_skip_recap)
-        "movie-credits" -> stringResource(Res.string.player_skip_movie_credits)
-        "post-credits" -> stringResource(Res.string.player_skip_post_credits)
+        "movie-credits" -> stringResource(
+            if (skipsToPostCredits) Res.string.player_skip_to_post_credits else Res.string.player_skip_movie_credits,
+        )
         else -> stringResource(Res.string.player_skip)
     }
