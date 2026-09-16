@@ -2218,6 +2218,13 @@
     <string name="updates_empty_download_body">Empty download body</string>
     <string name="updates_github_api_error">GitHub releases API error: %1$d</string>
     <string name="updates_no_channel_release">No update has been published yet.</string>
+    <string name="updates_channel_title">Update channel</string>
+    <string name="updates_channel_description">Choose the type of app updates to receive</string>
+    <string name="updates_channel_stable">Stable</string>
+    <string name="updates_channel_beta">Beta</string>
+    <string name="updates_channel_stable_description">Intended for everyday use.</string>
+    <string name="updates_channel_beta_description">Early updates that may contain bugs, break features, or behave unexpectedly.</string>
+    <string name="updates_waiting_for_stable">You’ll receive the next stable release when it becomes available</string>
     <string name="updates_release_missing_title">Release has no tag or name</string>
     <!-- Continue Watching air date display -->
     <string name="cw_airs_date">Airs %1$s</string>
