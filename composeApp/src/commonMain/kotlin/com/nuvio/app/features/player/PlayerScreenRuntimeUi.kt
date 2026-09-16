@@ -337,6 +337,8 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                 scrubbingPositionMs = positionMs
             },
             onScrubFinished = { positionMs ->
+                // Respect the manual destination while the player's seek is still asynchronous.
+                lastMovieManualSeekPositions = playbackSnapshot.positionMs to positionMs
                 isScrubbingTimeline = false
                 scrubbingPositionMs = null
                 playerController?.seekTo(positionMs)

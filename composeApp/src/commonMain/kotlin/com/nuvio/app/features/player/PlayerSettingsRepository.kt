@@ -65,6 +65,8 @@ data class PlayerSettingsUiState(
     val streamAutoPlayRegex: String = "",
     val streamAutoPlayTimeoutSeconds: Int = 3,
     val skipIntroEnabled: Boolean = true,
+    val autoSkipMovieCredits: Boolean = false,
+    val autoSkipPostCredits: Boolean = false,
     val animeSkipEnabled: Boolean = false,
     val animeSkipClientId: String = "",
     val introDbApiKey: String = "",
@@ -133,6 +135,8 @@ object PlayerSettingsRepository {
     private var streamAutoPlayRegex = ""
     private var streamAutoPlayTimeoutSeconds = 3
     private var skipIntroEnabled = true
+    private var autoSkipMovieCredits = false
+    private var autoSkipPostCredits = false
     private var animeSkipEnabled = false
     private var animeSkipClientId = ""
     private var introDbApiKey = ""
@@ -206,6 +210,8 @@ object PlayerSettingsRepository {
         streamAutoPlayRegex = ""
         streamAutoPlayTimeoutSeconds = 3
         skipIntroEnabled = true
+        autoSkipMovieCredits = false
+        autoSkipPostCredits = false
         animeSkipEnabled = false
         animeSkipClientId = ""
         introDbApiKey = ""
@@ -331,6 +337,8 @@ object PlayerSettingsRepository {
             PlayerSettingsStorage.saveStreamAutoPlayTimeoutSeconds(streamAutoPlayTimeoutSeconds)
         }
         skipIntroEnabled = PlayerSettingsStorage.loadSkipIntroEnabled() ?: true
+        autoSkipMovieCredits = PlayerSettingsStorage.loadAutoSkipMovieCredits() ?: false
+        autoSkipPostCredits = PlayerSettingsStorage.loadAutoSkipPostCredits() ?: false
         animeSkipEnabled = PlayerSettingsStorage.loadAnimeSkipEnabled() ?: false
         animeSkipClientId = PlayerSettingsStorage.loadAnimeSkipClientId() ?: ""
         introDbApiKey = PlayerSettingsStorage.loadIntroDbApiKey() ?: ""
@@ -665,6 +673,22 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveSkipIntroEnabled(enabled)
     }
 
+    fun setAutoSkipMovieCredits(enabled: Boolean) {
+        ensureLoaded()
+        if (autoSkipMovieCredits == enabled) return
+        autoSkipMovieCredits = enabled
+        publish()
+        PlayerSettingsStorage.saveAutoSkipMovieCredits(enabled)
+    }
+
+    fun setAutoSkipPostCredits(enabled: Boolean) {
+        ensureLoaded()
+        if (autoSkipPostCredits == enabled) return
+        autoSkipPostCredits = enabled
+        publish()
+        PlayerSettingsStorage.saveAutoSkipPostCredits(enabled)
+    }
+
     fun setAnimeSkipEnabled(enabled: Boolean) {
         ensureLoaded()
         if (animeSkipEnabled == enabled) return
@@ -969,6 +993,8 @@ object PlayerSettingsRepository {
             streamAutoPlayRegex = streamAutoPlayRegex,
             streamAutoPlayTimeoutSeconds = streamAutoPlayTimeoutSeconds,
             skipIntroEnabled = skipIntroEnabled,
+            autoSkipMovieCredits = autoSkipMovieCredits,
+            autoSkipPostCredits = autoSkipPostCredits,
             animeSkipEnabled = animeSkipEnabled,
             animeSkipClientId = animeSkipClientId,
             introDbApiKey = introDbApiKey,

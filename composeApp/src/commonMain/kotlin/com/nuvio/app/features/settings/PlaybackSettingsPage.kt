@@ -1038,6 +1038,24 @@ private fun PlaybackSettingsSection(
                 )
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_auto_skip_movie_credits),
+                    description = stringResource(Res.string.settings_playback_auto_skip_movie_credits_description),
+                    checked = autoPlayPlayerSettings.autoSkipMovieCredits,
+                    enabled = autoPlayPlayerSettings.skipIntroEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = PlayerSettingsRepository::setAutoSkipMovieCredits,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_auto_skip_post_credits),
+                    description = stringResource(Res.string.settings_playback_auto_skip_post_credits_description),
+                    checked = autoPlayPlayerSettings.autoSkipPostCredits,
+                    enabled = autoPlayPlayerSettings.skipIntroEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = PlayerSettingsRepository::setAutoSkipPostCredits,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
                     title = stringResource(Res.string.settings_playback_anime_skip),
                     description = stringResource(Res.string.settings_playback_anime_skip_description),
                     checked = autoPlayPlayerSettings.animeSkipEnabled,

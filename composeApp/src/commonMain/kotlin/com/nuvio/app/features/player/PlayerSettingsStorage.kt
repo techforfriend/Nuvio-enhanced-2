@@ -88,6 +88,10 @@ internal expect object PlayerSettingsStorage {
     fun loadStreamAutoPlayTimeoutSeconds(): Int?
     fun saveStreamAutoPlayTimeoutSeconds(seconds: Int)
     fun loadSkipIntroEnabled(): Boolean?
+    fun loadAutoSkipMovieCredits(): Boolean?
+    fun saveAutoSkipMovieCredits(enabled: Boolean)
+    fun loadAutoSkipPostCredits(): Boolean?
+    fun saveAutoSkipPostCredits(enabled: Boolean)
     fun saveSkipIntroEnabled(enabled: Boolean)
     fun loadAnimeSkipEnabled(): Boolean?
     fun saveAnimeSkipEnabled(enabled: Boolean)

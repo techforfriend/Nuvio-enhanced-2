@@ -2292,4 +2292,10 @@
         <item quantity="one">%d title</item>
         <item quantity="other">%d titles</item>
     </plurals>
+    <string name="settings_playback_auto_skip_movie_credits">Automatically skip end credits</string>
+    <string name="settings_playback_auto_skip_movie_credits_description">Skip movie credits, keeping post-credits scenes.</string>
+    <string name="settings_playback_auto_skip_post_credits">Automatically skip post-credits</string>
+    <string name="settings_playback_auto_skip_post_credits_description">Skip post-credits scenes automatically.</string>
+    <string name="player_skip_movie_credits">Skip credits</string>
+    <string name="player_skip_post_credits">Skip post-credits</string>
 </resources>
