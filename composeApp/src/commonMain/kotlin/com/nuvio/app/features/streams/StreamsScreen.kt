@@ -746,7 +746,7 @@ internal fun ProviderFilterRow(
 ) {
     val addonGroups = groups.filter { it.streams.isNotEmpty() || it.isLoading }
     val pinnedSourceIds by rememberPinnedStreamSourceIds()
-    var pinSheetTarget by remember { mutableStateOf<AddonStreamGroup?>(null) }
+    var pinSheetTarget by remember { mutableStateOf<PinTarget?>(null) }
 
     Row(
         modifier = modifier
@@ -771,15 +771,15 @@ internal fun ProviderFilterRow(
             FilterChip(
                 label = group.addonName,
                 isSelected = selectedFilter == group.addonId,
-                isPinned = group.addonId in pinnedSourceIds,
+                isPinned = group.soleSourcePin()?.key in pinnedSourceIds,
                 onClick = { onFilterSelected(group.addonId) },
-                onLongClick = { pinSheetTarget = group.takeIf { it.isPinnableSource } },
+                onLongClick = { pinSheetTarget = group.soleSourcePin() },
             )
         }
     }
 
     StreamSourcePinSheet(
-        group = pinSheetTarget,
+        target = pinSheetTarget,
         onDismiss = { pinSheetTarget = null },
     )
 }
@@ -790,22 +790,34 @@ private fun rememberPinnedStreamSourceIds(): State<List<String>> {
     return PinnedStreamSourcesRepository.pinnedSourceIds.collectAsStateWithLifecycle()
 }
 
-private val AddonStreamGroup.isPinnableSource: Boolean
-    get() = !addonId.startsWith("debrid:") &&
-        streams.none { stream -> stream.isAddonDebridCandidate && stream.isDirectDebridStream }
+private fun AddonStreamGroup.soleSourcePin(): PinTarget? {
+    if (addonId.startsWith("debrid:")) return null
+    val playableStreams = streams.filterNot { it.isAddonDebridCandidate && it.isDirectDebridStream }
+    val sourceNames = playableStreams
+        .map { it.sourceName?.trim()?.takeIf(String::isNotEmpty) }
+        .distinct()
+    if (sourceNames.size > 1) return null
+    val sourceName = sourceNames.firstOrNull()
+    return PinTarget(
+        key = PinnedStreamSourcesRepository.sourceKeyFor(addonId = addonId, sourceName = sourceName),
+        label = sourceName ?: addonName,
+    )
+}
+
+private data class PinTarget(val key: String, val label: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StreamSourcePinSheet(
-    group: AddonStreamGroup?,
+    target: PinTarget?,
     onDismiss: () -> Unit,
 ) {
-    if (group == null) return
+    if (target == null) return
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
     val pinnedSourceIds by rememberPinnedStreamSourceIds()
-    val isPinned = group.addonId in pinnedSourceIds
+    val isPinned = target.key in pinnedSourceIds
 
     NuvioModalBottomSheet(
         onDismissRequest = {
@@ -821,7 +833,7 @@ private fun StreamSourcePinSheet(
                 .padding(bottom = nuvioSafeBottomPadding(16.dp)),
         ) {
             Text(
-                text = group.addonName,
+                text = target.label,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -836,8 +848,7 @@ private fun StreamSourcePinSheet(
                     if (isPinned) Res.string.streams_unpin_source else Res.string.streams_pin_source,
                 ),
                 onClick = {
-                    PinnedStreamSourcesRepository.setPinned(group.addonId, !isPinned)
-                    StreamsRepository.applyPinnedSourceOrder()
+                    PinnedStreamSourcesRepository.setPinned(target.key, !isPinned)
                     coroutineScope.launch {
                         dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
                     }
@@ -964,6 +975,10 @@ internal fun StreamList(
         StreamBadgeSettingsRepository.ensureLoaded()
         StreamBadgeSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
+    val pinnedSourceIds by rememberPinnedStreamSourceIds()
+    val pinnedFirst = remember(filteredGroups, pinnedSourceIds) {
+        splitPinnedSources(filteredGroups, pinnedSourceIds)
+    }
 
     CompositionLocalProvider(LocalStreamSizeLabelFormat provides formatStreamSize) {
     LazyColumn(
@@ -988,7 +1003,25 @@ internal fun StreamList(
             }
 
             else -> {
-                filteredGroups.forEachIndexed { groupIndex, group ->
+                pinnedFirst.pinnedGroups.forEachIndexed { pinnedIndex, group ->
+                    streamSection(
+                        sectionKey = "pinned:" + streamSectionRenderKey(groupIndex = pinnedIndex, group = group),
+                        group = group,
+                        showHeader = true,
+                        debridEnabled = debridEnabled,
+                        appendInstantServiceToDefaultName = appendInstantServiceToDefaultName,
+                        showFileSizeBadges = streamBadgeSettings.showFileSizeBadges,
+                        showAddonLogo = streamBadgeSettings.showAddonLogo,
+                        badgePlacement = streamBadgeSettings.badgePlacement,
+                        torrentNotSupportedText = torrentNotSupportedText,
+                        fetchingText = fetchingText,
+                        onStreamSelected = onStreamSelected,
+                        onStreamLongPress = onStreamLongPress,
+                        resumePositionMs = resumePositionMs,
+                        resumeProgressFraction = resumeProgressFraction,
+                    )
+                }
+                pinnedFirst.remainingGroups.forEachIndexed { groupIndex, group ->
                     streamSection(
                         sectionKey = streamSectionRenderKey(groupIndex = groupIndex, group = group),
                         group = group,
@@ -1057,7 +1090,20 @@ private fun LazyListScope.streamSection(
         val sourceStreams = streamsBySource[sourceName].orEmpty()
         if (showSourceHeaders) {
             item(key = "source_${sectionKey}_$sourceIndex") {
-                StreamSourceHeader(sourceName = sourceName)
+                StreamSourceHeader(
+                    sourceName = sourceName,
+                    pinTarget = PinTarget(
+                        key = PinnedStreamSourcesRepository.sourceKeyFor(
+                            addonId = group.addonId,
+                            sourceName = sourceStreams.firstOrNull()?.sourceName,
+                        ),
+                        label = sourceName,
+                    ).takeIf {
+                        sourceStreams.none { stream ->
+                            stream.isAddonDebridCandidate && stream.isDirectDebridStream
+                        }
+                    },
+                )
             }
         }
 
@@ -1102,6 +1148,69 @@ private fun LazyListScope.streamSection(
     }
 }
 
+internal data class PinnedFirstStreamGroups(
+    val pinnedGroups: List<AddonStreamGroup>,
+    val remainingGroups: List<AddonStreamGroup>,
+)
+
+internal fun splitPinnedSources(
+    groups: List<AddonStreamGroup>,
+    pinnedSourceIds: List<String>,
+): PinnedFirstStreamGroups {
+    if (pinnedSourceIds.isEmpty()) return PinnedFirstStreamGroups(emptyList(), groups)
+
+    val pinnedRank = HashMap<String, Int>(pinnedSourceIds.size)
+    pinnedSourceIds.forEachIndexed { index, key ->
+        if (key !in pinnedRank) pinnedRank[key] = index
+    }
+
+    val pinned = mutableListOf<Pair<Int, AddonStreamGroup>>()
+    val remaining = mutableListOf<AddonStreamGroup>()
+
+    groups.forEach { group ->
+        val isDebridGroup = group.addonId.startsWith("debrid:")
+        val pinnedStreams = if (isDebridGroup) {
+            emptyMap()
+        } else {
+            group.streams
+                .filterNot { stream -> stream.isAddonDebridCandidate && stream.isDirectDebridStream }
+                .groupBy { stream ->
+                    PinnedStreamSourcesRepository.sourceKeyFor(
+                        addonId = group.addonId,
+                        sourceName = stream.sourceName,
+                    )
+                }
+                .filterKeys { key -> key in pinnedRank }
+        }
+
+        if (pinnedStreams.isEmpty()) {
+            remaining += group
+            return@forEach
+        }
+
+        val pinnedUrls = pinnedStreams.values.flatten().toSet()
+        pinnedStreams.forEach { (key, streams) ->
+            pinned += pinnedRank.getValue(key) to group.copy(
+                addonName = streams.firstOrNull()?.sourceName?.takeIf { it.isNotBlank() }
+                    ?: group.addonName,
+                streams = streams,
+                isLoading = false,
+                error = null,
+            )
+        }
+
+        val leftovers = group.streams.filterNot { it in pinnedUrls }
+        if (leftovers.isNotEmpty() || group.isLoading) {
+            remaining += group.copy(streams = leftovers)
+        }
+    }
+
+    return PinnedFirstStreamGroups(
+        pinnedGroups = pinned.sortedBy { it.first }.map { it.second },
+        remainingGroups = remaining,
+    )
+}
+
 internal fun streamSectionRenderKey(
     groupIndex: Int,
     group: AddonStreamGroup,
@@ -1138,7 +1247,8 @@ private fun StreamSectionHeader(
 ) {
     val isLoading = group.isLoading
     val pinnedSourceIds by rememberPinnedStreamSourceIds()
-    val isPinned = group.addonId in pinnedSourceIds
+    val pinTarget = remember(group) { group.soleSourcePin() }
+    val isPinned = pinTarget?.key in pinnedSourceIds
     var pinSheetVisible by remember { mutableStateOf(false) }
 
     Row(
@@ -1146,7 +1256,7 @@ private fun StreamSectionHeader(
             .fillMaxWidth()
             .combinedClickable(
                 onClick = {},
-                onLongClick = { if (group.isPinnableSource) pinSheetVisible = true },
+                onLongClick = { if (pinTarget != null) pinSheetVisible = true },
             )
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1190,7 +1300,7 @@ private fun StreamSectionHeader(
     }
 
     StreamSourcePinSheet(
-        group = group.takeIf { pinSheetVisible },
+        target = pinTarget?.takeIf { pinSheetVisible },
         onDismiss = { pinSheetVisible = false },
     )
 }
@@ -1198,17 +1308,46 @@ private fun StreamSectionHeader(
 @Composable
 private fun StreamSourceHeader(
     sourceName: String,
+    pinTarget: PinTarget? = null,
     modifier: Modifier = Modifier,
 ) {
-    Text(
-        text = sourceName,
-        modifier = modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-        style = MaterialTheme.typography.labelLarge.copy(
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = 0.2.sp,
-        ),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    val pinnedSourceIds by rememberPinnedStreamSourceIds()
+    val isPinned = pinTarget?.key in pinnedSourceIds
+    var pinSheetVisible by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = {},
+                onLongClick = { if (pinTarget != null) pinSheetVisible = true },
+            )
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (isPinned) {
+            Icon(
+                imageVector = Icons.Rounded.PushPin,
+                contentDescription = stringResource(Res.string.streams_pinned_source),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(12.dp),
+            )
+        }
+        Text(
+            text = sourceName,
+            style = MaterialTheme.typography.labelLarge.copy(
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.2.sp,
+            ),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
+    StreamSourcePinSheet(
+        target = pinTarget?.takeIf { pinSheetVisible },
+        onDismiss = { pinSheetVisible = false },
     )
 }
 
@@ -1269,7 +1408,8 @@ private fun StreamActionsSheet(
 
             if (stream.addonId.isNotBlank() && !stream.isDirectDebridStream) {
                 val pinnedSourceIds by rememberPinnedStreamSourceIds()
-                val isPinned = stream.addonId in pinnedSourceIds
+                val sourceKey = PinnedStreamSourcesRepository.sourceKeyFor(stream)
+                val isPinned = sourceKey in pinnedSourceIds
                 NuvioBottomSheetDivider()
                 NuvioBottomSheetActionRow(
                     icon = Icons.Rounded.PushPin,
@@ -1277,8 +1417,7 @@ private fun StreamActionsSheet(
                         if (isPinned) Res.string.streams_unpin_source else Res.string.streams_pin_source,
                     ),
                     onClick = {
-                        PinnedStreamSourcesRepository.setPinned(stream.addonId, !isPinned)
-                        StreamsRepository.applyPinnedSourceOrder()
+                        PinnedStreamSourcesRepository.setPinned(sourceKey, !isPinned)
                         coroutineScope.launch {
                             dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
                         }

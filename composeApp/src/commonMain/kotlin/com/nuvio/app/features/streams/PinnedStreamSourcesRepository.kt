@@ -21,10 +21,18 @@ object PinnedStreamSourcesRepository {
         loadFromDisk()
     }
 
-    fun isPinned(addonId: String): Boolean = addonId in _pinnedSourceIds.value
+    fun sourceKeyFor(addonId: String, sourceName: String?): String {
+        val source = sourceName?.trim()?.takeIf { it.isNotEmpty() }
+        return if (source == null) addonId else "$addonId|$source"
+    }
 
-    fun setPinned(addonId: String, pinned: Boolean) {
-        val normalized = addonId.trim()
+    fun sourceKeyFor(stream: StreamItem): String =
+        sourceKeyFor(addonId = stream.addonId, sourceName = stream.sourceName)
+
+    fun isPinned(sourceKey: String): Boolean = sourceKey in _pinnedSourceIds.value
+
+    fun setPinned(sourceKey: String, pinned: Boolean) {
+        val normalized = sourceKey.trim()
         if (normalized.isEmpty()) return
         ensureLoaded()
         val current = _pinnedSourceIds.value
@@ -38,8 +46,8 @@ object PinnedStreamSourcesRepository {
         persist(updated)
     }
 
-    fun toggle(addonId: String) {
-        setPinned(addonId, !isPinned(addonId))
+    fun toggle(sourceKey: String) {
+        setPinned(sourceKey, !isPinned(sourceKey))
     }
 
     private fun loadFromDisk() {
