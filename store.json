@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.21",
+          "buildVersion": "126",
+          "date": "2026-09-16T01:26:20Z",
+          "localizedDescription": "- fix(home): match continue watching badge colors to tv @tapframe\r\n- perf(navigation): reduce root tab switch stalls @tapframe\r\n- Add TVDB anime ID preference to avoid per-season IMDB splits (#1952) @skoruppa\r\n- Revert \"perf(navigation): reduce tab switch animation stalls\" @tapframe\r\n- fix(player): keep android landscape lock during exit @tapframe\r\n- fix(profiles): add active profile toast and back button @tapframe\r\n- fix(profiles): prevent selecting the active profile @tapframe\r\n- fix(player): hide addons with no streams @tapframe\r\n- fix(player): start playback without waiting for addon subtitles (#1949) @halibiram\r\n- fix(trailer): open ios playback in fullscreen @tapframe\r\n- Fix anime skip mapping, subtitle language detection, watched badges and Polish translations (#1943) @skoruppa\r\n- fix(library): restore LaunchedEffect import after the 0.4.21 merge @luqmanfadlli\r\n- feat(streams): add pinned stream sources @luqmanfadlli",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.4.21/Nuvio-v0.4.21-Enhanced.ipa",
+          "size": 66287229,
+          "sha256": "b6c06daae57124c94b555c800717ac91bb7db4b8c82260525fcacea5d02ae4a5",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.20",
           "buildVersion": "125",
           "date": "2026-09-14T09:40:55Z",
