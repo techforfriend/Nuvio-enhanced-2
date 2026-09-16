@@ -17,6 +17,9 @@ internal data class AndroidDownloadTransfer(
     val generation: String,
     val validator: String? = null,
     val retryCount: Int = 0,
+    val exportTreeUri: String? = null,
+    val partialDocumentUri: String? = null,
+    val directWrite: Boolean = true,
 )
 
 internal class AndroidDownloadStore(private val directory: File) {
@@ -27,7 +30,7 @@ internal class AndroidDownloadStore(private val directory: File) {
 
     fun get(fileName: String): AndroidDownloadTransfer? = state.value[fileName]
 
-    fun begin(item: DownloadItem): AndroidDownloadTransfer = synchronized(lock) {
+    fun begin(item: DownloadItem, exportTreeUri: String? = null): AndroidDownloadTransfer = synchronized(lock) {
         val previous = get(item.fileName)?.takeIf { it.item.id == item.id }
         if (previous?.item?.status == DownloadStatus.Downloading) return@synchronized previous
         val transfer = AndroidDownloadTransfer(
@@ -35,6 +38,9 @@ internal class AndroidDownloadStore(private val directory: File) {
             jobId = previous?.jobId ?: ((state.value.values.maxOfOrNull { it.jobId } ?: 0) + 1),
             generation = UUID.randomUUID().toString(),
             validator = previous?.validator,
+            exportTreeUri = exportTreeUri,
+            partialDocumentUri = previous?.takeIf { it.exportTreeUri == exportTreeUri }?.partialDocumentUri,
+            directWrite = previous?.takeIf { it.exportTreeUri == exportTreeUri }?.directWrite ?: true,
         )
         save(transfer)
         transfer

@@ -5,7 +5,11 @@ import java.io.File
 import java.net.URI
 
 internal actual class DownloadSubtitleStorage actual constructor(localVideoUri: String) {
-    private val directory = File(File(URI(localVideoUri)).path + ".subtitles")
+    private val directory = if (AndroidDownloadExport.isContentUri(localVideoUri)) {
+        AndroidDownloadExport.subtitleDirectory(localVideoUri)
+    } else {
+        File(File(URI(localVideoUri)).path + ".subtitles")
+    }
 
     actual fun read(fileName: String): String? =
         runCatching { AtomicFile(file(fileName)).readFully().decodeToString() }.getOrNull()

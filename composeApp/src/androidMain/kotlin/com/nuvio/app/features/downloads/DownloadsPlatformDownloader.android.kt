@@ -71,6 +71,10 @@ internal actual object DownloadsPlatformDownloader {
 
     actual fun removeFile(localFileUri: String?): Boolean {
         if (localFileUri.isNullOrBlank()) return false
+        if (AndroidDownloadExport.isContentUri(localFileUri)) {
+            DownloadSubtitleStorage(localFileUri).remove()
+            return AndroidDownloadExport.delete(localFileUri)
+        }
         val file = localFileUri.toLocalFileOrNull() ?: return false
         return runCatching { file.delete() }.getOrDefault(false)
     }
@@ -82,6 +86,9 @@ internal actual object DownloadsPlatformDownloader {
     }
 
     actual fun resolveLocalFileUri(localFileUri: String?, destinationFileName: String): String? {
+        if (localFileUri != null && AndroidDownloadExport.isContentUri(localFileUri)) {
+            if (appContext != null && AndroidDownloadExport.exists(localFileUri)) return localFileUri
+        }
         localFileUri
             ?.toLocalFileOrNull()
             ?.takeIf { it.exists() }
@@ -101,8 +108,15 @@ internal actual object DownloadsPlatformDownloader {
 
     actual fun openDownloadsDirectory(): Boolean {
         val context = appContext ?: return false
+        val treeUri = DownloadsSettingsRepository.run {
+            ensureLoaded()
+            downloadLocationUri.value
+        }
+        val customUri = treeUri
+            ?.takeIf { AndroidDownloadExport.writableFolder(it) != null }
+            ?.let(AndroidDownloadExport::treeDocumentUri)
         val downloadsDir = File(context.filesDir, "downloads").apply { mkdirs() }
-        val uri = runCatching {
+        val uri = customUri ?: runCatching {
             FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",
