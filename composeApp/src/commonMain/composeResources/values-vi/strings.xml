@@ -1356,7 +1356,7 @@
     <string name="custom_theme_title">Dải màu chuyển tiếp tùy chỉnh của bạn</string>
     <string name="custom_theme_subtitle">Chọn 3 màu cho chủ đề của bạn. Chọn một màu để chỉnh sửa.</string>
     <string name="custom_theme_edit">Chỉnh sửa chủ đề tùy chỉnh</string>
-    <string name="custom_theme_solid_title">Màu tùy chỉnh của bạn</string>
+    <string name="custom_theme_solid_title">Màu tùy chỉnh</string>
     <string name="custom_theme_solid_subtitle">Chọn một màu cho chủ đề của bạn.</string>
     <string name="custom_theme_mode_gradient">Dải màu chuyển tiếp</string>
     <string name="custom_theme_mode_solid">Màu trơn</string>
