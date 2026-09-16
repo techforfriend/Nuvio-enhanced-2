@@ -50,7 +50,7 @@ object MdbListMetadataService {
         if (!settings.enabled) return false
         if (settings.apiKey.trim().isBlank()) return false
         if (settings.enabledProvidersInPriorityOrder().isEmpty()) return false
-        return extractImdbId(meta.id) != null || extractImdbId(fallbackItemId) != null
+        return extractImdbId(meta.id) != null || extractImdbId(fallbackItemId) != null || extractImdbId(meta.imdbId) != null
     }
 
     suspend fun enrichMeta(
@@ -65,6 +65,7 @@ object MdbListMetadataService {
 
         val imdbId = extractImdbId(meta.id)
             ?: extractImdbId(fallbackItemId)
+            ?: extractImdbId(meta.imdbId)
             ?: return meta.copy(externalRatings = emptyList())
         val mediaType = toMdbListMediaType(meta.type)
         val enabledProviders = settings.enabledProvidersInPriorityOrder()

@@ -15,7 +15,7 @@ object TmdbService {
     private val tmdbToImdbCache = linkedMapOf<String, String>()
     private val cacheMutex = Mutex()
 
-    suspend fun ensureTmdbId(videoId: String, mediaType: String): String? {
+    suspend fun ensureTmdbId(videoId: String, mediaType: String, fallbackImdbId: String? = null): String? {
         val apiKey = TmdbConfig.API_KEY
 
         val normalized = videoId
@@ -28,9 +28,20 @@ object TmdbService {
 
         if (normalized.isBlank()) return null
         if (normalized.all(Char::isDigit)) return normalized
-        if (!normalized.startsWith("tt", ignoreCase = true)) return null
+        if (normalized.startsWith("tt", ignoreCase = true)) {
+            return imdbToTmdb(imdbId = normalized, mediaType = mediaType, apiKey = apiKey)
+        }
 
-        return imdbToTmdb(imdbId = normalized, mediaType = mediaType, apiKey = apiKey)
+        // Fallback: use the IMDB ID supplied by the addon's meta response
+        val normalizedFallback = fallbackImdbId
+            ?.trim()
+            ?.substringBefore(':')
+            ?.takeIf { it.startsWith("tt", ignoreCase = true) }
+        if (normalizedFallback != null) {
+            return imdbToTmdb(imdbId = normalizedFallback, mediaType = mediaType, apiKey = apiKey)
+        }
+
+        return null
     }
 
     suspend fun tmdbToImdb(tmdbId: Int, mediaType: String): String? {
