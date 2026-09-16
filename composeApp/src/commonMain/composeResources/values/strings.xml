@@ -2302,6 +2302,6 @@
     <string name="settings_playback_auto_skip_outro_description">Skip outros and anime endings automatically.</string>
     <string name="settings_playback_auto_skip_movie_credits">End Credits</string>
     <string name="settings_playback_auto_skip_movie_credits_description">Skip movie credits, keeping post-credits scenes.</string>
-    <string name="player_skip_movie_credits">Skip credits</string>
+    <string name="player_skip_movie_credits">Skip Credits</string>
     <string name="player_skip_to_post_credits">Skip to Post-Credits</string>
 </resources>

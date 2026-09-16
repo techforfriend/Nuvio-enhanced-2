@@ -158,7 +158,9 @@ fun SkipIntroButton(
 private fun skipLabel(type: String?, skipsToPostCredits: Boolean): String =
     when (type?.lowercase()) {
         "intro", "op", "mixed-op" -> stringResource(Res.string.player_skip_intro)
-        "outro", "ed", "mixed-ed", "credits" -> stringResource(Res.string.player_skip_outro)
+        "outro", "ed", "mixed-ed", "credits" -> stringResource(
+            if (skipsToPostCredits) Res.string.player_skip_to_post_credits else Res.string.player_skip_outro,
+        )
         "recap" -> stringResource(Res.string.player_skip_recap)
         "movie-credits" -> stringResource(
             if (skipsToPostCredits) Res.string.player_skip_to_post_credits else Res.string.player_skip_movie_credits,
