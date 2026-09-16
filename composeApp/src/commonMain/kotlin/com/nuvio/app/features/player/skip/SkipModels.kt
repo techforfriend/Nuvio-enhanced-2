@@ -61,22 +61,6 @@ private fun IntroDbSegment?.movieIntervalOrNull(type: String): SkipInterval? {
     return SkipInterval(start, end, type, "introdb")
 }
 
-internal fun SkipInterval.shouldAutoSkipMovie(creditsEnabled: Boolean, postCreditsEnabled: Boolean): Boolean =
-    when (type) {
-        "movie-credits" -> creditsEnabled
-        "post-credits" -> postCreditsEnabled
-        else -> false
-    }
-
-internal fun List<SkipInterval>.movieIntervalsAtSeekPositions(fromMs: Long, toMs: Long): List<SkipInterval> =
-    filter { interval ->
-        interval.shouldAutoSkipMovie(creditsEnabled = true, postCreditsEnabled = true) &&
-            listOf(fromMs, toMs).any { position ->
-                val seconds = position / 1000.0
-                seconds >= interval.startTime && seconds < interval.endTime
-            }
-    }
-
 @Serializable
 data class IntroDbSegment(
     @SerialName("start_sec") val startSec: Double? = null,

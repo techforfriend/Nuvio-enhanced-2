@@ -14,8 +14,14 @@ object SkipIntroRepository {
     private val introDbConfigured: Boolean
         get() = IntroDbConfig.URL.isNotBlank()
 
-    suspend fun getMovieSkipIntervals(contentId: String?, videoId: String?): List<SkipInterval> {
-        if (!introDbConfigured || !PlayerSettingsRepository.uiState.value.skipIntroEnabled) return emptyList()
+    suspend fun getMovieSkipIntervals(
+        contentId: String?,
+        videoId: String?,
+        requireSkipIntroEnabled: Boolean = true,
+    ): List<SkipInterval> {
+        if (!introDbConfigured ||
+            (requireSkipIntroEnabled && !PlayerSettingsRepository.uiState.value.skipIntroEnabled)
+        ) return emptyList()
         val imdbId = resolveMovieSkipImdbId(
             contentId, videoId,
             resolveTmdb = { TmdbService.tmdbToImdb(it, "movie") },

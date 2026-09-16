@@ -15,8 +15,8 @@ import com.nuvio.app.features.p2p.P2pStreamingState
 import com.nuvio.app.features.player.skip.NextEpisodeInfo
 import com.nuvio.app.features.player.skip.PlayerNextEpisodeRules
 import com.nuvio.app.features.player.skip.SkipIntroRepository
-import com.nuvio.app.features.player.skip.shouldAutoSkipMovie
-import com.nuvio.app.features.player.skip.movieIntervalsAtSeekPositions
+import com.nuvio.app.features.player.skip.shouldAutoSkip
+import com.nuvio.app.features.player.skip.intervalsAtSeekPositions
 import com.nuvio.app.features.streams.BingeGroupCacheRepository
 import com.nuvio.app.features.streams.StreamLinkCacheRepository
 import com.nuvio.app.features.streams.StreamItem
@@ -465,8 +465,8 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         playerSettingsUiState.skipIntroEnabled,
     ) {
         skipIntervals = emptyList()
-        autoSkippedMovieIntervals.clear()
-        lastMovieManualSeekPositions = null
+        autoSkippedIntervals.clear()
+        lastManualSkipSeekPositions = null
         activeSkipInterval = null
         skipIntervalDismissed = false
         showNextEpisodeCard = false
@@ -507,17 +507,17 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
 
     LaunchedEffect(
         playbackSnapshot.positionMs, playbackSnapshot.isPlaying, skipIntervals,
-        playerSettingsUiState.autoSkipMovieCredits, playerSettingsUiState.autoSkipPostCredits,
+        playerSettingsUiState.autoSkipSegmentTypes,
         playerSettingsUiState.skipIntroEnabled, isScrubbingTimeline, initialSeekApplied,
-        lastMovieManualSeekPositions,
+        lastManualSkipSeekPositions,
     ) {
         if (skipIntervals.isEmpty()) {
             activeSkipInterval = null
             return@LaunchedEffect
         }
         val positionSec = playbackSnapshot.positionMs / 1000.0
-        lastMovieManualSeekPositions?.let { (fromMs, toMs) ->
-            autoSkippedMovieIntervals += skipIntervals.movieIntervalsAtSeekPositions(fromMs, toMs)
+        lastManualSkipSeekPositions?.let { (fromMs, toMs) ->
+            autoSkippedIntervals += skipIntervals.intervalsAtSeekPositions(fromMs, toMs)
         }
         val current = skipIntervals.firstOrNull { interval ->
             positionSec >= interval.startTime && positionSec < interval.endTime
@@ -531,12 +531,10 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
             playerControllerSourceUrl == activeSourceUrl &&
             playerSettingsUiState.skipIntroEnabled && playbackSnapshot.isPlaying &&
             !isScrubbingTimeline && initialSeekApplied &&
-            current.shouldAutoSkipMovie(
-                playerSettingsUiState.autoSkipMovieCredits,
-                playerSettingsUiState.autoSkipPostCredits,
-            ) && current !in autoSkippedMovieIntervals
+            current.shouldAutoSkip(playerSettingsUiState.autoSkipSegmentTypes) &&
+            current !in autoSkippedIntervals
         ) {
-            autoSkippedMovieIntervals.add(current)
+            autoSkippedIntervals.add(current)
             val rawMs = (current.endTime * 1000.0).toLong()
             val durationMs = playbackSnapshot.durationMs
             controller.seekTo(if (durationMs > 0L) rawMs.coerceAtMost(durationMs - 1) else rawMs)
