@@ -21,7 +21,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,12 +63,9 @@ internal fun AppearanceThemePicker(
     val customColors by ThemeSettingsRepository.customThemeColors.collectAsStateWithLifecycle()
     val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
     val profileId = profileState.activeProfile?.profileIndex
-    var showEditor by rememberSaveable(profileId) { mutableStateOf(false) }
-    val themes = availableAppThemes(memberAccess.entitlements, memberAccess.tier)
-    val canCustomize = AppTheme.CUSTOM in themes
-    LaunchedEffect(canCustomize) {
-        if (!canCustomize) showEditor = false
-    }
+    val gradientEnabled = memberAccess.tier != null
+    var showEditor by rememberSaveable(profileId, gradientEnabled) { mutableStateOf(false) }
+    val themes = availableAppThemes(memberAccess.entitlements)
     val themeSpacing = if (isTablet) NuvioTokens.Space.s16 else NuvioTokens.Space.s12
     BoxWithConstraints(
         modifier = Modifier
@@ -105,9 +101,10 @@ internal fun AppearanceThemePicker(
             }
         }
     }
-    if (showEditor && canCustomize) {
+    if (showEditor) {
         CustomThemeEditor(
             initialColors = customColors,
+            allowGradient = gradientEnabled,
             onSave = ThemeSettingsRepository::setCustomTheme,
             onDismiss = { showEditor = false },
         )
@@ -133,7 +130,7 @@ private fun ThemeChip(
     ) {
         Box(
             modifier = Modifier.size(NuvioTokens.Space.s56).then(
-                if (isSelected) Modifier.border(tokens.borders.medium, palette.focusRing, tokens.shapes.button)
+                if (isSelected) Modifier.border(tokens.borders.medium, palette.focusRing, CircleShape)
                 else Modifier,
             ),
             contentAlignment = Alignment.Center,
@@ -167,11 +164,6 @@ private fun ThemeChip(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(NuvioTokens.Space.s4))
-        Box(
-            Modifier.size(width = NuvioTokens.Space.s36, height = NuvioTokens.Space.s3)
-                .clip(tokens.shapes.chip).background(palette.focusRing),
         )
     }
 }

@@ -19,6 +19,15 @@ data class PlayerAudioLevel(
 expect fun LockPlayerToLandscape()
 
 @Composable
+expect fun FullscreenPlayerDialog(
+    onDismiss: () -> Unit,
+    content: @Composable () -> Unit,
+)
+
+@Composable
+expect fun HidePlayerSystemBars()
+
+@Composable
 expect fun EnterImmersivePlayerMode(keepScreenAwake: Boolean)
 
 @Composable
