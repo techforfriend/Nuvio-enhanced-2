@@ -16,7 +16,7 @@ object TmdbService {
     private val cacheMutex = Mutex()
 
     suspend fun ensureTmdbId(videoId: String, mediaType: String, fallbackImdbId: String? = null): String? {
-        val apiKey = TmdbConfig.API_KEY
+        val apiKey = TmdbSettingsRepository.effectiveApiKey()
 
         val normalized = videoId
             .removePrefix("tmdb:")
@@ -45,7 +45,7 @@ object TmdbService {
     }
 
     suspend fun tmdbToImdb(tmdbId: Int, mediaType: String): String? {
-        val apiKey = TmdbConfig.API_KEY
+        val apiKey = TmdbSettingsRepository.effectiveApiKey()
 
         val cacheKey = "$tmdbId:${normalizeMediaType(mediaType)}"
         cacheMutex.withLock {
