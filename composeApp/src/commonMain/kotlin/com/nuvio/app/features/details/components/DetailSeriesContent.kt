@@ -474,7 +474,7 @@ private fun SeasonViewModeToggle(
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .border(
                 width = 1.dp,
                 color = Color.White.copy(alpha = 0.2f),
@@ -539,7 +539,7 @@ private fun SeasonTextChipScrollRow(
                     .clip(RoundedCornerShape(sizing.seasonChipRadius))
                     .background(
                         if (isSelected) {
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                            MaterialTheme.colorScheme.surfaceVariant
                         } else {
                             Color.Transparent
                         },
@@ -657,7 +657,7 @@ private fun SeasonPosterButton(
                 .fillMaxWidth()
                 .height(sizing.seasonPosterHeight)
                 .clip(RoundedCornerShape(sizing.seasonPosterRadius))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .border(
                     width = if (isSelected) 2.dp else 1.dp,
                     color = if (isSelected) {
@@ -827,7 +827,7 @@ private fun EpisodeHorizontalCard(
             .width(metrics.cardWidth)
             .height(metrics.cardHeight)
             .clip(cardShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .nuvioCardDepth(
                 shape = cardShape,
                 surface = NuvioCardDepthSurface.EpisodeCards,
@@ -1227,7 +1227,7 @@ private fun EpisodeListCard(
             .fillMaxWidth()
             .height(sizing.cardHeight)
             .clip(cardShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .border(
                 width = 1.dp,
                 color = Color.White.copy(alpha = 0.1f),

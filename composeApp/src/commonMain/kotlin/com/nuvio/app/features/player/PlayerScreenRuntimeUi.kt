@@ -19,6 +19,7 @@ import com.nuvio.app.core.logging.InAppLogger
 import com.nuvio.app.features.p2p.P2pStreamingState
 import com.nuvio.app.features.p2p.formatP2pMegabytes
 import com.nuvio.app.features.p2p.formatP2pSpeed
+import com.nuvio.app.features.player.skip.internalSkipAction
 import com.nuvio.app.isIos
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
@@ -476,6 +477,8 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                 scrubbingPositionMs = positionMs
             },
             onScrubFinished = { positionMs ->
+                // Respect the manual destination while the player's seek is still asynchronous.
+                lastManualSkipSeekPositions = playbackSnapshot.positionMs to positionMs
                 isScrubbingTimeline = false
                 scrubbingPositionMs = null
                 playerController?.seekTo(positionMs)
@@ -531,21 +534,24 @@ private fun BoxScope.RenderPlaybackOverlays(
         initialLoadCompleted = initialLoadCompleted,
         pausedOverlayVisible = pausedOverlayVisible,
         activeSkipInterval = activeSkipInterval,
+        skipsToPostCredits = activeSkipInterval?.internalSkipAction(skipIntervals, playbackSnapshot.durationMs)?.skipsToPostCredits == true,
         skipIntervalDismissed = skipIntervalDismissed,
         controlsVisible = controlsVisible,
         onSkipInterval = { interval ->
-            val rawMs = (interval.endTime * 1000.0).toLong()
-            val durationMs = playbackSnapshot.durationMs
-            val seekMs = if (durationMs > 0L) rawMs.coerceAtMost(durationMs - 1) else rawMs
-            InAppLogger.info(
-                "Player/SkipIntro",
-                "skip type=${interval.type} provider=${interval.provider} " +
-                    "fromMs=${playbackSnapshot.positionMs} targetMs=$seekMs rawMs=$rawMs " +
-                    "startSec=${interval.startTime} endSec=${interval.endTime}",
-            )
-            playerController?.seekTo(seekMs)
-            scheduleProgressSyncAfterSeek()
-            skipIntervalDismissed = true
+            interval.internalSkipAction(skipIntervals, playbackSnapshot.durationMs)?.let { action ->
+                val durationMs = playbackSnapshot.durationMs
+                val seekMs = if (durationMs > 0L) action.targetMs.coerceAtMost(durationMs - 1) else action.targetMs
+                InAppLogger.info(
+                    "Player/SkipIntro",
+                    "skip type=${interval.type} provider=${interval.provider} " +
+                        "fromMs=${playbackSnapshot.positionMs} targetMs=$seekMs rawMs=${action.targetMs} " +
+                        "postCredits=${action.skipsToPostCredits} " +
+                        "startSec=${interval.startTime} endSec=${interval.endTime}",
+                )
+                playerController?.seekTo(seekMs)
+                scheduleProgressSyncAfterSeek()
+                skipIntervalDismissed = true
+            }
         },
         onDismissSkipInterval = {
             activeSkipInterval?.let { interval ->

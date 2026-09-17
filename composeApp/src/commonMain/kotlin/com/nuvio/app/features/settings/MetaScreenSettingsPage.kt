@@ -673,7 +673,7 @@ private fun MetaEpisodeCardStylePreview(
                         .width(128.dp)
                         .height(80.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     Box(
                         modifier = Modifier
@@ -709,7 +709,7 @@ private fun MetaEpisodeCardStylePreview(
                         .width(132.dp)
                         .height(78.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.78f)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     Box(
                         modifier = Modifier
