@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.22",
+          "buildVersion": "127",
+          "date": "2026-09-17T05:08:08Z",
+          "localizedDescription": "- feat(updater): add stable and beta update channels @tapframe\r\n- feat(tmdb): add personal API key override with credential sync @tapframe\r\n- feat(details): parse addon episode runtimes @tapframe\r\n- Use addon imdb_id as fallback for non-IMDB content enrichment (#1966) @skoruppa\r\n- fix(settings): keep page content visible during navigation @tapframe\r\n- i18n(vi): update latest Vietnamese strings (#1959) @blueocean2308\r\n- fix: limit anime ID preference to entries with anime-specific IDs (#1955) @skoruppa\r\n- feat(ratings): add rotten tomatoes status icons @tapframe\r\n- fix(downloads): write Android downloads to the custom download location @luqmanfadlli \r\n- fix(streams): pin individual providers instead of whole source groups @luqmanfadlli \r\n- fix(ios): stop isa-swizzling UINavigationBar for empty-area passthrough @luqmanfadlli \r\n- fix(ios): run plugins on large-stack threads to prevent QuickJS stack overflow @luqmanfadlli \r\n- fix(merge): keep in-app updates on this fork's release page @luqmanfadlli \r\n- fix(ios): import kotlinx.coroutines.Runnable in plugin dispatcher @luqmanfadlli ",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.4.22/Nuvio-v0.4.22-Enhanced.ipa",
+          "size": 66450409,
+          "sha256": "fb159378b73ea930417a9715ab4a7c1b8252e19692ef109ac11b0fc5ca323cdb",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.21",
           "buildVersion": "126",
           "date": "2026-09-16T01:26:20Z",
