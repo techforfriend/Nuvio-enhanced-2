@@ -3,6 +3,7 @@ package com.nuvio.app.features.plugins.runtime
 import com.dokar.quickjs.QuickJs
 import kotlinx.cinterop.autoreleasepool
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.withContext
 import platform.Foundation.NSCondition
 import platform.Foundation.NSQualityOfServiceUtility
