@@ -4,7 +4,6 @@ import com.nuvio.app.features.addons.httpGetText
 import com.nuvio.app.features.addons.httpPostJsonWithHeaders
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
-import kotlinx.coroutines.CancellationException
 
 internal object SkipIntroApi {
 
