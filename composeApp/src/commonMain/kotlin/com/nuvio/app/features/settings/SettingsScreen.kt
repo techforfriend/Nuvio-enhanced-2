@@ -710,6 +710,7 @@ private fun MobileSettingsScreen(
             modifier = Modifier.nestedScroll(rootSearchRevealConnection),
             listState = listState,
             autoHidesNativeTabBar = true,
+            topPadding = if (page == SettingsPage.Profile) 0.dp else null,
         ) {
             if (showInternalHeader) {
                 stickyHeader {

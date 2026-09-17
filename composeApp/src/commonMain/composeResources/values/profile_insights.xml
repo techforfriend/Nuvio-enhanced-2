@@ -4,7 +4,7 @@
     <string name="compose_settings_root_profile_title">Profile</string>
     <string name="compose_settings_root_profile_description">View activity, library, and taste insights for the active profile</string>
 
-    <string name="profile_insights_title">%1$s’s profile</string>
+    <string name="profile_insights_title">%1$s</string>
     <string name="profile_insights_subtitle">A snapshot of your viewing activity and saved content</string>
     <string name="profile_insights_switch_profile">Switch profile</string>
     <string name="profile_insights_edit_profile">Edit profile</string>
@@ -12,9 +12,13 @@
     <string name="profile_insights_section_overview">Overview</string>
     <string name="profile_insights_section_taste">Taste</string>
 
+    <string name="profile_insights_hero_continue">Watching</string>
+    <string name="profile_insights_hero_library">Saved</string>
+    <string name="profile_insights_hero_upcoming">Upcoming</string>
+
     <string name="profile_insights_stat_continue">Continue Watching</string>
     <string name="profile_insights_stat_continue_caption">Titles currently in progress</string>
-    <string name="profile_insights_stat_completed">Completed Titles</string>
+    <string name="profile_insights_stat_completed">Completed</string>
     <string name="profile_insights_stat_completed_caption">Movies and series you finished, counted once per title</string>
     <string name="profile_insights_stat_ongoing">Ongoing</string>
     <string name="profile_insights_stat_ongoing_caption">Series you started but have not finished</string>
