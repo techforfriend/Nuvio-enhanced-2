@@ -128,6 +128,7 @@ fun SettingsScreen(
     requestedPageName: String? = null,
     onRequestedPageConsumed: () -> Unit = {},
     rootActionsEnabled: Boolean = true,
+    isSelectedTab: Boolean = true,
     onNavigatePage: ((pageName: String, title: String) -> Unit)? = null,
     onExternalBack: (() -> Unit)? = null,
     showInternalHeader: Boolean = true,
@@ -388,9 +389,7 @@ fun SettingsScreen(
             onBack = ::navigateBack,
         )
 
-        // Upstream now keeps an inactive settings tab out of composition and restores its state
-        // from pageStateHolder; the fork's extra settings parameters ride inside unchanged.
-        if (screenActive || page == SettingsPage.Root) {
+        if (isSelectedTab || page == SettingsPage.Root) {
             pageStateHolder.SaveableStateProvider("content") {
                 if (maxWidth >= 768.dp) {
                     TabletSettingsScreen(

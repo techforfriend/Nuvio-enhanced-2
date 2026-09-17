@@ -16,8 +16,8 @@ object TmdbService {
     private val tmdbToImdbCache = linkedMapOf<String, String>()
     private val cacheMutex = Mutex()
 
-    suspend fun ensureTmdbId(videoId: String, mediaType: String): String? {
-        val apiKey = TmdbConfig.API_KEY
+    suspend fun ensureTmdbId(videoId: String, mediaType: String, fallbackImdbId: String? = null): String? {
+        val apiKey = TmdbSettingsRepository.effectiveApiKey()
 
         val normalized = videoId
             .removePrefix("tmdb:")
@@ -32,14 +32,26 @@ object TmdbService {
             InAppLogger.debug("Metadata/TMDB", "ensureTmdbId alreadyTmdb id=$normalized type=$mediaType")
             return normalized
         }
-        if (!normalized.startsWith("tt", ignoreCase = true)) return null
+        if (normalized.startsWith("tt", ignoreCase = true)) {
+            InAppLogger.debug("Metadata/TMDB", "ensureTmdbId imdb=$normalized type=$mediaType")
+            return imdbToTmdb(imdbId = normalized, mediaType = mediaType, apiKey = apiKey)
+        }
 
-        InAppLogger.debug("Metadata/TMDB", "ensureTmdbId imdb=$normalized type=$mediaType")
-        return imdbToTmdb(imdbId = normalized, mediaType = mediaType, apiKey = apiKey)
+        // Fallback: use the IMDB ID supplied by the addon's meta response
+        val normalizedFallback = fallbackImdbId
+            ?.trim()
+            ?.substringBefore(':')
+            ?.takeIf { it.startsWith("tt", ignoreCase = true) }
+        if (normalizedFallback != null) {
+            InAppLogger.debug("Metadata/TMDB", "ensureTmdbId fallbackImdb=$normalizedFallback type=$mediaType")
+            return imdbToTmdb(imdbId = normalizedFallback, mediaType = mediaType, apiKey = apiKey)
+        }
+
+        return null
     }
 
     suspend fun tmdbToImdb(tmdbId: Int, mediaType: String): String? {
-        val apiKey = TmdbConfig.API_KEY
+        val apiKey = TmdbSettingsRepository.effectiveApiKey()
 
         val cacheKey = "$tmdbId:${normalizeMediaType(mediaType)}"
         cacheMutex.withLock {
