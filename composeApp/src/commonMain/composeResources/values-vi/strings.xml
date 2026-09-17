@@ -13,9 +13,9 @@
     <string name="action_back">Quay lại</string>
     <string name="action_cancel">Huỷ</string>
     <string name="action_close">Đóng</string>
-    <string name="action_delete">xóa</string>
+    <string name="action_delete">Xóa</string>
     <string name="action_delete_confirm_message">Bạn có chắc chắn muốn xóa không?</string>
-    <string name="action_delete_confirm_title">xóa?</string>
+    <string name="action_delete_confirm_title">Xóa?</string>
     <string name="action_done">Xong</string>
     <string name="action_edit">Chỉnh sửa</string>
     <string name="action_import">Nhập</string>
@@ -23,7 +23,7 @@
     <string name="action_ok">OK</string>
     <string name="action_play">Phát</string>
     <string name="action_previous">Trước</string>
-    <string name="action_remove">xóa</string>
+    <string name="action_remove">Xóa</string>
     <string name="action_remove_anyway">Vẫn xóa</string>
     <string name="action_reorder">Sắp xếp</string>
     <string name="action_reset">Đặt lại mặc định</string>
@@ -480,7 +480,7 @@
     <string name="compose_player_unlock_controls">Mở khóa điều khiển trình phát</string>
     <string name="compose_player_youre_watching">Bạn đang xem</string>
     <string name="compose_profile_add_profile">Thêm hồ sơ</string>
-    <string name="compose_search_clear">xóa tìm kiếm</string>
+    <string name="compose_search_clear">Xóa tìm kiếm</string>
     <string name="compose_search_discover_title">Khám phá</string>
     <string name="compose_search_empty_failed_message">Các tiện ích đã cài đặt không trả về kết quả tìm kiếm hợp lệ.</string>
     <string name="compose_search_empty_failed_title">Tìm kiếm thất bại</string>
@@ -565,7 +565,7 @@
     <string name="sentry_keep_enabled">Tiếp tục bật</string>
     <string name="sentry_turn_off">Tắt</string>
     <string name="sentry_turn_on">Bật</string>
-    <string name="settings_advanced_clear_cw_cache">xóa bộ nhớ đệm Tiếp tục xem</string>
+    <string name="settings_advanced_clear_cw_cache">Xóa bộ nhớ đệm Tiếp tục xem</string>
     <string name="settings_advanced_clear_cw_cache_subtitle">Xóa dữ liệu được lưu vào bộ nhớ đệm Tiếp tục xem và làm mới tiến trình xem</string>
     <string name="settings_advanced_clear_cw_cache_done">Đã xóa bộ nhớ đệm</string>
     <string name="settings_licenses_attributions_section_app">GIẤY PHÉP ỨNG DỤNG</string>
@@ -607,7 +607,7 @@
     <string name="action_donate">Ủng hộ</string>
     <string name="action_support_nuvio">Tài trợ Nuvio</string>
     <string name="cw_action_go_to_details">Xem chi tiết</string>
-    <string name="cw_action_remove">xóa</string>
+    <string name="cw_action_remove">Xóa</string>
     <string name="cw_action_start_from_beginning">Xem từ đầu</string>
     <string name="detail_btn_play">Phát</string>
     <string name="detail_comments_badge_rating">%1$d/10</string>
@@ -641,7 +641,7 @@
     <string name="hero_add_to_library">Thêm vào thư viện</string>
     <string name="hero_mark_unwatched">Đánh dấu chưa xem</string>
     <string name="hero_mark_watched">Đánh dấu đã xem</string>
-    <string name="hero_remove_from_library">xóa khỏi thư viện</string>
+    <string name="hero_remove_from_library">Xóa khỏi thư viện</string>
     <string name="home_view_all">Xem tất cả</string>
     <string name="play_manually">Chọn nguồn phát</string>
     <string name="poster_logo_content_description">Logo %1$s</string>
@@ -1200,7 +1200,7 @@
     <string name="settings_playback_timeout_unlimited">Không giới hạn</string>
     <string name="settings_playback_tunneled_playback">Phát trực tiếp qua phần cứng</string>
     <string name="settings_playback_tunneled_playback_description">Đồng bộ âm thanh/video ở cấp phần cứng. Có thể cải thiện việc phát lại trên một số thiết bị Android TV</string>
-    <string name="settings_tmdb_api_key_label">Mã khóa API</string>
+    <string name="settings_tmdb_api_key_label">Mã khoá API</string>
     <string name="settings_tmdb_api_key_override_description">Dùng mã khóa API TMDB của riêng bạn hoặc bỏ trống để sử dụng mặc định.</string>
     <string name="settings_tmdb_personal_api_key">Mã khóa API cá nhân</string>
     <string name="settings_tmdb_enable_enrichment">Bật bổ sung dữ liệu TMDB</string>
@@ -1460,7 +1460,7 @@
     <string name="lang_vietnamese">Tiếng Việt</string>
     <string name="lang_welsh">Tiếng Wales</string>
     <string name="lang_zulu">Tiếng Zulu</string>
-    <string name="action_clear">xóa</string>
+    <string name="action_clear">Xóa</string>
     <string name="action_continue">Tiếp tục</string>
     <string name="action_ignore">Bỏ qua</string>
     <string name="action_install">Cài đặt</string>
@@ -1566,7 +1566,7 @@
     <string name="profile_custom_avatar_url_description">Dán liên kết hình ảnh hoặc để trống để dùng bộ sưu tập ảnh đại diện có sẵn.</string>
     <string name="profile_custom_avatar_url_placeholder">https://example.com/avatar.png</string>
     <string name="profile_delete_confirm_message">Toàn bộ dữ liệu của "%1$s" sẽ bị xóa vĩnh viễn</string>
-    <string name="profile_delete_title">xóa hồ sơ</string>
+    <string name="profile_delete_title">Xóa hồ sơ</string>
     <string name="profile_edit_add_title">Thêm hồ sơ</string>
     <string name="profile_edit_edit_title">Chỉnh sửa hồ sơ</string>
     <string name="profile_enter_current_pin">Nhập mã PIN hiện tại</string>
@@ -1698,7 +1698,7 @@
     <string name="downloads_live_downloading_with_total">Đang tải %1$s • %2$s / %3$s</string>
     <string name="downloads_live_failed">Tải xuống thất bại</string>
     <string name="downloads_live_paused">Đã tạm dừng %1$s</string>
-    <string name="library_remove_confirm">xóa</string>
+    <string name="library_remove_confirm">Xóa</string>
     <string name="library_remove_from_list_message">Xóa %1$s khỏi %2$s?</string>
     <string name="library_remove_message">Xóa %1$s khỏi thư viện?</string>
     <string name="library_remove_title">Xóa khỏi thư viện?</string>
