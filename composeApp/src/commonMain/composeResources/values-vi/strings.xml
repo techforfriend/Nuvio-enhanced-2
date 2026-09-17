@@ -2050,12 +2050,12 @@
     <string name="settings_debrid_rule_excluded_channels">Kênh loại trừ</string>
     <string name="settings_debrid_rule_excluded_channels_desc">Ẩn các kênh âm thanh đã chọn</string>
     <!-- Debrid rule rows: encodes -->
-    <string name="settings_debrid_rule_preferred_encodes">Bản mã hoá ưu tiên</string>
-    <string name="settings_debrid_rule_preferred_encodes_desc">Ưu tiên sắp xếp các bản mã hoá như AV1, HEVC, AVC và các bản mã hoá tương tự</string>
-    <string name="settings_debrid_rule_required_encodes">Bản mã hoá bắt buộc</string>
-    <string name="settings_debrid_rule_required_encodes_desc">Chỉ hiển thị kết quả có bản mã hoá như AV1, HEVC và AVC và các bản mã hoá tương tự </string>
-    <string name="settings_debrid_rule_excluded_encodes">Bản mã hoá loại trừ</string>
-    <string name="settings_debrid_rule_excluded_encodes_desc">Ẩn các bản mã hoá đã chọn</string>
+    <string name="settings_debrid_rule_preferred_encodes">Bản mã hóa ưu tiên</string>
+    <string name="settings_debrid_rule_preferred_encodes_desc">Ưu tiên sắp xếp các bản mã hóa như AV1, HEVC, AVC và các bản mã hóa tương tự</string>
+    <string name="settings_debrid_rule_required_encodes">Bản mã hóa bắt buộc</string>
+    <string name="settings_debrid_rule_required_encodes_desc">Chỉ hiển thị kết quả có bản mã hóa như AV1, HEVC và AVC và các bản mã hóa tương tự</string>
+    <string name="settings_debrid_rule_excluded_encodes">Bản mã hóa loại trừ</string>
+    <string name="settings_debrid_rule_excluded_encodes_desc">Ẩn các bản mã hóa đã chọn</string>
     <!-- Debrid rule rows: languages -->
     <string name="settings_debrid_rule_preferred_languages">Ngôn ngữ ưu tiên</string>
     <string name="settings_debrid_rule_preferred_languages_desc">Ưu tiên sắp xếp các ngôn ngữ âm thanh đã chọn</string>
