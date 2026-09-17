@@ -163,10 +163,16 @@ internal class AndroidDownloadScheduler(val context: Context) {
                 .connectionPool(ConnectionPool())
                 .build()
         } else downloadHttpClient
+        val subtitles = CoroutineScope(currentCoroutineContext()).launch {
+            try {
+                DownloadSubtitles.prepare(transfer.item, destination.toURI().toString())
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Log.w(TAG, "Subtitle preparation failed for $fileName", error)
+            }
+        }
         try {
-            DownloadSubtitles.prepare(transfer.item, destination.toURI().toString())
-            currentCoroutineContext().ensureActive()
-            if (!isActive(transfer)) return@withLock false
             var lastProgressAt = 0L
             val onHeaders: (Long?, String?) -> Unit = { total, validator ->
                 updateActive(transfer) { it.copy(validator = validator, item = it.item.copy(totalBytes = total)) }
@@ -201,6 +207,7 @@ internal class AndroidDownloadScheduler(val context: Context) {
                     onProgress = reportProgress,
                 )
                 currentCoroutineContext().ensureActive()
+                subtitles.join()
                 updateActive(transfer) { current ->
                     val finalUri = AndroidDownloadExport.finalizePartial(partialDocument, fileName).toString()
                     runCatching { AndroidDownloadExport.moveSubtitles(destination, finalUri) }
@@ -233,6 +240,7 @@ internal class AndroidDownloadScheduler(val context: Context) {
             }
             currentCoroutineContext().ensureActive()
             if (!isActive(transfer)) return@withLock false
+            subtitles.join()
             if (!destination.isFile && !partialFile.renameTo(destination)) {
                 throw IOException("Could not finalize the downloaded file")
             }
@@ -265,6 +273,7 @@ internal class AndroidDownloadScheduler(val context: Context) {
             else fail(transfer, error)
             retry
         } finally {
+            subtitles.cancel()
             if (network != null) withContext(NonCancellable + Dispatchers.IO) { client.connectionPool.evictAll() }
         }
     }
