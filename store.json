@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.23",
+          "buildVersion": "128",
+          "date": "2026-09-17T11:02:10Z",
+          "localizedDescription": "- fix(simkl): retain posters when marking items watched @tapframe\r\n- fix(home): restore wide continue watching sizing @tapframe\r\n- i18n(vi): update latest Vietnamese strings (#1975) @blueocean2308\r\n- fix(ui): use filled chips and consistent surface colors @tapframe\r\n- feat(playback): support IntroDB movie segments and external forwarding (#1963) @Laskco\r\n- fix(ios): resume paused downloads from where they left off @luqmanfadlli \r\n- fix(android): start download transfer without waiting for subtitles @luqmanfadlli \r\n- fix(merge): drop duplicate CancellationException import in SkipIntroApi @luqmanfadlli ",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.4.23-beta/Nuvio-v0.4.23-Enhanced.ipa",
+          "size": 66509993,
+          "sha256": "7db78398b887460faf1d9e84eb1cdc5cb8656658b559cdf4fb62865fef85c4c9",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.22",
           "buildVersion": "127",
           "date": "2026-09-17T05:08:08Z",
