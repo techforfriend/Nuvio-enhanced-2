@@ -1200,6 +1200,9 @@
     <string name="settings_playback_timeout_unlimited">Không giới hạn</string>
     <string name="settings_playback_tunneled_playback">Phát trực tiếp qua phần cứng</string>
     <string name="settings_playback_tunneled_playback_description">Đồng bộ âm thanh/video ở cấp phần cứng. Có thể cải thiện việc phát lại trên một số thiết bị Android TV</string>
+    <string name="settings_tmdb_api_key_label">Mã khoá API</string>
+    <string name="settings_tmdb_api_key_override_description">Dùng mã khóa API TMDB của riêng bạn hoặc bỏ trống để sử dụng mặc định.</string>
+    <string name="settings_tmdb_personal_api_key">Mã khóa API cá nhân</string>
     <string name="settings_tmdb_enable_enrichment">Bật bổ sung dữ liệu TMDB</string>
     <string name="settings_tmdb_enable_enrichment_description">Dùng TMDB làm nguồn siêu dữ liệu để bổ sung dữ liệu cho tiện ích</string>
     <string name="settings_tmdb_language_code_label">Mã ngôn ngữ</string>
@@ -1499,11 +1502,11 @@
     <string name="discover_select_genre">Chọn thể loại</string>
     <string name="discover_select_type">Chọn loại</string>
     <string name="discover_type">Loại</string>
-    <string name="episode_mark_previous_unwatched">Đánh dấu các tập trước là chưa xem</string>
-    <string name="episode_mark_previous_watched">Đánh dấu các tập trước là đã xem</string>
-    <string name="episode_mark_season_unwatched">Đánh dấu %1$s là chưa xem</string>
-    <string name="episode_mark_season_watched">Đánh dấu %1$s là đã xem</string>
-    <string name="episode_mark_previous_seasons_watched">Đánh dấu các mùa trước là đã xem</string>
+    <string name="episode_mark_previous_unwatched">Đánh dấu chưa xem các tập trước</string>
+    <string name="episode_mark_previous_watched">Đánh dấu đã xem các tập trước</string>
+    <string name="episode_mark_season_unwatched">Đánh dấu chưa xem %1$s</string>
+    <string name="episode_mark_season_watched">Đánh dấu đã xem %1$s</string>
+    <string name="episode_mark_previous_seasons_watched">Đánh dấu đã xem các mùa trước</string>
     <string name="episode_mark_unwatched">Đánh dấu chưa xem</string>
     <string name="episode_mark_watched">Đánh dấu đã xem</string>
     <string name="home_continue_watching_up_next">Tiếp theo</string>
@@ -2215,6 +2218,13 @@
     <string name="updates_empty_download_body">Dữ liệu tải về trống</string>
     <string name="updates_github_api_error">Lỗi API phát hành của GitHub: %1$d</string>
     <string name="updates_no_channel_release">Chưa có bản cập nhật nào được phát hành</string>
+    <string name="updates_channel_title">Kênh cập nhật</string>
+    <string name="updates_channel_description">Chọn loại bản cập nhật ứng dụng muốn nhận</string>
+    <string name="updates_channel_stable">Ổn định</string>
+    <string name="updates_channel_beta">Thử nghiệm</string>
+    <string name="updates_channel_stable_description">Dành cho sử dụng hàng ngày.</string>
+    <string name="updates_channel_beta_description">Các bản cập nhật sớm có thể chứa lỗi, làm hỏng một số tính năng hoặc hoạt động không như mong đợi.</string>
+    <string name="updates_waiting_for_stable">Bạn sẽ nhận được bản phát hành ổn định tiếp theo khi có sẵn</string>
     <string name="updates_release_missing_title">Bản phát hành không có tên hoặc thẻ</string>
     <!-- Continue Watching air date display -->
     <string name="cw_airs_date">Phát sóng %1$s</string>
