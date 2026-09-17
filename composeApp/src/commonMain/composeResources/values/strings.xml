@@ -2314,4 +2314,12 @@
     <string name="settings_playback_auto_skip_movie_credits_description">Skip movie credits, keeping post-credits scenes.</string>
     <string name="player_skip_movie_credits">Skip Credits</string>
     <string name="player_skip_to_post_credits">Skip to Post-Credits</string>
+    <string name="layout_overall_ratings">Overall Ratings</string>
+    <string name="layout_overall_ratings_sub_on">Standard and TMDB ratings are shown.</string>
+    <string name="layout_overall_ratings_sub_off">Standard and TMDB ratings are Hidden. MDBList provider settings take priority on detail pages.</string>
+    <string name="layout_episode_ratings">Episode Ratings</string>
+    <string name="layout_episode_ratings_sub">Choose which episode ratings are visible.</string>
+    <string name="layout_ratings_show">Show</string>
+    <string name="layout_ratings_hide">Hide</string>
+    <string name="layout_ratings_hide_unwatched">Hide Unwatched</string>
 </resources>
