@@ -3,15 +3,9 @@ package com.nuvio.app.features.player
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeContent
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -109,26 +103,13 @@ internal fun BoxScope.PlayerPlaybackOverlays(
             .padding(top = 58.dp),
     )
 
-    AnimatedVisibility(
-        visible = currentGestureFeedback != null,
-        enter = fadeIn(),
-        exit = fadeOut(),
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            renderedGestureFeedback?.let { feedback ->
-                GestureFeedbackPill(
-                    feedback = feedback,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Top))
-                        .padding(horizontal = horizontalSafePadding)
-                        .padding(top = 40.dp),
-                )
-            }
-        }
-    }
+    PlayerGestureOverlay(
+        currentFeedback = currentGestureFeedback,
+        renderedFeedback = renderedGestureFeedback,
+        useLegacyLayout = useLegacyLayout,
+        horizontalSafePadding = horizontalSafePadding,
+        horizontalPadding = metrics.horizontalPadding,
+    )
 
     if (!playerControlsLocked) {
         SkipIntroButton(
