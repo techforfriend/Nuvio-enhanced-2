@@ -26,6 +26,7 @@ import com.nuvio.app.features.player.skip.SkipInterval
 @Composable
 internal fun BoxScope.PlayerPlaybackOverlays(
     playerControlsLocked: Boolean,
+    useLegacyLayout: Boolean,
     lockedOverlayVisible: Boolean,
     playbackSnapshot: PlayerPlaybackSnapshot,
     displayedPositionMs: Long,
@@ -77,6 +78,7 @@ internal fun BoxScope.PlayerPlaybackOverlays(
             metrics = metrics,
             horizontalSafePadding = horizontalSafePadding,
             onUnlock = onUnlock,
+            useLegacyLayout = useLegacyLayout,
             modifier = Modifier.fillMaxSize(),
         )
     }
@@ -147,7 +149,7 @@ internal fun BoxScope.PlayerPlaybackOverlays(
     if (isSeries && !playerControlsLocked) {
         NextEpisodeCard(
             nextEpisode = nextEpisodeInfo,
-            visible = showNextEpisodeCard,
+            visible = showNextEpisodeCard || nextEpisodeAutoPlaySearching || nextEpisodeAutoPlayCountdown != null,
             isAutoPlaySearching = nextEpisodeAutoPlaySearching,
             autoPlaySourceName = nextEpisodeAutoPlaySourceName,
             autoPlayCountdownSec = nextEpisodeAutoPlayCountdown,
