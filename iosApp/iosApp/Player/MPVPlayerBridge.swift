@@ -748,6 +748,7 @@ final class MPVPlayerViewController: UIViewController {
         mpv_observe_property(mpv, 0, "eof-reached", MPV_FORMAT_FLAG)
         mpv_observe_property(mpv, 0, "seeking", MPV_FORMAT_FLAG)
         mpv_observe_property(mpv, 0, "track-list/count", MPV_FORMAT_INT64)
+        mpv_observe_property(mpv, 0, "current-tracks/sub/id", MPV_FORMAT_INT64)
         mpv_observe_property(mpv, 0, "current-tracks/sub/lang", MPV_FORMAT_STRING)
         mpv_observe_property(mpv, 0, "sub-text", MPV_FORMAT_STRING)
 
