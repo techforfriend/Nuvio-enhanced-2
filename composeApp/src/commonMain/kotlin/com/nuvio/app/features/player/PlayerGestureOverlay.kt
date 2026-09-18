@@ -7,7 +7,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -46,6 +48,7 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_player_brightness
 import nuvio.composeapp.generated.resources.compose_player_volume
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.roundToInt
 
 @Composable
 internal fun PlayerGestureOverlay(
@@ -55,10 +58,8 @@ internal fun PlayerGestureOverlay(
     horizontalSafePadding: Dp,
     horizontalPadding: Dp,
 ) {
-    val isSeek = currentFeedback?.icon == GestureFeedbackIcon.SeekForward ||
-        currentFeedback?.icon == GestureFeedbackIcon.SeekBackward
     AnimatedVisibility(
-        visible = currentFeedback != null && (useLegacyLayout || !isSeek),
+        visible = currentFeedback != null,
         enter = fadeIn(),
         exit = fadeOut(),
     ) {
@@ -104,26 +105,44 @@ private fun PlayerGestureFeedback(
                     val level = feedback.level?.coerceIn(0f, 1f) ?: 0f
                     val trackHeight = minOf(maxHeight / 4, 104.dp)
                     val animatedLevel by animateFloatAsState(level, tween(80), label = "playerGestureLevel")
-                    Box(
+                    val reading = feedback.messageArgs.firstOrNull()?.toString()
+                        ?: "${(level * 100f).roundToInt()}%"
+                    Column(
                         modifier = Modifier
                             .align(if (isBrightness) Alignment.CenterStart else Alignment.CenterEnd)
-                            .padding(horizontal = horizontalSafePadding + 8.dp)
-                            .semantics {
-                                contentDescription = description
-                                progressBarRangeInfo = ProgressBarRangeInfo(level, 0f..1f)
-                            }
-                            .width(6.dp)
-                            .height(trackHeight)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(Color.White.copy(alpha = 0.3f)),
+                            .padding(horizontal = horizontalSafePadding + 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Box(
-                            Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .fillMaxHeight(animatedLevel)
-                                .background(MaterialTheme.themePalette.accentBrush()),
-                        )
+                            modifier = Modifier
+                                .semantics {
+                                    contentDescription = description
+                                    progressBarRangeInfo = ProgressBarRangeInfo(level, 0f..1f)
+                                }
+                                .width(6.dp)
+                                .height(trackHeight)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(Color.White.copy(alpha = 0.3f)),
+                        ) {
+                            Box(
+                                Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(animatedLevel)
+                                    .background(MaterialTheme.themePalette.accentBrush()),
+                            )
+                        }
+                        if (reading.isNotBlank()) {
+                            Text(
+                                text = reading,
+                                color = Color.White,
+                                style = MaterialTheme.nuvioTypeScale.bodySm.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    shadow = Shadow(Color.Black.copy(alpha = 0.8f), blurRadius = 8f),
+                                ),
+                            )
+                        }
                     }
                 }
                 GestureFeedbackIcon.Speed -> {
@@ -143,7 +162,16 @@ private fun PlayerGestureFeedback(
                             .padding(top = 40.dp),
                     )
                 }
-                GestureFeedbackIcon.SeekForward, GestureFeedbackIcon.SeekBackward -> Unit
+                GestureFeedbackIcon.SeekForward, GestureFeedbackIcon.SeekBackward -> {
+                    GestureFeedbackPill(
+                        feedback = feedback,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Top))
+                            .padding(horizontal = horizontalSafePadding)
+                            .padding(top = 40.dp),
+                    )
+                }
             }
         }
     }
