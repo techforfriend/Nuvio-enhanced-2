@@ -52,7 +52,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -315,21 +314,25 @@ fun NuvioPrimaryButton(
 ) {
     val tokens = MaterialTheme.nuvio
     val palette = MaterialTheme.themePalette
+    val containerBrush = if (enabled) {
+        palette.accentBrush()
+    } else {
+        palette.accentBrush(alpha = tokens.opacity.disabled)
+    }
     Button(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
             .height(NuvioTokens.Space.s48 + NuvioTokens.Space.s4)
             .clip(tokens.shapes.button)
-            .background(palette.accentBrush())
-            .alpha(if (enabled) NuvioTokens.Opacity.visible else tokens.opacity.disabled),
+            .background(containerBrush),
         enabled = enabled,
         shape = tokens.shapes.button,
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent,
             contentColor = tokens.colors.onAccent,
             disabledContainerColor = Color.Transparent,
-            disabledContentColor = tokens.colors.onAccent,
+            disabledContentColor = tokens.colors.onAccent.copy(alpha = tokens.opacity.disabled),
         ),
     ) {
         AnimatedContent(
