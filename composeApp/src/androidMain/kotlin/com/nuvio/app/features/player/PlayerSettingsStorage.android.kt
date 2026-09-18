@@ -19,6 +19,7 @@ import kotlinx.serialization.json.put
 
 actual object PlayerSettingsStorage {
     private const val preferencesName = "nuvio_player_settings"
+    private const val playbackBrightnessKey = "playback_brightness"
     private const val useLegacyPlayerLayoutKey = "use_legacy_player_layout"
     private const val showLoadingOverlayKey = "show_loading_overlay"
     private const val showPlayerLoadingStatusKey = "show_player_loading_status"
@@ -173,6 +174,16 @@ actual object PlayerSettingsStorage {
 
     fun initialize(context: Context) {
         preferences = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
+    }
+
+    actual fun loadPlaybackBrightness(): Float? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(playbackBrightnessKey)
+            if (sharedPreferences.contains(key)) sharedPreferences.getFloat(key, 0f) else null
+        }
+
+    actual fun savePlaybackBrightness(level: Float) {
+        preferences?.edit()?.putFloat(ProfileScopedKey.of(playbackBrightnessKey), level)?.apply()
     }
 
     actual fun loadShowLoadingOverlay(): Boolean? =
