@@ -131,6 +131,7 @@ internal fun PlayerScreenRuntime.showBrightnessFeedback(level: Float) {
             messageRes = Res.string.compose_player_brightness_level,
             messageArgs = listOf("$percentage%"),
             icon = GestureFeedbackIcon.Brightness,
+            level = level.coerceIn(0f, 1f),
         ),
     )
 }
@@ -151,6 +152,7 @@ internal fun PlayerScreenRuntime.showVolumeFeedback(level: PlayerAudioLevel) {
             icon = if (level.isMuted) GestureFeedbackIcon.VolumeMuted else GestureFeedbackIcon.Volume,
             // Reuse the existing alternate feedback color path to distinguish boosted volume.
             isDanger = level.isMuted || isBoosted,
+            level = if (level.isMuted) 0f else level.fraction.coerceIn(0f, 1f),
         ),
     )
 }
