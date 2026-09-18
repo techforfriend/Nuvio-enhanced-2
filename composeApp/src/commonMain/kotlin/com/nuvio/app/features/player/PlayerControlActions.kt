@@ -173,7 +173,10 @@ internal fun PlayerControlActions(
                 actions.take(if (expanded) actions.size else 5).forEach { action ->
                     PlayerAction(
                         description = action.description,
-                        onClick = action.onClick,
+                        onClick = {
+                            onInteraction()
+                            action.onClick()
+                        },
                         icon = action.icon,
                         painter = action.painter,
                         iconSize = action.iconSize,

@@ -219,9 +219,18 @@ internal fun PlayerControlsShell(
                     CenterControls(
                         snapshot = playbackSnapshot,
                         metrics = metrics,
-                        onSeekBack = onSeekBack,
-                        onSeekForward = onSeekForward,
-                        onTogglePlayback = onTogglePlayback,
+                        onSeekBack = {
+                            if (!useLegacyLayout) onInteraction()
+                            onSeekBack()
+                        },
+                        onSeekForward = {
+                            if (!useLegacyLayout) onInteraction()
+                            onSeekForward()
+                        },
+                        onTogglePlayback = {
+                            if (!useLegacyLayout) onInteraction()
+                            onTogglePlayback()
+                        },
                         modifier = Modifier
                             .align(Alignment.Center)
                             .padding(bottom = centerBottomPadding),
@@ -277,7 +286,10 @@ internal fun PlayerControlsShell(
                         snapshot = playbackSnapshot,
                         displayedPositionMs = displayedPositionMs,
                         onScrubChange = onScrubChange,
-                        onScrubFinished = onScrubFinished,
+                        onScrubFinished = {
+                            onInteraction()
+                            onScrubFinished(it)
+                        },
                     )
                     PlayerControlActions(
                         playbackSnapshot = playbackSnapshot,
