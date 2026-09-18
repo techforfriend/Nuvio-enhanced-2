@@ -3,6 +3,9 @@ package com.nuvio.app.features.player
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.safeContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -12,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.details.MetaDetailsRepository
@@ -98,7 +102,12 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
         runtime.horizontalSafePadding = horizontalSafePadding
         runtime.metrics = metrics
         runtime.sliderEdgePadding = horizontalSafePadding + metrics.horizontalPadding
-        runtime.overlayBottomPadding = sliderOverlayBottomPadding(metrics)
+        runtime.overlayBottomPadding = if (playerSettingsUiState.useLegacyPlayerLayout) {
+            sliderOverlayBottomPadding(metrics)
+        } else {
+            metrics.sliderBottomOffset / 2 + 72.dp + PlayerSliderOverlayGap +
+                WindowInsets.safeContent.asPaddingValues().calculateBottomPadding()
+        }
         runtime.sideGestureSystemEdgeExclusionPx = with(density) {
             PlayerSideGestureSystemEdgeExclusion.toPx()
         }

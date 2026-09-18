@@ -17,6 +17,7 @@ import kotlinx.serialization.json.put
 import platform.Foundation.NSUserDefaults
 
 actual object PlayerSettingsStorage {
+    private const val useLegacyPlayerLayoutKey = "use_legacy_player_layout"
     private const val showLoadingOverlayKey = "show_loading_overlay"
     private const val showPlayerLoadingStatusKey = "show_player_loading_status"
     private const val pauseOverlayEnabledKey = "pause_overlay_enabled"
@@ -218,6 +219,20 @@ actual object PlayerSettingsStorage {
 
     actual fun savePauseOverlayEnabled(enabled: Boolean) {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(pauseOverlayEnabledKey))
+    }
+
+    actual fun loadUseLegacyPlayerLayout(): Boolean? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(useLegacyPlayerLayoutKey)
+        return if (defaults.objectForKey(key) != null) {
+            defaults.boolForKey(key)
+        } else {
+            null
+        }
+    }
+
+    actual fun saveUseLegacyPlayerLayout(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(useLegacyPlayerLayoutKey))
     }
 
     actual fun loadShowParentalGuide(): Boolean? {
