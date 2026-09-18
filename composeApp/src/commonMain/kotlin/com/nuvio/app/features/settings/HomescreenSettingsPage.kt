@@ -61,6 +61,8 @@ import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_descr
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_full_bleed
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_full_bleed_description
 import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay
+import nuvio.composeapp.generated.resources.settings_hero_trailer_start_unmuted
+import nuvio.composeapp.generated.resources.settings_hero_trailer_start_unmuted_description
 import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay_description
 import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay_instant
 import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay_value
@@ -94,6 +96,7 @@ internal fun LazyListScope.homescreenSettingsContent(
     heroEnabled: Boolean,
     heroTrailerPlaybackEnabled: Boolean,
     heroTrailerStartDelaySeconds: Int,
+    heroTrailerStartUnmuted: Boolean,
     showCatalogType: Boolean,
     hideUnreleasedContent: Boolean,
     items: List<HomeCatalogSettingsItem>,
@@ -135,6 +138,14 @@ internal fun LazyListScope.homescreenSettingsContent(
                         onCheckedChange = HomeCatalogSettingsRepository::setHeroTrailerPlaybackEnabled,
                     )
                     if (heroTrailerPlaybackEnabled) {
+                        SettingsGroupDivider(isTablet = isTablet)
+                        SettingsSwitchRow(
+                            title = stringResource(Res.string.settings_hero_trailer_start_unmuted),
+                            description = stringResource(Res.string.settings_hero_trailer_start_unmuted_description),
+                            checked = heroTrailerStartUnmuted,
+                            isTablet = isTablet,
+                            onCheckedChange = HomeCatalogSettingsRepository::setHeroTrailerStartUnmuted,
+                        )
                         SettingsGroupDivider(isTablet = isTablet)
                         SettingsSliderRow(
                             title = stringResource(Res.string.settings_hero_trailer_start_delay),

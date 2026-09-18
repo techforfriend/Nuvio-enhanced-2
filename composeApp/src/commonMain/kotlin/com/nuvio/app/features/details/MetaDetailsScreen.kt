@@ -623,7 +623,17 @@ fun MetaDetailsScreen(
                 var heroTrailerPlaybackSource by remember(meta.id, heroTrailerCandidate?.id) { mutableStateOf<TrailerPlaybackSource?>(null) }
                 var heroTrailerReady by remember(meta.id, heroTrailerCandidate?.id) { mutableStateOf(false) }
                 var heroTrailerFinished by remember(meta.id, heroTrailerCandidate?.id) { mutableStateOf(false) }
-                val heroTrailerMuted by HeroTrailerAudioState.muted.collectAsStateWithLifecycle()
+                val heroTrailerMuted by HeroTrailerAudioState
+                    .muted(HeroTrailerSurface.Details)
+                    .collectAsStateWithLifecycle()
+                val heroTrailerStartUnmuted = metaScreenSettingsUiState.heroTrailerStartUnmuted
+
+                LaunchedEffect(heroTrailerStartUnmuted) {
+                    HeroTrailerAudioState.applyStartMuted(
+                        HeroTrailerSurface.Details,
+                        !heroTrailerStartUnmuted,
+                    )
+                }
                 val heroTrailerStartDelaySeconds = metaScreenSettingsUiState.heroTrailerStartDelaySeconds
                 LaunchedEffect(
                     heroTrailerPlaybackEnabled,
@@ -1094,7 +1104,7 @@ fun MetaDetailsScreen(
                                         dominantBackdropImageBitmap = imageBitmap
                                     },
                                     onHeroTrailerMuteToggle = {
-                                        HeroTrailerAudioState.toggleMuted()
+                                        HeroTrailerAudioState.toggleMuted(HeroTrailerSurface.Details)
                                     },
                                     onHeroTrailerReady = {
                                         if (!heroTrailerFinished) {

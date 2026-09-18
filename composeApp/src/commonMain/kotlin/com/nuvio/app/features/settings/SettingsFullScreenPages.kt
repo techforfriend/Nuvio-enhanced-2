@@ -76,6 +76,7 @@ fun HomescreenSettingsScreen(
             heroEnabled = homescreenSettingsUiState.heroEnabled,
             heroTrailerPlaybackEnabled = homescreenSettingsUiState.heroTrailerPlaybackEnabled,
             heroTrailerStartDelaySeconds = homescreenSettingsUiState.heroTrailerStartDelaySeconds,
+            heroTrailerStartUnmuted = homescreenSettingsUiState.heroTrailerStartUnmuted,
             showCatalogType = homescreenSettingsUiState.showCatalogType,
             hideUnreleasedContent = homescreenSettingsUiState.hideUnreleasedContent,
             items = homescreenSettingsUiState.items,

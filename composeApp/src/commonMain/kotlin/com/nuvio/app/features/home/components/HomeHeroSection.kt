@@ -78,6 +78,7 @@ import com.nuvio.app.core.ui.heroStretchHeight
 import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.heroStretchZoom
 import com.nuvio.app.features.details.HeroTrailerAudioState
+import com.nuvio.app.features.details.HeroTrailerSurface
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.components.DetailIconAction
 import com.nuvio.app.features.details.components.HeroTrailerPlayerSurface
@@ -217,6 +218,7 @@ internal fun HomeHeroSection(
     stretchPx: () -> Float = { 0f },
     trailerPlaybackEnabled: Boolean = false,
     trailerStartDelaySeconds: Int = 0,
+    trailerStartUnmuted: Boolean = false,
     onItemClick: ((MetaPreview) -> Unit)? = null,
     onActiveArtworkChange: ((String?) -> Unit)? = null,
 ) {
@@ -379,7 +381,13 @@ internal fun HomeHeroSection(
             }
             var heroTrailerReady by remember(currentItem.type, currentItem.id) { mutableStateOf(false) }
             var heroTrailerFinished by remember(currentItem.type, currentItem.id) { mutableStateOf(false) }
-            val heroTrailerMuted by HeroTrailerAudioState.muted.collectAsStateWithLifecycle()
+            val heroTrailerMuted by HeroTrailerAudioState
+                .muted(HeroTrailerSurface.Home)
+                .collectAsStateWithLifecycle()
+
+            LaunchedEffect(trailerStartUnmuted) {
+                HeroTrailerAudioState.applyStartMuted(HeroTrailerSurface.Home, !trailerStartUnmuted)
+            }
 
             val latestForceStopTrailer = rememberUpdatedState {
                 if (heroTrailerPlaybackSource != null || !heroTrailerFinished) {
@@ -667,7 +675,7 @@ internal fun HomeHeroSection(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
                                 ) {
-                                    HeroTrailerAudioState.toggleMuted()
+                                    HeroTrailerAudioState.toggleMuted(HeroTrailerSurface.Home)
                                 }
                                 .padding(8.dp),
                         ) {

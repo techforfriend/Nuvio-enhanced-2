@@ -74,6 +74,8 @@ import nuvio.composeapp.generated.resources.settings_meta_comments_description
 import nuvio.composeapp.generated.resources.settings_meta_details
 import nuvio.composeapp.generated.resources.settings_meta_details_description
 import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay
+import nuvio.composeapp.generated.resources.settings_hero_trailer_start_unmuted
+import nuvio.composeapp.generated.resources.settings_hero_trailer_start_unmuted_description
 import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay_description
 import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay_instant
 import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay_value
@@ -157,6 +159,14 @@ internal fun LazyListScope.metaScreenSettingsContent(
                         onCheckedChange = { MetaScreenSettingsRepository.setHeroTrailerPlayback(it) },
                     )
                     if (uiState.heroTrailerPlayback) {
+                        SettingsGroupDivider(isTablet = isTablet)
+                        SettingsSwitchRow(
+                            title = stringResource(Res.string.settings_hero_trailer_start_unmuted),
+                            description = stringResource(Res.string.settings_hero_trailer_start_unmuted_description),
+                            checked = uiState.heroTrailerStartUnmuted,
+                            isTablet = isTablet,
+                            onCheckedChange = { MetaScreenSettingsRepository.setHeroTrailerStartUnmuted(it) },
+                        )
                         SettingsGroupDivider(isTablet = isTablet)
                         SettingsSliderRow(
                             title = stringResource(Res.string.settings_hero_trailer_start_delay),
