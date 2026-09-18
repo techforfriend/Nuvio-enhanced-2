@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material.icons.rounded.Download
 import com.nuvio.app.core.ui.AppIconResource
 import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.nuvio
@@ -48,6 +50,7 @@ import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.appIconPainter
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_play
+import nuvio.composeapp.generated.resources.details_download_action
 import nuvio.composeapp.generated.resources.details_actions_menu_label
 import org.jetbrains.compose.resources.stringResource
 
@@ -70,6 +73,7 @@ fun DetailActionButtons(
     isTablet: Boolean = false,
     onPlayClick: () -> Unit = {},
     onPlayLongClick: (() -> Unit)? = null,
+    onDownloadClick: (() -> Unit)? = null,
 ) {
     val playPainter = appIconPainter(AppIconResource.PlayerPlay)
     val buttonHeight = if (isTablet) 56.dp else 52.dp
@@ -84,12 +88,17 @@ fun DetailActionButtons(
     )
     val hasSecondaryActions = secondaryActions.isNotEmpty()
 
-    Box(
+    Column(
         modifier = modifier
             .widthIn(max = if (isTablet) 520.dp else 420.dp)
-            .fillMaxWidth()
-            .height(buttonHeight),
+            .fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(buttonHeight),
+        ) {
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -226,6 +235,44 @@ fun DetailActionButtons(
                                 },
                         )
                     }
+                }
+            }
+        }
+    }
+
+        if (onDownloadClick != null) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(buttonHeight),
+                shape = playShape,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(role = Role.Button, onClick = onDownloadClick)
+                        .height(buttonHeight),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Download,
+                        contentDescription = null,
+                        modifier = Modifier.size(if (isTablet) 20.dp else 18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(Res.string.details_download_action),
+                        style = if (isTablet) {
+                            MaterialTheme.typography.titleMedium
+                        } else {
+                            MaterialTheme.typography.titleSmall
+                        },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
         }

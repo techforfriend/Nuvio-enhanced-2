@@ -1630,6 +1630,7 @@
     <string name="catalog_empty_message">This catalog did not return any items.</string>
     <string name="catalog_empty_title">No titles found</string>
     <string name="catalog_load_failed_title">Couldn’t load this catalog</string>
+    <string name="details_download_action">Download</string>
     <string name="details_actions_menu_label">More actions</string>
     <string name="details_check_connection">Check your Wi-Fi or mobile data connection and try again.</string>
     <string name="details_director">Director</string>
@@ -2006,6 +2007,8 @@
     <string name="downloads_enqueue_unsupported_format">Unsupported stream format for downloads</string>
     <string name="downloads_enqueue_requires_wifi">Connect to Wi-Fi to download, or allow mobile data in Downloads settings</string>
     <string name="downloads_allow_mobile_data_title">Allow mobile data</string>
+    <string name="downloads_show_download_button_title">Show download button</string>
+    <string name="downloads_show_download_button_description">Adds a download button under Play on a title's details page.</string>
     <string name="downloads_allow_mobile_data_description">By default, downloads only start on Wi-Fi. Enable this to also allow them on mobile data.</string>
     <string name="downloads_error_empty_body">Empty response body</string>
     <string name="downloads_error_finalize_failed">Failed to finalize download file</string>

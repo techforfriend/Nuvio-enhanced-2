@@ -12,6 +12,10 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_settings_root_downloads_title
 import nuvio.composeapp.generated.resources.settings_downloads_location_private
 import nuvio.composeapp.generated.resources.settings_downloads_location_reset
+import nuvio.composeapp.generated.resources.downloads_allow_mobile_data_description
+import nuvio.composeapp.generated.resources.downloads_allow_mobile_data_title
+import nuvio.composeapp.generated.resources.downloads_show_download_button_description
+import nuvio.composeapp.generated.resources.downloads_show_download_button_title
 import nuvio.composeapp.generated.resources.settings_downloads_location_title
 import org.jetbrains.compose.resources.stringResource
 
@@ -20,6 +24,8 @@ internal fun LazyListScope.downloadsSettingsContent(
 ) {
     item {
         val downloadLocationUri by DownloadsSettingsRepository.downloadLocationUri.collectAsStateWithLifecycle()
+        val allowMobileData by DownloadsSettingsRepository.allowMobileDataDownloads.collectAsStateWithLifecycle()
+        val showDownloadButton by DownloadsSettingsRepository.showDownloadButton.collectAsStateWithLifecycle()
         var showPicker by remember { mutableStateOf(false) }
 
         SettingsSection(
@@ -27,6 +33,22 @@ internal fun LazyListScope.downloadsSettingsContent(
             isTablet = isTablet,
         ) {
             SettingsGroup(isTablet = isTablet) {
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.downloads_allow_mobile_data_title),
+                    description = stringResource(Res.string.downloads_allow_mobile_data_description),
+                    checked = allowMobileData,
+                    isTablet = isTablet,
+                    onCheckedChange = DownloadsSettingsRepository::setAllowMobileDataDownloads,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.downloads_show_download_button_title),
+                    description = stringResource(Res.string.downloads_show_download_button_description),
+                    checked = showDownloadButton,
+                    isTablet = isTablet,
+                    onCheckedChange = DownloadsSettingsRepository::setShowDownloadButton,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_downloads_location_title),
                     description = downloadLocationUri?.let { formatUriForDisplay(it) } ?: stringResource(Res.string.settings_downloads_location_private),

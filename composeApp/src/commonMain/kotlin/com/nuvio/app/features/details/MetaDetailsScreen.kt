@@ -91,6 +91,7 @@ import com.nuvio.app.core.ui.nuvioSafeBottomPadding
 import com.nuvio.app.core.ui.rememberHeroStretchState
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
+import com.nuvio.app.features.downloads.DownloadsSettingsRepository
 import com.nuvio.app.features.details.components.DetailActionButtons
 import com.nuvio.app.features.details.components.DetailSecondaryAction
 import com.nuvio.app.features.details.components.CommentDetailSheet
@@ -163,6 +164,7 @@ fun MetaDetailsScreen(
     onBack: () -> Unit,
     onPlay: ((type: String, videoId: String, parentMetaId: String, parentMetaType: String, title: String, logo: String?, poster: String?, background: String?, seasonNumber: Int?, episodeNumber: Int?, episodeTitle: String?, episodeThumbnail: String?, pauseDescription: String?, resumePositionMs: Long?) -> Unit)? = null,
     onPlayManually: ((type: String, videoId: String, parentMetaId: String, parentMetaType: String, title: String, logo: String?, poster: String?, background: String?, seasonNumber: Int?, episodeNumber: Int?, episodeTitle: String?, episodeThumbnail: String?, pauseDescription: String?, resumePositionMs: Long?) -> Unit)? = null,
+    onDownload: ((type: String, videoId: String, parentMetaId: String, parentMetaType: String, title: String, logo: String?, poster: String?, background: String?, seasonNumber: Int?, episodeNumber: Int?, episodeTitle: String?, episodeThumbnail: String?, pauseDescription: String?, resumePositionMs: Long?) -> Unit)? = null,
     onOpenMeta: ((MetaPreview) -> Unit)? = null,
     onOpenMoreLikeThis: ((MetaDetails) -> Unit)? = null,
     onCastClick: ((MetaPerson, String?) -> Unit)? = null,
@@ -752,6 +754,54 @@ fun MetaDetailsScreen(
                         }
                     }
                 }
+                val showDownloadButton by remember {
+                    DownloadsSettingsRepository.ensureLoaded()
+                    DownloadsSettingsRepository.showDownloadButton
+                }.collectAsStateWithLifecycle()
+                val downloadHandler = onDownload
+                val onDownloadClick: (() -> Unit)? = if (showDownloadButton && downloadHandler != null) {
+                    {
+                        stopHeroTrailerForNavigation()
+                        // Same target as Play, but the stream list opens in download mode.
+                        if ((meta.type == "series" || hasEpisodes) && seriesAction != null) {
+                            downloadHandler(
+                                meta.type,
+                                seriesStreamVideoId ?: seriesAction.videoId,
+                                meta.id,
+                                meta.type,
+                                meta.name,
+                                meta.logo,
+                                meta.poster,
+                                meta.background,
+                                seriesAction.seasonNumber,
+                                seriesAction.episodeNumber,
+                                seriesAction.episodeTitle,
+                                seriesAction.episodeThumbnail,
+                                seriesPauseDescription,
+                                null,
+                            )
+                        } else {
+                            downloadHandler(
+                                meta.type,
+                                meta.id,
+                                meta.id,
+                                meta.type,
+                                meta.name,
+                                meta.logo,
+                                meta.poster,
+                                meta.background,
+                                null,
+                                null,
+                                null,
+                                null,
+                                meta.description,
+                                null,
+                            )
+                        }
+                    }
+                } else {
+                    null
+                }
                 val manualPlayHandler = onPlayManually
                 val showManualPlayOption = manualPlayHandler != null && StreamAutoPlayPolicy.isEffectivelyEnabled(playerSettingsUiState)
                 val onPrimaryPlayLongClick: (() -> Unit)? = manualPlayHandler
@@ -1072,6 +1122,7 @@ fun MetaDetailsScreen(
                                 isSaved = isSaved,
                                 isWatched = isWatched,
                                 onPrimaryPlayClick = onPrimaryPlayClick,
+                                onDownloadClick = onDownloadClick,
                                 onPrimaryPlayLongClick = onPrimaryPlayLongClick,
                                 onRandomEpisodeClick = onRandomEpisodeClick,
                                 onSaveClick = toggleSaved,
@@ -1723,6 +1774,7 @@ private fun LazyListScope.configuredMetaSectionItems(
     isSaved: Boolean,
     isWatched: Boolean,
     onPrimaryPlayClick: () -> Unit,
+    onDownloadClick: (() -> Unit)?,
     onPrimaryPlayLongClick: (() -> Unit)?,
     onRandomEpisodeClick: (() -> Unit)?,
     onSaveClick: () -> Unit,
@@ -1801,6 +1853,7 @@ private fun LazyListScope.configuredMetaSectionItems(
                     isSaved = isSaved,
                     isWatched = isWatched,
                     onPrimaryPlayClick = onPrimaryPlayClick,
+                    onDownloadClick = onDownloadClick,
                     onPrimaryPlayLongClick = onPrimaryPlayLongClick,
                     onRandomEpisodeClick = onRandomEpisodeClick,
                     onSaveClick = onSaveClick,
@@ -1952,6 +2005,7 @@ private fun ConfiguredMetaSections(
     isSaved: Boolean,
     isWatched: Boolean,
     onPrimaryPlayClick: () -> Unit,
+    onDownloadClick: (() -> Unit)?,
     onPrimaryPlayLongClick: (() -> Unit)?,
     onRandomEpisodeClick: (() -> Unit)?,
     onSaveClick: () -> Unit,
@@ -2054,6 +2108,7 @@ private fun ConfiguredMetaSections(
                     },
                     isTablet = isTablet,
                     onPlayClick = onPrimaryPlayClick,
+                    onDownloadClick = onDownloadClick,
                     onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
                 )
             }

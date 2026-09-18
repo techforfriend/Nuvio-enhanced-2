@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 actual object DownloadsSettingsStorage {
     private const val preferencesName = "nuvio_downloads_settings"
     private const val allowMobileDataDownloadsKey = "allow_mobile_data_downloads"
+    private const val showDownloadButtonKey = "show_download_button"
 
     private var preferences: SharedPreferences? = null
 
@@ -26,6 +27,22 @@ actual object DownloadsSettingsStorage {
         preferences
             ?.edit()
             ?.putBoolean(allowMobileDataDownloadsKey, enabled)
+            ?.apply()
+    }
+
+    actual fun loadShowDownloadButton(): Boolean? =
+        preferences?.let { prefs ->
+            if (prefs.contains(showDownloadButtonKey)) {
+                prefs.getBoolean(showDownloadButtonKey, false)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveShowDownloadButton(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(showDownloadButtonKey, enabled)
             ?.apply()
     }
 }
