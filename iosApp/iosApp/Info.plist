@@ -25,6 +25,7 @@
 	</dict>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
+		<string>shareddocuments</string>
 		<string>infuse</string>
 		<string>vlc-x-callback</string>
 		<string>outplayer</string>
@@ -40,5 +41,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<false/>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 </dict>
 </plist>

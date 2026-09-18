@@ -166,8 +166,14 @@ internal actual object DownloadsPlatformDownloader {
 
     actual fun openDownloadsDirectory(): Boolean =
         resolveDownloadsBaseDirectory().withAccess { downloadsDirectory ->
-            val url = NSURL.fileURLWithPath(downloadsDirectory)
-            UIApplication.sharedApplication.openURL(
+            val fileUrl = NSURL.fileURLWithPath(downloadsDirectory).absoluteString
+                ?.takeIf { it.startsWith("file://") }
+                ?: return@withAccess false
+            val url = NSURL(string = "shareddocuments://" + fileUrl.removePrefix("file://"))
+            val application = UIApplication.sharedApplication
+            if (!application.canOpenURL(url)) return@withAccess false
+
+            application.openURL(
                 url = url,
                 options = emptyMap<Any?, Any>(),
                 completionHandler = null,
