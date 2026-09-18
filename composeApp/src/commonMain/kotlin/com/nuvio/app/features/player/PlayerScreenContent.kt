@@ -3,9 +3,7 @@ package com.nuvio.app.features.player
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.safeContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -105,8 +103,8 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
         runtime.overlayBottomPadding = if (playerSettingsUiState.useLegacyPlayerLayout) {
             sliderOverlayBottomPadding(metrics)
         } else {
-            metrics.sliderBottomOffset / 2 + 72.dp + PlayerSliderOverlayGap +
-                WindowInsets.safeContent.asPaddingValues().calculateBottomPadding()
+            playerTimelineBottomInsets(metrics).asPaddingValues().calculateBottomPadding() +
+                72.dp + PlayerSliderOverlayGap
         }
         runtime.sideGestureSystemEdgeExclusionPx = with(density) {
             PlayerSideGestureSystemEdgeExclusion.toPx()

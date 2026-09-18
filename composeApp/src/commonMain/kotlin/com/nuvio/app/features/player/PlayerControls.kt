@@ -265,9 +265,8 @@ internal fun PlayerControlsShell(
                         .onSizeChanged { size -> timelineHeight = with(density) { size.height.toDp() } }
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Bottom))
-                        .padding(horizontal = metrics.horizontalPadding)
-                        .padding(bottom = metrics.sliderBottomOffset / 2),
+                        .windowInsetsPadding(playerTimelineBottomInsets(metrics))
+                        .padding(horizontal = metrics.horizontalPadding),
                 ) {
                     if (!hideDetails) {
                         PlayerTimelineDetails(
