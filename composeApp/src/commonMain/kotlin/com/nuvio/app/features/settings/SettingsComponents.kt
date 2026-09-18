@@ -50,7 +50,10 @@ import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.NuvioActionLabel
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.NuvioSectionLabel
+import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.nuvioConsumePointerEvents
 import com.nuvio.app.features.home.HomeCatalogSettingsItem
 import nuvio.composeapp.generated.resources.Res
@@ -187,6 +190,11 @@ internal fun SettingsSidebarItem(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
+                    modifier = if (selected) {
+                        Modifier.gradientMask(MaterialTheme.themePalette.accentBrush())
+                    } else {
+                        Modifier
+                    },
                     tint = if (selected) primary else contentColor,
                 )
             }
@@ -310,6 +318,7 @@ internal fun SettingsNavigationRow(
                             Icon(
                                 imageVector = icon,
                                 contentDescription = null,
+                                modifier = Modifier.gradientMask(MaterialTheme.themePalette.accentBrush()),
                                 tint = tokens.colors.accent,
                             )
                         }

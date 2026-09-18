@@ -13,6 +13,13 @@ fun ThemeColorPalette.accentBrush(): Brush =
     if (accentGradient.size >= 2) Brush.linearGradient(accentGradient)
     else SolidColor(accentGradient.firstOrNull() ?: secondary)
 
+fun ThemeColorPalette.accentBrush(alpha: Float): Brush =
+    if (accentGradient.size >= 2) {
+        Brush.linearGradient(accentGradient.map { color -> color.copy(alpha = alpha) })
+    } else {
+        SolidColor((accentGradient.firstOrNull() ?: secondary).copy(alpha = alpha))
+    }
+
 fun ThemeColorPalette.nativeAccentGradientHex(): List<String> =
     if (accentGradient.size >= 2) {
         accentGradient.map { color -> formatHexColor(color.toArgb() and 0xFFFFFF) }

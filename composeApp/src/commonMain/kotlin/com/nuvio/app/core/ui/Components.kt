@@ -52,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -81,17 +82,12 @@ fun NuvioScreen(
     horizontalPadding: Dp = MaterialTheme.nuvio.spacing.screenHorizontal,
     topPadding: Dp? = null,
     listState: LazyListState = rememberLazyListState(),
-    /**
-     * Opt-in for the five tab-root screens. Sub-pages leave this off so scrolling inside a pushed
-     * route never touches the tab bar's visibility.
-     */
     autoHidesNativeTabBar: Boolean = false,
     content: LazyListScope.() -> Unit,
 ) {
     NativeTabBarScrollEffect(listState = listState, enabled = autoHidesNativeTabBar)
     val tokens = MaterialTheme.nuvio
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    // A dynamic artwork layer is painted behind this screen, so the opaque fill would hide it.
     val screenBackground = if (LocalDynamicArtworkBackgroundActive.current) {
         Color.Transparent
     } else {
@@ -318,18 +314,22 @@ fun NuvioPrimaryButton(
     onClick: () -> Unit = {},
 ) {
     val tokens = MaterialTheme.nuvio
+    val palette = MaterialTheme.themePalette
     Button(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .height(NuvioTokens.Space.s48 + NuvioTokens.Space.s4),
+            .height(NuvioTokens.Space.s48 + NuvioTokens.Space.s4)
+            .clip(tokens.shapes.button)
+            .background(palette.accentBrush())
+            .alpha(if (enabled) NuvioTokens.Opacity.visible else tokens.opacity.disabled),
         enabled = enabled,
         shape = tokens.shapes.button,
         colors = ButtonDefaults.buttonColors(
-            containerColor = tokens.colors.accent,
+            containerColor = Color.Transparent,
             contentColor = tokens.colors.onAccent,
-            disabledContainerColor = tokens.colors.accent.copy(alpha = tokens.opacity.disabled),
-            disabledContentColor = tokens.colors.onAccent.copy(alpha = tokens.opacity.disabled),
+            disabledContainerColor = Color.Transparent,
+            disabledContentColor = tokens.colors.onAccent,
         ),
     ) {
         AnimatedContent(
