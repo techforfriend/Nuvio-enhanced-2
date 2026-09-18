@@ -19,8 +19,11 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.rounded.HighQuality
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material3.Icon
@@ -97,6 +100,10 @@ internal fun PlayerControlActions(
     onVideoSettingsClick: (() -> Unit)?,
     onOpenInExternalPlayer: (() -> Unit)?,
     onSubmitIntroClick: (() -> Unit)?,
+    qualityLabel: String? = null,
+    onQualityClick: (() -> Unit)? = null,
+    onPictureInPictureClick: (() -> Unit)? = null,
+    onInfoClick: (() -> Unit)? = null,
     onInteraction: () -> Unit,
 ) {
     val actions = listOfNotNull(
@@ -126,6 +133,12 @@ internal fun PlayerControlActions(
                 painter = appIconPainter(AppIconResource.PlayerEpisodes),
             )
         },
+        onQualityClick?.let {
+            PlayerControlAction(
+                qualityLabel?.takeIf { label -> label.isNotBlank() } ?: "Quality", it,
+                icon = Icons.Rounded.HighQuality,
+            )
+        },
         PlayerControlAction(
             "${stringResource(Res.string.compose_player_speed)} ${formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed)}",
             onSpeedClick, icon = Icons.Rounded.Speed,
@@ -150,6 +163,18 @@ internal fun PlayerControlActions(
             PlayerControlAction(
                 stringResource(Res.string.submit_intro_action), it,
                 icon = Icons.Rounded.Flag,
+            )
+        },
+        onPictureInPictureClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.compose_player_picture_in_picture), it,
+                icon = Icons.Rounded.PictureInPictureAlt,
+            )
+        },
+        onInfoClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.compose_player_playback_info), it,
+                icon = Icons.Rounded.Info,
             )
         },
     )

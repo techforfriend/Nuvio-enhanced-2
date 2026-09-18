@@ -328,6 +328,10 @@ internal fun PlayerControlsShell(
                         onVideoSettingsClick = onVideoSettingsClick,
                         onOpenInExternalPlayer = onOpenInExternalPlayer,
                         onSubmitIntroClick = onSubmitIntroClick,
+                        qualityLabel = qualityLabel,
+                        onQualityClick = onQualityClick,
+                        onPictureInPictureClick = onPictureInPictureClick,
+                        onInfoClick = onInfoClick,
                         onInteraction = onInteraction,
                     )
                 }
@@ -487,7 +491,7 @@ private fun PlayerHeader(
                     if (onPictureInPictureClick != null) {
                         PlayerHeaderIconButton(
                             icon = Icons.Rounded.PictureInPictureAlt,
-                            contentDescription = "Picture in Picture",
+                            contentDescription = stringResource(Res.string.compose_player_picture_in_picture),
                             buttonSize = metrics.headerIconSize + 16.dp,
                             iconSize = metrics.headerIconSize,
                             onClick = onPictureInPictureClick,
