@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,11 +14,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyListScope
@@ -60,16 +65,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.nuvio.app.core.ui.LocalDynamicArtworkBackgroundActive
 import com.nuvio.app.core.ui.NuvioIconActionButton
 import com.nuvio.app.core.ui.NuvioInputField
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
-import com.nuvio.app.core.ui.NuvioSectionLabel
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.core.ui.nuvioPlatformExtraTopPadding
 import com.nuvio.app.features.home.components.HomeEmptyStateCard
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -91,10 +99,10 @@ import nuvio.composeapp.generated.resources.live_tv_no_matching_channels_title
 import nuvio.composeapp.generated.resources.live_tv_no_playlist_message
 import nuvio.composeapp.generated.resources.live_tv_no_playlist_title
 import nuvio.composeapp.generated.resources.live_tv_search_placeholder
-import nuvio.composeapp.generated.resources.live_tv_section_channels
 import nuvio.composeapp.generated.resources.live_tv_title
 import org.jetbrains.compose.resources.stringResource
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LiveTvScreen(
     modifier: Modifier = Modifier,
@@ -186,28 +194,48 @@ fun LiveTvScreen(
         }
     }
 
+    val tokens = MaterialTheme.nuvio
+    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val screenBackground = if (LocalDynamicArtworkBackgroundActive.current) {
+        Color.Transparent
+    } else {
+        tokens.colors.background
+    }
+    val listTopPadding = tokens.spacing.screenTop + statusBarTop + nuvioPlatformExtraTopPadding
+
+    val density = LocalDensity.current
+    val controlsTopPadding by remember(listTopPadding) {
+        derivedStateOf {
+            val offset = listState.layoutInfo.visibleItemsInfo
+                .firstOrNull { it.key == ChannelControlsKey }
+                ?.offset
+                ?: return@derivedStateOf listTopPadding
+            (listTopPadding - with(density) { offset.toDp() }).coerceIn(0.dp, listTopPadding)
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         NuvioScreen(
             modifier = Modifier.fillMaxSize(),
-            horizontalPadding = 16.dp,
+            horizontalPadding = LiveTvScreenHorizontalPadding,
             listState = listState,
             autoHidesNativeTabBar = true,
         ) {
-        item {
-            NuvioScreenHeader(
-                title = stringResource(Res.string.live_tv_title),
-                includeStatusBarPadding = false,
-                actions = {
-                    if (uiState.hasPlaylist) {
-                        NuvioIconActionButton(
-                            icon = Icons.Rounded.Refresh,
-                            contentDescription = stringResource(Res.string.action_retry),
-                            onClick = LiveTvRepository::refresh,
-                        )
-                    }
-                },
-            )
-        }
+            item {
+                NuvioScreenHeader(
+                    title = stringResource(Res.string.live_tv_title),
+                    includeStatusBarPadding = false,
+                    actions = {
+                        if (uiState.hasPlaylist) {
+                            NuvioIconActionButton(
+                                icon = Icons.Rounded.Refresh,
+                                contentDescription = stringResource(Res.string.action_retry),
+                                onClick = LiveTvRepository::refresh,
+                            )
+                        }
+                    },
+                )
+            }
 
             when {
                 uiState.isLoading && uiState.channels.isEmpty() -> {
@@ -268,23 +296,19 @@ fun LiveTvScreen(
                         }
                     }
 
-                    item {
-                        LiveTvSearchField(
-                            query = searchQuery,
-                            onQueryChange = { searchQuery = it },
-                        )
-                    }
-
-                    item {
-                        LiveTvFilterPanelRow(
-                            groups = categoryOptions
-                                .filter { option -> option.mode == LiveTvChannelFilterMode.Category }
-                                .map { option -> option.label },
-                            selectedGroup = selectedCategoryName,
-                            favoritesOnly = filterMode == LiveTvChannelFilterMode.Favorites,
+                    stickyHeader(key = ChannelControlsKey) {
+                        LiveTvChannelControls(
+                            topPadding = controlsTopPadding,
+                            searchQuery = searchQuery,
+                            onSearchQueryChange = { searchQuery = it },
+                            categoryOptions = categoryOptions,
+                            selectedCategoryName = selectedCategoryName,
+                            filterMode = filterMode,
                             allLabel = allChannelsLabel,
                             favoritesLabel = favoritesLabel,
                             categoryLabel = chooseCategoryLabel,
+                            channelCount = visibleChannels.size,
+                            background = screenBackground,
                             onAllSelected = {
                                 filterMode = LiveTvChannelFilterMode.All
                                 selectedCategoryName = null
@@ -298,10 +322,6 @@ fun LiveTvScreen(
                                 selectedCategoryName = category
                             },
                         )
-                    }
-
-                    item {
-                        LiveTvChannelsSubheader(channelCount = visibleChannels.size)
                     }
 
                     if (visibleChannels.isEmpty()) {
@@ -324,6 +344,14 @@ fun LiveTvScreen(
             }
         }
 
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .height(listTopPadding)
+                .background(screenBackground),
+        )
+
         AnimatedVisibility(
             visible = showBackToTop,
             enter = fadeIn(),
@@ -338,6 +366,67 @@ fun LiveTvScreen(
                         listState.animateScrollToItem(0)
                     }
                 },
+            )
+        }
+    }
+}
+
+private const val ChannelControlsKey = "channel-controls"
+
+private val LiveTvScreenHorizontalPadding = 16.dp
+
+@Composable
+private fun LiveTvChannelControls(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    categoryOptions: List<LiveTvCategoryFilterOption>,
+    selectedCategoryName: String?,
+    filterMode: LiveTvChannelFilterMode,
+    allLabel: String,
+    favoritesLabel: String,
+    categoryLabel: String,
+    channelCount: Int,
+    background: Color,
+    topPadding: Dp,
+    onAllSelected: () -> Unit,
+    onFavoritesSelected: () -> Unit,
+    onGroupSelected: (String) -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(background)
+            .padding(top = topPadding + 4.dp, bottom = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(tokens.spacing.listGap),
+    ) {
+        LiveTvSearchField(
+            query = searchQuery,
+            onQueryChange = onSearchQueryChange,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            LiveTvFilterPanelRow(
+                modifier = Modifier.weight(1f),
+                groups = categoryOptions
+                    .filter { option -> option.mode == LiveTvChannelFilterMode.Category }
+                    .map { option -> option.label },
+                selectedGroup = selectedCategoryName,
+                favoritesOnly = filterMode == LiveTvChannelFilterMode.Favorites,
+                allLabel = allLabel,
+                favoritesLabel = favoritesLabel,
+                categoryLabel = categoryLabel,
+                onAllSelected = onAllSelected,
+                onFavoritesSelected = onFavoritesSelected,
+                onGroupSelected = onGroupSelected,
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = channelCount.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = tokens.colors.textMuted,
             )
         }
     }
@@ -533,24 +622,6 @@ private fun LiveTvCategoryFilterChip(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun LiveTvChannelsSubheader(
-    channelCount: Int,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        NuvioSectionLabel(text = stringResource(Res.string.live_tv_section_channels))
-        Text(
-            text = channelCount.toString(),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.nuvio.colors.textMuted,
-        )
     }
 }
 
