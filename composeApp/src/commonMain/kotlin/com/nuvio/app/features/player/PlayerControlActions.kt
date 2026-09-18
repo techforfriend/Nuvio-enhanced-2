@@ -1,13 +1,17 @@
 package com.nuvio.app.features.player
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
@@ -36,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -78,6 +83,8 @@ internal fun PlayerToolbar(
 internal fun PlayerControlActions(
     playbackSnapshot: PlayerPlaybackSnapshot,
     displayedPositionMs: Long,
+    showRemainingTime: Boolean,
+    onRuntimeClick: () -> Unit,
     metrics: PlayerLayoutMetrics,
     resizeMode: PlayerResizeMode,
     onSubtitleClick: () -> Unit,
@@ -92,7 +99,62 @@ internal fun PlayerControlActions(
     onSubmitIntroClick: (() -> Unit)?,
     onInteraction: () -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    val actions = listOfNotNull(
+        onNextEpisodeClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.player_next_episode), it,
+                icon = Icons.Rounded.SkipNext, iconSize = 40.dp,
+            )
+        },
+        PlayerControlAction(
+            stringResource(Res.string.compose_player_subtitles), onSubtitleClick,
+            painter = appIconPainter(AppIconResource.PlayerSubtitles),
+        ),
+        PlayerControlAction(
+            stringResource(Res.string.compose_player_audio), onAudioClick,
+            painter = appIconPainter(AppIconResource.PlayerAudioFilled),
+        ),
+        onSourcesClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.compose_player_sources), it,
+                painter = appIconPainter(AppIconResource.PlayerSource),
+            )
+        },
+        onEpisodesClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.compose_player_episodes), it,
+                painter = appIconPainter(AppIconResource.PlayerEpisodes),
+            )
+        },
+        PlayerControlAction(
+            "${stringResource(Res.string.compose_player_speed)} ${formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed)}",
+            onSpeedClick, icon = Icons.Rounded.Speed,
+        ),
+        PlayerControlAction(
+            stringResource(resizeMode.labelRes), onResizeModeClick,
+            painter = appIconPainter(AppIconResource.PlayerAspectRatio),
+        ),
+        onOpenInExternalPlayer?.let {
+            PlayerControlAction(
+                stringResource(Res.string.streams_open_external_player), it,
+                icon = Icons.AutoMirrored.Rounded.OpenInNew,
+            )
+        },
+        onVideoSettingsClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.player_action_video_settings), it,
+                icon = Icons.Rounded.Build,
+            )
+        },
+        onSubmitIntroClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.submit_intro_action), it,
+                icon = Icons.Rounded.Flag,
+            )
+        },
+    )
+    val hasOverflow = actions.size > 5
+    var expanded by remember(hasOverflow) { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val startOffset = if (onNextEpisodeClick != null) (-13).dp else (-12).dp
     LaunchedEffect(expanded, scrollState.maxValue) {
@@ -108,77 +170,48 @@ internal fun PlayerControlActions(
                 modifier = Modifier.weight(1f).offset(x = startOffset).horizontalScroll(scrollState),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (onNextEpisodeClick != null) {
+                actions.take(if (expanded) actions.size else 5).forEach { action ->
                     PlayerAction(
-                        stringResource(Res.string.player_next_episode), onNextEpisodeClick,
-                        icon = Icons.Rounded.SkipNext, iconSize = 40.dp,
+                        description = action.description,
+                        onClick = action.onClick,
+                        icon = action.icon,
+                        painter = action.painter,
+                        iconSize = action.iconSize,
                     )
                 }
-                PlayerAction(
-                    stringResource(Res.string.compose_player_subtitles), onSubtitleClick,
-                    painter = appIconPainter(AppIconResource.PlayerSubtitles),
-                )
-                PlayerAction(
-                    stringResource(Res.string.compose_player_audio), onAudioClick,
-                    painter = appIconPainter(AppIconResource.PlayerAudioFilled),
-                )
-                if (onSourcesClick != null) {
+                if (hasOverflow) {
                     PlayerAction(
-                        stringResource(Res.string.compose_player_sources), onSourcesClick,
-                        painter = appIconPainter(AppIconResource.PlayerSource),
+                        description = stringResource(
+                            if (expanded) Res.string.compose_player_fewer_actions else Res.string.compose_player_more_actions,
+                        ),
+                        onClick = {
+                            expanded = !expanded
+                            onInteraction()
+                        },
+                        icon = if (expanded) Icons.AutoMirrored.Rounded.KeyboardArrowLeft else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                     )
                 }
-                if (onEpisodesClick != null) {
-                    PlayerAction(
-                        stringResource(Res.string.compose_player_episodes), onEpisodesClick,
-                        painter = appIconPainter(AppIconResource.PlayerEpisodes),
-                    )
-                }
-                if (expanded) {
-                    PlayerAction(
-                        "${stringResource(Res.string.compose_player_speed)} ${formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed)}",
-                        onSpeedClick, icon = Icons.Rounded.Speed,
-                    )
-                    PlayerAction(
-                        stringResource(resizeMode.labelRes), onResizeModeClick,
-                        painter = appIconPainter(AppIconResource.PlayerAspectRatio),
-                    )
-                    if (onOpenInExternalPlayer != null) {
-                        PlayerAction(
-                            stringResource(Res.string.streams_open_external_player), onOpenInExternalPlayer,
-                            icon = Icons.AutoMirrored.Rounded.OpenInNew,
-                        )
-                    }
-                    if (onVideoSettingsClick != null) {
-                        PlayerAction(
-                            stringResource(Res.string.player_action_video_settings), onVideoSettingsClick,
-                            icon = Icons.Rounded.Build,
-                        )
-                    }
-                    if (onSubmitIntroClick != null) {
-                        PlayerAction(
-                            stringResource(Res.string.submit_intro_action), onSubmitIntroClick,
-                            icon = Icons.Rounded.Flag,
-                        )
-                    }
-                }
-                PlayerAction(
-                    description = stringResource(
-                        if (expanded) Res.string.compose_player_fewer_actions else Res.string.compose_player_more_actions,
+            }
+            Box(
+                modifier = Modifier.height(48.dp).widthIn(min = 48.dp).clickable(
+                    role = Role.Button,
+                    onClickLabel = stringResource(
+                        if (showRemainingTime) Res.string.compose_player_show_elapsed_time else Res.string.compose_player_show_remaining_time,
                     ),
                     onClick = {
-                        expanded = !expanded
+                        onRuntimeClick()
                         onInteraction()
                     },
-                    icon = if (expanded) Icons.AutoMirrored.Rounded.KeyboardArrowLeft else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                ),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Text(
+                    text = formatPlaybackRuntime(displayedPositionMs, playbackSnapshot.durationMs, showRemainingTime),
+                    style = MaterialTheme.nuvioTypeScale.bodyMd.copy(fontSize = (metrics.timeSize.value + 2).sp),
+                    color = Color.White.copy(alpha = 0.9f),
+                    maxLines = 1,
                 )
             }
-            Text(
-                text = "${formatPlaybackTime(displayedPositionMs)} / ${formatPlaybackTime(playbackSnapshot.durationMs)}",
-                style = MaterialTheme.nuvioTypeScale.bodyMd.copy(fontSize = (metrics.timeSize.value + 2).sp),
-                color = Color.White.copy(alpha = 0.9f),
-                maxLines = 1,
-            )
         }
     }
 }
@@ -199,3 +232,11 @@ private fun PlayerAction(
         }
     }
 }
+
+private data class PlayerControlAction(
+    val description: String,
+    val onClick: () -> Unit,
+    val icon: ImageVector? = null,
+    val painter: Painter? = null,
+    val iconSize: Dp = 24.dp,
+)

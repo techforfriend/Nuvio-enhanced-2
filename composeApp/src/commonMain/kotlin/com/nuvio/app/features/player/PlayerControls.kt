@@ -90,6 +90,8 @@ internal fun PlayerControlsShell(
     resizeMode: PlayerResizeMode,
     isLocked: Boolean,
     useLegacyLayout: Boolean = false,
+    showRemainingTime: Boolean = false,
+    onRuntimeClick: () -> Unit = {},
     releaseInfo: String? = null,
     hideDetails: Boolean = false,
     onNextEpisodeClick: (() -> Unit)? = null,
@@ -280,6 +282,8 @@ internal fun PlayerControlsShell(
                     PlayerControlActions(
                         playbackSnapshot = playbackSnapshot,
                         displayedPositionMs = displayedPositionMs,
+                        showRemainingTime = showRemainingTime,
+                        onRuntimeClick = onRuntimeClick,
                         metrics = metrics,
                         resizeMode = resizeMode,
                         onSubtitleClick = onSubtitleClick,
@@ -743,6 +747,7 @@ internal fun LockedPlayerOverlay(
     horizontalSafePadding: androidx.compose.ui.unit.Dp,
     onUnlock: () -> Unit,
     useLegacyLayout: Boolean = false,
+    showRemainingTime: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val durationMs = playbackSnapshot.durationMs.coerceAtLeast(1L)
@@ -841,7 +846,7 @@ internal fun LockedPlayerOverlay(
                     enabled = false,
                 )
                 Text(
-                    text = "${formatPlaybackTime(displayedPositionMs)} / ${formatPlaybackTime(playbackSnapshot.durationMs)}",
+                    text = formatPlaybackRuntime(displayedPositionMs, playbackSnapshot.durationMs, showRemainingTime),
                     style = MaterialTheme.nuvioTypeScale.bodyMd.copy(fontSize = (metrics.timeSize.value + 2).sp),
                     color = Color.White.copy(alpha = 0.9f),
                     modifier = Modifier.align(Alignment.End),

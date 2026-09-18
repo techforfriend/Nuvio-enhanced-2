@@ -2329,6 +2329,8 @@
     <string name="compose_player_more_actions">More controls</string>
     <string name="compose_player_fewer_actions">Fewer controls</string>
     <string name="compose_player_speed">Playback speed</string>
+    <string name="compose_player_show_elapsed_time">Show elapsed time</string>
+    <string name="compose_player_show_remaining_time">Show remaining time</string>
     <string name="compose_player_brightness">Brightness</string>
     <string name="compose_player_volume">Volume</string>
 </resources>

@@ -22,6 +22,7 @@ internal fun BoxScope.PlayerPlaybackOverlays(
     playerControlsLocked: Boolean,
     useLegacyLayout: Boolean,
     lockedOverlayVisible: Boolean,
+    showRemainingTime: Boolean = false,
     playbackSnapshot: PlayerPlaybackSnapshot,
     displayedPositionMs: Long,
     metrics: PlayerLayoutMetrics,
@@ -73,6 +74,7 @@ internal fun BoxScope.PlayerPlaybackOverlays(
             horizontalSafePadding = horizontalSafePadding,
             onUnlock = onUnlock,
             useLegacyLayout = useLegacyLayout,
+            showRemainingTime = showRemainingTime,
             modifier = Modifier.fillMaxSize(),
         )
     }
