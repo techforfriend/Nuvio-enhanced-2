@@ -10,6 +10,7 @@ private const val nativeTabBarBehaviorKey = "NuvioNativeTabBarBehavior"
 private const val nativeTabBarVisibleKey = "NuvioNativeTabBarVisible"
 private const val nativeSelectedTabKey = "NuvioNativeSelectedTab"
 private const val nativeTabAccentColorKey = "NuvioNativeTabAccentColor"
+private const val nativeTabAccentGradientKey = "NuvioNativeTabAccentGradient"
 private const val nativeTabTitleHomeKey = "NuvioNativeTabTitleHome"
 private const val nativeTabTitleSearchKey = "NuvioNativeTabTitleSearch"
 private const val nativeTabTitleLibraryKey = "NuvioNativeTabTitleLibrary"
@@ -43,8 +44,12 @@ internal actual fun publishNativeSelectedTab(tabName: String) {
     notifyNativeTabChromeChanged()
 }
 
-internal actual fun publishNativeTabAccentColor(hexColor: String) {
+internal actual fun publishNativeTabAccentColor(hexColor: String, gradientHexColors: List<String>) {
     NSUserDefaults.standardUserDefaults.setObject(hexColor, forKey = nativeTabAccentColorKey)
+    NSUserDefaults.standardUserDefaults.setObject(
+        gradientHexColors.joinToString(separator = ","),
+        forKey = nativeTabAccentGradientKey,
+    )
     notifyNativeTabChromeChanged()
 }
 

@@ -373,6 +373,34 @@ private enum NuvioNativeTabIcon {
             .withRenderingMode(.alwaysTemplate)
     }
 
+    static func gradientTinted(_ image: UIImage, colors: [UIColor]) -> UIImage {
+        guard colors.count > 1, let mask = image.cgImage else { return image }
+        let size = image.size
+        guard size.width > 0, size.height > 0 else { return image }
+        let cgColors = colors.map { $0.cgColor } as CFArray
+        guard let gradient = CGGradient(
+            colorsSpace: CGColorSpaceCreateDeviceRGB(),
+            colors: cgColors,
+            locations: nil
+        ) else {
+            return image
+        }
+
+        return UIGraphicsImageRenderer(size: size).image { context in
+            let cgContext = context.cgContext
+            let rect = CGRect(origin: .zero, size: size)
+            cgContext.translateBy(x: 0, y: size.height)
+            cgContext.scaleBy(x: 1, y: -1)
+            cgContext.clip(to: rect, mask: mask)
+            cgContext.drawLinearGradient(
+                gradient,
+                start: .zero,
+                end: CGPoint(x: size.width, y: size.height),
+                options: [.drawsBeforeStartLocation, .drawsAfterEndLocation]
+            )
+        }.withRenderingMode(.alwaysOriginal)
+    }
+
     static func profileAvatar(
         name: String?,
         avatarColor: UIColor?,
@@ -449,6 +477,7 @@ private enum NuvioNativeTabIcon {
 final class NativeTabIconStore: ObservableObject {
     private static let chromeDidChange = Notification.Name("NuvioNativeTabChromeDidChange")
     private static let accentKey = "NuvioNativeTabAccentColor"
+    private static let accentGradientKey = "NuvioNativeTabAccentGradient"
     private static let profileNameKey = "NuvioNativeProfileName"
     private static let profileColorKey = "NuvioNativeProfileAvatarColor"
     private static let profileURLKey = "NuvioNativeProfileAvatarURL"
@@ -461,6 +490,19 @@ final class NativeTabIconStore: ObservableObject {
         blue: 0.96,
         alpha: 1
     )
+
+    @Published private(set) var accentColors: [UIColor] = []
+
+    func accentStyle(opacity: CGFloat = 1) -> AnyShapeStyle {
+        let colors = accentColors.isEmpty ? [accentColor] : accentColors
+        let faded = colors.map { Color(uiColor: $0).opacity(opacity) }
+        guard faded.count > 1 else {
+            return AnyShapeStyle(faded[0])
+        }
+        return AnyShapeStyle(
+            LinearGradient(colors: faded, startPoint: .topLeading, endPoint: .bottomTrailing)
+        )
+    }
 
     private var observer: NSObjectProtocol?
     private var profileAvatarURL: String?
@@ -493,7 +535,9 @@ final class NativeTabIconStore: ObservableObject {
 
     func image(for tab: NuvioAppTab, selected: Bool) -> UIImage {
         guard tab == .settings else {
-            return NuvioNativeTabIcon.image(for: tab)
+            let icon = NuvioNativeTabIcon.image(for: tab)
+            guard selected, accentColors.count > 1 else { return icon }
+            return NuvioNativeTabIcon.gradientTinted(icon, colors: accentColors)
         }
 
         let defaults = UserDefaults.standard
@@ -511,6 +555,9 @@ final class NativeTabIconStore: ObservableObject {
         let defaults = UserDefaults.standard
         accentColor = UIColor(hexString: defaults.string(forKey: Self.accentKey))
             ?? UIColor(red: 0.96, green: 0.96, blue: 0.96, alpha: 1)
+        accentColors = (defaults.string(forKey: Self.accentGradientKey) ?? "")
+            .split(separator: ",")
+            .compactMap { UIColor(hexString: String($0).trimmingCharacters(in: .whitespaces)) }
 
         let nextURL = defaults.string(forKey: Self.profileURLKey)
         guard nextURL != profileAvatarURL else {
@@ -569,11 +616,6 @@ final class NativeProfileTabInteractionCoordinator: NSObject, UIGestureRecognize
         publishIconFrame()
     }
 
-    /// Measures the real Profile tab bar item's on-screen frame and pushes it to Compose (see
-    /// `NativeTabBridgeKt.publishProfileTabIconFrame`) so the profile-loading exit animation can
-    /// land pixel-perfect on the actual icon instead of an approximated corner. Converting to
-    /// window coordinates (`to: nil`) matches AppGateComposeView, which fills the same window via
-    /// `.ignoresSafeArea(.all)`.
     func publishIconFrame() {
         guard #available(iOS 17.0, *),
               let tabBar = tabBarController?.tabBar,
@@ -659,9 +701,6 @@ final class AppNavigationCoordinator: ObservableObject {
             if selectedTab != oldValue {
                 setTabBarVisible(true)
                 refreshSelectedTabDepth()
-                // Home's Compose content stays mounted (just hidden) behind the other native
-                // tabs, so Compose can't reliably detect this switch on its own — tell it
-                // directly so anything playing in the background (e.g. a hero trailer) stops.
                 NativeTabBridgeKt.nativeTabVisibilityChanged(tabName: selectedTab.rawValue)
             }
         }
@@ -694,9 +733,6 @@ final class AppNavigationCoordinator: ObservableObject {
         setTabBarVisible(true)
         reloadTabBarBehavior()
         reloadLiveTvTabVisibility()
-        // Direct callback from Compose's scroll listener (NativeTabBarScrollEffect.kt) — see
-        // observeNativeTabBarVisible's doc comment for why this bypasses the generic
-        // UserDefaults/NotificationCenter chrome-sync path.
         NativeTabBridgeKt.observeNativeTabBarVisible { [weak self] visible in
             guard let self else { return }
             self.setTabBarVisible(visible.boolValue, animated: self.tabBarBehavior == .morphed)
@@ -759,8 +795,6 @@ final class AppNavigationCoordinator: ObservableObject {
     private func setTabBarVisible(_ visible: Bool, animated: Bool = false) {
         UserDefaults.standard.set(visible, forKey: Self.nativeTabBarVisibleKey)
         if visible {
-            // Re-measure whenever the bar is (re)shown — e.g. right as a profile reload begins —
-            // so the exit animation's target is fresh even after a rotation or layout change.
             profileTabInteraction.publishIconFrame()
         }
 
@@ -773,11 +807,6 @@ final class AppNavigationCoordinator: ObservableObject {
             return
         }
 
-        // `animated` is only ever requested for `.morphed`, which is a two-instrument mode: the
-        // glass pill owns the collapsed shape, and the REAL system tab bar owns the expanded one
-        // so that dragging across tabs keeps its native liquid-glass highlight. Expanding is
-        // therefore staged — grow the pill first, then hand off to the native bar once the grow
-        // animation has landed — instead of a plain state flip.
         if visible {
             guard !isTabBarVisible || !isNativeTabBarVisible else { return }
             withAnimation(.smooth(duration: 0.38)) {
@@ -1072,19 +1101,12 @@ struct TabContentView: View {
                         coordinator: coordinator,
                         appCoordinator: appCoordinator
                     )
-                    // A native replace keeps the same NavigationStack depth.
-                    // Keying by the wrapper forces SwiftUI to replace the
-                    // embedded Compose controller instead of reusing the old
-                    // screen with the new route's toolbar preferences.
                     .id(wrapper.id)
                 } else {
                     Color.clear
                 }
             }
         }
-        // Tab-bar visibility is a preference emitted by the active navigation
-        // stack. Applying it here keeps the authentication/profile gate truly
-        // full-screen on iOS 26, where a modifier on TabView itself is ignored.
         .toolbar(
             usesNativeTabBar &&
                 appCoordinator.isMainContentVisible &&
@@ -1601,8 +1623,6 @@ struct NativeNavContentView: View {
             if appCoordinator.tabBarBehavior.usesCompactPill &&
                 appCoordinator.isAppReady &&
                 appCoordinator.isSelectedTabAtRoot {
-                // Cross-faded out once the real system tab bar has taken over the expanded
-                // shape, so the two instruments are never both on screen.
                 NuvioGlassTabBar(
                     appCoordinator: appCoordinator,
                     iconStore: iconStore

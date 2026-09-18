@@ -4,6 +4,7 @@ import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.CustomThemeColors
 import com.nuvio.app.core.ui.NativeTabBridge
 import com.nuvio.app.core.ui.ThemeColors
+import com.nuvio.app.core.ui.nativeAccentGradientHex
 import com.nuvio.app.features.membership.MemberAccessRepository
 import com.nuvio.app.features.membership.resolveCustomThemeColors
 import com.nuvio.app.features.membership.resolveAppTheme
@@ -76,7 +77,10 @@ object ThemeSettingsRepository {
         _liquidGlassNativeTabBarEnabled.value = NuvioTabBarBehavior.Default.isEnabled
         _dynamicArtworkBackgroundEnabled.value = false
         _showCatalogAccentEnabled.value = false
-        NativeTabBridge.publishAccentColor(AppTheme.WHITE.nativeTabAccentHex())
+        NativeTabBridge.publishAccentColor(
+            hexColor = AppTheme.WHITE.nativeTabAccentHex(),
+            gradientHexColors = ThemeColors.getColorPalette(AppTheme.WHITE).nativeAccentGradientHex(),
+        )
         NativeTabBridge.publishTabBarBehavior(NuvioTabBarBehavior.Default)
         NativeTabBridge.publishLiquidGlassEnabled(NuvioTabBarBehavior.Default.isEnabled)
         _selectedAppLanguage.value = AppLanguage.DEVICE
@@ -217,8 +221,10 @@ object ThemeSettingsRepository {
         )
         _customThemeColors.value = resolveCustomThemeColors(_customThemePreference.value, access.tier)
         _selectedTheme.value = effective
+        val palette = ThemeColors.getColorPalette(effective, _customThemeColors.value)
         NativeTabBridge.publishAccentColor(
-            ThemeColors.getColorPalette(effective, _customThemeColors.value).nativeAccentHex,
+            hexColor = palette.nativeAccentHex,
+            gradientHexColors = palette.nativeAccentGradientHex(),
         )
     }
 }

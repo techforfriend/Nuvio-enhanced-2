@@ -52,11 +52,6 @@ internal object NativeTabBridge {
 
     fun publishTabBarVisible(visible: Boolean) {
         val supported = isLiquidGlassNativeTabBarSupported()
-        // Direct, in-memory callback for the morphed pill's live scroll animation — the
-        // UserDefaults + NSNotificationCenter round trip below is fine for occasional chrome
-        // updates (behavior/accent/titles), but going through disk + a broadcast notification on
-        // every scroll direction change added enough latency to make the pill morph feel laggy
-        // and occasionally desynced from the gesture.
         swiftTabBarVisibilityListener?.invoke(visible && supported)
         publishNativeTabBarVisible(visible && supported)
     }
@@ -71,8 +66,11 @@ internal object NativeTabBridge {
         publishNativeTabBarBehavior(if (supported) behavior.key else NuvioTabBarBehavior.OFF.key)
     }
 
-    fun publishAccentColor(hexColor: String) {
-        publishNativeTabAccentColor(hexColor)
+    fun publishAccentColor(hexColor: String, gradientHexColors: List<String> = listOf(hexColor)) {
+        publishNativeTabAccentColor(
+            hexColor = hexColor,
+            gradientHexColors = gradientHexColors.ifEmpty { listOf(hexColor) },
+        )
     }
 
     fun publishTabTitles(
@@ -100,9 +98,6 @@ internal object NativeTabBridge {
 
     private val _profileTabIconFrame = MutableStateFlow<ProfileTabIconFrame?>(null)
 
-    // The real on-screen position of the native Profile tab bar item, in points (== dp), pushed
-    // from Swift (see `publishProfileTabIconFrame` below). Lets the profile-loading exit animation
-    // (AppLoadingContent) land pixel-perfect on the actual icon instead of an approximated corner.
     val profileTabIconFrame: StateFlow<ProfileTabIconFrame?> = _profileTabIconFrame.asStateFlow()
 
     fun receiveProfileTabIconFrame(xDp: Float, yDp: Float, widthDp: Float, heightDp: Float) {
@@ -230,13 +225,6 @@ class NativeProfileSwitcherController {
 
 private var swiftTabBarVisibilityListener: ((Boolean) -> Unit)? = null
 
-/**
- * Registers a direct callback for the morphed tab bar's scroll-driven visibility signal (see
- * NativeTabBarScrollEffect.kt). Called once from Swift at app start, this bypasses the
- * UserDefaults + NSNotificationCenter "tab chrome changed" round trip used for other, less
- * time-critical chrome updates — that generic path added enough latency mid-scroll to make the
- * pill morph feel laggy and occasionally desynced from the gesture.
- */
 fun observeNativeTabBarVisible(listener: (Boolean) -> Unit) {
     swiftTabBarVisibilityListener = listener
 }
@@ -245,24 +233,10 @@ fun nativeTabSelect(tabName: String) {
     NativeTabBridge.requestTab(tabName)
 }
 
-/**
- * Called directly from Swift whenever the real Profile tab bar item's on-screen frame is known
- * (or changes) — see `NativeProfileTabInteractionCoordinator` in ContentView.swift, which already
- * reads this exact frame (`UITabBarItem.frame(in:)`) for its long-press hit-testing. All values
- * are in points, which are numerically identical to Compose's dp on iOS.
- */
 fun publishProfileTabIconFrame(xDp: Float, yDp: Float, widthDp: Float, heightDp: Float) {
     NativeTabBridge.receiveProfileTabIconFrame(xDp, yDp, widthDp, heightDp)
 }
 
-/**
- * Called directly from Swift (`AppNavigationCoordinator.selectedTab`'s `didSet`) every time the
- * native tab bar switches to a different tab, including when Compose's own `selectedTab` never
- * changes because native navigation owns tab switching entirely. Home can stay mounted (just
- * hidden) behind the other native tabs, so this is the only reliable "Home is no longer visible"
- * signal — it calls straight into the playback controller instead of going through Compose state,
- * which may not even be recomposing while off-screen.
- */
 fun nativeTabVisibilityChanged(tabName: String) {
     if (NativeNavigationTab.fromName(tabName) != NativeNavigationTab.Home) {
         com.nuvio.app.features.home.components.HomeHeroTrailerPlaybackController.forceStop()
@@ -279,7 +253,7 @@ internal expect fun publishNativeTabBarVisible(visible: Boolean)
 
 internal expect fun publishNativeSelectedTab(tabName: String)
 
-internal expect fun publishNativeTabAccentColor(hexColor: String)
+internal expect fun publishNativeTabAccentColor(hexColor: String, gradientHexColors: List<String>)
 
 internal expect fun publishNativeTabTitles(
     home: String,
