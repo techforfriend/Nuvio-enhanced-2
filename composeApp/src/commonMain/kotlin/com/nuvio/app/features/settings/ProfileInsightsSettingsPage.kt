@@ -41,6 +41,7 @@ import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.ButtonDefaults
@@ -74,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.format.resolveReleaseInfoForDisplay
+import com.nuvio.app.core.ui.platformPhysicalTopInset
 import com.nuvio.app.core.ui.NuvioPrimaryButton
 import com.nuvio.app.core.ui.NuvioSurfaceCard
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
@@ -246,6 +248,8 @@ private fun ProfileInsightsBody(
             stats = stats,
             isCollectionAvailable = isCollectionAvailable,
             onCollectionClick = onCollectionClick,
+            onEditProfile = onEditProfile.takeUnless { isTablet },
+            onSwitchProfile = onSwitchProfile.takeUnless { isTablet },
         )
         Column(
             modifier = Modifier
@@ -253,11 +257,13 @@ private fun ProfileInsightsBody(
                 .padding(top = if (isTablet) 18.dp else 14.dp),
             verticalArrangement = Arrangement.spacedBy(if (isTablet) 18.dp else 14.dp),
         ) {
-            if (onSwitchProfile != null || onEditProfile != null) {
+            val inlineEditProfile = onEditProfile.takeIf { isTablet }
+            val inlineSwitchProfile = onSwitchProfile.takeIf { isTablet }
+            if (inlineSwitchProfile != null || inlineEditProfile != null) {
                 ProfileManagementActions(
                     isTablet = isTablet,
-                    onSwitchProfile = onSwitchProfile,
-                    onEditProfile = onEditProfile,
+                    onSwitchProfile = inlineSwitchProfile,
+                    onEditProfile = inlineEditProfile,
                 )
             }
             ProfileWatchTimeRow(stats = stats)
@@ -332,6 +338,30 @@ private fun ProfileManagementActions(
 }
 
 @Composable
+private fun ProfileHeaderIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.14f))
+            .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = Color.White,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
+@Composable
 private fun ProfileInsightsHero(
     profile: NuvioProfile?,
     avatarItem: AvatarCatalogItem?,
@@ -340,6 +370,8 @@ private fun ProfileInsightsHero(
     stats: ProfileInsightsStats,
     isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
     onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
+    onEditProfile: (() -> Unit)?,
+    onSwitchProfile: (() -> Unit)?,
 ) {
     if (isTablet) {
         ProfileInsightsHeroBounded(
@@ -358,6 +390,8 @@ private fun ProfileInsightsHero(
             stats = stats,
             isCollectionAvailable = isCollectionAvailable,
             onCollectionClick = onCollectionClick,
+            onEditProfile = onEditProfile,
+            onSwitchProfile = onSwitchProfile,
         )
     }
 }
@@ -450,6 +484,8 @@ private fun ProfileInsightsHeroCinematic(
     stats: ProfileInsightsStats,
     isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
     onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
+    onEditProfile: (() -> Unit)?,
+    onSwitchProfile: (() -> Unit)?,
 ) {
     val tokens = MaterialTheme.nuvio
     val accent = profile?.avatarColorHex?.let(::parseHexColor) ?: tokens.colors.accent
@@ -548,6 +584,34 @@ private fun ProfileInsightsHeroCinematic(
                     .padding(start = 18.dp)
                     .padding(bottom = 18.dp),
             )
+
+            if (onEditProfile != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = platformPhysicalTopInset() + 4.dp, end = 18.dp),
+                ) {
+                    ProfileHeaderIconButton(
+                        icon = Icons.Rounded.Edit,
+                        contentDescription = stringResource(Res.string.profile_insights_edit_profile),
+                        onClick = onEditProfile,
+                    )
+                }
+            }
+
+            if (onSwitchProfile != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 140.dp, end = 18.dp),
+                ) {
+                    ProfileHeaderIconButton(
+                        icon = Icons.Rounded.People,
+                        contentDescription = stringResource(Res.string.profile_insights_switch_profile),
+                        onClick = onSwitchProfile,
+                    )
+                }
+            }
         }
     }
 }

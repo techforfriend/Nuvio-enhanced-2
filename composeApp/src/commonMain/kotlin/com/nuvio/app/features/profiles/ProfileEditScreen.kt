@@ -2,6 +2,7 @@ package com.nuvio.app.features.profiles
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,14 +11,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -47,6 +51,7 @@ import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.NuvioSurfaceCard
 import com.nuvio.app.core.ui.NuvioAsyncImage
+import com.nuvio.app.core.ui.platformPhysicalTopInset
 import com.nuvio.app.features.membership.CosmeticEntitlement
 import com.nuvio.app.features.membership.MemberAccessRepository
 import com.nuvio.app.features.membership.ProfileBackgroundRepository
@@ -116,8 +121,41 @@ fun ProfileEditScreen(
     val previewAccent = remember(visibleAvatarItem, fallbackColorHex) {
         parseHexColor(visibleAvatarItem?.bgColor ?: fallbackColorHex)
     }
+    val saveEnabled = name.isNotBlank() && !avatarUrlIsInvalid && !customBackgroundUrlIsInvalid && !isSaving
+    val handleSave: () -> Unit = {
+        isSaving = true
+        scope.launch {
+            try {
+                val avatarColorHex = visibleAvatarItem?.bgColor ?: fallbackColorHex
+                if (isNew) {
+                    ProfileRepository.createProfile(
+                        name = name,
+                        avatarColorHex = avatarColorHex,
+                        avatarId = if (customAvatarUrl == null) selectedAvatarId else null,
+                        avatarUrl = customAvatarUrl,
+                        usesPrimaryAddons = usesPrimaryAddons,
+                    )
+                } else {
+                    ProfileRepository.updateProfile(
+                        profileIndex = currentProfile!!.profileIndex,
+                        name = name,
+                        avatarColorHex = avatarColorHex,
+                        avatarId = if (customAvatarUrl == null) selectedAvatarId else null,
+                        avatarUrl = customAvatarUrl,
+                        profileBackgroundId = selectedBackgroundId,
+                        profileBackgroundUrl = selectedBackgroundUrl,
+                        usesPrimaryAddons = usesPrimaryAddons,
+                    )
+                }
+                onSaved()
+            } finally {
+                isSaving = false
+            }
+        }
+    }
 
-    NuvioScreen(modifier = modifier) {
+    Box(modifier = modifier.fillMaxSize()) {
+    NuvioScreen {
         stickyHeader {
             NuvioScreenHeader(
                 title = if (isNew) {
@@ -317,47 +355,6 @@ fun ProfileEditScreen(
 
         item {
             Spacer(modifier = Modifier.height(8.dp))
-            NuvioPrimaryButton(
-                text = if (isSaving) {
-                    stringResource(Res.string.profile_saving)
-                } else if (isNew) {
-                    stringResource(Res.string.profile_create_profile)
-                } else {
-                    stringResource(Res.string.collections_editor_save_changes)
-                },
-                enabled = name.isNotBlank() && !avatarUrlIsInvalid && !customBackgroundUrlIsInvalid && !isSaving,
-                onClick = {
-                    isSaving = true
-                    scope.launch {
-                        try {
-                            val avatarColorHex = visibleAvatarItem?.bgColor ?: fallbackColorHex
-                            if (isNew) {
-                                ProfileRepository.createProfile(
-                                    name = name,
-                                    avatarColorHex = avatarColorHex,
-                                    avatarId = if (customAvatarUrl == null) selectedAvatarId else null,
-                                    avatarUrl = customAvatarUrl,
-                                    usesPrimaryAddons = usesPrimaryAddons,
-                                )
-                            } else {
-                                ProfileRepository.updateProfile(
-                                    profileIndex = currentProfile!!.profileIndex,
-                                    name = name,
-                                    avatarColorHex = avatarColorHex,
-                                    avatarId = if (customAvatarUrl == null) selectedAvatarId else null,
-                                    avatarUrl = customAvatarUrl,
-                                    profileBackgroundId = selectedBackgroundId,
-                                    profileBackgroundUrl = selectedBackgroundUrl,
-                                    usesPrimaryAddons = usesPrimaryAddons,
-                                )
-                            }
-                            onSaved()
-                        } finally {
-                            isSaving = false
-                        }
-                    }
-                },
-            )
         }
 
         if (!isNew && (currentProfile?.profileIndex ?: 0) > 1) {
@@ -380,6 +377,40 @@ fun ProfileEditScreen(
                         textAlign = TextAlign.Center,
                     )
                 }
+            }
+        }
+    }
+
+        val saveContentDescription = if (isSaving) {
+            stringResource(Res.string.profile_saving)
+        } else if (isNew) {
+            stringResource(Res.string.profile_create_profile)
+        } else {
+            stringResource(Res.string.collections_editor_save_changes)
+        }
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = platformPhysicalTopInset() + 4.dp, end = 18.dp)
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = if (saveEnabled) 1f else 0.35f))
+                .then(if (saveEnabled) Modifier.clickable(onClick = handleSave) else Modifier),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (isSaving) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    color = Color.Black,
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.Save,
+                    contentDescription = saveContentDescription,
+                    tint = Color.Black,
+                    modifier = Modifier.size(20.dp),
+                )
             }
         }
     }
