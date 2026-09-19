@@ -729,6 +729,7 @@ final class MPVPlayerViewController: UIViewController {
         setSetupOption("vulkan-queue-count", "1")
         setSetupOption("vulkan-async-compute", "no")
         setSetupOption("vulkan-async-transfer", "no")
+        setSetupOption("vulkan-disable-interop", "yes")
         setSetupOption("video-rotate", "no")
         setSetupOption("subs-match-os-language", "yes")
         setSetupOption("subs-fallback", "yes")
@@ -761,6 +762,13 @@ final class MPVPlayerViewController: UIViewController {
     }
 
     private static let demuxerMaxBytes = 64 * 1024 * 1024
+
+    private func setupNotifications() {
+        NotificationCenter.default.addObserver(self, selector: #selector(enterBackground),
+                                               name: UIApplication.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(enterForeground),
+                                               name: UIApplication.willEnterForegroundNotification, object: nil)
+    }
 
     private static let demuxerMaxBackBytes = 32 * 1024 * 1024
 
