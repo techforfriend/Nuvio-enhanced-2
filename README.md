@@ -40,9 +40,6 @@ or grab the IPA from [the latest release](https://github.com/luqmanfadlli/NuvioM
 
 Grab the APK from [the latest release](https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/latest).
 
-The app installs as **Nuvio Enhanced**. It shares the `com.nuvio.app` application ID with the official Android build,
-so the two cannot be installed side by side — uninstall one first.
-
 ---
 
 ## What Enhanced adds
@@ -54,10 +51,12 @@ Everythings below are added on top of upstream Nuvio Mobile.
 | Feature | Where | Default |
 |---|---|---|
 | **Hero trailer autoplay** — trailers play in the hero carousel instead of static artwork. The carousel stops auto-advancing while a trailer plays, so it only moves when you swipe. | Settings → Layout → Home Layout → **Hero Trailer Playback** | Off |
+| **Trailer start with sound** — start the hero trailer unmuted instead of muted. You can still mute it with the speaker button. Appears once trailer playback is on. | Settings → Layout → Home Layout → **Start with sound** | Off |
 | **Trailer start delay** — how long the artwork holds before the trailer starts, `Instant` to 10 s. Appears once trailer playback is on. | Settings → Layout → Home Layout → **Trailer Start Delay** | Instant |
 | **Hero style** — `Full-bleed` (artwork spans the screen) or `Card` (rounded, inset). | Settings → Layout → Home Layout → **Hero Style** | Full-bleed |
 | **Dynamic background** — tints the home screen with a gradient pulled from the featured artwork's colours. | Settings → Layout → **Dynamic background color** | Off |
 | **Catalog accent underline** — accent rule under each catalog row heading. | Settings → Layout → **Catalog accent underline** | Off |
+| **Accent gradient everywhere** — the theme accent is drawn as its full gradient rather than a single colour: settings and Profile Insight icons, Taste DNA bars and chips, the catalog accent underline, primary buttons, and the tinted iOS tab bar in every tab bar mode. | Settings → Layout → **Theme** | Follows the selected theme |
 
 ### Player
 
@@ -65,8 +64,10 @@ Everythings below are added on top of upstream Nuvio Mobile.
 |---|---|---|
 | **Tap-to-seek on the timeline** — tap anywhere on the progress bar to jump there. | — | Always on |
 | **Volume Boost** — volume can be boosted past 100% | Swipe up all the way past 100% | Always on |
-| **Stream Quality Chooser** - add quality indicator and ability to choose quality on HLS stream whenever available | Player screen overlay | Best quality supported by hardware |
-| **Info Button** add playback info button to show currently playing video and audio information | Player screen overlay | — |
+| **Stream Quality Chooser** - add quality indicator and ability to choose quality on HLS stream whenever available, in both the legacy and the new control layout | Player screen overlay | Best quality supported by hardware |
+| **Info Button** add playback info button to show currently playing video and audio information, in both the legacy and the new control layout | Player screen overlay | — |
+| **Picture in Picture button** — enter PiP straight from the player overlay, in both the legacy and the new control layout. | Player screen overlay | — |
+| **Gesture readouts** — swiping shows the seek target and delta, and the volume/brightness percentage, in the new control layout as well. | — | Always on |
 | **Swipe to Seek toggle** — an option to turn it off to prevent accidental seeking while keeping the up/down brightness and volume swipes. | Settings → Playback → **Swipe to Seek** (under Touch Gestures) | On |
 | **Hardware keyboard shortcuts** — <kbd>Space</kbd> play/pause, <kbd>←</kbd> / <kbd>→</kbd> seek 10 s, <kbd>Esc</kbd> leave the player. Inert while a panel is open or the controls are locked. | — | Always on |
 | **Adjustable subtitle transparency** | Settings → Playback → Subtitle Rendering → **Background Color** | — |
@@ -96,8 +97,18 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 | **More Like This → View All** — the recommendation rail's header opens the full list as a paged grid that keeps loading as you scroll, instead of stopping at one page. | — | Always on when the rail has more to show |
 | **Budget and revenue** — added to the details block for movies. | Shown with Settings → Layout → Detail Page → **Details** | — |
 | **Episode ratings** — TMDB vote averages on episode cards. | Settings → Content & Discovery → TMDB Enrichment → **Episode ratings** | — |
+| **Icon action row** — play/resume spans the full width and the other actions (download, start from the beginning, random episode, external player, watched, library) sit as icons underneath it, instead of hiding behind the 3-dots menu. Turn it off to get the old row back. | Settings → Layout → Detail Page → **Icon action row** | On |
+| **Download button** — adds a download button under Play that opens the stream list in download mode. | Settings → Downloads → **Show download button** | Off |
+| **Trailer start with sound** — start the details-page trailer unmuted. Appears once trailer playback is on. | Settings → Layout → Detail Page → **Start with sound** | Off |
 | **Random Episode** — Play random episode for series. | 3 dots next to play button → **random icon** | — |
 | **Include watched episodes toggle** — Include watched episodes in random playback. | Settings → Playback → **Include watched episodes in random playback**| Off |
+
+### Streams
+
+| Feature | Where | Default |
+|---|---|---|
+| **Pinned sources** — pin an addon or a scraper source so its results always sort to the top of the stream list. Pins are kept per profile. | Stream list → long-press a stream or its source header → **Pin to top** | None pinned |
+| **Search bar** — a filter field above the stream list that narrows the results as you type, matching every term against the stream name, description, source, addon, filename and badges — so `1080 hevc multi` works. | Settings → Layout → Streams → **Search bar** | Off |
 
 ### Library
 
