@@ -91,6 +91,8 @@ import nuvio.composeapp.generated.resources.settings_stream_size_badges_title
 import nuvio.composeapp.generated.resources.settings_stream_addon_logo_title
 import nuvio.composeapp.generated.resources.settings_stream_addon_logo_description
 import nuvio.composeapp.generated.resources.settings_stream_display_section
+import nuvio.composeapp.generated.resources.settings_stream_search_title
+import nuvio.composeapp.generated.resources.settings_stream_search_description
 import nuvio.composeapp.generated.resources.settings_stream_background_title
 import nuvio.composeapp.generated.resources.settings_stream_background_description
 import nuvio.composeapp.generated.resources.settings_meta_background_mode_cinematic
@@ -161,6 +163,13 @@ internal fun LazyListScope.streamsSettingsContent(isTablet: Boolean) {
                     checked = currentSettings.showAddonLogo,
                     isTablet = isTablet,
                     onCheckedChange = StreamBadgeSettingsRepository::setShowAddonLogo,
+                )
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_stream_search_title),
+                    description = stringResource(Res.string.settings_stream_search_description),
+                    checked = currentSettings.showStreamSearch,
+                    isTablet = isTablet,
+                    onCheckedChange = StreamBadgeSettingsRepository::setShowStreamSearch,
                 )
             }
         }
