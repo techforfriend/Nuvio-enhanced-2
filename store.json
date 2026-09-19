@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.25",
+          "buildVersion": "130",
+          "date": "2026-09-19T17:32:52Z",
+          "localizedDescription": "- fix(details): keep the hero blend layer below the content @luqmanfadlli\r\n- feat(player): show seek, volume, and brightness values in the new layout @luqmanfadlli\r\n- fix(home): prevent hero flash when cycling @tapframe\r\n- i18n(el): translate new 0.4.24 strings and refresh stale ones @nosvasedis\r\n- revert(ui): restore previous surface and chip styles @tapframe\r\n- test(simkl): expect the percentage an episode row really carries @Judzim\r\n- fix(simkl): stop inventing an episode position out of the show runtime @Judzim\r\n- fix(simkl): keep a pause the app just recorded over a fetch that lags @Judzim\r\n- fix(simkl): never push a whole-series mark to Simkl history @Judzim\r\n- fix(player): restore the PiP, quality chooser, and info button in the new layout @luqmanfadlli\r\n- fix(ui): fade the primary button's gradient when it is disabled @luqmanfadlli\r\n- fix(downloads): tint the open downloads folder icon @luqmanfadlli",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.4.25-beta/Nuvio-0.4.25-Enhanced.ipa",
+          "size": 66955980,
+          "sha256": "1ef10c8ac1e4f95ae5e3470bd77b20696b27ce77605ce54780a9d1aaecd50bae",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.24",
           "buildVersion": "129",
           "date": "2026-09-18T19:58:08Z",
