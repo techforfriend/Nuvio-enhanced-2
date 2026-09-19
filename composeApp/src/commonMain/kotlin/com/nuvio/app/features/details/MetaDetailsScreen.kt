@@ -1215,30 +1215,30 @@ fun MetaDetailsScreen(
                                     Spacer(modifier = Modifier.height(nuvioSafeBottomPadding(32.dp)))
                                 }
                             }
-                        }
 
-                        if (backgroundMode.usesBackdropBackground && deferredMetaWorkAllowed && heroHeightPx.intValue > 0) {
-                            val blendColor = dominantBackdropColor.takeIf { dominantColorEnabled }
-                                ?: colorScheme.background
-                            Box(
-                                modifier = Modifier
-                                    .zIndex(0.5f)
-                                    .fillMaxWidth()
-                                    .height(132.dp)
-                                    .graphicsLayer {
-                                        translationY = heroHeightPx.intValue.toFloat() - detailScrollOffsetPx()
-                                    }
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                blendColor.copy(alpha = 0.98f),
-                                                blendColor.copy(alpha = 0.84f),
-                                                blendColor.copy(alpha = 0.52f),
-                                                Color.Transparent,
+                            if (backgroundMode.usesBackdropBackground && deferredMetaWorkAllowed && heroHeightPx.intValue > 0) {
+                                val blendColor = dominantBackdropColor.takeIf { dominantColorEnabled }
+                                    ?: colorScheme.background
+                                Box(
+                                    modifier = Modifier
+                                        .zIndex(0.5f)
+                                        .fillMaxWidth()
+                                        .height(132.dp)
+                                        .graphicsLayer {
+                                            translationY = heroHeightPx.intValue.toFloat() - detailScrollOffsetPx()
+                                        }
+                                        .background(
+                                            Brush.verticalGradient(
+                                                colors = listOf(
+                                                    blendColor.copy(alpha = 0.98f),
+                                                    blendColor.copy(alpha = 0.84f),
+                                                    blendColor.copy(alpha = 0.52f),
+                                                    Color.Transparent,
+                                                ),
                                             ),
                                         ),
-                                    ),
-                            )
+                                )
+                            }
                         }
 
                         DetailHeaderOverlay(
