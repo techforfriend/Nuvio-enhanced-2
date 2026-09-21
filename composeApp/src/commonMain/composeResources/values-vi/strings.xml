@@ -758,7 +758,7 @@
     <string name="settings_card_depth_surface_cast">Diễn viên</string>
     <string name="settings_card_depth_surface_trailers">Trailer</string>
     <string name="settings_poster_card_radius">Bo tròn góc</string>
-    <string name="settings_poster_card_style">POSTER</string>
+    <string name="settings_poster_card_style">KIỂU POSTER</string>
     <string name="settings_poster_card_width">Độ rộng</string>
     <string name="settings_poster_custom">Tuỳ chỉnh</string>
     <string name="settings_poster_description">Điều chỉnh độ rộng và bo tròn góc của thẻ.</string>

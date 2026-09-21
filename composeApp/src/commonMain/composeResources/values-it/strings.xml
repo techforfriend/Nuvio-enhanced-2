@@ -353,7 +353,7 @@
   <string name="settings_homescreen_visible">Visibile</string>
   <string name="settings_playback_subtitle">Player, sottotitoli e riproduzione automatica</string>
   <string name="settings_poster_card_radius">Raggio angoli</string>
-  <string name="settings_poster_card_style">LOCANDINA</string>
+  <string name="settings_poster_card_style">STILE LOCANDINA</string>
   <string name="settings_poster_card_width">Larghezza locandina</string>
   <string name="settings_poster_custom">Personalizzato</string>
   <string name="settings_poster_description">Personalizza la larghezza e il raggio degli angoli delle locandine in tutta l'app.</string>

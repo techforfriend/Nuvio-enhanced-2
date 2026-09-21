@@ -490,7 +490,7 @@
     <string name="settings_homescreen_visible">Sichtbar</string>
     <string name="settings_playback_subtitle">Player, Untertitel und automatische Wiedergabe</string>
     <string name="settings_poster_card_radius">Karten-Radius</string>
-    <string name="settings_poster_card_style">POSTERKARTE</string>
+    <string name="settings_poster_card_style">POSTERKARTEN-STIL</string>
     <string name="settings_poster_card_width">Karten-Breite</string>
     <string name="settings_poster_custom">Benutzerdefiniert</string>
     <string name="settings_poster_description">Passe Kartenbreite und Eckenradius für gemeinsame Posterkarten in der gesamten App an.</string>

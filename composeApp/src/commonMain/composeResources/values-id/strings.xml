@@ -553,7 +553,7 @@
     <string name="settings_hide_secret">Sembunyikan nilai</string>
     <string name="settings_playback_subtitle">Pemutar, subtitle, dan putar otomatis</string>
     <string name="settings_poster_card_radius">Radius Sudut</string>
-    <string name="settings_poster_card_style">KARTU POSTER</string>
+    <string name="settings_poster_card_style">GAYA KARTU POSTER</string>
     <string name="settings_poster_card_width">Lebar</string>
     <string name="settings_poster_custom">Kustom</string>
     <string name="settings_poster_description">Sesuaikan lebar kartu dan radius sudut.</string>

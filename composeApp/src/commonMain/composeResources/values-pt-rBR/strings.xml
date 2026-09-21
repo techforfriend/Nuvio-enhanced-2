@@ -538,7 +538,7 @@
     <string name="settings_hide_secret">Ocultar valor</string>
     <string name="settings_playback_subtitle">Player, legendas e reprodução automática</string>
     <string name="settings_poster_card_radius">Raio dos Cantos</string>
-    <string name="settings_poster_card_style">CARD DE PÔSTER</string>
+    <string name="settings_poster_card_style">ESTILO DO CARD DE PÔSTER</string>
     <string name="settings_poster_card_width">Largura</string>
     <string name="settings_poster_custom">Personalizado</string>
     <string name="settings_poster_description">Ajuste largura do card e raio dos cantos.</string>

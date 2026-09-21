@@ -680,7 +680,7 @@
     <string name="settings_card_depth_surface_cast">طاقم العمل</string>
     <string name="settings_card_depth_surface_trailers">الإعلانات</string>
     <string name="settings_poster_card_radius">نصف قطر الزاوية</string>
-    <string name="settings_poster_card_style">البطاقات</string>
+    <string name="settings_poster_card_style">نمط البطاقات</string>
     <string name="settings_poster_card_width">العرض</string>
     <string name="settings_poster_custom">مخصص</string>
     <string name="settings_poster_description">ضبط عرض البطاقة وزوايا الانحناء.</string>
