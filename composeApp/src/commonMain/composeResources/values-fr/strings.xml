@@ -598,7 +598,7 @@
     <string name="settings_hide_secret">Masquer la valeur</string>
     <string name="settings_playback_subtitle">Lecteur, sous-titres et lecture automatique</string>
     <string name="settings_poster_card_radius">Rayon de carte</string>
-    <string name="settings_poster_card_style">STYLE DE CARTE D’AFFICHE</string>
+    <string name="settings_poster_card_style">CARTE D’AFFICHE</string>
     <string name="settings_poster_card_width">Largeur de carte</string>
     <string name="settings_poster_custom">Personnalisé</string>
     <string name="settings_poster_description">Ajuste la largeur des cartes et le rayon des coins.</string>
@@ -633,7 +633,7 @@
     <string name="settings_continue_watching_sort_mode_default_desc">Trier tous les éléments par récence</string>
     <string name="settings_continue_watching_sort_mode_streaming">Style streaming</string>
     <string name="settings_continue_watching_sort_mode_streaming_desc">Éléments sortis d’abord, à venir à la fin</string>
-    <string name="settings_continue_watching_section_card_style">STYLE DE CARTE D’AFFICHE</string>
+    <string name="settings_continue_watching_section_card_style">CARTE D’AFFICHE</string>
     <string name="settings_continue_watching_section_on_launch">AU DÉMARRAGE</string>
     <string name="settings_continue_watching_section_up_next_behavior">COMPORTEMENT DE LA SUITE</string>
     <string name="settings_continue_watching_section_visibility">VISIBILITÉ</string>

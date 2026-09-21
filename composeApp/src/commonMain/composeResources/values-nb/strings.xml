@@ -537,7 +537,7 @@
     <string name="settings_hide_secret">Skjul verdi</string>
     <string name="settings_playback_subtitle">Avspiller, undertekster og auto-play</string>
     <string name="settings_poster_card_radius">Hjørneradius</string>
-    <string name="settings_poster_card_style">PLAKATSTIL</string>
+    <string name="settings_poster_card_style">PLAKATKORT</string>
     <string name="settings_poster_card_width">Bredde</string>
     <string name="settings_poster_custom">Tilpasset</string>
     <string name="settings_poster_description">Juster kortbredde og hjørneradius.</string>

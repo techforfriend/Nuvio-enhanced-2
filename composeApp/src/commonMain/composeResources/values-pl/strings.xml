@@ -553,7 +553,7 @@
     <string name="settings_hide_secret">Ukryj wartość</string>
     <string name="settings_playback_subtitle">Odtwarzacz, napisy i automatyczne odtwarzanie</string>
     <string name="settings_poster_card_radius">Zaokrąglenie karty</string>
-    <string name="settings_poster_card_style">STYL KARTY PLAKATU</string>
+    <string name="settings_poster_card_style">KARTA PLAKATU</string>
     <string name="settings_poster_card_width">Szerokość karty</string>
     <string name="settings_poster_custom">Niestandardowy</string>
     <string name="settings_poster_description">Dostosuj szerokość i zaokrąglenie rogów kart plakatów w całej aplikacji.</string>

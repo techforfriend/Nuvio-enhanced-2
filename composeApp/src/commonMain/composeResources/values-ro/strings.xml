@@ -606,7 +606,7 @@
     <string name="settings_hide_secret">Ascunde valoarea</string>
     <string name="settings_playback_subtitle">Player, subtitrări și redare automată</string>
     <string name="settings_poster_card_radius">Raza colțurilor</string>
-    <string name="settings_poster_card_style">STIL CARD POSTER</string>
+    <string name="settings_poster_card_style">CARD POSTER</string>
     <string name="settings_poster_card_width">Lățime</string>
     <string name="settings_poster_custom">Personalizat</string>
     <string name="settings_poster_description">Ajustează lățimea cardului și raza colțurilor.</string>

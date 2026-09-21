@@ -470,7 +470,7 @@
     <string name="settings_card_depth_surface_cast">Καστ</string>
     <string name="settings_card_depth_surface_trailers">Τρέιλερ</string>
     <string name="settings_poster_card_radius">Ακτίνα κάρτας</string>
-    <string name="settings_poster_card_style">ΣΤΥΛ ΚΑΡΤΑΣ ΑΦΙΣΑΣ</string>
+    <string name="settings_poster_card_style">ΚΑΡΤΑ ΑΦΙΣΑΣ</string>
     <string name="settings_poster_card_width">Πλάτος κάρτας</string>
     <string name="settings_poster_custom">Προσαρμοσμένο</string>
     <string name="settings_poster_description">Ρύθμιση πλάτους κάρτας και ακτίνας γωνιών.</string>

@@ -531,7 +531,7 @@
     <string name="settings_hide_secret">Érték elrejtése</string>
     <string name="settings_playback_subtitle">Lejátszó, feliratok és automatikus lejátszás</string>
     <string name="settings_poster_card_radius">Sarokkerekítés</string>
-    <string name="settings_poster_card_style">POSZTERKÁRTYA STÍLUSA</string>
+    <string name="settings_poster_card_style">POSZTERKÁRTYA</string>
     <string name="settings_poster_card_width">Szélesség</string>
     <string name="settings_poster_custom">Egyéni</string>
     <string name="settings_poster_description">Kártyaszélesség és sarokkerekítés finomhangolása.</string>

@@ -667,7 +667,7 @@
     <string name="settings_card_depth_surface_cast">Oyuncular</string>
     <string name="settings_card_depth_surface_trailers">Fragmanlar</string>
     <string name="settings_poster_card_radius">Kart yuvarlaklığı</string>
-    <string name="settings_poster_card_style">POSTER KART STİLİ</string>
+    <string name="settings_poster_card_style">POSTER KARTI</string>
     <string name="settings_poster_card_width">Kart genişliği</string>
     <string name="settings_poster_custom">Özel</string>
     <string name="settings_poster_description">Uygulama genelindeki ortak poster kartları için kart genişliğini ve köşe yuvarlaklığını özelleştir.</string>

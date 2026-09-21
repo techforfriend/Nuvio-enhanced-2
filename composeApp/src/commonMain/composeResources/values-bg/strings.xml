@@ -744,7 +744,7 @@
     <string name="settings_card_depth_surface_cast">Актьорски състав</string>
     <string name="settings_card_depth_surface_trailers">Трейлъри</string>
     <string name="settings_poster_card_radius">Радиус на ъглите</string>
-    <string name="settings_poster_card_style">СТИЛ НА КАРТИЧКАТА С ПОСТЕР</string>
+    <string name="settings_poster_card_style">КАРТИЧКА С ПОСТЕР</string>
     <string name="settings_poster_card_width">Ширина</string>
     <string name="settings_poster_custom">Персонализиран</string>
     <string name="settings_poster_description">Настрой ширината на картичката и радиуса на ъглите.</string>

@@ -577,7 +577,7 @@
     <string name="settings_hide_secret">Skryť hodnotu</string>
     <string name="settings_playback_subtitle">Prehrávač, titulky a automatické prehrávanie</string>
     <string name="settings_poster_card_radius">Polomer rohov</string>
-    <string name="settings_poster_card_style">ŠTÝL KARTY PLAGÁTU</string>
+    <string name="settings_poster_card_style">KARTA PLAGÁTU</string>
     <string name="settings_poster_card_width">Šírka</string>
     <string name="settings_poster_custom">Vlastné</string>
     <string name="settings_poster_description">Nastaviť šírku karty a polomer rohov.</string>

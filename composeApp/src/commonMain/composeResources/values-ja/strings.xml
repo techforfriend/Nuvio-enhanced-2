@@ -588,7 +588,7 @@
     <string name="settings_hide_secret">値を隠す</string>
     <string name="settings_playback_subtitle">プレーヤー、字幕、自動再生</string>
     <string name="settings_poster_card_radius">角の丸み</string>
-    <string name="settings_poster_card_style">ポスターカードスタイル</string>
+    <string name="settings_poster_card_style">ポスターカード</string>
     <string name="settings_poster_card_width">幅</string>
     <string name="settings_poster_custom">カスタム</string>
     <string name="settings_poster_description">カードの幅と角の丸みを調整します。</string>
