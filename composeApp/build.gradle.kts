@@ -129,7 +129,7 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 |package com.nuvio.app.features.mdblist
                 |
                 |object MdbListConfig {
-                |    const val CLIENT_ID = "${props.getProperty("MDBLIST_CLIENT_ID", "kMMZyv8qithmUSF5102U6HTAPEDqfHtNbn1W4gkz")}"
+                |    const val CLIENT_ID = "${props.getProperty("MDBLIST_CLIENT_ID", "")}"
                 |}
                 """.trimMargin()
             )

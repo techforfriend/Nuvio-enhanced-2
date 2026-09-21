@@ -172,6 +172,7 @@ data class WatchProgressUiState(
         get() = entries.continueWatchingEntries(limit = ContinueWatchingLimit)
 }
 
+@Serializable
 data class WatchProgressPlaybackSession(
     val profileId: Int,
     val contentType: String,
