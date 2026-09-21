@@ -833,12 +833,11 @@ final class AppNavigationCoordinator: ObservableObject {
 
     func reloadLiveTvTabVisibility() {
         let visible = UserDefaults.standard.bool(forKey: Self.liveTvTabVisibleKey)
-        if isLiveTvTabVisible != visible {
-            isLiveTvTabVisible = visible
-        }
+        guard isLiveTvTabVisible != visible else { return }
         if !visible && selectedTab == .liveTv {
             selectedTab = .home
         }
+        isLiveTvTabVisible = visible
     }
 
     func coordinator(for tab: NuvioAppTab) -> TabNavigationCoordinator {
@@ -1546,10 +1545,14 @@ struct NativeNavContentView: View {
         }
     }
 
+    private func tabBarVisibility(for tab: NuvioAppTab) -> Visibility {
+        tab == .liveTv && !appCoordinator.isLiveTvTabVisible ? .hidden : .automatic
+    }
+
     @available(iOS 26.0, *)
     private var nativeTabs: some View {
         TabView(selection: tabSelection) {
-            ForEach(appCoordinator.availableTabs, id: \.self) { tab in
+            ForEach(NuvioAppTab.allCases, id: \.self) { tab in
                 if tab == .settings {
                     Tab(value: tab) {
                         TabContentView(
@@ -1612,6 +1615,7 @@ struct NativeNavContentView: View {
                             )
                         }
                     }
+                    .defaultVisibility(tabBarVisibility(for: tab), for: .tabBar)
                 }
             }
         }
