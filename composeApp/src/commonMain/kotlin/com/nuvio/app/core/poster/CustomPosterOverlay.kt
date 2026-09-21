@@ -100,7 +100,9 @@ fun List<com.nuvio.app.features.library.LibraryItem>.withCustomPosterUrls(
 
 /**
  * Applies a custom poster URL pattern to a [ContinueWatchingItem].
- * Only the `poster` field is replaced; episode thumbnails and backgrounds are left untouched.
+ * The `poster` field is replaced with the portrait resolve. When the pattern contains
+ * `{shape}`, a landscape URL is also resolved and set as `background` so that
+ * wide/card CW layouts pick it up automatically.
  */
 fun com.nuvio.app.features.watchprogress.ContinueWatchingItem.withCustomPosterUrl(
     pattern: String
@@ -109,18 +111,25 @@ fun com.nuvio.app.features.watchprogress.ContinueWatchingItem.withCustomPosterUr
 
     val ids = CustomPosterUrlResolver.extractIds(parentMetaId)
     val contentType = if (parentMetaType.equals("movie", ignoreCase = true)) "movie" else "series"
+    val supportsShape = "{shape}" in pattern
 
     val resolvedPoster = CustomPosterUrlResolver.resolve(
         pattern = pattern,
         ids = ids,
         type = contentType,
         shape = "poster"
-    ) ?: return this
+    )
+    val resolvedLandscape = if (supportsShape) {
+        CustomPosterUrlResolver.resolve(pattern, ids, contentType, shape = "landscape")
+    } else null
+
+    if (resolvedPoster == null && resolvedLandscape == null) return this
 
     val originalPoster = poster
     return copy(
-        poster = resolvedPoster,
-        imageUrl = if (imageUrl == originalPoster) resolvedPoster else imageUrl,
+        poster = resolvedPoster ?: poster,
+        background = resolvedLandscape ?: background,
+        imageUrl = if (imageUrl == originalPoster && resolvedPoster != null) resolvedPoster else imageUrl,
     )
 }
 
