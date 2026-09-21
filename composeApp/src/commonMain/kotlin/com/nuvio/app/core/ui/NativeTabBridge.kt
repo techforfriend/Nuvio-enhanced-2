@@ -42,6 +42,13 @@ internal object NativeTabBridge {
     private val _requestedTabs = MutableSharedFlow<NativeNavigationTab>(extraBufferCapacity = 1)
     val requestedTabs: SharedFlow<NativeNavigationTab> = _requestedTabs.asSharedFlow()
 
+    private val _activeTab = MutableStateFlow(NativeNavigationTab.Home)
+    val activeTab: StateFlow<NativeNavigationTab> = _activeTab.asStateFlow()
+
+    fun markActiveTab(tab: NativeNavigationTab) {
+        _activeTab.value = tab
+    }
+
     fun requestTab(tabName: String) {
         _requestedTabs.tryEmit(NativeNavigationTab.fromName(tabName))
     }
@@ -238,6 +245,7 @@ fun publishProfileTabIconFrame(xDp: Float, yDp: Float, widthDp: Float, heightDp:
 }
 
 fun nativeTabVisibilityChanged(tabName: String) {
+    NativeTabBridge.markActiveTab(NativeNavigationTab.fromName(tabName))
     if (NativeNavigationTab.fromName(tabName) != NativeNavigationTab.Home) {
         com.nuvio.app.features.home.components.HomeHeroTrailerPlaybackController.forceStop()
     }
