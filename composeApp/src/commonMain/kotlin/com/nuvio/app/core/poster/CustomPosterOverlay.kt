@@ -2,6 +2,7 @@ package com.nuvio.app.core.poster
 
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.PosterShape
+import kotlin.jvm.JvmName
 
 /**
  * Applies a custom poster URL pattern to a [MetaPreview].
