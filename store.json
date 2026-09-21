@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.26",
+          "buildVersion": "131",
+          "date": "2026-09-21T11:56:57Z",
+          "localizedDescription": "- fix(merge): keep source pinning in the shared provider filter row @luqmanfadlli\r\n- feat(downloads): show the download button by default @luqmanfadlli\r\n- fix(navigation): keep the iPad floating bar on the tab that is showing @luqmanfadlli\r\n- feat(navigation): bring the jelly floating nav bar to iPad @luqmanfadlli\r\n- feat(details): show the library icon on saved items @luqmanfadlli\r\n- fix(ios): stop the tab bar crashing when Live TV is disabled @luqmanfadlli\r\n- fix(streams): share addon filtering across pickers @tapframe\r\n- i18n(nb): complete missing Norwegian Bokmål strings @SimSalabimse\r\n- feat(streams): add an optional search bar to the stream selection screen @luqmanfadlli\r\n- feat(details): put the actions in an icon row under play @luqmanfadlli",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.4.26-beta/Nuvio-0.4.26-Enhanced.ipa",
+          "size": 67100856,
+          "sha256": "2dee04cecf3d2345baa6945314046ca6279d7e067ecf6df937319fca7a746d6d",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.25",
           "buildVersion": "130",
           "date": "2026-09-19T17:32:52Z",
