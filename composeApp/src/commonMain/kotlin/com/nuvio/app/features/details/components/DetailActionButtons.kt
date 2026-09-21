@@ -54,11 +54,14 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_play
 import nuvio.composeapp.generated.resources.details_download_action
 import nuvio.composeapp.generated.resources.details_actions_menu_label
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 data class DetailSecondaryAction(
     val label: String,
     val icon: ImageVector,
+    val drawable: DrawableResource? = null,
     val isActive: Boolean = false,
     val onClick: () -> Unit = {},
     val onLongClick: (() -> Unit)? = null,
@@ -123,6 +126,7 @@ fun DetailActionButtons(
                         DetailIconAction(
                             label = action.label,
                             icon = action.icon,
+                            drawable = action.drawable,
                             active = action.isActive,
                             progress = 1f,
                             size = iconButtonSize,
@@ -175,6 +179,7 @@ fun DetailActionButtons(
                             DetailIconAction(
                                 label = action.label,
                                 icon = action.icon,
+                                drawable = action.drawable,
                                 active = action.isActive,
                                 progress = menuProgress,
                                 size = iconButtonSize,
@@ -287,6 +292,7 @@ internal fun DetailIconAction(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     size: Dp,
+    drawable: DrawableResource? = null,
     onLongClick: (() -> Unit)? = null,
 ) {
     Surface(
@@ -318,11 +324,19 @@ internal fun DetailIconAction(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                modifier = Modifier.size(21.dp),
-            )
+            if (drawable != null) {
+                Icon(
+                    painter = painterResource(drawable),
+                    contentDescription = label,
+                    modifier = Modifier.size(21.dp),
+                )
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    modifier = Modifier.size(21.dp),
+                )
+            }
         }
     }
 }

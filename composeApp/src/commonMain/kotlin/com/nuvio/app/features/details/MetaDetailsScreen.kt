@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.DoneAll
@@ -2199,7 +2198,8 @@ private fun ConfiguredMetaSections(
                         } else {
                             stringResource(Res.string.hero_add_to_library)
                         },
-                        icon = if (isSaved) Icons.Default.Check else Icons.Default.Add,
+                        icon = Icons.Default.Add,
+                        drawable = Res.drawable.sidebar_library.takeIf { isSaved },
                         isActive = isSaved,
                         onClick = onSaveClick,
                         onLongClick = onSaveLongClick,
@@ -2237,11 +2237,8 @@ private fun ConfiguredMetaSections(
                             } else {
                                 stringResource(Res.string.hero_add_to_library)
                             },
-                            icon = if (isSaved) {
-                                Icons.Default.Check
-                            } else {
-                                Icons.Default.Add
-                            },
+                            icon = Icons.Default.Add,
+                            drawable = Res.drawable.sidebar_library.takeIf { isSaved },
                             isActive = isSaved,
                             onClick = onSaveClick,
                             onLongClick = onSaveLongClick,

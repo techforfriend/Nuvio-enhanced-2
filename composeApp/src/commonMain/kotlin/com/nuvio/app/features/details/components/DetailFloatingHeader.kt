@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -44,6 +43,7 @@ import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.isIos
 import com.nuvio.app.navigation.LocalUseNativeNavigation
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -177,14 +177,23 @@ private fun DetailFloatingHeaderAction(
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = if (isSaved) Icons.Default.Check else Icons.Default.Add,
-            contentDescription = if (isSaved) {
-                stringResource(Res.string.hero_remove_from_library)
-            } else {
-                stringResource(Res.string.hero_add_to_library)
-            },
-            tint = MaterialTheme.colorScheme.onBackground,
-        )
+        val contentDescription = if (isSaved) {
+            stringResource(Res.string.hero_remove_from_library)
+        } else {
+            stringResource(Res.string.hero_add_to_library)
+        }
+        if (isSaved) {
+            Icon(
+                painter = painterResource(Res.drawable.sidebar_library),
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
+        }
     }
 }
