@@ -13,7 +13,7 @@ object DownloadsSettingsRepository {
     private val _allowMobileDataDownloads = MutableStateFlow(false)
     val allowMobileDataDownloads: StateFlow<Boolean> = _allowMobileDataDownloads.asStateFlow()
 
-    private val _showDownloadButton = MutableStateFlow(false)
+    private val _showDownloadButton = MutableStateFlow(true)
     val showDownloadButton: StateFlow<Boolean> = _showDownloadButton.asStateFlow()
 
     private val _downloadLocationUri = MutableStateFlow<String?>(null)
@@ -25,7 +25,7 @@ object DownloadsSettingsRepository {
         if (hasLoaded) return
         hasLoaded = true
         _allowMobileDataDownloads.value = DownloadsSettingsStorage.loadAllowMobileDataDownloads() ?: false
-        _showDownloadButton.value = DownloadsSettingsStorage.loadShowDownloadButton() ?: false
+        _showDownloadButton.value = DownloadsSettingsStorage.loadShowDownloadButton() ?: true
         _downloadLocationUri.value = DownloadsStorage.getDownloadLocationUri()
     }
 
