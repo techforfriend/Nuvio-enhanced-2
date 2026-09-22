@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.0",
+          "buildVersion": "132",
+          "date": "2026-09-22T10:51:10Z",
+          "localizedDescription": "- fix(ios): end the downloads Live Activity background task on the main actor @luqmanfadlli\r\n- feat(player): snooze the movie recommendation card for a minute on dismiss @luqmanfadlli\r\n- feat(player): suggest More Like This titles at the end of a movie @luqmanfadlli\r\n- fix(library): load and persist episode release schedule from app start @luqmanfadlli\r\n- feat(profile): iOS-style floating header on the Android Profile page @luqmanfadlli\r\n- feat(settings): collapse tracker cards by default @tapframe\r\n- fix(player): restore subtitles for each episode @tapframe\r\n- feat(profile): split finished titles into Watched, Completed and Episodes @luqmanfadlli\r\n- fix(profile): show next-7-day episodes under Profile Insight's Upcoming @luqmanfadlli\r\n- feat(profile): move edit/switch/save actions to circular header buttons @albertovinaroz\r\n- feat(settings): redesign the Profile page hero @albertovinaroz\r\n- fix(ios): align the morphed tab bar handoff with the native UITabBar @luqmanfadlli\r\n- feat(mdblist): use connected account for ratings with api key override @tapframe\r\n- fix(ios): run each plugin on its own large-stack thread to restore scraping speed @luqmanfadlli\r\n- Get rid of Tmbd Dates Enrichment @skoruppa\r\n- test(player): cover MX Player completion results without position @zuko726\r\n- fix(player): record position-less external results when the player reports completion @zuko726\r\n- fix(player): keep external player results that report completion without a position @zuko726\r\n- fix(tmdb): sort blank collection release dates last tapframe\r\n- fix(ios): use clean player framework archive tapframe\r\n- fix(player): preserve iOS audio during calls @tapframe\r\n- fix(poster): reload pattern on profile switch @tapframe\r\n- fix(poster): add missing iOS annotation import @tapframe\r\n- Custom poster URL pattern support @skoruppa",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.5.0-beta/Nuvio-0.5.0-Enhanced.ipa",
+          "size": 67967466,
+          "sha256": "ad3f9744d533c5b4e587049144ab3ed9e35af8ddfb4dc8a08941a949c160db9b",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.26",
           "buildVersion": "131",
           "date": "2026-09-21T11:56:57Z",
