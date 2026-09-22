@@ -56,6 +56,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -90,6 +91,8 @@ import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.library.LibraryItem
 import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.library.LibraryUiState
+import com.nuvio.app.features.library.LibraryUpcomingEpisode
+import com.nuvio.app.features.library.loadLibraryUpcomingEpisodes
 import com.nuvio.app.features.profiles.AvatarCatalogItem
 import com.nuvio.app.features.profiles.AvatarRepository
 import com.nuvio.app.features.profiles.NuvioProfile
@@ -152,6 +155,20 @@ private fun ProfileInsightsBody(
         LibraryRepository.uiState
     }.collectAsStateWithLifecycle()
     val todayIsoDate = remember { CurrentDateProvider.todayIsoDate() }
+    val upcomingEpisodes by produceState(
+        initialValue = emptyList<LibraryUpcomingEpisode>(),
+        libraryState.items,
+        todayIsoDate,
+    ) {
+        value = runCatching {
+            loadLibraryUpcomingEpisodes(
+                items = libraryState.items.filter(LibraryItem::isProfileInsightContent),
+                days = PROFILE_UPCOMING_EPISODE_DAYS,
+            )
+        }.onFailure { error ->
+            profileInsightsLog.e(error) { "Failed to load upcoming episodes" }
+        }.getOrElse { emptyList() }
+    }
 
     LaunchedEffect(Unit) {
         AvatarRepository.fetchAvatars()
@@ -170,7 +187,7 @@ private fun ProfileInsightsBody(
         ?.trim()
         ?.takeIf { it.isNotBlank() }
         ?: profileNameFallback
-    val stats = remember(activeProfileIndex, watchProgressState, watchedState, fullyWatchedSeriesKeys, libraryState, todayIsoDate) {
+    val baseStats = remember(activeProfileIndex, watchProgressState, watchedState, fullyWatchedSeriesKeys, libraryState, todayIsoDate) {
         runCatching {
             buildProfileInsightsStats(
                 watchProgressState = watchProgressState,
@@ -185,12 +202,15 @@ private fun ProfileInsightsBody(
             emptyProfileInsightsStats()
         }
     }
+    val stats = remember(baseStats, upcomingEpisodes) {
+        baseStats.copy(upcomingCount = upcomingEpisodes.size)
+    }
     val continueTitle = stringResource(Res.string.profile_insights_stat_continue)
     val completedTitle = stringResource(Res.string.profile_insights_stat_completed)
     val ongoingTitle = stringResource(Res.string.profile_insights_stat_ongoing)
     val libraryTitle = stringResource(Res.string.profile_insights_stat_library)
     val upcomingTitle = stringResource(Res.string.profile_insights_stat_upcoming)
-    val insightCollections = remember(
+    val baseInsightCollections = remember(
         activeProfileIndex,
         watchProgressState,
         watchedState,
@@ -227,6 +247,15 @@ private fun ProfileInsightsBody(
                 upcomingTitle = upcomingTitle,
             )
         }
+    }
+    val insightCollections = remember(baseInsightCollections, upcomingEpisodes, upcomingTitle) {
+        baseInsightCollections + (
+            ProfileInsightCollectionKind.Upcoming to ProfileInsightCollection(
+                title = upcomingTitle,
+                subtitle = "",
+                items = upcomingEpisodes.map(LibraryUpcomingEpisode::toProfileInsightPosterItem),
+            )
+        )
     }
     var selectedInsightCollection by remember { mutableStateOf<ProfileInsightCollection?>(null) }
     LaunchedEffect(activeProfileIndex) {
@@ -1430,22 +1459,6 @@ private fun buildProfileInsightCollections(
         }
         .toList()
 
-    val upcomingItems = libraryState.items
-        .asSequence()
-        .filter(LibraryItem::isProfileInsightContent)
-        .filter { item -> item.profileReleaseIsoDate()?.let { releaseDate -> releaseDate >= todayIsoDate } == true }
-        .sortedBy { item -> item.profileReleaseIsoDate().orEmpty() }
-        .map { item ->
-            ProfileInsightPosterItem(
-                id = "upcoming:${item.id}:${item.type}",
-                title = item.name.trim().takeIf { it.isNotBlank() } ?: item.id,
-                releaseInfo = item.releaseInfo?.trim()?.takeIf { it.isNotBlank() },
-                imageUrl = item.poster ?: item.banner,
-                lookupType = item.type,
-                lookupId = item.id,
-            )
-        }
-        .toList()
 
     return mapOf(
         ProfileInsightCollectionKind.Continue to ProfileInsightCollection(
@@ -1468,10 +1481,11 @@ private fun buildProfileInsightCollections(
             subtitle = "",
             items = libraryItems,
         ),
+        // Filled from the release calendar in the composable (see upcomingEpisodes).
         ProfileInsightCollectionKind.Upcoming to ProfileInsightCollection(
             title = upcomingTitle,
             subtitle = "",
-            items = upcomingItems,
+            items = emptyList(),
         ),
     )
 }
@@ -2100,6 +2114,19 @@ private data class ProfileInsightsStats(
     val dnaChips: List<ProfileTasteDnaChip>,
 )
 
+
+private const val PROFILE_UPCOMING_EPISODE_DAYS = 7
+
+private fun LibraryUpcomingEpisode.toProfileInsightPosterItem(): ProfileInsightPosterItem =
+    ProfileInsightPosterItem(
+        id = "upcoming:$key",
+        title = item.name.trim().takeIf { it.isNotBlank() } ?: item.id,
+        secondaryText = subtitle,
+        releaseInfo = dateIso,
+        imageUrl = item.poster ?: imageUrl ?: item.banner,
+        lookupType = item.type,
+        lookupId = item.id,
+    )
 
 private enum class ProfileInsightCollectionKind {
     Continue,

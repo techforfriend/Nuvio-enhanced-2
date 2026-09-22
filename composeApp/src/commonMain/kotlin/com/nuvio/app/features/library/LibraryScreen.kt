@@ -2693,3 +2693,62 @@ private class LibraryDisintegrationHolder {
         return result
     }
 }
+
+/** An episode from the Library release calendar, exposed for other screens (Profile Insight). */
+internal data class LibraryUpcomingEpisode(
+    val key: String,
+    val item: LibraryItem,
+    val dateIso: String,
+    val subtitle: String?,
+    val imageUrl: String?,
+    val seasonNumber: Int?,
+    val episodeNumber: Int?,
+)
+
+/**
+ * Episodes of saved series airing from today through the next [days] days (today included),
+ * built from the same episode source as the Library release calendar so both always agree.
+ */
+internal suspend fun loadLibraryUpcomingEpisodes(
+    items: List<LibraryItem>,
+    days: Int = 7,
+): List<LibraryUpcomingEpisode> {
+    val today = parseLibraryCalendarDate(CurrentDateProvider.todayIsoDate()) ?: return emptyList()
+    val todayEpochDay = isoEpochDay(today.iso)
+    val windowDates = (0 until days).map { offset -> libraryCalendarDatePlusDays(today, offset) }
+    val windowIsoDates = windowDates.map { it.iso }.toSet()
+    val monthKeys = windowDates.map { it.iso.take(7) }.toSet()
+    return buildLibraryEpisodeCalendarEvents(items, monthKeys)
+        .asSequence()
+        .filter { event -> event.date.iso in windowIsoDates && isoEpochDay(event.date.iso) >= todayEpochDay }
+        .distinctBy { it.key }
+        .sortedWith(compareBy<LibraryCalendarEvent> { it.date.iso }.thenBy { it.sortTitle.lowercase() })
+        .map { event ->
+            LibraryUpcomingEpisode(
+                key = event.key,
+                item = event.item,
+                dateIso = event.date.iso,
+                subtitle = event.subtitle,
+                imageUrl = event.imageUrl,
+                seasonNumber = event.seasonNumber,
+                episodeNumber = event.episodeNumber,
+            )
+        }
+        .toList()
+}
+
+private fun libraryCalendarDatePlusDays(date: LibraryCalendarDate, days: Int): LibraryCalendarDate {
+    var year = date.year
+    var month = date.month
+    var day = date.day + days
+    while (day > daysInLibraryCalendarMonth(year, month)) {
+        day -= daysInLibraryCalendarMonth(year, month)
+        if (month == 12) {
+            month = 1
+            year += 1
+        } else {
+            month += 1
+        }
+    }
+    return LibraryCalendarDate(year, month, day)
+}
