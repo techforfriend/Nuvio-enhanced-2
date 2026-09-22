@@ -174,6 +174,7 @@ sentry {
 dependencies {
     implementation(project(":composeApp"))
     implementation(libs.androidx.appcompat)
+    implementation(libs.compose.runtime)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     debugImplementation(libs.compose.uiTooling)
     androidTestImplementation("androidx.test:runner:1.7.0")
