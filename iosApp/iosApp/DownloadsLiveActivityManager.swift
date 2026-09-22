@@ -40,7 +40,7 @@ final class DownloadsLiveActivityManager {
             backgroundTaskId = .invalid
         }
 
-        Task {
+        Task { @MainActor in
             await apply(payload)
             if backgroundTaskId != .invalid {
                 UIApplication.shared.endBackgroundTask(backgroundTaskId)
