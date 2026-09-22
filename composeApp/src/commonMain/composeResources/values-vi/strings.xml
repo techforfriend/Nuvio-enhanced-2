@@ -125,7 +125,7 @@
     <string name="collections_editor_shape_square">Vuông</string>
     <string name="collections_editor_shape_wide">Ngang</string>
     <string name="collections_editor_show_all_tab_desc">Gộp tất cả danh mục vào một thẻ</string>
-    <string name="collections_editor_show_all_tab">Hiển thị thẻ \"Tất cả\"</string>
+    <string name="collections_editor_show_all_tab">Hiển thị thẻ &quot;Tất cả&quot;</string>
     <string name="collections_editor_show_gif_when_configured_desc">Phát ảnh động GIF đã thiết lập thay cho ảnh bìa tĩnh khi có sẵn.</string>
     <string name="collections_editor_show_gif_when_configured">Hiển thị GIF đã thiết lập</string>
     <string name="collections_editor_source_count">%1$d nguồn · %2$s</string>
