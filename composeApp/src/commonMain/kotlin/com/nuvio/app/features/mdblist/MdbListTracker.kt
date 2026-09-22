@@ -23,6 +23,7 @@ object MdbListTracker : TrackingAuthProvider {
     private val http = MdbListHttpClient(MdbListNetworkEngine(configuration))
     val auth = MdbListAuthRepository(http, configuration, store)
     internal val api = MdbListApiClient(http, auth, store)
+    internal val ratings = MdbListRatingsClient(api, store)
     val sync = MdbListSyncRepository(PlatformMdbListSyncStorage, store, api, activeProfile, coroutineScope)
     val library = MdbListLibraryService(api, sync, store, activeProfile, coroutineScope)
     private val history = MdbListHistoryService(api, sync)

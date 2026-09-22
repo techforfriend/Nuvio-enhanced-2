@@ -1,4 +1,7 @@
 <resources>
+    <string name="settings_mdb_ratings_credentials_required">Connect MDBList in Tracking or enter an API key to fetch ratings.</string>
+    <string name="settings_mdb_ratings_key_override_description">An API key overrides your connected account for ratings. Clear it and save to use the connected account again.</string>
+    <string name="settings_mdb_ratings_connected_account">Using connected account</string>
     <string name="tracking_source_mdblist">MDBList</string>
     <string name="settings_mdblist_library_description">Watchlist and your static movie and show lists.</string>
     <string name="settings_mdblist_progress_description">Watched history, resume progress and Next Up from MDBList.</string>
