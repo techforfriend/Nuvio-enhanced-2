@@ -8,6 +8,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -39,6 +40,7 @@ class MdbListSettingsUiTest {
         compose.runOnUiThread {
             compose.activity.setContent { NuvioTheme { SettingsScreen(initialPageName = "TraktAuthentication") } }
         }
+        compose.onAllNodesWithText("MDBList").onFirst().performScrollTo().performClick()
         compose.onNodeWithText("Sync watched history and playback progress across devices").performScrollTo().assertIsDisplayed()
         screenshot("mdblist-connected.png")
         compose.onNodeWithText("Disconnect MDBList").performScrollTo().performClick()
