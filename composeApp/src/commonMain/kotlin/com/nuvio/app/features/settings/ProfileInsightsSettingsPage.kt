@@ -63,7 +63,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -99,7 +98,8 @@ import com.nuvio.app.features.library.LibraryItem
 import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.library.LibraryUiState
 import com.nuvio.app.features.library.LibraryUpcomingEpisode
-import com.nuvio.app.features.library.loadLibraryUpcomingEpisodes
+import com.nuvio.app.features.library.libraryUpcomingEpisodesFlow
+import com.nuvio.app.features.library.warmLibraryReleaseSchedule
 import com.nuvio.app.features.profiles.AvatarCatalogItem
 import com.nuvio.app.features.profiles.AvatarRepository
 import com.nuvio.app.features.profiles.NuvioProfile
@@ -165,19 +165,11 @@ private fun ProfileInsightsBody(
         LibraryRepository.uiState
     }.collectAsStateWithLifecycle()
     val todayIsoDate = remember { CurrentDateProvider.todayIsoDate() }
-    val upcomingEpisodes by produceState(
-        initialValue = emptyList<LibraryUpcomingEpisode>(),
-        libraryState.items,
-        todayIsoDate,
-    ) {
-        value = runCatching {
-            loadLibraryUpcomingEpisodes(
-                items = libraryState.items.filter(LibraryItem::isProfileInsightContent),
-                days = PROFILE_UPCOMING_EPISODE_DAYS,
-            )
-        }.onFailure { error ->
-            profileInsightsLog.e(error) { "Failed to load upcoming episodes" }
-        }.getOrElse { emptyList() }
+    val upcomingEpisodes by remember {
+        libraryUpcomingEpisodesFlow(days = PROFILE_UPCOMING_EPISODE_DAYS)
+    }.collectAsStateWithLifecycle(initialValue = emptyList())
+    LaunchedEffect(libraryState.items) {
+        warmLibraryReleaseSchedule(libraryState.items)
     }
 
     LaunchedEffect(Unit) {
