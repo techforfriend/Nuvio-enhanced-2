@@ -609,7 +609,7 @@ private fun BoxScope.RenderPlaybackOverlays(
             args.onOpenMetaDetails?.invoke(preview)
         },
         onDismissMovieRecommendations = {
-            movieRecommendationCardDismissed = true
+            movieRecommendationSnoozedUntilMs = playbackSnapshot.positionMs + MOVIE_RECOMMENDATION_SNOOZE_MS
             showMovieRecommendationCard = false
         },
         errorMessage = errorMessage,
@@ -859,3 +859,5 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
 }
 
 private const val MOVIE_RECOMMENDATION_LIMIT = 10
+
+private const val MOVIE_RECOMMENDATION_SNOOZE_MS = 60_000L

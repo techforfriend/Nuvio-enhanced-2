@@ -714,19 +714,24 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         playbackSnapshot.isEnded,
         skipIntervals,
         playerMeta?.moreLikeThis,
-        movieRecommendationCardDismissed,
+        movieRecommendationSnoozedUntilMs,
         playerSettingsUiState.movieRecommendationsEnabled,
     ) {
-        if (!isMoviePlayback || !playerSettingsUiState.movieRecommendationsEnabled || movieRecommendationCardDismissed || playerMeta?.moreLikeThis.isNullOrEmpty()) {
+        if (!isMoviePlayback || !playerSettingsUiState.movieRecommendationsEnabled || playerMeta?.moreLikeThis.isNullOrEmpty()) {
             showMovieRecommendationCard = false
             return@LaunchedEffect
         }
-        showMovieRecommendationCard = playbackSnapshot.isEnded ||
-            PlayerNextEpisodeRules.shouldShowMovieRecommendations(
-                positionMs = playbackSnapshot.positionMs,
-                durationMs = playbackSnapshot.durationMs,
-                skipIntervals = skipIntervals,
-            )
+        val inCreditsWindow = PlayerNextEpisodeRules.shouldShowMovieRecommendations(
+            positionMs = playbackSnapshot.positionMs,
+            durationMs = playbackSnapshot.durationMs,
+            skipIntervals = skipIntervals,
+        )
+        val snoozedUntil = movieRecommendationSnoozedUntilMs
+        if (snoozedUntil != null && !inCreditsWindow && !playbackSnapshot.isEnded) {
+            movieRecommendationSnoozedUntilMs = null
+        }
+        val snoozed = snoozedUntil != null && playbackSnapshot.positionMs < snoozedUntil
+        showMovieRecommendationCard = playbackSnapshot.isEnded || (inCreditsWindow && !snoozed)
     }
 }
 
