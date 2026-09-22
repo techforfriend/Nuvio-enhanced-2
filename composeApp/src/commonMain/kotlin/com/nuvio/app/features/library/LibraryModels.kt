@@ -29,6 +29,7 @@ data class LibraryItem(
     /** Original media category from the tracking provider (e.g. "anime").
      *  Used for UI filtering while [type] stays as "movie"/"series" for meta addon compatibility. */
     val mediaCategory: String? = null,
+    val rawPosterUrl: String? = null,
     override val trackingProviderId: String? = null,
     override val trackingProviderItemId: String? = null,
     override val trackingSourceUrl: String? = null,
@@ -110,4 +111,5 @@ fun LibraryItem.toMetaPreview(): MetaPreview =
         releaseInfo = releaseInfo,
         imdbRating = imdbRating,
         genres = genres,
+        rawPosterUrl = rawPosterUrl,
     )
