@@ -614,6 +614,125 @@ final class NativeProfileTabInteractionCoordinator: NSObject, UIGestureRecognize
         tabBarController.tabBar.addGestureRecognizer(recognizer)
         self.tabBarController = tabBarController
         publishIconFrame()
+        onAttached?()
+    }
+
+    var onAttached: (() -> Void)?
+
+    func measureNativeTabBarMetrics() -> NuvioTabBarMetrics? {
+        guard let tabBar = tabBarController?.tabBar,
+              let window = tabBar.window,
+              !tabBar.isHidden,
+              tabBar.bounds.width > 0 else { return nil }
+        let platterFrame: CGRect
+        if let platter = Self.findPlatter(in: tabBar) {
+            platterFrame = platter.convert(platter.bounds, to: window)
+        } else if #available(iOS 17.0, *),
+                  let items = tabBar.items, !items.isEmpty {
+            let union = items
+                .compactMap { $0.frame(in: tabBar) }
+                .reduce(CGRect.null) { $0.union($1) }
+            guard !union.isNull else { return nil }
+            platterFrame = tabBar.convert(union.insetBy(dx: -4, dy: -4), to: window)
+        } else {
+            return nil
+        }
+        guard platterFrame.width > 0, platterFrame.height > 0 else { return nil }
+        let (items, selectionFrame, selectionIndex) = Self.measureItems(
+            in: tabBar,
+            window: window,
+            platterFrame: platterFrame
+        )
+        return NuvioTabBarMetrics(
+            windowSize: window.bounds.size,
+            leadingInset: platterFrame.minX,
+            trailingInset: window.bounds.width - platterFrame.maxX,
+            bottomInset: window.bounds.height - platterFrame.maxY,
+            height: platterFrame.height,
+            items: items,
+            selectionFrame: selectionFrame,
+            selectionItemIndex: selectionFrame == nil ? nil : selectionIndex
+        )
+    }
+
+    private static func measureItems(
+        in tabBar: UITabBar,
+        window: UIWindow,
+        platterFrame: CGRect
+    ) -> ([NuvioTabBarItemMetrics], CGRect?, Int?) {
+        func local(_ view: UIView) -> CGRect {
+            view.convert(view.bounds, to: window).offsetBy(dx: -platterFrame.minX, dy: -platterFrame.minY)
+        }
+        func descendants(of view: UIView) -> [UIView] {
+            view.subviews.flatMap { [$0] + descendants(of: $0) }
+        }
+
+        let buttons = descendants(of: tabBar)
+            .filter { view in
+                String(describing: type(of: view)).localizedCaseInsensitiveContains("TabBarButton") &&
+                    !view.isHidden && view.alpha > 0.01 && view.bounds.width > 0
+            }
+            .sorted { local($0).minX < local($1).minX }
+        guard !buttons.isEmpty else { return ([], nil, nil) }
+
+        var items: [NuvioTabBarItemMetrics] = []
+        for button in buttons {
+            let inner = descendants(of: button).filter { !$0.isHidden && $0.alpha > 0.01 }
+            guard let imageView = inner
+                .compactMap({ $0 as? UIImageView })
+                .filter({ $0.image != nil })
+                .max(by: { $0.bounds.width * $0.bounds.height < $1.bounds.width * $1.bounds.height })
+            else { return ([], nil, nil) }
+            let label = inner.compactMap { $0 as? UILabel }.first { !($0.text ?? "").isEmpty }
+            items.append(
+                NuvioTabBarItemMetrics(
+                    buttonFrame: local(button),
+                    iconFrame: local(imageView),
+                    labelFrame: label.map(local),
+                    labelFont: label?.font
+                )
+            )
+        }
+
+        var selectionFrame: CGRect?
+        var selectionIndex: Int?
+        if let selectedItem = tabBar.selectedItem,
+           let selectedIndex = tabBar.items?.firstIndex(of: selectedItem),
+           selectedIndex < buttons.count {
+            selectionIndex = selectedIndex
+            let buttonFrame = local(buttons[selectedIndex])
+            let center = CGPoint(x: buttonFrame.midX, y: buttonFrame.midY)
+            let buttonSet = Set(buttons.flatMap { [ObjectIdentifier($0)] + descendants(of: $0).map(ObjectIdentifier.init) })
+            selectionFrame = descendants(of: tabBar)
+                .filter { view in
+                    guard !buttonSet.contains(ObjectIdentifier(view)),
+                          !view.isHidden, view.alpha > 0.01 else { return false }
+                    let frame = local(view)
+                    return frame.contains(center) &&
+                        frame.width >= buttonFrame.width * 0.8 &&
+                        frame.width <= buttonFrame.width * 1.8 &&
+                        frame.height >= platterFrame.height * 0.6 &&
+                        frame.height < platterFrame.height + 1
+                }
+                .map(local)
+                .min { $0.width * $0.height < $1.width * $1.height }
+        }
+        return (items, selectionFrame, selectionIndex)
+    }
+
+    private static func findPlatter(in view: UIView) -> UIView? {
+        var best: UIView?
+        var stack = view.subviews
+        while let current = stack.popLast() {
+            let name = String(describing: type(of: current))
+            if name.localizedCaseInsensitiveContains("Platter"),
+               !current.isHidden,
+               current.bounds.width > (best?.bounds.width ?? 0) {
+                best = current
+            }
+            stack.append(contentsOf: current.subviews)
+        }
+        return best
     }
 
     func publishIconFrame() {
@@ -710,6 +829,20 @@ final class AppNavigationCoordinator: ObservableObject {
     @Published private(set) var isAppReady = false
     @Published private(set) var isTabBarVisible = true
     @Published private(set) var isNativeTabBarVisible = true
+    @Published private(set) var isCompactPillHidden = true
+    @Published private(set) var nativeTabBarMetricsBySize: [String: NuvioTabBarMetrics] = [:]
+
+    func nativeTabBarMetrics(for size: CGSize) -> NuvioTabBarMetrics? {
+        nativeTabBarMetricsBySize[NuvioTabBarMetrics.key(for: size)]
+    }
+
+    func refreshNativeTabBarMetrics() {
+        guard isNativeTabBarVisible,
+              let metrics = profileTabInteraction.measureNativeTabBarMetrics() else { return }
+        let key = NuvioTabBarMetrics.key(for: metrics.windowSize)
+        guard nativeTabBarMetricsBySize[key] != metrics else { return }
+        nativeTabBarMetricsBySize[key] = metrics
+    }
     @Published private(set) var tabBarBehavior: NuvioTabBarBehavior = NuvioTabBarBehavior.current()
     @Published private(set) var isSelectedTabAtRoot = true
     @Published private(set) var isLiveTvTabVisible = false
@@ -744,6 +877,9 @@ final class AppNavigationCoordinator: ObservableObject {
             coordinator.onPathChanged = { [weak self] _ in
                 self?.refreshSelectedTabDepth()
             }
+        }
+        profileTabInteraction.onAttached = { [weak self] in
+            DispatchQueue.main.async { self?.refreshNativeTabBarMetrics() }
         }
         profileTabInteraction.onLongPress = { [weak self] in
             guard let self, self.isAppReady else { return }
@@ -804,29 +940,43 @@ final class AppNavigationCoordinator: ObservableObject {
         guard animated else {
             isTabBarVisible = visible
             isNativeTabBarVisible = visible
+            isCompactPillHidden = visible
             return
         }
 
         if visible {
-            guard !isTabBarVisible || !isNativeTabBarVisible else { return }
+            guard !isTabBarVisible || !isCompactPillHidden else { return }
             withAnimation(.smooth(duration: 0.38)) {
                 isTabBarVisible = visible
             }
-            guard !isNativeTabBarVisible else { return }
+            let needsGrowDelay = !isNativeTabBarVisible
 
             tabBarTransitionTask = Task { [weak self] in
-                try? await Task.sleep(nanoseconds: 340_000_000)
-                guard !Task.isCancelled, let self, self.isTabBarVisible else { return }
-                withAnimation(.easeOut(duration: 0.12)) {
-                    self.isNativeTabBarVisible = true
+                if needsGrowDelay {
+                    try? await Task.sleep(nanoseconds: 340_000_000)
                 }
+                guard !Task.isCancelled, let self, self.isTabBarVisible else { return }
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    self.isNativeTabBarVisible = true
+                    self.isCompactPillHidden = true
+                }
+                try? await Task.sleep(nanoseconds: 50_000_000)
+                guard !Task.isCancelled, self.isTabBarVisible else { return }
+                self.refreshNativeTabBarMetrics()
             }
             return
         }
 
-        guard isTabBarVisible || isNativeTabBarVisible else { return }
-        withAnimation(.smooth(duration: 0.38)) {
+        guard isTabBarVisible || isNativeTabBarVisible || isCompactPillHidden else { return }
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            isCompactPillHidden = false
             isNativeTabBarVisible = false
+        }
+        withAnimation(.smooth(duration: 0.38)) {
             isTabBarVisible = false
         }
     }
@@ -1118,9 +1268,7 @@ struct TabContentView: View {
         .animation(
             appCoordinator.tabBarBehavior == .autoHide
                 ? .easeInOut(duration: 0.18)
-                : appCoordinator.tabBarBehavior == .morphed
-                    ? .easeOut(duration: 0.12)
-                    : nil,
+                : nil,
             value: appCoordinator.isNativeTabBarVisible
         )
     }
@@ -1627,13 +1775,22 @@ struct NativeNavContentView: View {
             if appCoordinator.tabBarBehavior.usesCompactPill &&
                 appCoordinator.isAppReady &&
                 appCoordinator.isSelectedTabAtRoot {
-                NuvioGlassTabBar(
-                    appCoordinator: appCoordinator,
-                    iconStore: iconStore
-                )
-                .padding(.horizontal, appCoordinator.isTabBarVisible ? 20 : 16)
-                .opacity(appCoordinator.isNativeTabBarVisible ? 0 : 1)
-                .accessibilityHidden(appCoordinator.isNativeTabBarVisible)
+                GeometryReader { proxy in
+                    let metrics = appCoordinator.isTabBarVisible
+                        ? appCoordinator.nativeTabBarMetrics(for: proxy.size)
+                        : nil
+                    NuvioGlassTabBar(
+                        appCoordinator: appCoordinator,
+                        iconStore: iconStore,
+                        expandedMetrics: metrics
+                    )
+                    .padding(.leading, metrics?.leadingInset ?? (appCoordinator.isTabBarVisible ? 20 : 16))
+                    .padding(.trailing, metrics?.trailingInset ?? (appCoordinator.isTabBarVisible ? 20 : 16))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                }
+                .ignoresSafeArea(.all)
+                .opacity(appCoordinator.isCompactPillHidden ? 0 : 1)
+                .accessibilityHidden(appCoordinator.isCompactPillHidden)
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)
