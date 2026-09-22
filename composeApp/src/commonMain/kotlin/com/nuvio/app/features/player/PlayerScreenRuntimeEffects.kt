@@ -707,6 +707,27 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
             }
         }
     }
+
+    LaunchedEffect(
+        playbackSnapshot.positionMs,
+        playbackSnapshot.durationMs,
+        playbackSnapshot.isEnded,
+        skipIntervals,
+        playerMeta?.moreLikeThis,
+        movieRecommendationCardDismissed,
+        playerSettingsUiState.movieRecommendationsEnabled,
+    ) {
+        if (!isMoviePlayback || !playerSettingsUiState.movieRecommendationsEnabled || movieRecommendationCardDismissed || playerMeta?.moreLikeThis.isNullOrEmpty()) {
+            showMovieRecommendationCard = false
+            return@LaunchedEffect
+        }
+        showMovieRecommendationCard = playbackSnapshot.isEnded ||
+            PlayerNextEpisodeRules.shouldShowMovieRecommendations(
+                positionMs = playbackSnapshot.positionMs,
+                durationMs = playbackSnapshot.durationMs,
+                skipIntervals = skipIntervals,
+            )
+    }
 }
 
 private fun PlayerScreenRuntime.buildNowPlayingInfo(): PlayerNowPlayingInfo {

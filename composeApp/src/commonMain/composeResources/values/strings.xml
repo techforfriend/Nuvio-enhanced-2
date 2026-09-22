@@ -1213,6 +1213,8 @@
     <string name="settings_playback_touch_gestures">Touch Gestures</string>
     <string name="settings_playback_touch_gestures_description">Allow swipes and double-taps on the player surface to seek, adjust brightness, or adjust volume.</string>
     <string name="settings_playback_swipe_to_seek">Swipe to Seek</string>
+    <string name="settings_playback_movie_recommendations">Movie Recommendations</string>
+    <string name="settings_playback_movie_recommendations_description">Suggest titles from More Like This when a movie reaches its end credits.</string>
     <string name="settings_playback_swipe_to_seek_description">Swipe left or right across the player to scrub through the video. Turn this off to keep only the up and down swipes for brightness and volume — double-tapping to skip still works.</string>
     <string name="settings_playback_auto_show_subtitles_on_rewind">Auto-Show Subtitles on Rewind</string>
     <string name="settings_playback_auto_show_subtitles_on_rewind_description">When subtitles are off, automatically turn them on while you rewind, then hide them again once playback catches back up to where you rewound from.</string>

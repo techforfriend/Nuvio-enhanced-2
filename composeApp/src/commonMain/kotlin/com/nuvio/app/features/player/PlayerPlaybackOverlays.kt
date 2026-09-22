@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.features.p2p.P2pLoadingStatus
+import com.nuvio.app.features.home.MetaPreview
+import com.nuvio.app.features.player.skip.MovieRecommendationCard
 import com.nuvio.app.features.player.skip.NextEpisodeCard
 import com.nuvio.app.features.player.skip.NextEpisodeInfo
 import com.nuvio.app.features.player.skip.SkipIntroButton
@@ -59,6 +61,10 @@ internal fun BoxScope.PlayerPlaybackOverlays(
     blurUnwatchedEpisodes: Boolean,
     onPlayNextEpisode: () -> Unit,
     onDismissNextEpisode: () -> Unit,
+    movieRecommendations: List<MetaPreview> = emptyList(),
+    showMovieRecommendationCard: Boolean = false,
+    onOpenMovieRecommendation: (MetaPreview) -> Unit = {},
+    onDismissMovieRecommendations: () -> Unit = {},
     errorMessage: String?,
     onDismissError: () -> Unit,
 ) {
@@ -139,6 +145,18 @@ internal fun BoxScope.PlayerPlaybackOverlays(
             blurred = blurUnwatchedEpisodes && nextEpisodeInfo?.isWatched == false,
             onPlayNext = onPlayNextEpisode,
             onDismiss = onDismissNextEpisode,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = sliderEdgePadding, bottom = overlayBottomPadding),
+        )
+    }
+
+    if (!isSeries && !playerControlsLocked) {
+        MovieRecommendationCard(
+            recommendations = movieRecommendations,
+            visible = showMovieRecommendationCard,
+            onOpen = onOpenMovieRecommendation,
+            onDismiss = onDismissMovieRecommendations,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = sliderEdgePadding, bottom = overlayBottomPadding),

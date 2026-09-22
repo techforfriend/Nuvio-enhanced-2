@@ -13,6 +13,7 @@ import com.nuvio.app.features.player.PlayerLaunch
 import com.nuvio.app.features.player.PlayerLaunchStore
 import com.nuvio.app.features.player.PlayerScreen
 import com.nuvio.app.features.watchprogress.ResumePromptRepository
+import com.nuvio.app.navigation.DetailRoute
 import com.nuvio.app.navigation.NuvioNavigator
 import com.nuvio.app.navigation.PlayerRoute
 
@@ -122,6 +123,16 @@ internal fun PlayerDestination(
         },
         onOpenExternalUrl = { url ->
             openExternalStreamUrl(url)
+        },
+        onOpenMetaDetails = { preview ->
+            onBack()
+            navController.navigate(
+                DetailRoute(
+                    type = preview.type,
+                    id = preview.id,
+                    title = preview.name,
+                ),
+            )
         },
         modifier = Modifier.fillMaxSize(),
     )

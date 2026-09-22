@@ -622,6 +622,11 @@ internal fun settingsSearchEntries(
                 stringResource(Res.string.settings_playback_swipe_to_seek),
                 stringResource(Res.string.settings_playback_swipe_to_seek_description),
             ),
+            PlaybackSearchRow(
+                "movie-recommendations",
+                stringResource(Res.string.settings_playback_movie_recommendations),
+                stringResource(Res.string.settings_playback_movie_recommendations_description),
+            ),
             PlaybackSearchRow("hold-speed", stringResource(Res.string.settings_playback_hold_speed)),
         ),
     )
