@@ -2,10 +2,10 @@ package com.nuvio.app.features.mdblist
 
 import co.touchlab.kermit.Logger
 import com.nuvio.app.core.logging.InAppLogger
-import com.nuvio.app.features.addons.httpGetText
-import com.nuvio.app.features.addons.httpPostJson
 import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.details.MetaExternalRating
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -18,6 +18,13 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 object MdbListMetadataService {
+    private data class CacheKey(
+        val mediaType: String,
+        val imdbId: String,
+        val credential: MdbListRatingsCredential,
+        val providers: List<String>,
+    )
+
     const val PROVIDER_IMDB = "imdb"
     const val PROVIDER_TMDB = "tmdb"
     const val PROVIDER_TOMATOES = "tomatoes"
@@ -40,7 +47,9 @@ object MdbListMetadataService {
 
     private val log = Logger.withTag("MdbListMetadata")
     private val json = Json { ignoreUnknownKeys = true }
-    private val ratingsCache = mutableMapOf<String, List<MetaExternalRating>>()
+    private val ratingsCache = mutableMapOf<CacheKey, List<MetaExternalRating>>()
+    private val cacheLock = SynchronizedObject()
+    private val client get() = MdbListTracker.ratings
     private val imdbRegex = Regex("tt\\d+")
 
     fun shouldFetchForMeta(
@@ -48,8 +57,7 @@ object MdbListMetadataService {
         fallbackItemId: String,
         settings: MdbListSettings,
     ): Boolean {
-        if (!settings.enabled) return false
-        if (settings.apiKey.trim().isBlank()) return false
+        if (!settings.isActive) return false
         if (settings.enabledProvidersInPriorityOrder().isEmpty()) return false
         return extractImdbId(meta.id) != null || extractImdbId(fallbackItemId) != null || extractImdbId(meta.imdbId) != null
     }
@@ -67,7 +75,7 @@ object MdbListMetadataService {
             )
             return meta.copy(externalRatings = emptyList())
         }
-        val apiKey = settings.apiKey.trim()
+        val credential = settings.credential ?: return meta.copy(externalRatings = emptyList())
 
         val imdbId = extractImdbId(meta.id)
             ?: extractImdbId(fallbackItemId)
@@ -84,7 +92,7 @@ object MdbListMetadataService {
         val ratings = fetchRatings(
             imdbId = imdbId,
             mediaType = mediaType,
-            apiKey = apiKey,
+            credential = credential,
             providers = enabledProviders,
         )
 
@@ -96,17 +104,18 @@ object MdbListMetadataService {
     }
 
     fun clearCache() {
-        ratingsCache.clear()
+        synchronized(cacheLock) { ratingsCache.clear() }
     }
 
     private suspend fun fetchRatings(
         imdbId: String,
         mediaType: String,
-        apiKey: String,
+        credential: MdbListRatingsCredential,
         providers: List<String>,
     ): List<MetaExternalRating> = withContext(Dispatchers.Default) {
-        val cacheKey = "$mediaType:$imdbId:$apiKey:${providers.joinToString(",")}"
-        ratingsCache[cacheKey]?.let {
+        client.checkCredential(credential)
+        val cacheKey = CacheKey(mediaType, imdbId, credential, providers)
+        synchronized(cacheLock) { ratingsCache[cacheKey] }?.let {
             InAppLogger.debug(
                 "Metadata/MDBList",
                 "cache hit imdb=$imdbId mediaType=$mediaType providers=${providers.joinToString(",")}",
@@ -116,7 +125,7 @@ object MdbListMetadataService {
 
         val ratings = coroutineScope {
             val rottenTomatoesRatings = if (providers.any { it == PROVIDER_TOMATOES || it == PROVIDER_AUDIENCE }) {
-                async { fetchRottenTomatoesRatings(imdbId, mediaType, apiKey) }
+                async { fetchRottenTomatoesRatings(imdbId, mediaType, credential) }
             } else {
                 null
             }
@@ -130,24 +139,24 @@ object MdbListMetadataService {
                         imdbId = imdbId,
                         mediaType = mediaType,
                         providerId = providerId,
-                        apiKey = apiKey,
+                        credential = credential,
                     )
                 }
             }.awaitAll().filterNotNull()
         }
 
-        ratingsCache[cacheKey] = ratings
+        client.checkCredential(credential)
+        synchronized(cacheLock) { ratingsCache[cacheKey] = ratings }
         ratings
     }
 
     private suspend fun fetchRottenTomatoesRatings(
         imdbId: String,
         mediaType: String,
-        apiKey: String,
+        credential: MdbListRatingsCredential,
     ): List<MetaExternalRating> {
-        val url = "https://api.mdblist.com/imdb/$mediaType/$imdbId?apikey=$apiKey&append_to_response=keyword"
         return runCatching {
-            parseRottenTomatoesRatings(httpGetText(url))
+            parseRottenTomatoesRatings(client.getMedia(mediaType, imdbId, credential))
         }.onFailure { error ->
             if (error is CancellationException) throw error
             log.w { "MDBList Rotten Tomatoes request failed for $imdbId: ${error.message}" }
@@ -158,9 +167,8 @@ object MdbListMetadataService {
         imdbId: String,
         mediaType: String,
         providerId: String,
-        apiKey: String,
+        credential: MdbListRatingsCredential,
     ): MetaExternalRating? {
-        val url = "https://api.mdblist.com/rating/$mediaType/$providerId?apikey=$apiKey"
         val requestBody = json.encodeToString(
             RatingRequest(
                 ids = listOf(imdbId),
@@ -170,11 +178,11 @@ object MdbListMetadataService {
 
         InAppLogger.info(
             "Metadata/MDBList",
-            "POST provider=$providerId imdb=$imdbId mediaType=$mediaType url=${InAppLogger.redactUrl(url)} bodyChars=${requestBody.length}",
+            "POST provider=$providerId imdb=$imdbId mediaType=$mediaType bodyChars=${requestBody.length}",
         )
 
         return runCatching {
-            val payload = httpPostJson(url = url, body = requestBody)
+            val payload = client.getRating(mediaType, providerId, credential, requestBody)
             InAppLogger.info(
                 "Metadata/MDBList",
                 "POST provider=$providerId imdb=$imdbId ok chars=${payload.length}",
