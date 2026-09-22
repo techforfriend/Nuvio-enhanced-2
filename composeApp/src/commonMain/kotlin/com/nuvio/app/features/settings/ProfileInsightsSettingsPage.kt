@@ -41,9 +41,11 @@ import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -206,6 +208,7 @@ private fun ProfileInsightsBody(
         baseStats.copy(upcomingCount = upcomingEpisodes.size)
     }
     val continueTitle = stringResource(Res.string.profile_insights_stat_continue)
+    val watchedTitle = stringResource(Res.string.profile_insights_stat_watched)
     val completedTitle = stringResource(Res.string.profile_insights_stat_completed)
     val ongoingTitle = stringResource(Res.string.profile_insights_stat_ongoing)
     val libraryTitle = stringResource(Res.string.profile_insights_stat_library)
@@ -218,6 +221,7 @@ private fun ProfileInsightsBody(
         libraryState,
         todayIsoDate,
         continueTitle,
+        watchedTitle,
         completedTitle,
         ongoingTitle,
         libraryTitle,
@@ -231,6 +235,7 @@ private fun ProfileInsightsBody(
                 libraryState = libraryState,
                 todayIsoDate = todayIsoDate,
                 continueTitle = continueTitle,
+                watchedTitle = watchedTitle,
                 completedTitle = completedTitle,
                 ongoingTitle = ongoingTitle,
                 libraryTitle = libraryTitle,
@@ -241,6 +246,7 @@ private fun ProfileInsightsBody(
         }.getOrElse {
             emptyProfileInsightCollections(
                 continueTitle = continueTitle,
+                watchedTitle = watchedTitle,
                 completedTitle = completedTitle,
                 ongoingTitle = ongoingTitle,
                 libraryTitle = libraryTitle,
@@ -717,6 +723,12 @@ private fun ProfileMetricPillRow(
             collectionKind = ProfileInsightCollectionKind.Upcoming,
         ),
         ProfileMetricPillSpec(
+            icon = Icons.Rounded.Movie,
+            value = stats.watchedMovieCount.toString(),
+            label = stringResource(Res.string.profile_insights_hero_watched),
+            collectionKind = ProfileInsightCollectionKind.Watched,
+        ),
+        ProfileMetricPillSpec(
             icon = Icons.Rounded.Favorite,
             value = stats.completedCount.toString(),
             label = stringResource(Res.string.profile_insights_stat_completed),
@@ -727,6 +739,12 @@ private fun ProfileMetricPillRow(
             value = stats.ongoingSeriesCount.toString(),
             label = stringResource(Res.string.profile_insights_stat_ongoing),
             collectionKind = ProfileInsightCollectionKind.Ongoing,
+        ),
+        ProfileMetricPillSpec(
+            icon = Icons.Rounded.Tv,
+            value = stats.episodesWatchedCount.toString(),
+            label = stringResource(Res.string.profile_insights_hero_episodes),
+            collectionKind = null,
         ),
     )
 
@@ -741,7 +759,7 @@ private fun ProfileMetricPillRow(
             ProfileMetricPill(
                 spec = pill,
                 onClick = pill.collectionKind
-                    .takeIf(isCollectionAvailable)
+                    ?.takeIf(isCollectionAvailable)
                     ?.let { kind -> { onCollectionClick(kind) } },
             )
         }
@@ -753,7 +771,7 @@ private data class ProfileMetricPillSpec(
     val icon: ImageVector,
     val value: String,
     val label: String,
-    val collectionKind: ProfileInsightCollectionKind,
+    val collectionKind: ProfileInsightCollectionKind?,
 )
 
 @Composable
@@ -1320,6 +1338,7 @@ private fun buildProfileInsightsStats(
         progressEntries = progressEntries,
     )
     val completedContentItems = watchedBuckets.completedItems
+    val watchedMovieItems = watchedBuckets.watchedMovieItems
     val ongoingSeriesItems = watchedBuckets.ongoingSeriesItems
     val normalizedTypes = libraryItems.map { item -> item.type } +
         progressEntries.map { entry -> entry.parentMetaType } +
@@ -1344,7 +1363,9 @@ private fun buildProfileInsightsStats(
 
     return ProfileInsightsStats(
         continueCount = continueEntries.size,
+        watchedMovieCount = watchedMovieItems.size,
         completedCount = completedContentItems.size,
+        episodesWatchedCount = watchedItems.profileWatchedEpisodeCount(),
         ongoingSeriesCount = ongoingSeriesItems.size,
         libraryCount = libraryItems.size,
         trackedDurationMs = profileTrackedDurationMs(
@@ -1370,7 +1391,7 @@ private fun buildProfileInsightsStats(
         dnaChips = buildProfileTasteDnaChips(
             libraryCount = libraryItems.size,
             continueCount = continueEntries.size,
-            completedCount = completedContentItems.size,
+            completedCount = watchedMovieItems.size + completedContentItems.size,
             recentActivityCount = recentActivityCount,
             upcomingCount = libraryItems.count { item ->
                 item.profileReleaseIsoDate()?.let { releaseDate -> releaseDate >= todayIsoDate } == true
@@ -1388,6 +1409,7 @@ private fun buildProfileInsightCollections(
     libraryState: LibraryUiState,
     todayIsoDate: String,
     continueTitle: String,
+    watchedTitle: String,
     completedTitle: String,
     ongoingTitle: String,
     libraryTitle: String,
@@ -1414,6 +1436,20 @@ private fun buildProfileInsightCollections(
         libraryItems = libraryState.items,
         progressEntries = watchProgressState.entries,
     )
+
+    val watchedMovieItems = watchedBuckets.watchedMovieItems
+        .asSequence()
+        .map { item ->
+            ProfileInsightPosterItem(
+                id = "watched:${item.kind}:${item.id}",
+                title = item.title,
+                releaseInfo = item.releaseInfo,
+                imageUrl = item.imageUrl,
+                lookupType = item.kind,
+                lookupId = item.id,
+            )
+        }
+        .toList()
 
     val completedItems = watchedBuckets.completedItems
         .asSequence()
@@ -1466,6 +1502,11 @@ private fun buildProfileInsightCollections(
             subtitle = "",
             items = continueItems,
         ),
+        ProfileInsightCollectionKind.Watched to ProfileInsightCollection(
+            title = watchedTitle,
+            subtitle = "",
+            items = watchedMovieItems,
+        ),
         ProfileInsightCollectionKind.Completed to ProfileInsightCollection(
             title = completedTitle,
             subtitle = "",
@@ -1493,7 +1534,9 @@ private fun buildProfileInsightCollections(
 private fun emptyProfileInsightsStats(): ProfileInsightsStats =
     ProfileInsightsStats(
         continueCount = 0,
+        watchedMovieCount = 0,
         completedCount = 0,
+        episodesWatchedCount = 0,
         ongoingSeriesCount = 0,
         libraryCount = 0,
         trackedDurationMs = 0L,
@@ -1509,6 +1552,7 @@ private fun emptyProfileInsightsStats(): ProfileInsightsStats =
 
 private fun emptyProfileInsightCollections(
     continueTitle: String,
+    watchedTitle: String,
     completedTitle: String,
     ongoingTitle: String,
     libraryTitle: String,
@@ -1517,6 +1561,11 @@ private fun emptyProfileInsightCollections(
     mapOf(
         ProfileInsightCollectionKind.Continue to ProfileInsightCollection(
             title = continueTitle,
+            subtitle = "",
+            items = emptyList(),
+        ),
+        ProfileInsightCollectionKind.Watched to ProfileInsightCollection(
+            title = watchedTitle,
             subtitle = "",
             items = emptyList(),
         ),
@@ -1543,6 +1592,7 @@ private fun emptyProfileInsightCollections(
     )
 
 private data class ProfileWatchedContentBuckets(
+    val watchedMovieItems: List<ProfileCompletedContentItem>,
     val completedItems: List<ProfileCompletedContentItem>,
     val ongoingSeriesItems: List<ProfileCompletedContentItem>,
 )
@@ -1667,10 +1717,19 @@ private fun buildProfileWatchedContentBuckets(
         }
 
     return ProfileWatchedContentBuckets(
-        completedItems = (movieItems + completedSeriesItems).sortedByDescending(ProfileCompletedContentItem::markedAtEpochMs),
+        watchedMovieItems = movieItems.sortedByDescending(ProfileCompletedContentItem::markedAtEpochMs),
+        completedItems = completedSeriesItems.sortedByDescending(ProfileCompletedContentItem::markedAtEpochMs),
         ongoingSeriesItems = ongoingSeriesItems.sortedByDescending(ProfileCompletedContentItem::markedAtEpochMs),
     )
 }
+private fun List<WatchedItem>.profileWatchedEpisodeCount(): Int =
+    asSequence()
+        .filter { item -> item.type.profileCompletedContentKind() == "series" }
+        .filter { item -> item.season != null && item.episode != null }
+        .map { item -> Triple(item.id, item.season, item.episode) }
+        .distinct()
+        .count()
+
 private fun WatchProgressEntry.isProfileInsightProgressEntry(): Boolean =
     parentMetaType.profileCompletedContentKind() != null &&
         !parentMetaId.isLikelyProfileLiveTvValue() &&
@@ -2106,6 +2165,8 @@ private data class ProfileInsightsStats(
     val trackedDurationMs: Long,
     val recentActivityCount: Int,
     val upcomingCount: Int,
+    val watchedMovieCount: Int = 0,
+    val episodesWatchedCount: Int = 0,
     val topGenre: String?,
     val topType: String?,
     val tasteSegments: List<ProfileTasteSegment>,
@@ -2130,6 +2191,7 @@ private fun LibraryUpcomingEpisode.toProfileInsightPosterItem(): ProfileInsightP
 
 private enum class ProfileInsightCollectionKind {
     Continue,
+    Watched,
     Completed,
     Ongoing,
     Library,

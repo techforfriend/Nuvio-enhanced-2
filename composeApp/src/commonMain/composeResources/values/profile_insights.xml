@@ -15,11 +15,14 @@
     <string name="profile_insights_hero_continue">Watching</string>
     <string name="profile_insights_hero_library">Saved</string>
     <string name="profile_insights_hero_upcoming">Upcoming</string>
+    <string name="profile_insights_hero_watched">Watched</string>
+    <string name="profile_insights_hero_episodes">Episodes</string>
 
     <string name="profile_insights_stat_continue">Continue Watching</string>
     <string name="profile_insights_stat_continue_caption">Titles currently in progress</string>
+    <string name="profile_insights_stat_watched">Watched Movies</string>
     <string name="profile_insights_stat_completed">Completed</string>
-    <string name="profile_insights_stat_completed_caption">Movies and series you finished, counted once per title</string>
+    <string name="profile_insights_stat_completed_caption">Series you watched through to the end</string>
     <string name="profile_insights_stat_ongoing">Ongoing</string>
     <string name="profile_insights_stat_ongoing_caption">Series you started but have not finished</string>
     <string name="profile_insights_stat_library">Library</string>
