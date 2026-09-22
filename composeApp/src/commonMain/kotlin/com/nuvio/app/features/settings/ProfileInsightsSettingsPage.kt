@@ -1,5 +1,10 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import com.nuvio.app.navigation.LocalUseNativeNavigation
 import co.touchlab.kermit.Logger
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.text.TextAutoSize
@@ -123,6 +128,7 @@ internal fun LazyListScope.profileInsightsContent(
     onSwitchProfile: (() -> Unit)?,
     onEditProfile: (() -> Unit)?,
     onPosterClick: ((MetaPreview) -> Unit)?,
+    onBack: (() -> Unit)? = null,
 ) {
     item {
         ProfileInsightsBody(
@@ -130,6 +136,7 @@ internal fun LazyListScope.profileInsightsContent(
             onSwitchProfile = onSwitchProfile,
             onEditProfile = onEditProfile,
             onPosterClick = onPosterClick,
+            onBack = onBack,
         )
     }
 }
@@ -140,6 +147,7 @@ private fun ProfileInsightsBody(
     onSwitchProfile: (() -> Unit)?,
     onEditProfile: (() -> Unit)?,
     onPosterClick: ((MetaPreview) -> Unit)?,
+    onBack: (() -> Unit)? = null,
 ) {
     val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
     val avatars by AvatarRepository.avatars.collectAsStateWithLifecycle()
@@ -285,6 +293,7 @@ private fun ProfileInsightsBody(
             onCollectionClick = onCollectionClick,
             onEditProfile = onEditProfile.takeUnless { isTablet },
             onSwitchProfile = onSwitchProfile.takeUnless { isTablet },
+            onBack = onBack.takeUnless { isTablet },
         )
         Column(
             modifier = Modifier
@@ -407,6 +416,7 @@ private fun ProfileInsightsHero(
     onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
     onEditProfile: (() -> Unit)?,
     onSwitchProfile: (() -> Unit)?,
+    onBack: (() -> Unit)? = null,
 ) {
     if (isTablet) {
         ProfileInsightsHeroBounded(
@@ -427,6 +437,7 @@ private fun ProfileInsightsHero(
             onCollectionClick = onCollectionClick,
             onEditProfile = onEditProfile,
             onSwitchProfile = onSwitchProfile,
+            onBack = onBack,
         )
     }
 }
@@ -521,12 +532,16 @@ private fun ProfileInsightsHeroCinematic(
     onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
     onEditProfile: (() -> Unit)?,
     onSwitchProfile: (() -> Unit)?,
+    onBack: (() -> Unit)? = null,
 ) {
     val tokens = MaterialTheme.nuvio
     val accent = profile?.avatarColorHex?.let(::parseHexColor) ?: tokens.colors.accent
     val avatarImageUrl = remember(profile, avatarItem) {
         profile?.let { profileAvatarImageUrl(it, avatarItem) }
     }
+
+    val bleedsUnderNativeNavBar = LocalUseNativeNavigation.current
+    val floatingChromeTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp
 
     Box(
         modifier = Modifier
@@ -537,7 +552,7 @@ private fun ProfileInsightsHeroCinematic(
             val leftInset = tokens.spacing.screenHorizontal + 40.dp
             val rightInset = tokens.spacing.screenHorizontal + 160.dp
             val bleedWidth = maxWidth + leftInset + rightInset
-            val topExtension = 56.dp
+            val topExtension = if (bleedsUnderNativeNavBar) 56.dp else 0.dp
             val extendedHeight = maxHeight + topExtension
 
             Box(
@@ -624,7 +639,10 @@ private fun ProfileInsightsHeroCinematic(
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = platformPhysicalTopInset() + 4.dp, end = 18.dp),
+                        .padding(
+                            top = if (bleedsUnderNativeNavBar) platformPhysicalTopInset() + 4.dp else floatingChromeTop,
+                            end = 18.dp,
+                        ),
                 ) {
                     ProfileHeaderIconButton(
                         icon = Icons.Rounded.Edit,
@@ -632,6 +650,29 @@ private fun ProfileInsightsHeroCinematic(
                         onClick = onEditProfile,
                     )
                 }
+            }
+
+            if (onBack != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(top = floatingChromeTop, start = 18.dp),
+                ) {
+                    ProfileHeaderIconButton(
+                        icon = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = stringResource(Res.string.action_back),
+                        onClick = onBack,
+                    )
+                }
+                Text(
+                    text = stringResource(Res.string.compose_settings_page_profile),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = floatingChromeTop + 9.dp),
+                )
             }
 
             if (onSwitchProfile != null) {

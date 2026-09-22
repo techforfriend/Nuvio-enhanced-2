@@ -1,5 +1,6 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.navigation.LocalUseNativeNavigation
 import com.nuvio.app.core.build.AppFeaturePolicy
 
 import androidx.compose.foundation.background
@@ -706,13 +707,15 @@ private fun MobileSettingsScreen(
             }
         }
 
+        val profileDrawsOwnChrome = page == SettingsPage.Profile && showInternalHeader && !LocalUseNativeNavigation.current
         NuvioScreen(
             modifier = Modifier.nestedScroll(rootSearchRevealConnection),
             listState = listState,
             autoHidesNativeTabBar = true,
             topPadding = if (page == SettingsPage.Profile) 0.dp else null,
         ) {
-            if (showInternalHeader) {
+            if (profileDrawsOwnChrome) {
+            } else if (showInternalHeader) {
                 stickyHeader {
                     val previousPage = page.previousPage()
                     NuvioScreenHeader(
@@ -779,6 +782,7 @@ private fun MobileSettingsScreen(
                     onSwitchProfile = onSwitchProfile,
                     onEditProfile = onEditProfile,
                     onPosterClick = onPosterClick,
+                    onBack = if (profileDrawsOwnChrome) onNavigateBack else null,
                 )
                 SettingsPage.SupportersContributors -> {
                     if (AppFeaturePolicy.supportersContributorsPageEnabled) {
