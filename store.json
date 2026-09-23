@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.1",
+          "buildVersion": "133",
+          "date": "2026-09-23T13:18:13Z",
+          "localizedDescription": "- fix: MDBList login @luqmanfadlli \r\n- fix(player): time the movie recommendations to the last two minutes @luqmanfadlli\r\n- fix(navigation): keep the tab bar on Settings sub-pages @luqmanfadlli\r\n- feat(navigation): inline labels on the tablet floating pill @luqmanfadlli\r\n- fix(ios): fix Live TV visibility and legacy tab bar on iOS 26+ @luqmanfadlli\r\n- fix(mdblist): correct library sorting @tapframe\r\n- feat(settings): let the floating nav bar sit at the top @luqmanfadlli\r\n- fix(navigation): skip the pill slide on iPad after a drag @luqmanfadlli\r\n- fix(mdblist): batch and reuse rating requests @tapframe\r\n- update latest Vietnamese strings @blueocean2308\r\n- Fix collections race condition @skoruppa\r\n- fix(details) adapt to the new aiom season poster method @chrisk325\r\n- Landscape posters in library @skoruppa\r\n- feat: traducir strings pendientes al castellano @IberianSoldierPC\r\n- Fix custom posters missing in tmdb/trakt collections @skoruppa",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.5.1-beta/Nuvio-0.5.1-Enhanced.ipa",
+          "size": 68031189,
+          "sha256": "098035742a41a878fccb4a4df60a2cb37e77dc96de27c67bbbeff1645b67b79b",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.0",
           "buildVersion": "132",
           "date": "2026-09-22T10:51:10Z",
