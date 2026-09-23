@@ -50,6 +50,9 @@ object ThemeSettingsRepository {
     private val _navBarStyle = MutableStateFlow(NavBarStyle.ADAPTIVE)
     val navBarStyle: StateFlow<NavBarStyle> = _navBarStyle.asStateFlow()
 
+    private val _navBarPosition = MutableStateFlow(NavBarPosition.BOTTOM)
+    val navBarPosition: StateFlow<NavBarPosition> = _navBarPosition.asStateFlow()
+
     private val _navBarGlowEnabled = MutableStateFlow(true)
     val navBarGlowEnabled: StateFlow<Boolean> = _navBarGlowEnabled.asStateFlow()
 
@@ -86,6 +89,7 @@ object ThemeSettingsRepository {
         _selectedAppLanguage.value = AppLanguage.DEVICE
         _navBarGlowEnabled.value = true
         _navBarStyle.value = NavBarStyle.ADAPTIVE
+        _navBarPosition.value = NavBarPosition.BOTTOM
     }
 
     private fun loadFromDisk() {
@@ -119,6 +123,7 @@ object ThemeSettingsRepository {
         _selectedAppLanguage.value = appLanguage
         _navBarGlowEnabled.value = ThemeSettingsStorage.loadNavBarGlowEnabled() ?: true
         _navBarStyle.value = NavBarStyle.fromKey(ThemeSettingsStorage.loadNavBarStyle())
+        _navBarPosition.value = NavBarPosition.fromKey(ThemeSettingsStorage.loadNavBarPosition())
     }
 
     fun setCustomTheme(colors: CustomThemeColors) {
@@ -193,6 +198,13 @@ object ThemeSettingsRepository {
         if (_navBarStyle.value == style) return
         _navBarStyle.value = style
         ThemeSettingsStorage.saveNavBarStyle(style.key)
+    }
+
+    fun setNavBarPosition(position: NavBarPosition) {
+        ensureLoaded()
+        if (_navBarPosition.value == position) return
+        _navBarPosition.value = position
+        ThemeSettingsStorage.saveNavBarPosition(position.key)
     }
 
     fun setNavBarGlowEnabled(enabled: Boolean) {

@@ -4,7 +4,10 @@ import androidx.compose.runtime.collectAsState
 import com.nuvio.app.core.ui.NativeTabBridge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -29,6 +32,8 @@ import com.nuvio.app.core.ui.LocalNuvioNavBarScrollState
 import com.nuvio.app.core.ui.NuvioClassicNavigationBar
 import com.nuvio.app.core.ui.PlatformBackHandler
 import com.nuvio.app.core.ui.LocalNuvioTabletNavLayout
+import com.nuvio.app.core.ui.floatingNavigationBarPadding
+import com.nuvio.app.features.settings.NavBarPosition
 import com.nuvio.app.core.ui.rememberNuvioNavBarScrollState
 import com.nuvio.app.features.profiles.NuvioProfile
 import com.nuvio.app.features.profiles.ProfileSwitcherTab
@@ -82,6 +87,8 @@ internal fun MainTabsDestination(
         val navBarHazeState = rememberHazeState()
         val navBarStyleSetting by remember { ThemeSettingsRepository.navBarStyle }.collectAsStateWithLifecycle()
         val navBarGlowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
+        val navBarPosition by ThemeSettingsRepository.navBarPosition.collectAsStateWithLifecycle()
+        val floatingBarOnTop = navBarStyleSetting != NavBarStyle.CLASSIC && navBarPosition == NavBarPosition.TOP
         val floatingNavigationItems = buildList {
             add(
                 FloatingNavigationItem(
@@ -192,7 +199,9 @@ internal fun MainTabsDestination(
                 CompositionLocalProvider(
                     LocalNuvioBottomNavigationOverlayPadding provides when {
                         tabsRouteActive && useNativeBottomTabs -> 49.dp
-                        tabsRouteActive && navBarStyleSetting != NavBarStyle.CLASSIC -> 72.dp
+                        // A top pill floats over the content like the tablet CLASSIC bar, so
+                        // nothing needs to be kept clear at the bottom.
+                        tabsRouteActive && navBarStyleSetting != NavBarStyle.CLASSIC && !floatingBarOnTop -> 72.dp
                         else -> 0.dp
                     },
                     LocalNuvioNavBarScrollState provides navBarScrollState,
@@ -231,9 +240,17 @@ internal fun MainTabsDestination(
                         else -> {}
                     }
                     FloatingNavigationBar(
-                        modifier = Modifier.align(Alignment.BottomCenter),
+                        modifier = Modifier.align(if (floatingBarOnTop) Alignment.TopCenter else Alignment.BottomCenter),
                         scrollState = navBarScrollState,
                         hazeState = navBarHazeState,
+                        contentPadding = if (floatingBarOnTop) {
+                            PaddingValues(
+                                top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 10.dp,
+                                bottom = 8.dp,
+                            )
+                        } else {
+                            floatingNavigationBarPadding()
+                        },
                         items = floatingNavigationItems,
                         glowEnabled = navBarGlowEnabled,
                     )

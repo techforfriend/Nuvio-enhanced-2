@@ -2552,4 +2552,7 @@
     <string name="compose_player_show_remaining_time">Show remaining time</string>
     <string name="compose_player_brightness">Brightness</string>
     <string name="compose_player_volume">Volume</string>
+    <string name="settings_nav_bar_position">Position</string>
+    <string name="settings_nav_bar_position_bottom">Bottom</string>
+    <string name="settings_nav_bar_position_top">Top</string>
 </resources>

@@ -39,6 +39,8 @@ internal fun NavigationBarSettingsSheet(
     onStyleSelected: (NavBarStyle) -> Unit,
     glowEnabled: Boolean,
     onGlowChanged: (Boolean) -> Unit,
+    selectedPosition: NavBarPosition,
+    onPositionSelected: (NavBarPosition) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -55,7 +57,7 @@ internal fun NavigationBarSettingsSheet(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                 )
-                NavigationBarPreview(selectedStyle, isTablet, glowEnabled)
+                NavigationBarPreview(selectedStyle, isTablet, glowEnabled, selectedPosition)
             }
             if (!isTablet) {
                 NavBarStyle.entries.forEach { style ->
@@ -73,6 +75,36 @@ internal fun NavigationBarSettingsSheet(
                                 }
                             },
                         )
+                    }
+                }
+            }
+            item {
+                // Only the floating pill can move; CLASSIC keeps its fixed place.
+                AnimatedVisibility(selectedStyle != NavBarStyle.CLASSIC) {
+                    Column {
+                        NuvioBottomSheetDivider()
+                        Text(
+                            text = stringResource(Res.string.settings_nav_bar_position),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 4.dp),
+                        )
+                        NavBarPosition.entries.forEach { position ->
+                            NuvioBottomSheetActionRow(
+                                title = stringResource(position.labelRes),
+                                onClick = { onPositionSelected(position) },
+                                modifier = Modifier.semantics {
+                                    role = Role.RadioButton
+                                    selected = position == selectedPosition
+                                },
+                                trailingContent = {
+                                    if (position == selectedPosition) {
+                                        Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
             }

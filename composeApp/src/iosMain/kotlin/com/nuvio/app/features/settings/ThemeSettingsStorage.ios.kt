@@ -20,6 +20,7 @@ actual object ThemeSettingsStorage {
     private const val tabBarBehaviorKey = "tab_bar_behavior"
     private const val selectedAppLanguageKey = "selected_app_language"
     private const val navBarStyleKey = "nav_bar_style"
+    private const val navBarPositionKey = "nav_bar_position"
     private const val navBarGlowEnabledKey = "nav_bar_glow_enabled"
     private val profileScopedSyncKeys = listOf(
         selectedThemeKey,
@@ -31,6 +32,7 @@ actual object ThemeSettingsStorage {
         dynamicArtworkBackgroundEnabledKey,
         showCatalogAccentEnabledKey,
         navBarStyleKey,
+        navBarPositionKey,
     )
 
     actual fun loadSelectedTheme(): String? =
@@ -172,6 +174,13 @@ actual object ThemeSettingsStorage {
         NSUserDefaults.standardUserDefaults.setObject(styleKey, forKey = ProfileScopedKey.of(navBarStyleKey))
     }
 
+    actual fun loadNavBarPosition(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(navBarPositionKey))
+
+    actual fun saveNavBarPosition(positionKey: String) {
+        NSUserDefaults.standardUserDefaults.setObject(positionKey, forKey = ProfileScopedKey.of(navBarPositionKey))
+    }
+
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {
         loadSelectedTheme()?.let { put(selectedThemeKey, encodeSyncString(it)) }
         loadCustomThemeColors()?.let { put(customThemeColorsKey, encodeSyncString(it)) }
@@ -182,6 +191,7 @@ actual object ThemeSettingsStorage {
         loadDynamicArtworkBackgroundEnabled()?.let { put(dynamicArtworkBackgroundEnabledKey, encodeSyncBoolean(it)) }
         loadShowCatalogAccentEnabled()?.let { put(showCatalogAccentEnabledKey, encodeSyncBoolean(it)) }
         loadNavBarStyle()?.let { put(navBarStyleKey, encodeSyncString(it)) }
+        loadNavBarPosition()?.let { put(navBarPositionKey, encodeSyncString(it)) }
     }
 
     actual fun replaceFromSyncPayload(payload: JsonObject) {
@@ -198,6 +208,7 @@ actual object ThemeSettingsStorage {
         payload.decodeSyncBoolean(dynamicArtworkBackgroundEnabledKey)?.let(::saveDynamicArtworkBackgroundEnabled)
         payload.decodeSyncBoolean(showCatalogAccentEnabledKey)?.let(::saveShowCatalogAccentEnabled)
         payload.decodeSyncString(navBarStyleKey)?.let(::saveNavBarStyle)
+        payload.decodeSyncString(navBarPositionKey)?.let(::saveNavBarPosition)
         applySelectedAppLanguage(loadSelectedAppLanguage() ?: AppLanguage.DEVICE.code)
     }
 }

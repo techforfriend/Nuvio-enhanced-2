@@ -40,11 +40,17 @@ import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun NavigationBarPreview(style: NavBarStyle, isTablet: Boolean, glowEnabled: Boolean) {
+internal fun NavigationBarPreview(
+    style: NavBarStyle,
+    isTablet: Boolean,
+    glowEnabled: Boolean,
+    position: NavBarPosition = NavBarPosition.BOTTOM,
+) {
     val tokens = MaterialTheme.nuvio
     val hazeState = rememberHazeState()
     val tabletClassic = style == NavBarStyle.CLASSIC && (isTablet || LocalNuvioTabletNavLayout.current)
     val topPill = isTablet || tabletClassic
+    val pillOnTop = topPill || (style != NavBarStyle.CLASSIC && position == NavBarPosition.TOP)
     val barScrollState = remember(style, topPill) {
         NuvioNavBarScrollState().apply {
             if (topPill || style == NavBarStyle.COMPACT) collapse()
@@ -101,7 +107,7 @@ internal fun NavigationBarPreview(style: NavBarStyle, isTablet: Boolean, glowEna
             } else {
                 FloatingNavigationBar(
                     items = items,
-                    modifier = Modifier.align(if (topPill) Alignment.TopCenter else Alignment.BottomCenter)
+                    modifier = Modifier.align(if (pillOnTop) Alignment.TopCenter else Alignment.BottomCenter)
                         .then(if (topPill) Modifier.widthIn(max = 416.dp) else Modifier),
                     scrollState = barScrollState,
                     hazeState = hazeState,
