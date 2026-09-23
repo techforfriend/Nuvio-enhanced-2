@@ -515,7 +515,7 @@ object MetaDetailsRepository {
     private fun MetaDetails.withUnreleasedFilter(): MetaDetails {
         val posterPattern = com.nuvio.app.core.poster.CustomPosterUrlRepository.let {
             it.ensureLoaded()
-            it.pattern.value
+            it.patternForScreen(com.nuvio.app.core.poster.CustomPosterScreen.DETAILS)
         }
         val base = withCustomPosterUrls(posterPattern)
         if (!HomeCatalogSettingsRepository.snapshot().hideUnreleasedContent) return base

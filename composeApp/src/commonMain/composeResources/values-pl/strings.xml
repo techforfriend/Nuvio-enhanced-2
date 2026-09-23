@@ -583,6 +583,14 @@
     <string name="settings_custom_poster_none">Brak skonfigurowanego wzorca</string>
     <string name="settings_custom_poster_save">Zapisz</string>
     <string name="settings_custom_poster_clear">Wyczyść</string>
+    <!-- Custom Poster URL - Screen Toggles -->
+    <string name="settings_custom_poster_apply_to">Stosuj niestandardowe plakaty w</string>
+    <string name="settings_custom_poster_screen_home">Strona główna</string>
+    <string name="settings_custom_poster_screen_continue_watching">Kontynuuj oglądanie</string>
+    <string name="settings_custom_poster_screen_collections">Kolekcje</string>
+    <string name="settings_custom_poster_screen_library">Biblioteka</string>
+    <string name="settings_custom_poster_screen_search">Wyszukiwanie</string>
+    <string name="settings_custom_poster_screen_details">Strona szczegółów</string>
     <string name="settings_show_secret">Pokaż wartość</string>
     <string name="settings_continue_watching_resume_prompt_description">Pokaż okno kontynuowania od miejsca, w którym skończyłeś, po otwarciu aplikacji po wyjściu z odtwarzacza.</string>
     <string name="settings_continue_watching_resume_prompt_title">Monit o wznowienie przy uruchomieniu</string>
