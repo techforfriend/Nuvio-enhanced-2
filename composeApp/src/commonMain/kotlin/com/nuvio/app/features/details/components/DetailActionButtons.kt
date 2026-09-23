@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -59,6 +60,7 @@ fun DetailActionButtons(
     modifier: Modifier = Modifier,
     playLabel: String = stringResource(Res.string.action_play),
     playEnabled: Boolean = true,
+    shuffleEnabled: Boolean = false,
     secondaryActions: List<DetailSecondaryAction> = emptyList(),
     actionsMenuLabel: String = stringResource(Res.string.details_actions_menu_label),
     isTablet: Boolean = false,
@@ -114,11 +116,13 @@ fun DetailActionButtons(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        painter = playPainter,
-                        contentDescription = null,
-                        modifier = Modifier.size(if (isTablet) 20.dp else 18.dp),
-                    )
+                    if (shuffleEnabled) {
+                        Icon(Icons.Default.Shuffle, contentDescription = null,
+                            modifier = Modifier.size(if (isTablet) 20.dp else 18.dp))
+                    } else {
+                        Icon(painter = playPainter, contentDescription = null,
+                            modifier = Modifier.size(if (isTablet) 20.dp else 18.dp))
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = playLabel,
