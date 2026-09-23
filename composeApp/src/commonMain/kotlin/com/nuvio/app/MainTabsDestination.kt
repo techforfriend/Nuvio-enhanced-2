@@ -132,6 +132,7 @@ internal fun MainTabsDestination(
                         else -> 0.dp
                     },
                     LocalNuvioNavBarScrollState provides navBarScrollState,
+                    LocalNuvioTabletNavLayout provides isTabletLayout,
                 ) {
                     AppTabHost(
                         selectedTab = selectedTab,
