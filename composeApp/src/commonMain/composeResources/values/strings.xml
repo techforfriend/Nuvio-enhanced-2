@@ -1280,6 +1280,7 @@
     <string name="settings_tracking_simkl_progress_description">Resume with playback progress from Simkl.</string>
     <string name="settings_tracking_tmdb_recommendations_description">Use TMDB recommendations on details pages.</string>
     <string name="settings_tracking_trakt_recommendations_description">Use personalized related titles from Trakt.</string>
+    <string name="settings_tracking_simkl_recommendations_description">Use similar titles and community recommendations from Simkl.</string>
     <string name="settings_tracking_anime_id_title">Anime ID preference</string>
     <string name="settings_tracking_anime_id_subtitle">Choose which external ID is used as the primary identifier for anime entries.</string>
     <string name="settings_tracking_anime_id_dialog_title">Anime ID preference</string>
@@ -1342,6 +1343,7 @@
     <string name="trakt_more_like_this_source_dialog_subtitle">Select the source for recommendations shown on detail pages.</string>
     <string name="trakt_more_like_this_source_trakt">Trakt</string>
     <string name="trakt_more_like_this_source_tmdb">TMDB</string>
+    <string name="trakt_more_like_this_source_simkl">Simkl</string>
     <string name="trakt_continue_watching_window">Continue Watching Window</string>
     <string name="trakt_continue_watching_subtitle">Trakt history considered for continue watching</string>
     <string name="trakt_cw_window_title">Continue Watching Window</string>
@@ -1489,6 +1491,7 @@
     <string name="details_more_like_this">More Like This</string>
     <string name="detail_more_like_this_powered_by_tmdb">Powered by TMDB</string>
     <string name="detail_more_like_this_powered_by_trakt">Powered by Trakt</string>
+    <string name="detail_more_like_this_powered_by_simkl">Powered by Simkl</string>
     <string name="details_seasons">Seasons</string>
     <string name="details_series_missing_numbers">This addon returned videos for the series, but none included season or episode numbers.</string>
     <string name="details_series_no_metadata">This addon did not provide episode metadata for this series.</string>
