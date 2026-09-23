@@ -713,26 +713,23 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         playbackSnapshot.positionMs,
         playbackSnapshot.durationMs,
         playbackSnapshot.isEnded,
-        skipIntervals,
         playerMeta?.moreLikeThis,
-        movieRecommendationSnoozedUntilMs,
+        movieRecommendationDismissedStage,
         playerSettingsUiState.movieRecommendationsEnabled,
     ) {
         if (!isMoviePlayback || !playerSettingsUiState.movieRecommendationsEnabled || playerMeta?.moreLikeThis.isNullOrEmpty()) {
             showMovieRecommendationCard = false
             return@LaunchedEffect
         }
-        val inCreditsWindow = PlayerNextEpisodeRules.shouldShowMovieRecommendations(
+        val stage = PlayerNextEpisodeRules.movieRecommendationStage(
             positionMs = playbackSnapshot.positionMs,
             durationMs = playbackSnapshot.durationMs,
-            skipIntervals = skipIntervals,
+            isEnded = playbackSnapshot.isEnded,
         )
-        val snoozedUntil = movieRecommendationSnoozedUntilMs
-        if (snoozedUntil != null && !inCreditsWindow && !playbackSnapshot.isEnded) {
-            movieRecommendationSnoozedUntilMs = null
+        if (stage == 0 && movieRecommendationDismissedStage != 0) {
+            movieRecommendationDismissedStage = 0
         }
-        val snoozed = snoozedUntil != null && playbackSnapshot.positionMs < snoozedUntil
-        showMovieRecommendationCard = playbackSnapshot.isEnded || (inCreditsWindow && !snoozed)
+        showMovieRecommendationCard = stage > movieRecommendationDismissedStage
     }
 }
 

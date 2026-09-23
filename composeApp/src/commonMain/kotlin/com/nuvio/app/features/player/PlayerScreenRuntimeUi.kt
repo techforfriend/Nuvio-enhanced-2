@@ -15,6 +15,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.layout.onSizeChanged
+import com.nuvio.app.features.player.skip.PlayerNextEpisodeRules
 import com.nuvio.app.core.logging.InAppLogger
 import com.nuvio.app.features.p2p.P2pStreamingState
 import com.nuvio.app.features.p2p.formatP2pMegabytes
@@ -609,7 +610,11 @@ private fun BoxScope.RenderPlaybackOverlays(
             args.onOpenMetaDetails?.invoke(preview)
         },
         onDismissMovieRecommendations = {
-            movieRecommendationSnoozedUntilMs = playbackSnapshot.positionMs + MOVIE_RECOMMENDATION_SNOOZE_MS
+            movieRecommendationDismissedStage = PlayerNextEpisodeRules.movieRecommendationStage(
+                positionMs = playbackSnapshot.positionMs,
+                durationMs = playbackSnapshot.durationMs,
+                isEnded = playbackSnapshot.isEnded,
+            )
             showMovieRecommendationCard = false
         },
         errorMessage = errorMessage,
@@ -860,4 +865,3 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
 
 private const val MOVIE_RECOMMENDATION_LIMIT = 10
 
-private const val MOVIE_RECOMMENDATION_SNOOZE_MS = 60_000L

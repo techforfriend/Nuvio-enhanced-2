@@ -84,24 +84,27 @@ object PlayerNextEpisodeRules {
         }
     }
 
-    fun shouldShowMovieRecommendations(
-        positionMs: Long,
-        durationMs: Long,
-        skipIntervals: List<SkipInterval>,
-    ): Boolean {
-        if (durationMs <= 0L) return false
-        val outroSegments = skipIntervals.filter { it.type in OUTRO_SEGMENT_TYPES }
-        if (outroSegments.isNotEmpty()) {
-            return positionMs / 1_000.0 >= outroSegments.minOf { it.startTime }
+    /**
+     * How far a movie is into its ending, for the More Like This card:
+     * 0 = not yet, 1 = last 2 minutes, 2 = last 30 seconds, 3 = playback ended.
+     * The card shows while the stage is above the one the user last dismissed it at, so a
+     * dismissal in the 2-minute window brings it back at 30 seconds, and it always returns
+     * when playback really ends.
+     */
+    fun movieRecommendationStage(positionMs: Long, durationMs: Long, isEnded: Boolean): Int {
+        if (isEnded) return MOVIE_RECOMMENDATION_STAGE_ENDED
+        if (durationMs <= 0L) return 0
+        val remainingMs = durationMs - positionMs
+        return when {
+            remainingMs <= MOVIE_RECOMMENDATION_FINAL_MS -> 2
+            remainingMs <= MOVIE_RECOMMENDATION_FIRST_MS -> 1
+            else -> 0
         }
-        val creditsWindowMs = (durationMs * MOVIE_CREDITS_FRACTION).toLong()
-            .coerceIn(MOVIE_CREDITS_MIN_MS, MOVIE_CREDITS_MAX_MS)
-        return durationMs - positionMs <= creditsWindowMs
     }
 
-    private const val MOVIE_CREDITS_FRACTION = 0.05
-    private const val MOVIE_CREDITS_MIN_MS = 2L * 60_000L
-    private const val MOVIE_CREDITS_MAX_MS = 8L * 60_000L
+    const val MOVIE_RECOMMENDATION_STAGE_ENDED = 3
+    private const val MOVIE_RECOMMENDATION_FIRST_MS = 2L * 60_000L
+    private const val MOVIE_RECOMMENDATION_FINAL_MS = 30_000L
 
     fun hasEpisodeAired(raw: String?): Boolean {
         val value = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return true
