@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -43,6 +44,7 @@ import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.visualNavIndex
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @Composable
 internal fun JellyTabRow(
@@ -52,6 +54,7 @@ internal fun JellyTabRow(
     active: Boolean,
     compactSize: Boolean,
     modifier: Modifier,
+    inlineLabels: Boolean = false,
 ) {
     val tokens = MaterialTheme.nuvio
     val palette = MaterialTheme.themePalette
@@ -74,6 +77,18 @@ internal fun JellyTabRow(
                 },
                 contentAlignment = Alignment.Center,
             ) {
+                if (inlineLabels) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(iconSize)) {
+                            when {
+                                item.icon != null -> Icon(item.icon, null, iconModifier, tint = iconTint)
+                                item.drawable != null -> Icon(painterResource(item.drawable), null, iconModifier, tint = iconTint)
+                            }
+                        }
+                        InlineJellyLabel(item.label, labelFraction, color, active)
+                    }
+                    return@Box
+                }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(Modifier.size(iconSize).graphicsLayer { translationY = 2.dp.toPx() * labelFraction }) {
                         when {
@@ -109,6 +124,7 @@ internal fun JellyTabTargets(
     motion: JellyMotion,
     compactSize: Boolean,
     modifier: Modifier,
+    inlineLabels: Boolean = false,
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Row(modifier.padding(horizontal = 4.dp).selectableGroup()) {
@@ -136,7 +152,25 @@ internal fun JellyTabTargets(
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                if (item.content != null) {
+                if (item.content != null && inlineLabels) {
+                    Row(
+                        modifier = Modifier.graphicsLayer {
+                            val frame = motion.frame
+                            val coverage = (1f - abs(frame.position - visualIndex)).coerceIn(0f, 1f)
+                            val scale = 1f + (frame.contentScale - 1f) * coverage
+                            scaleX = scale
+                            scaleY = scale
+                        },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(if (compactSize) Modifier.size(24.dp) else Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+                            item.content(onClick)
+                        }
+                        Box(Modifier.alpha(0f)) {
+                            InlineJellyLabel(item.label, labelFraction, Color.Transparent, active = false)
+                        }
+                    }
+                } else if (item.content != null) {
                     Column(
                         modifier = Modifier.graphicsLayer {
                             val frame = motion.frame
@@ -160,4 +194,30 @@ internal fun JellyTabTargets(
             }
         }
     }
+}
+
+@Composable
+private fun InlineJellyLabel(label: String, labelFraction: Float, color: Color, active: Boolean) {
+    Text(
+        text = label,
+        color = color,
+        style = TextStyle(
+            fontSize = 14.sp,
+            lineHeight = 16.sp,
+            fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+        ),
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .clipToBounds()
+            .alpha(labelFraction)
+            .layout { measurable, constraints ->
+                val gap = (6.dp.toPx() * labelFraction).roundToInt()
+                val maxText = (constraints.maxWidth - gap).coerceAtLeast(0)
+                val placeable = measurable.measure(constraints.copy(minWidth = 0, maxWidth = maxText))
+                val width = gap + (placeable.width * labelFraction).roundToInt()
+                layout(width, placeable.height) { placeable.place(gap, 0) }
+            },
+    )
 }

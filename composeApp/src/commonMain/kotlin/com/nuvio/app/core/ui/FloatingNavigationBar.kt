@@ -86,6 +86,7 @@ internal fun FloatingNavigationBar(
     contentPadding: PaddingValues = floatingNavigationBarPadding(),
     compactSize: Boolean = false,
     glowEnabled: Boolean = true,
+    inlineLabels: Boolean = false,
 ) {
     if (items.isEmpty()) return
     val showGlow = !floatingNavigationGlowSupported || glowEnabled
@@ -110,8 +111,16 @@ internal fun FloatingNavigationBar(
     val currentItems by rememberUpdatedState(items)
     val currentIsRtl by rememberUpdatedState(isRtl)
     val density = LocalDensity.current
-    val trackHeight = 48.dp + (if (compactSize) 8.dp else 16.dp) * labelFraction
+    val trackHeight = if (inlineLabels) 48.dp + 4.dp * labelFraction
+    else 48.dp + (if (compactSize) 8.dp else 16.dp) * labelFraction
     val horizontalPadding = 58.dp - 30.dp * labelFraction
+    // Inline (tablet) pill: expanded fits icon + label per tab, compact shrinks to icon-only
+    // slots instead of keeping most of the expanded width.
+    val inlineMaxWidth = run {
+        val compactWidth = 64.dp * items.size + 8.dp
+        val expandedWidth = 640.dp
+        compactWidth + (expandedWidth - compactWidth) * labelFraction
+    }
 
     SideEffect {
         if (visualSelectedIndex >= 0 && JellySelectionSource.lastDragCommit == visualSelectedIndex) {
@@ -145,7 +154,7 @@ internal fun FloatingNavigationBar(
     ) {
         Box(
             modifier = Modifier
-                .widthIn(max = 400.dp)
+                .widthIn(max = if (inlineLabels) inlineMaxWidth else 400.dp)
                 .fillMaxWidth()
                 .height(trackHeight)
                 .onSizeChanged {
@@ -203,7 +212,7 @@ internal fun FloatingNavigationBar(
                                 }
                             },
                         ) {
-                            JellyTabRow(items, labelFraction, motion, active = false, compactSize = compactSize, modifier = Modifier.matchParentSize())
+                            JellyTabRow(items, labelFraction, motion, active = false, compactSize = compactSize, modifier = Modifier.matchParentSize(), inlineLabels = inlineLabels)
                         }
                         if (selectedIndex >= 0) {
                             Box(
@@ -218,10 +227,10 @@ internal fun FloatingNavigationBar(
                                         ) { drawContent() }
                                     },
                             ) {
-                                JellyTabRow(items, labelFraction, motion, active = true, compactSize = compactSize, modifier = Modifier.matchParentSize())
+                                JellyTabRow(items, labelFraction, motion, active = true, compactSize = compactSize, modifier = Modifier.matchParentSize(), inlineLabels = inlineLabels)
                             }
                         }
-                        JellyTabTargets(items, labelFraction, motion, compactSize, Modifier.matchParentSize())
+                        JellyTabTargets(items, labelFraction, motion, compactSize, Modifier.matchParentSize(), inlineLabels = inlineLabels)
                     }
                 }
             }

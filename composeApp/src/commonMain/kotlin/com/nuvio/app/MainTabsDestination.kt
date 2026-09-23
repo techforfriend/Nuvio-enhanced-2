@@ -253,6 +253,7 @@ internal fun MainTabsDestination(
                         },
                         items = floatingNavigationItems,
                         glowEnabled = navBarGlowEnabled,
+                        inlineLabels = isTabletLayout,
                     )
                 }
             }

@@ -114,6 +114,7 @@ internal fun NavigationBarPreview(
                     contentPadding = PaddingValues(vertical = 16.dp),
                     compactSize = topPill,
                     glowEnabled = glowEnabled,
+                    inlineLabels = LocalNuvioTabletNavLayout.current,
                 )
             }
         }
