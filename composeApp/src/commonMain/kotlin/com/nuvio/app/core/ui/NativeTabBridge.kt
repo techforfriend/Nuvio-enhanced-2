@@ -49,6 +49,10 @@ internal object NativeTabBridge {
         _activeTab.value = tab
     }
 
+    fun requestPopToRoot(tabName: String) {
+        swiftPopToRootListener?.invoke(tabName)
+    }
+
     fun requestTab(tabName: String) {
         _requestedTabs.tryEmit(NativeNavigationTab.fromName(tabName))
     }
@@ -234,6 +238,12 @@ private var swiftTabBarVisibilityListener: ((Boolean) -> Unit)? = null
 
 fun observeNativeTabBarVisible(listener: (Boolean) -> Unit) {
     swiftTabBarVisibilityListener = listener
+}
+
+private var swiftPopToRootListener: ((String) -> Unit)? = null
+
+fun observeNativePopToRoot(listener: (String) -> Unit) {
+    swiftPopToRootListener = listener
 }
 
 fun nativeTabSelect(tabName: String) {

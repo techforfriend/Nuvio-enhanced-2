@@ -54,10 +54,14 @@ fun ScreenViewController(
     onReplace: (AppRoute) -> Unit,
     onActivate: (String) -> Unit,
     appGateController: AppGateController,
+    useNativeTabBar: Boolean = false,
+    useTabletFloatingTabBar: Boolean = false,
 ): UIViewController = nuvioComposeViewController {
     App(
         initialRoute = route,
         useNativeNavigation = true,
+        useNativeTabBar = useNativeTabBar,
+        useTabletFloatingTabBar = useTabletFloatingTabBar,
         ownsAppRuntime = false,
         bypassAppGate = true,
         onNavigate = onNavigate,

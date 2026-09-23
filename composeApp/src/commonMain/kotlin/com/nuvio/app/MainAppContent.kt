@@ -67,6 +67,7 @@ import com.nuvio.app.core.sync.ProfileSettingsSync
 import com.nuvio.app.core.sync.SyncManager
 import com.nuvio.app.core.ui.DisintegrationRequestController
 import com.nuvio.app.core.ui.NativeTabBridge
+import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioContinueWatchingActionSheet
 import com.nuvio.app.core.ui.NuvioFloatingPrompt
@@ -143,6 +144,9 @@ import com.nuvio.app.features.player.HidePlayerSystemBars
 import com.nuvio.app.features.player.rememberExternalPlayerLauncher
 import com.nuvio.app.features.profiles.ProfileEditScreen
 import com.nuvio.app.features.profiles.ProfileRepository
+import com.nuvio.app.features.profiles.NuvioProfile
+import com.nuvio.app.core.ui.LocalNuvioBottomNavigationOverlayPadding
+import androidx.compose.foundation.layout.BoxWithConstraints
 import com.nuvio.app.features.settings.AccountSettingsScreen
 import com.nuvio.app.features.settings.AddonsSettingsScreen
 import com.nuvio.app.features.settings.ContinueWatchingSettingsScreen
@@ -520,6 +524,30 @@ internal fun MainAppContent(
     }
 
     var profileSwitchLoading by remember { mutableStateOf(false) }
+
+    val onNavigationProfileSelected: (NuvioProfile) -> Unit = { profile ->
+        if (profile.profileIndex != ProfileRepository.state.value.activeProfile?.profileIndex) {
+            profileSwitchLoading = true
+            NativeTabBridge.publishTabBarVisible(false)
+            activateTab(AppScreenTab.Home)
+            ProfileRepository.selectProfile(profile.profileIndex)
+            SyncManager.pullAllForProfile(profile.profileIndex)
+        }
+    }
+
+    fun selectTabFromSettingsRoute(tab: AppScreenTab) {
+        if (useNativeNavigation) {
+            if (tab == AppScreenTab.Settings) {
+                NativeTabBridge.requestPopToRoot(AppScreenTab.Settings.name)
+            } else {
+                activateTab(tab)
+            }
+            return
+        }
+        while (navController.currentRoute !is TabsRoute && navController.popBackStack()) Unit
+        activateTab(tab)
+    }
+
 
     val rootContentReady = !ownsAppRuntime || (initialHomeReady && !profileSwitchLoading)
     val launchOverlayVisible = ownsAppRuntime && showLaunchOverlay && !rootContentReady
@@ -1417,6 +1445,15 @@ internal fun MainAppContent(
             controller = appUpdaterController,
             modifier = Modifier.fillMaxSize(),
         ) {
+            val nativeTabBarOwnsChrome = useNativeNavigation && useNativeTabBar
+            val settingsRouteBarVisible = currentRoute is SettingsDestinationRoute && !nativeTabBarOwnsChrome
+            val settingsRouteBarHazeState = rememberHazeState()
+            var settingsRouteBarOverlay by remember { mutableStateOf(0.dp) }
+            val settingsRouteBottomOverlay = when {
+                currentRoute !is SettingsDestinationRoute -> 0.dp
+                nativeTabBarOwnsChrome -> 49.dp
+                else -> settingsRouteBarOverlay
+            }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1436,13 +1473,16 @@ internal fun MainAppContent(
             ) {
             SharedTransitionLayout {
                 CompositionLocalProvider(
+                    LocalNuvioBottomNavigationOverlayPadding provides settingsRouteBottomOverlay,
                     LocalPosterClickAnchor provides if (posterNavigationEnabled) posterNavigation::prepare else null,
                     LocalUseNativeNavigation provides useNativeNavigation,
                     LocalNativeNavigationBarHidden provides (currentRoute?.hidesNavigationBar == true),
                 ) {
                 NavDisplay(
                     backStack = navBackStack,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(if (settingsRouteBarVisible) Modifier.hazeSource(state = settingsRouteBarHazeState) else Modifier),
                     onBack = { navController.popBackStack() },
                     entryDecorators = listOf(
                         rememberSaveableStateHolderNavEntryDecorator<NavKey>(),
@@ -1634,15 +1674,7 @@ internal fun MainAppContent(
                             }
                         },
                         onTabSelected = ::handleRootTabClick,
-                        onProfileSelected = { profile ->
-                            if (profile.profileIndex != ProfileRepository.state.value.activeProfile?.profileIndex) {
-                                profileSwitchLoading = true
-                                NativeTabBridge.publishTabBarVisible(false)
-                                activateTab(AppScreenTab.Home)
-                                ProfileRepository.selectProfile(profile.profileIndex)
-                                SyncManager.pullAllForProfile(profile.profileIndex)
-                            }
-                        },
+                        onProfileSelected = onNavigationProfileSelected,
                         onAddProfileRequested = onSwitchProfile,
                     )
                 }
@@ -1846,6 +1878,19 @@ internal fun MainAppContent(
                         }
                     },
                 )
+                }
+            }
+            if (settingsRouteBarVisible) {
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    SettingsRouteNavigationBar(
+                        isTabletLayout = useTabletFloatingTabBar || maxWidth >= 768.dp,
+                        showLiveTv = showLiveTvInNavigation,
+                        hazeState = settingsRouteBarHazeState,
+                        onTabSelected = ::selectTabFromSettingsRoute,
+                        onProfileSelected = onNavigationProfileSelected,
+                        onAddProfileRequested = onSwitchProfile,
+                        onBottomOverlayChanged = { settingsRouteBarOverlay = it },
+                    )
                 }
             }
             }
