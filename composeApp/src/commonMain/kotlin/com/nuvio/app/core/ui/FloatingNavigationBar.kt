@@ -19,6 +19,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +65,8 @@ internal class FloatingNavigationItem(
  * Whether the pill's accent glow can be switched off. Where it cannot, the glow stays on
  * (see [FloatingNavigationBar]).
  */
+internal val LocalNuvioTabletNavLayout = staticCompositionLocalOf { false }
+
 internal expect val floatingNavigationGlowSupported: Boolean
 
 @Composable

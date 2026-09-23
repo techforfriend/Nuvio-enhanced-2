@@ -28,6 +28,7 @@ import com.nuvio.app.core.ui.FloatingNavigationItem
 import com.nuvio.app.core.ui.LocalNuvioNavBarScrollState
 import com.nuvio.app.core.ui.NuvioClassicNavigationBar
 import com.nuvio.app.core.ui.PlatformBackHandler
+import com.nuvio.app.core.ui.LocalNuvioTabletNavLayout
 import com.nuvio.app.core.ui.rememberNuvioNavBarScrollState
 import com.nuvio.app.features.profiles.NuvioProfile
 import com.nuvio.app.features.profiles.ProfileSwitcherTab
@@ -195,6 +196,7 @@ internal fun MainTabsDestination(
                         else -> 0.dp
                     },
                     LocalNuvioNavBarScrollState provides navBarScrollState,
+                    LocalNuvioTabletNavLayout provides isTabletLayout,
                 ) {
                     AppTabHost(
                         selectedTab = selectedTab,
