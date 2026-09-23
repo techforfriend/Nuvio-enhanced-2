@@ -23,6 +23,10 @@ internal data class JellyFrame(
     val glowOpacity: Float = 0f,
 )
 
+internal object JellySelectionSource {
+    var lastDragCommit: Int? = null
+}
+
 @Stable
 internal class JellyMotion(initialIndex: Int, count: Int) {
     private val position = JellySpring(initialIndex.coerceAtLeast(0).toDouble(), 1000.0, 1.0)
@@ -78,6 +82,16 @@ internal class JellyMotion(initialIndex: Int, count: Int) {
         running = true
     }
 
+    fun snap(index: Int) {
+        if (index < 0 || dragging) return
+        if (target == index.coerceAtMost(maxIndex).toDouble() && position.isAtRest(target)) return
+        target = index.coerceAtMost(maxIndex).toDouble()
+        position.snapTo(target)
+        velocity.snapTo(0.0)
+        publish()
+        running = true
+    }
+
     fun begin(x: Float, y: Float) {
         downX = x.toDouble()
         downY = y.toDouble().coerceIn(0.0, height)
@@ -109,8 +123,10 @@ internal class JellyMotion(initialIndex: Int, count: Int) {
     }
 
     fun finish(): Int {
-        val index = if (movedDistance < 4 && tabWidth > 0) indexAt(downX)
+        val wasDrag = !(movedDistance < 4 && tabWidth > 0)
+        val index = if (!wasDrag) indexAt(downX)
         else floor(target + 0.5).toInt().coerceIn(0, maxIndex)
+        JellySelectionSource.lastDragCommit = if (wasDrag) index else null
         dragging = false
         panel.velocity = 0.0
         target = index.toDouble()

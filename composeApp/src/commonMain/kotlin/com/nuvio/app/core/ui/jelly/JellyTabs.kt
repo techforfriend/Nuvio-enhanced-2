@@ -115,6 +115,7 @@ internal fun JellyTabTargets(
         items.forEachIndexed { index, item ->
             val visualIndex = visualNavIndex(index, items.size, isRtl)
             val onClick = {
+                JellySelectionSource.lastDragCommit = null
                 motion.select(visualIndex)
                 item.onClick()
             }

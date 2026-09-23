@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.glass.GlassBarSurface
 import com.nuvio.app.core.ui.jelly.JellyMotion
+import com.nuvio.app.core.ui.jelly.JellySelectionSource
 import com.nuvio.app.core.ui.jelly.JellyTabRow
 import com.nuvio.app.core.ui.jelly.JellyTabTargets
 import com.nuvio.app.core.ui.jelly.drawJellyGlow
@@ -108,8 +110,17 @@ internal fun FloatingNavigationBar(
     val trackHeight = 48.dp + (if (compactSize) 8.dp else 16.dp) * labelFraction
     val horizontalPadding = 58.dp - 30.dp * labelFraction
 
+    SideEffect {
+        if (visualSelectedIndex >= 0 && JellySelectionSource.lastDragCommit == visualSelectedIndex) {
+            motion.snap(visualSelectedIndex)
+        }
+    }
     LaunchedEffect(visualSelectedIndex, items.size) {
-        motion.select(visualSelectedIndex)
+        if (JellySelectionSource.lastDragCommit == visualSelectedIndex) {
+            motion.snap(visualSelectedIndex)
+        } else {
+            motion.select(visualSelectedIndex)
+        }
     }
     LaunchedEffect(motion.running) {
         if (!motion.running) return@LaunchedEffect
