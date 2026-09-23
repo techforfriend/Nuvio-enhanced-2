@@ -1637,7 +1637,7 @@ struct NativeNavContentView: View {
             return false
         }
         if #available(iOS 26.0, *) {
-            return true
+            return appCoordinator.tabBarBehavior.isEnabled
         }
         return false
     }
@@ -1693,14 +1693,10 @@ struct NativeNavContentView: View {
         }
     }
 
-    private func tabBarVisibility(for tab: NuvioAppTab) -> Visibility {
-        tab == .liveTv && !appCoordinator.isLiveTvTabVisible ? .hidden : .automatic
-    }
-
     @available(iOS 26.0, *)
     private var nativeTabs: some View {
         TabView(selection: tabSelection) {
-            ForEach(NuvioAppTab.allCases, id: \.self) { tab in
+            ForEach(appCoordinator.availableTabs, id: \.self) { tab in
                 if tab == .settings {
                     Tab(value: tab) {
                         TabContentView(
@@ -1763,10 +1759,10 @@ struct NativeNavContentView: View {
                             )
                         }
                     }
-                    .defaultVisibility(tabBarVisibility(for: tab), for: .tabBar)
                 }
             }
         }
+        .id(appCoordinator.isLiveTvTabVisible)
         .tint(Color(uiColor: iconStore.accentColor))
         .tabBarMinimizeBehavior(
             appCoordinator.tabBarBehavior == .autoHide ? .onScrollDown : .never
