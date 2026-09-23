@@ -125,7 +125,7 @@
     <string name="collections_editor_shape_square">Square</string>
     <string name="collections_editor_shape_wide">Wide</string>
     <string name="collections_editor_show_all_tab_desc">Combine all catalogs into one tab</string>
-    <string name="collections_editor_show_all_tab">Show \"All\" Tab</string>
+    <string name="collections_editor_show_all_tab">Show &quot;All&quot; Tab</string>
     <string name="collections_editor_show_gif_when_configured_desc">Play the configured GIF instead of the static cover when available.</string>
     <string name="collections_editor_show_gif_when_configured">Show GIF When Configured</string>
     <string name="collections_editor_source_count">%1$d source(s) · %2$s</string>
