@@ -949,7 +949,7 @@ private fun ProfileInsightCollectionSheet(
                 columns = GridCells.Adaptive(if (isTablet) 132.dp else 104.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = if (isTablet) 640.dp else 520.dp),
+                    .weight(1f, fill = false),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
