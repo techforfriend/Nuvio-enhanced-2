@@ -1,5 +1,7 @@
 package com.nuvio.app.features.library
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.togetherWith
@@ -121,7 +123,6 @@ import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.home.components.HomeEmptyStateCard
 import com.nuvio.app.features.home.components.HomePosterCard
 import com.nuvio.app.features.home.components.HomeSkeletonRow
-import com.nuvio.app.features.home.components.posterGridColumnCountForWidth
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.tracking.TrackingRefreshIntent
 import com.nuvio.app.features.watched.WatchedRepository
@@ -457,7 +458,16 @@ fun LibraryScreen(
         }
 
         BoxWithConstraints(modifier = Modifier.weight(1f)) {
-            val gridColumns = remember(maxWidth) { posterGridColumnCountForWidth(maxWidth) }
+            val windowSize = LocalWindowInfo.current.containerSize
+            val density = LocalDensity.current
+            val windowShortSide = with(density) { minOf(windowSize.width, windowSize.height).toDp() }
+            val isLandscape = maxWidth > maxHeight
+            val gridColumns = remember(isLandscape, windowShortSide) {
+                libraryGridColumnCount(
+                    isLandscape = isLandscape,
+                    isTablet = windowShortSide >= 600.dp,
+                )
+            }
 
             NuvioScreen(
                 modifier = Modifier.fillMaxSize(),
@@ -2877,4 +2887,11 @@ private fun libraryCalendarDatePlusDays(date: LibraryCalendarDate, days: Int): L
         }
     }
     return LibraryCalendarDate(year, month, day)
+}
+
+internal fun libraryGridColumnCount(isLandscape: Boolean, isTablet: Boolean): Int = when {
+    isTablet && isLandscape -> 7
+    isTablet -> 5
+    isLandscape -> 6
+    else -> 3
 }
