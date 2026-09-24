@@ -120,12 +120,15 @@ object SimklRelatedRepository {
             ?: return null
         val contentId = resolveContentId(item.ids, item.type) ?: return null
         val year = item.year ?: return null
+        val fanart = simklFanartUrl(item.fanart)
+        val posterCrop = simklPosterLandscapeUrl(item.poster)
 
         return MetaPreview(
             id = contentId,
             type = resolveContentType(item.type, item.animeType),
             name = title,
             poster = simklPosterUrl(item.poster),
+            banner = fanart ?: posterCrop,
             posterShape = PosterShape.Poster,
             description = null,
             releaseInfo = year.toString(),
@@ -183,3 +186,11 @@ object SimklRelatedRepository {
     private data class TimedCache(val items: List<MetaPreview>, val updatedAtMs: Long)
     private fun currentTimeMs(): Long = TraktPlatformClock.nowEpochMs()
 }
+
+private fun simklFanartUrl(path: String?): String? = path?.trim()?.trim('/')
+    ?.takeIf(String::isNotBlank)
+    ?.let { "https://wsrv.nl/?url=https://simkl.in/fanart/${it}_w.webp&q=90" }
+
+private fun simklPosterLandscapeUrl(path: String?): String? = path?.trim()?.trim('/')
+    ?.takeIf(String::isNotBlank)
+    ?.let { "https://wsrv.nl/?url=https://simkl.in/posters/${it}_w.webp&q=90" }
