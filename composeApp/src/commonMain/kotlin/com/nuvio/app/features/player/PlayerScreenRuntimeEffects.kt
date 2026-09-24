@@ -714,10 +714,11 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         playbackSnapshot.durationMs,
         playbackSnapshot.isEnded,
         playerMeta?.moreLikeThis,
+        watchedUiState.watchedKeys,
         movieRecommendationDismissedStage,
         playerSettingsUiState.movieRecommendationsEnabled,
     ) {
-        if (!isMoviePlayback || !playerSettingsUiState.movieRecommendationsEnabled || playerMeta?.moreLikeThis.isNullOrEmpty()) {
+        if (!isMoviePlayback || !playerSettingsUiState.movieRecommendationsEnabled || movieRecommendationCandidates.isEmpty()) {
             showMovieRecommendationCard = false
             return@LaunchedEffect
         }

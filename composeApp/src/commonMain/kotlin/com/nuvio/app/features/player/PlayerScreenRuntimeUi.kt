@@ -1,5 +1,7 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.features.watching.application.WatchingState
+import com.nuvio.app.features.home.MetaPreview
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -598,9 +600,7 @@ private fun BoxScope.RenderPlaybackOverlays(
             nextEpisodeAutoPlayCountdown = null
         },
         movieRecommendations = if (isMoviePlayback && args.onOpenMetaDetails != null) {
-            playerMeta?.moreLikeThis.orEmpty()
-                .filterNot { it.id == parentMetaId }
-                .take(MOVIE_RECOMMENDATION_LIMIT)
+            movieRecommendationCandidates
         } else {
             emptyList()
         },
@@ -864,4 +864,15 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
 }
 
 private const val MOVIE_RECOMMENDATION_LIMIT = 10
+
+internal val PlayerScreenRuntime.movieRecommendationCandidates: List<MetaPreview>
+    get() {
+        val watchedKeys = watchedUiState.watchedKeys
+        return playerMeta?.moreLikeThis.orEmpty()
+            .asSequence()
+            .filterNot { it.id == parentMetaId }
+            .filterNot { WatchingState.isPosterWatched(watchedKeys = watchedKeys, item = it) }
+            .take(MOVIE_RECOMMENDATION_LIMIT)
+            .toList()
+    }
 
