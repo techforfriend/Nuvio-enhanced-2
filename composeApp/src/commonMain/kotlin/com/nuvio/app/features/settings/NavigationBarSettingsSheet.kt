@@ -35,6 +35,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun NavigationBarSettingsSheet(
     isTablet: Boolean,
+    tabletLayout: Boolean = false,
     selectedStyle: NavBarStyle,
     onStyleSelected: (NavBarStyle) -> Unit,
     glowEnabled: Boolean,
@@ -57,7 +58,7 @@ internal fun NavigationBarSettingsSheet(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                 )
-                NavigationBarPreview(selectedStyle, isTablet, glowEnabled, selectedPosition)
+                NavigationBarPreview(selectedStyle, isTablet, glowEnabled, selectedPosition, tabletLayout)
             }
             if (!isTablet) {
                 NavBarStyle.entries.forEach { style ->

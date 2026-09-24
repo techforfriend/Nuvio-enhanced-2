@@ -30,7 +30,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.FloatingNavigationBar
 import com.nuvio.app.core.ui.FloatingNavigationItem
-import com.nuvio.app.core.ui.LocalNuvioTabletNavLayout
+import com.nuvio.app.AppScreenTab
+import com.nuvio.app.TabletFloatingTopBar
 import com.nuvio.app.core.ui.NuvioClassicNavigationBar
 import com.nuvio.app.core.ui.NuvioNavBarScrollState
 import com.nuvio.app.core.ui.nuvio
@@ -45,11 +46,12 @@ internal fun NavigationBarPreview(
     isTablet: Boolean,
     glowEnabled: Boolean,
     position: NavBarPosition = NavBarPosition.BOTTOM,
+    tabletLayout: Boolean = false,
 ) {
     val tokens = MaterialTheme.nuvio
     val hazeState = rememberHazeState()
-    val tabletClassic = style == NavBarStyle.CLASSIC && (isTablet || LocalNuvioTabletNavLayout.current)
-    val topPill = isTablet || tabletClassic
+    val tabletClassic = style == NavBarStyle.CLASSIC && (isTablet || tabletLayout)
+    val topPill = isTablet
     val pillOnTop = topPill || (style != NavBarStyle.CLASSIC && position == NavBarPosition.TOP)
     val barScrollState = remember(style, topPill) {
         NuvioNavBarScrollState().apply {
@@ -92,7 +94,18 @@ internal fun NavigationBarPreview(
                     }
                 }
             }
-            if (style == NavBarStyle.CLASSIC && !topPill) {
+            if (tabletClassic) {
+                val previewTabs = listOf(AppScreenTab.Home, AppScreenTab.Search, AppScreenTab.Library, AppScreenTab.Settings)
+                TabletFloatingTopBar(
+                    selectedTab = previewTabs[selectedIndex],
+                    showLiveTv = false,
+                    onTabSelected = { tab -> previewTabs.indexOf(tab).takeIf { it >= 0 }?.let { selectedIndex = it } },
+                    onProfileSelected = {},
+                    onAddProfileRequested = {},
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    topInset = 12.dp,
+                )
+            } else if (style == NavBarStyle.CLASSIC && !topPill) {
                 NuvioClassicNavigationBar(
                     Modifier.align(Alignment.BottomCenter).background(tokens.colors.background),
                 ) {
@@ -114,7 +127,7 @@ internal fun NavigationBarPreview(
                     contentPadding = PaddingValues(vertical = 16.dp),
                     compactSize = topPill,
                     glowEnabled = glowEnabled,
-                    inlineLabels = LocalNuvioTabletNavLayout.current,
+                    inlineLabels = tabletLayout,
                 )
             }
         }
