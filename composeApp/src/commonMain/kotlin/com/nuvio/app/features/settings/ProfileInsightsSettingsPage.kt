@@ -1,5 +1,10 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.asPaddingValues
@@ -283,8 +288,8 @@ private fun ProfileInsightsBody(
             stats = stats,
             isCollectionAvailable = isCollectionAvailable,
             onCollectionClick = onCollectionClick,
-            onEditProfile = onEditProfile.takeUnless { isTablet },
-            onSwitchProfile = onSwitchProfile.takeUnless { isTablet },
+            onEditProfile = onEditProfile,
+            onSwitchProfile = onSwitchProfile,
             onBack = onBack.takeUnless { isTablet },
         )
         Column(
@@ -293,15 +298,6 @@ private fun ProfileInsightsBody(
                 .padding(top = if (isTablet) 18.dp else 14.dp),
             verticalArrangement = Arrangement.spacedBy(if (isTablet) 18.dp else 14.dp),
         ) {
-            val inlineEditProfile = onEditProfile.takeIf { isTablet }
-            val inlineSwitchProfile = onSwitchProfile.takeIf { isTablet }
-            if (inlineSwitchProfile != null || inlineEditProfile != null) {
-                ProfileManagementActions(
-                    isTablet = isTablet,
-                    onSwitchProfile = inlineSwitchProfile,
-                    onEditProfile = inlineEditProfile,
-                )
-            }
             ProfileWatchTimeRow(stats = stats)
             SettingsSection(
                 title = stringResource(Res.string.profile_insights_section_taste),
@@ -321,56 +317,6 @@ private fun ProfileInsightsBody(
         )
     }
 
-}
-
-@Composable
-private fun ProfileManagementActions(
-    isTablet: Boolean,
-    onSwitchProfile: (() -> Unit)?,
-    onEditProfile: (() -> Unit)?,
-) {
-    val tokens = MaterialTheme.nuvio
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = tokens.spacing.controlGap),
-        horizontalArrangement = Arrangement.spacedBy(if (isTablet) 14.dp else 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (onSwitchProfile != null) {
-            NuvioPrimaryButton(
-                text = stringResource(Res.string.profile_insights_switch_profile),
-                onClick = onSwitchProfile,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        if (onEditProfile != null) {
-            OutlinedButton(
-                onClick = onEditProfile,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(54.dp),
-                shape = tokens.shapes.button,
-                border = BorderStroke(1.dp, tokens.colors.borderSubtle),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = tokens.colors.textPrimary,
-                ),
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Edit,
-                    contentDescription = null,
-                    modifier = Modifier.gradientMask(MaterialTheme.themePalette.accentBrush()),
-                    tint = tokens.colors.accent,
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(Res.string.profile_insights_edit_profile),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
 }
 
 @Composable
@@ -418,6 +364,8 @@ private fun ProfileInsightsHero(
             stats = stats,
             isCollectionAvailable = isCollectionAvailable,
             onCollectionClick = onCollectionClick,
+            onEditProfile = onEditProfile,
+            onSwitchProfile = onSwitchProfile,
         )
     } else {
         ProfileInsightsHeroCinematic(
@@ -442,6 +390,8 @@ private fun ProfileInsightsHeroBounded(
     stats: ProfileInsightsStats,
     isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
     onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
+    onEditProfile: (() -> Unit)?,
+    onSwitchProfile: (() -> Unit)?,
 ) {
     val tokens = MaterialTheme.nuvio
     val accent = profile?.avatarColorHex?.let(::parseHexColor) ?: tokens.colors.accent
@@ -496,19 +446,40 @@ private fun ProfileInsightsHeroBounded(
                 avatarBackgroundColor = avatarItem?.bgColor?.let(::parseHexColor) ?: accent,
                 isTablet = true,
             )
-            Text(
-                text = stringResource(Res.string.profile_insights_title, profileName),
-                style = MaterialTheme.typography.displaySmall,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(28.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (onSwitchProfile != null) {
+                    ProfileHeaderIconButton(
+                        icon = Icons.Rounded.People,
+                        contentDescription = stringResource(Res.string.profile_insights_switch_profile),
+                        onClick = onSwitchProfile,
+                    )
+                }
+                Text(
+                    text = stringResource(Res.string.profile_insights_title, profileName),
+                    style = MaterialTheme.typography.displaySmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (onEditProfile != null) {
+                    ProfileHeaderIconButton(
+                        icon = Icons.Rounded.Edit,
+                        contentDescription = stringResource(Res.string.profile_insights_edit_profile),
+                        onClick = onEditProfile,
+                    )
+                }
+            }
             ProfileMetricPillRow(
                 stats = stats,
                 isCollectionAvailable = isCollectionAvailable,
                 onCollectionClick = onCollectionClick,
+                centerWhenFits = true,
             )
         }
     }
@@ -623,26 +594,9 @@ private fun ProfileInsightsHeroCinematic(
                 onCollectionClick = onCollectionClick,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 18.dp)
                     .padding(bottom = 18.dp),
+                edgeInset = 18.dp,
             )
-
-            if (onEditProfile != null) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(
-                            top = if (bleedsUnderNativeNavBar) platformPhysicalTopInset() + 4.dp else floatingChromeTop,
-                            end = 18.dp,
-                        ),
-                ) {
-                    ProfileHeaderIconButton(
-                        icon = Icons.Rounded.Edit,
-                        contentDescription = stringResource(Res.string.profile_insights_edit_profile),
-                        onClick = onEditProfile,
-                    )
-                }
-            }
 
             if (onBack != null) {
                 Box(
@@ -667,11 +621,25 @@ private fun ProfileInsightsHeroCinematic(
                 )
             }
 
-            if (onSwitchProfile != null) {
+            if (onEditProfile != null) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(bottom = 140.dp, end = 18.dp),
+                ) {
+                    ProfileHeaderIconButton(
+                        icon = Icons.Rounded.Edit,
+                        contentDescription = stringResource(Res.string.profile_insights_edit_profile),
+                        onClick = onEditProfile,
+                    )
+                }
+            }
+
+            if (onSwitchProfile != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(bottom = 140.dp, start = 18.dp),
                 ) {
                     ProfileHeaderIconButton(
                         icon = Icons.Rounded.People,
@@ -734,7 +702,8 @@ private fun ProfileMetricPillRow(
     isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
     onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
     modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(0.dp),
+    edgeInset: Dp = 18.dp,
+    centerWhenFits: Boolean = false,
 ) {
     val pills = listOf(
         ProfileMetricPillSpec(
@@ -781,24 +750,60 @@ private fun ProfileMetricPillRow(
         ),
     )
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Spacer(modifier = Modifier.width(contentPadding.calculateStartPadding(LayoutDirection.Ltr)))
-        pills.forEach { pill ->
-            ProfileMetricPill(
-                spec = pill,
-                onClick = pill.collectionKind
-                    ?.takeIf(isCollectionAvailable)
-                    ?.let { kind -> { onCollectionClick(kind) } },
-            )
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val pillCount = pills.size
+        val contentWidth = ProfileMetricPillWidth * pillCount + ProfileMetricPillGap * (pillCount - 1)
+        val fits = contentWidth + edgeInset * 2 <= maxWidth
+        val pillContent: @Composable () -> Unit = {
+            pills.forEach { pill ->
+                ProfileMetricPill(
+                    spec = pill,
+                    onClick = pill.collectionKind
+                        ?.takeIf(isCollectionAvailable)
+                        ?.let { kind -> { onCollectionClick(kind) } },
+                )
+            }
         }
-        Spacer(modifier = Modifier.width(contentPadding.calculateEndPadding(LayoutDirection.Ltr)))
+        if (fits && centerWhenFits) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(ProfileMetricPillGap, Alignment.CenterHorizontally),
+            ) { pillContent() }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .profileHorizontalEdgeFade(edgeInset)
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(ProfileMetricPillGap),
+            ) {
+                Spacer(modifier = Modifier.width((edgeInset - ProfileMetricPillGap).coerceAtLeast(0.dp)))
+                pillContent()
+                Spacer(modifier = Modifier.width((edgeInset - ProfileMetricPillGap).coerceAtLeast(0.dp)))
+            }
+        }
     }
 }
+
+private val ProfileMetricPillWidth = 96.dp
+private val ProfileMetricPillGap = 10.dp
+
+private fun Modifier.profileHorizontalEdgeFade(fadeWidth: Dp): Modifier =
+    if (fadeWidth <= 0.dp) this else this
+        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        .drawWithContent {
+            drawContent()
+            val fade = fadeWidth.toPx().coerceAtMost(size.width / 2f)
+            drawRect(
+                brush = Brush.horizontalGradient(
+                    0f to Color.Transparent,
+                    (fade / size.width) to Color.Black,
+                    (1f - fade / size.width) to Color.Black,
+                    1f to Color.Transparent,
+                ),
+                blendMode = BlendMode.DstIn,
+            )
+        }
 
 private data class ProfileMetricPillSpec(
     val icon: ImageVector,
@@ -814,7 +819,7 @@ private fun ProfileMetricPill(
 ) {
     Column(
         modifier = Modifier
-            .width(96.dp)
+            .width(ProfileMetricPillWidth)
             .clip(RoundedCornerShape(18.dp))
             .background(Color.White.copy(alpha = 0.14f))
             .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(18.dp))
@@ -859,49 +864,33 @@ private fun ProfileWatchTimeRow(stats: ProfileInsightsStats) {
         shape = tokens.shapes.card,
         border = BorderStroke(1.dp, tokens.colors.borderSubtle),
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Surface(
-                modifier = Modifier.size(40.dp),
-                color = tokens.colors.accent.copy(alpha = tokens.opacity.pressed),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Rounded.AutoAwesome,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(18.dp)
-                            .gradientMask(MaterialTheme.themePalette.accentBrush()),
-                        tint = tokens.colors.accent,
-                    )
-                }
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(Res.string.profile_insights_stat_time),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = tokens.colors.textPrimary,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    text = stringResource(Res.string.profile_insights_stat_time_caption),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = tokens.colors.textMuted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
             Text(
-                text = profileInsightDurationLabel(stats.trackedDurationMs),
+                text = stringResource(Res.string.profile_insights_stat_time),
                 style = MaterialTheme.typography.titleMedium,
                 color = tokens.colors.textPrimary,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = profileInsightDurationLabel(stats.trackedDurationMs),
+                style = MaterialTheme.typography.displayMedium,
+                color = tokens.colors.textPrimary,
                 fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+            )
+            Text(
+                text = stringResource(Res.string.profile_insights_stat_time_caption),
+                style = MaterialTheme.typography.bodySmall,
+                color = tokens.colors.textMuted,
+                textAlign = TextAlign.Center,
             )
         }
     }
@@ -1413,7 +1402,7 @@ private fun buildProfileInsightsStats(
         topType = normalizedTypes
             .mapNotNull(String::profileNormalizedType)
             .profileMostCommonValue(),
-        tasteSegments = libraryItems.profileTopGenreSegments(limit = 3),
+        tasteSegments = libraryItems.profileTopGenreSegments(limit = Int.MAX_VALUE),
         movieShare = movieShare,
         typeBalanceLabel = when {
             movieSeriesTotal == 0 -> ProfileTasteBalanceLabel.Learning
