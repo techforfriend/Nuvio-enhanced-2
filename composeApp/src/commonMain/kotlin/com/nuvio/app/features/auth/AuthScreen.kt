@@ -56,6 +56,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.platform.LocalAutofillManager
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
@@ -714,6 +718,11 @@ private fun AuthForm(
     onPasswordBoundsChange: (Rect) -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
+    val autofillManager = LocalAutofillManager.current
+    val submitWithAutofillCommit: () -> Unit = {
+        autofillManager?.commit()
+        onSubmit()
+    }
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -727,6 +736,7 @@ private fun AuthForm(
             modifier = Modifier.onGloballyPositioned { coordinates ->
                 onEmailBoundsChange(coordinates.boundsInRoot())
             },
+            autofillContentType = ContentType.EmailAddress + ContentType.Username,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email,
                 imeAction = ImeAction.Next,
@@ -748,12 +758,13 @@ private fun AuthForm(
             modifier = Modifier.onGloballyPositioned { coordinates ->
                 onPasswordBoundsChange(coordinates.boundsInRoot())
             },
+            autofillContentType = if (isSignUp) ContentType.NewPassword else ContentType.Password,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
                 imeAction = ImeAction.Done,
             ),
             keyboardActions = KeyboardActions(
-                onDone = { onSubmit() },
+                onDone = { submitWithAutofillCommit() },
             ),
         )
 
@@ -786,7 +797,7 @@ private fun AuthForm(
             enabled = !isLoading,
             height = metrics.primaryHeight,
             scale = scale,
-            onClick = onSubmit,
+            onClick = submitWithAutofillCommit,
         )
 
         Spacer(modifier = Modifier.height(metrics.toggleTop))
@@ -887,6 +898,7 @@ private fun AuthTextField(
     onPasswordVisibilityToggle: () -> Unit = {},
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
+    autofillContentType: ContentType? = null,
 ) {
     val shape = RoundedCornerShape(14.dp)
     Row(
@@ -910,7 +922,14 @@ private fun AuthTextField(
             onValueChange = onValueChange,
             modifier = Modifier
                 .weight(1f)
-                .fillMaxHeight(),
+                .fillMaxHeight()
+                .then(
+                    if (autofillContentType != null) {
+                        Modifier.semantics { contentType = autofillContentType }
+                    } else {
+                        Modifier
+                    },
+                ),
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyLarge.copy(
                 color = AuthTextPrimary,
