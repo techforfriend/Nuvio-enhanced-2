@@ -44,6 +44,8 @@
     <string name="profile_insights_taste_balance_title">Movie and series balance</string>
     <string name="profile_insights_type_movie">Movies</string>
     <string name="profile_insights_type_series">Series</string>
+    <string name="profile_insights_genre_others">Others</string>
+    <string name="profile_insights_genre_chart_description">Genre breakdown: %1$s</string>
     <string name="profile_insights_type_watch_time_split">Watch time: %1$d%% movies · %2$d%% series</string>
 
     <string name="profile_insights_taste_balance_learning">Learning your taste</string>

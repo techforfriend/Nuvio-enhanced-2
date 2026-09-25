@@ -72,6 +72,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -1149,11 +1156,7 @@ private fun ProfileTasteCard(stats: ProfileInsightsStats) {
                 }
             }
             if (stats.tasteSegments.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    stats.tasteSegments.forEach { segment ->
-                        ProfileTasteSegmentRow(segment = segment)
-                    }
-                }
+                ProfileTasteGenreDonut(segments = stats.tasteSegments)
             }
             ProfileTasteBalanceBar(stats = stats)
             if (stats.dnaChips.isNotEmpty()) {
@@ -1180,43 +1183,261 @@ private fun ProfileTasteCard(stats: ProfileInsightsStats) {
     }
 }
 
+private const val PROFILE_TASTE_DONUT_MAX_GENRES = 7
+
+private val ProfileTasteDonutPalette = listOf(
+    Color(0xFFFF6384), // rose
+    Color(0xFFFF9F40), // orange
+    Color(0xFFFFCD56), // yellow
+    Color(0xFF4BC0C0), // teal
+    Color(0xFF36A2EB), // blue
+    Color(0xFF9966FF), // violet
+    Color(0xFFE879F9), // pink
+)
+private val ProfileTasteDonutOthersColor = Color(0xFF8A8A96)
+
+private class ProfileTasteDonutSlice(
+    val label: String,
+    val share: Float,
+    val color: Color,
+    val isOthers: Boolean = false,
+)
+
+private fun Float.profilePercentLabel(): String = "${(this * 100f).roundToInt().coerceIn(1, 100)}%"
+
 @Composable
-private fun ProfileTasteSegmentRow(segment: ProfileTasteSegment) {
-    val tokens = MaterialTheme.nuvio
-    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = segment.label,
-                style = MaterialTheme.typography.labelMedium,
-                color = tokens.colors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = "${(segment.share * 100f).roundToInt().coerceIn(1, 100)}%",
-                style = MaterialTheme.typography.labelSmall,
-                color = tokens.colors.textMuted,
-                maxLines = 1,
+private fun ProfileTasteGenreDonut(segments: List<ProfileTasteSegment>) {
+    val othersLabel = stringResource(Res.string.profile_insights_genre_others)
+    val topSegments = segments.take(PROFILE_TASTE_DONUT_MAX_GENRES)
+    val otherSegments = segments.drop(PROFILE_TASTE_DONUT_MAX_GENRES)
+    val slices = remember(segments, othersLabel) {
+        buildList {
+            topSegments.forEachIndexed { index, segment ->
+                add(
+                    ProfileTasteDonutSlice(
+                        label = segment.label,
+                        share = segment.share,
+                        color = ProfileTasteDonutPalette[index % ProfileTasteDonutPalette.size],
+                    ),
+                )
+            }
+            val othersShare = otherSegments.sumOf { it.share.toDouble() }.toFloat()
+            if (othersShare > 0f) {
+                add(
+                    ProfileTasteDonutSlice(
+                        label = othersLabel,
+                        share = othersShare,
+                        color = ProfileTasteDonutOthersColor,
+                        isOthers = true,
+                    ),
+                )
+            }
+        }
+    }
+    var othersExpanded by remember(segments) { mutableStateOf(false) }
+    val chartDescription = stringResource(
+        Res.string.profile_insights_genre_chart_description,
+        slices.joinToString(", ") { "${it.label} ${it.share.profilePercentLabel()}" },
+    )
+
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val wide = maxWidth >= 560.dp
+        val donutSize = if (wide) 220.dp else 188.dp
+        val donut: @Composable () -> Unit = {
+            ProfileTasteDonutCanvas(
+                slices = slices,
+                topLabel = topSegments.firstOrNull()?.label,
+                topShare = topSegments.firstOrNull()?.share,
+                modifier = Modifier
+                    .size(donutSize)
+                    .semantics { contentDescription = chartDescription },
             )
         }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(5.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(tokens.colors.borderSubtle),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(segment.share.coerceIn(0f, 1f))
-                    .fillMaxHeight()
-                    .background(MaterialTheme.themePalette.accentBrush()),
+        val legend: @Composable (Modifier) -> Unit = { modifier ->
+            ProfileTasteDonutLegend(
+                slices = slices,
+                otherSegments = otherSegments,
+                othersExpanded = othersExpanded,
+                onToggleOthers = { othersExpanded = !othersExpanded },
+                columns = 2,
+                modifier = modifier,
             )
+        }
+        if (wide) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(28.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                donut()
+                legend(Modifier.weight(1f))
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
+                donut()
+                legend(Modifier.fillMaxWidth())
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileTasteDonutCanvas(
+    slices: List<ProfileTasteDonutSlice>,
+    topLabel: String?,
+    topShare: Float?,
+    modifier: Modifier = Modifier,
+) {
+    val tokens = MaterialTheme.nuvio
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val strokeWidth = size.minDimension * 0.18f
+            val inset = strokeWidth / 2f
+            val arcSize = androidx.compose.ui.geometry.Size(
+                size.minDimension - strokeWidth,
+                size.minDimension - strokeWidth,
+            )
+            val total = slices.sumOf { it.share.toDouble() }.toFloat().takeIf { it > 0f } ?: return@Canvas
+            val gapDegrees = if (slices.size > 1) 1.6f else 0f
+            var startAngle = -90f
+            slices.forEach { slice ->
+                val sweep = slice.share / total * 360f
+                val drawnSweep = (sweep - gapDegrees).coerceAtLeast(0.5f)
+                drawArc(
+                    color = slice.color,
+                    startAngle = startAngle + gapDegrees / 2f,
+                    sweepAngle = drawnSweep,
+                    useCenter = false,
+                    topLeft = Offset(inset, inset),
+                    size = arcSize,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Butt),
+                )
+                startAngle += sweep
+            }
+        }
+        if (topLabel != null && topShare != null) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(horizontal = 40.dp),
+            ) {
+                Text(
+                    text = topShare.profilePercentLabel(),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = tokens.colors.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                )
+                Text(
+                    text = topLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = tokens.colors.textMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileTasteDonutLegend(
+    slices: List<ProfileTasteDonutSlice>,
+    otherSegments: List<ProfileTasteSegment>,
+    othersExpanded: Boolean,
+    onToggleOthers: () -> Unit,
+    columns: Int,
+    modifier: Modifier = Modifier,
+) {
+    val tokens = MaterialTheme.nuvio
+    Column(
+        modifier = modifier.animateContentSize(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        slices.chunked(columns).forEach { rowSlices ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                rowSlices.forEach { slice ->
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .then(
+                                if (slice.isOthers) Modifier.clickable(onClick = onToggleOthers) else Modifier,
+                            )
+                            .padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(slice.color),
+                        )
+                        Text(
+                            text = if (slice.isOthers) {
+                                "${slice.label} ${if (othersExpanded) "▴" else "▾"}"
+                            } else {
+                                slice.label
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            color = tokens.colors.textPrimary,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            text = slice.share.profilePercentLabel(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = tokens.colors.textMuted,
+                            maxLines = 1,
+                        )
+                    }
+                }
+                repeat(columns - rowSlices.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+        if (othersExpanded && otherSegments.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(tokens.colors.borderSubtle.copy(alpha = 0.35f))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                otherSegments.forEach { segment ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = segment.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = tokens.colors.textMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            text = segment.share.profilePercentLabel(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = tokens.colors.textMuted,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
         }
     }
 }
