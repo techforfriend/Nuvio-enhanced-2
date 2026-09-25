@@ -815,7 +815,6 @@ private fun LibraryChip(
             if (loading) {
                 NuvioLoadingIndicator(
                     modifier = Modifier.size(12.dp),
-                    color = colorScheme.primary,
                 )
             }
             Text(

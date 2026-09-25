@@ -166,14 +166,11 @@ internal fun PlayerDialogButton(
 internal fun PlayerModalLoading(
     modifier: Modifier = Modifier,
 ) {
-    val tokens = MaterialTheme.nuvio
-
     Box(
         modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center,
     ) {
         NuvioLoadingIndicator(
-            color = tokens.colors.accent,
             modifier = Modifier.size(24.dp),
         )
     }

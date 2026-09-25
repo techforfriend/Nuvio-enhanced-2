@@ -936,7 +936,6 @@ private fun StreamSectionHeader(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 NuvioLoadingIndicator(
                     modifier = Modifier.size(12.dp),
-                    color = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
@@ -1103,7 +1102,6 @@ private fun LoadingStateBlock(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         NuvioLoadingIndicator(
-            color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(32.dp),
         )
         Text(
@@ -1188,7 +1186,6 @@ private fun FooterLoadingBlock(
     ) {
         NuvioLoadingIndicator(
             modifier = Modifier.size(14.dp),
-            color = MaterialTheme.colorScheme.primary,
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
