@@ -1271,6 +1271,19 @@ private fun ProfileTasteBalanceBar(stats: ProfileInsightsStats) {
                 color = tokens.colors.textMuted,
             )
         }
+        stats.movieWatchTimeShare?.let { movieTimeShare ->
+            val moviePercent = (movieTimeShare * 100f).roundToInt().coerceIn(0, 100)
+            Text(
+                text = stringResource(
+                    Res.string.profile_insights_type_watch_time_split,
+                    moviePercent,
+                    100 - moviePercent,
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = tokens.colors.textMuted,
+                maxLines = 1,
+            )
+        }
     }
 }
 
@@ -1365,18 +1378,13 @@ private fun buildProfileInsightsStats(
     val normalizedTypes = libraryItems.map { item -> item.type } +
         progressEntries.map { entry -> entry.parentMetaType } +
         watchedItems.map { item -> item.type }
-    val typedCounts = normalizedTypes
-        .mapNotNull(String::profileNormalizedType)
-        .groupingBy { type -> type }
-        .eachCount()
-    val movieCount = typedCounts["movie"] ?: 0
-    val seriesCount = typedCounts["series"] ?: 0
-    val movieSeriesTotal = (movieCount + seriesCount).coerceAtLeast(0)
-    val movieShare = if (movieSeriesTotal > 0) {
-        movieCount.toFloat() / movieSeriesTotal.toFloat()
-    } else {
-        0.5f
-    }
+    val typeBalance = buildProfileTypeBalance(
+        watchedItems = watchedItems,
+        progressEntries = progressEntries,
+        fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+    )
+    val movieSeriesTotal = typeBalance.titleTotal
+    val movieShare = typeBalance.movieShare
     val recentActivityCount = profileRecentActivityCount(
         watchedItems = watchedItems,
         progressEntries = progressEntries,
@@ -1390,10 +1398,7 @@ private fun buildProfileInsightsStats(
         episodesWatchedCount = watchedItems.profileWatchedEpisodeCount(),
         ongoingSeriesCount = ongoingSeriesItems.size,
         libraryCount = libraryItems.size,
-        trackedDurationMs = profileTrackedDurationMs(
-            watchedItems = watchedItems,
-            progressEntries = progressEntries,
-        ),
+        trackedDurationMs = typeBalance.movieWatchTimeMs + typeBalance.seriesWatchTimeMs,
         recentActivityCount = recentActivityCount,
         upcomingCount = libraryItems.count { item ->
             item.profileReleaseIsoDate()?.let { releaseDate -> releaseDate >= todayIsoDate } == true
@@ -1404,6 +1409,7 @@ private fun buildProfileInsightsStats(
             .profileMostCommonValue(),
         tasteSegments = libraryItems.profileTopGenreSegments(limit = Int.MAX_VALUE),
         movieShare = movieShare,
+        movieWatchTimeShare = typeBalance.movieWatchTimeShare,
         typeBalanceLabel = when {
             movieSeriesTotal == 0 -> ProfileTasteBalanceLabel.Learning
             movieShare >= 0.62f -> ProfileTasteBalanceLabel.MovieLeaning
@@ -1808,10 +1814,10 @@ private fun WatchProgressEntry.profileTrackedDurationMs(): Long {
     return (effectiveDurationMs * (explicitPercent / 100f)).toLong().coerceIn(0L, effectiveDurationMs)
 }
 
-private fun profileTrackedDurationMs(
+private fun profileTrackedDurationByActivityKey(
     watchedItems: List<WatchedItem>,
     progressEntries: List<WatchProgressEntry>,
-): Long {
+): Map<String, Long> {
     val durationByKey = mutableMapOf<String, Long>()
 
     fun record(key: String?, durationMs: Long) {
@@ -1828,7 +1834,87 @@ private fun profileTrackedDurationMs(
         record(item.profileTrackableActivityKey(), item.profileEstimatedDurationMs())
     }
 
-    return durationByKey.values.sum()
+    return durationByKey
+}
+
+private fun buildProfileTypeBalance(
+    watchedItems: List<WatchedItem>,
+    progressEntries: List<WatchProgressEntry>,
+    fullyWatchedSeriesKeys: Set<String>,
+): ProfileTypeBalance {
+    val watchedMovieIds = mutableSetOf<String>()
+    val completedSeriesIds = mutableSetOf<String>()
+    val engagedEpisodesBySeries = mutableMapOf<String, MutableSet<String>>()
+
+    watchedItems.forEach { item ->
+        val id = item.id.trim().takeIf { it.isNotBlank() } ?: return@forEach
+        when (item.type.profileCompletedContentKind()) {
+            "movie" -> if (item.season == null && item.episode == null) watchedMovieIds += id
+            "series" -> {
+                if (item.season != null && item.episode != null) {
+                    engagedEpisodesBySeries.getOrPut(id) { mutableSetOf() } += "${item.season}:${item.episode}"
+                } else if (!item.type.equals("tv", ignoreCase = true)) {
+                    completedSeriesIds += id
+                }
+                if (watchedItemKey(item.type, item.id) in fullyWatchedSeriesKeys) {
+                    completedSeriesIds += id
+                }
+            }
+        }
+    }
+    progressEntries.forEach { entry ->
+        val id = entry.parentMetaId.trim().takeIf { it.isNotBlank() } ?: return@forEach
+        when (entry.parentMetaType.profileCompletedContentKind()) {
+            "movie" -> if (entry.isEffectivelyCompleted) watchedMovieIds += id
+            "series" -> {
+                val season = entry.seasonNumber
+                val episode = entry.episodeNumber
+                if (season != null && episode != null && entry.profileTrackedDurationMs() > 0L) {
+                    engagedEpisodesBySeries.getOrPut(id) { mutableSetOf() } += "$season:$episode"
+                }
+            }
+        }
+    }
+
+    val engagedSeriesIds = completedSeriesIds + engagedEpisodesBySeries
+        .filterValues { episodes -> episodes.size >= PROFILE_SERIES_MIN_ENGAGED_EPISODES }
+        .keys
+
+    var movieWatchTimeMs = 0L
+    var seriesWatchTimeMs = 0L
+    profileTrackedDurationByActivityKey(watchedItems, progressEntries).forEach { (key, durationMs) ->
+        when (key.substringBefore(':')) {
+            "movie" -> movieWatchTimeMs += durationMs
+            "series" -> seriesWatchTimeMs += durationMs
+        }
+    }
+
+    return ProfileTypeBalance(
+        movieTitleCount = watchedMovieIds.size,
+        seriesTitleCount = engagedSeriesIds.size,
+        movieWatchTimeMs = movieWatchTimeMs,
+        seriesWatchTimeMs = seriesWatchTimeMs,
+    )
+}
+
+private const val PROFILE_SERIES_MIN_ENGAGED_EPISODES = 2
+
+private data class ProfileTypeBalance(
+    val movieTitleCount: Int,
+    val seriesTitleCount: Int,
+    val movieWatchTimeMs: Long,
+    val seriesWatchTimeMs: Long,
+) {
+    val titleTotal: Int get() = movieTitleCount + seriesTitleCount
+
+    val movieShare: Float
+        get() = if (titleTotal > 0) movieTitleCount.toFloat() / titleTotal.toFloat() else 0.5f
+
+    val movieWatchTimeShare: Float?
+        get() {
+            val total = movieWatchTimeMs + seriesWatchTimeMs
+            return if (total > 0L) movieWatchTimeMs.toFloat() / total.toFloat() else null
+        }
 }
 
 private fun WatchProgressEntry.profileArtworkUrl(): String? =
@@ -2193,6 +2279,7 @@ private data class ProfileInsightsStats(
     val topType: String?,
     val tasteSegments: List<ProfileTasteSegment>,
     val movieShare: Float,
+    val movieWatchTimeShare: Float? = null,
     val typeBalanceLabel: ProfileTasteBalanceLabel,
     val dnaChips: List<ProfileTasteDnaChip>,
 )
