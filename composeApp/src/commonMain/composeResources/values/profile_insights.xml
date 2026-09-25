@@ -39,7 +39,7 @@
     <string name="profile_insights_minutes">%1$d min</string>
 
     <string name="profile_insights_taste_dna_title">Taste DNA</string>
-    <string name="profile_insights_taste_subtitle">Based on the genres and content types in this profile</string>
+    <string name="profile_insights_taste_subtitle">Based on the genres and content types you have watched</string>
     <string name="profile_insights_taste_empty">Still learning</string>
     <string name="profile_insights_taste_balance_title">Movie and series balance</string>
     <string name="profile_insights_type_movie">Movies</string>

@@ -194,7 +194,8 @@ private fun ProfileInsightsBody(
         ?.trim()
         ?.takeIf { it.isNotBlank() }
         ?: profileNameFallback
-    val baseStats = remember(activeProfileIndex, watchProgressState, watchedState, fullyWatchedSeriesKeys, libraryState, todayIsoDate) {
+    var genreMetaVersion by remember { mutableStateOf(0) }
+    val baseStats = remember(activeProfileIndex, watchProgressState, watchedState, fullyWatchedSeriesKeys, libraryState, todayIsoDate, genreMetaVersion) {
         runCatching {
             buildProfileInsightsStats(
                 watchProgressState = watchProgressState,
@@ -211,6 +212,15 @@ private fun ProfileInsightsBody(
     }
     val stats = remember(baseStats, upcomingEpisodes) {
         baseStats.copy(upcomingCount = upcomingEpisodes.size)
+    }
+    LaunchedEffect(activeProfileIndex, baseStats.genreLookupMisses) {
+        val misses = baseStats.genreLookupMisses.take(PROFILE_GENRE_HYDRATION_LIMIT)
+        if (misses.isEmpty()) return@LaunchedEffect
+        var hydrated = 0
+        misses.forEach { (kind, id) ->
+            if (profileHydrateGenreMeta(kind, id)) hydrated++
+        }
+        if (hydrated > 0) genreMetaVersion++
     }
     val continueTitle = stringResource(Res.string.profile_insights_stat_continue)
     val watchedTitle = stringResource(Res.string.profile_insights_stat_watched)
@@ -1384,6 +1394,10 @@ private fun buildProfileInsightsStats(
         fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
     )
     val movieSeriesTotal = typeBalance.titleTotal
+    val watchedTitleGenres = buildProfileWatchedTitleGenres(
+        typeBalance = typeBalance,
+        libraryItems = libraryItems,
+    )
     val movieShare = typeBalance.movieShare
     val recentActivityCount = profileRecentActivityCount(
         watchedItems = watchedItems,
@@ -1403,11 +1417,12 @@ private fun buildProfileInsightsStats(
         upcomingCount = libraryItems.count { item ->
             item.profileReleaseIsoDate()?.let { releaseDate -> releaseDate >= todayIsoDate } == true
         },
-        topGenre = libraryItems.profileTopGenre(),
+        topGenre = watchedTitleGenres.segments.firstOrNull()?.label,
         topType = normalizedTypes
             .mapNotNull(String::profileNormalizedType)
             .profileMostCommonValue(),
-        tasteSegments = libraryItems.profileTopGenreSegments(limit = Int.MAX_VALUE),
+        tasteSegments = watchedTitleGenres.segments,
+        genreLookupMisses = watchedTitleGenres.missingTitles,
         movieShare = movieShare,
         movieWatchTimeShare = typeBalance.movieWatchTimeShare,
         typeBalanceLabel = when {
@@ -1890,8 +1905,8 @@ private fun buildProfileTypeBalance(
     }
 
     return ProfileTypeBalance(
-        movieTitleCount = watchedMovieIds.size,
-        seriesTitleCount = engagedSeriesIds.size,
+        movieTitleIds = watchedMovieIds.toSet(),
+        seriesTitleIds = engagedSeriesIds.toSet(),
         movieWatchTimeMs = movieWatchTimeMs,
         seriesWatchTimeMs = seriesWatchTimeMs,
     )
@@ -1900,11 +1915,14 @@ private fun buildProfileTypeBalance(
 private const val PROFILE_SERIES_MIN_ENGAGED_EPISODES = 2
 
 private data class ProfileTypeBalance(
-    val movieTitleCount: Int,
-    val seriesTitleCount: Int,
+    val movieTitleIds: Set<String>,
+    val seriesTitleIds: Set<String>,
     val movieWatchTimeMs: Long,
     val seriesWatchTimeMs: Long,
 ) {
+    val movieTitleCount: Int get() = movieTitleIds.size
+    val seriesTitleCount: Int get() = seriesTitleIds.size
+
     val titleTotal: Int get() = movieTitleCount + seriesTitleCount
 
     val movieShare: Float
@@ -2086,34 +2104,64 @@ private fun profileParseRuntimeMinutes(value: String?): Int? {
         ?.coerceAtLeast(0)
 }
 
-private fun List<LibraryItem>.profileTopGenre(): String? =
-    asSequence()
-        .flatMap { item -> item.genres.asSequence() }
-        .map { genre -> genre.trim() }
-        .filter { genre -> genre.isNotBlank() }
-        .groupingBy { genre -> genre }
-        .eachCount()
-        .maxByOrNull { (_, count) -> count }
-        ?.key
+private const val PROFILE_GENRE_HYDRATION_LIMIT = 60
 
-private fun List<LibraryItem>.profileTopGenreSegments(limit: Int): List<ProfileTasteSegment> {
-    val counts = asSequence()
-        .flatMap { item -> item.genres.asSequence() }
-        .map { genre -> genre.trim() }
-        .filter { genre -> genre.isNotBlank() }
-        .groupingBy { genre -> genre }
-        .eachCount()
-        .toList()
-        .sortedByDescending { (_, count) -> count }
-    val total = counts.sumOf { (_, count) -> count }.coerceAtLeast(1)
-    return counts
-        .take(limit)
-        .map { (genre, count) ->
-            ProfileTasteSegment(
-                label = genre,
-                share = count.toFloat() / total.toFloat(),
-            )
+private class ProfileWatchedTitleGenres(
+    val segments: List<ProfileTasteSegment>,
+    val missingTitles: List<Pair<String, String>>,
+)
+
+private fun buildProfileWatchedTitleGenres(
+    typeBalance: ProfileTypeBalance,
+    libraryItems: List<LibraryItem>,
+): ProfileWatchedTitleGenres {
+    val libraryGenresByKey = libraryItems
+        .mapNotNull { item ->
+            val kind = item.type.profileCompletedContentKind() ?: return@mapNotNull null
+            val genres = item.genres.profileCleanGenres()
+            if (genres.isEmpty()) null else "$kind:${item.id.trim()}" to genres
         }
+        .toMap()
+
+    val titles = typeBalance.movieTitleIds.map { "movie" to it } +
+        typeBalance.seriesTitleIds.map { "series" to it }
+    val missing = mutableListOf<Pair<String, String>>()
+    val counts = mutableMapOf<String, Int>()
+    titles.forEach { (kind, id) ->
+        val genres = libraryGenresByKey["$kind:$id"]
+            ?: profileCachedMeta(kind, id)?.genres?.profileCleanGenres()?.takeIf { it.isNotEmpty() }
+        if (genres == null) {
+            missing += kind to id
+            return@forEach
+        }
+        genres.forEach { genre -> counts[genre] = (counts[genre] ?: 0) + 1 }
+    }
+
+    val total = counts.values.sum().coerceAtLeast(1)
+    val segments = counts.toList()
+        .sortedByDescending { (_, count) -> count }
+        .map { (genre, count) ->
+            ProfileTasteSegment(label = genre, share = count.toFloat() / total.toFloat())
+        }
+    return ProfileWatchedTitleGenres(segments = segments, missingTitles = missing)
+}
+
+private fun List<String>.profileCleanGenres(): List<String> =
+    map { genre -> genre.trim() }
+        .filter { genre -> genre.isNotBlank() }
+        .distinctBy { genre -> genre.lowercase() }
+
+private suspend fun profileHydrateGenreMeta(kind: String, id: String): Boolean {
+    for ((lookupType, lookupId) in profileMetaLookupCandidates(kind, id)) {
+        val meta = MetaDetailsRepository.peek(type = lookupType, id = lookupId)
+            ?: runCatching { MetaDetailsRepository.fetch(type = lookupType, id = lookupId) }
+                .onFailure { error ->
+                    profileInsightsLog.w(error) { "Failed to hydrate genres for $lookupType/$lookupId" }
+                }
+                .getOrNull()
+        if (meta != null) return meta.genres.isNotEmpty()
+    }
+    return false
 }
 
 private fun buildProfileTasteDnaChips(
@@ -2278,6 +2326,7 @@ private data class ProfileInsightsStats(
     val topGenre: String?,
     val topType: String?,
     val tasteSegments: List<ProfileTasteSegment>,
+    val genreLookupMisses: List<Pair<String, String>> = emptyList(),
     val movieShare: Float,
     val movieWatchTimeShare: Float? = null,
     val typeBalanceLabel: ProfileTasteBalanceLabel,
