@@ -2418,9 +2418,9 @@ final class MPVPlayerViewController: UIViewController {
     private func publishImmersiveSystemUIVisibility(isVisible: Bool) {
         guard !isEmbeddedPreviewMode else { return }
         if isVisible {
-            NuvioImmersiveSystemUI.shared.playerDidBecomeVisible(self)
+            SystemUI.shared.playerDidBecomeVisible(self)
         } else {
-            NuvioImmersiveSystemUI.shared.playerDidBecomeHidden(self)
+            SystemUI.shared.playerDidBecomeHidden(self)
         }
         NotificationCenter.default.post(
             name: nuvioPlayerImmersiveSystemUIVisibilityDidChange,

@@ -112,19 +112,19 @@ final class RootComposeViewController: UIViewController {
     }
 
     override var prefersHomeIndicatorAutoHidden: Bool {
-        NuvioImmersiveSystemUI.shared.activePlayer?.prefersHomeIndicatorAutoHidden
+        SystemUI.shared.activePlayer?.prefersHomeIndicatorAutoHidden
             ?? immersiveController(in: contentController)?.prefersHomeIndicatorAutoHidden
             ?? false
     }
 
     override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge {
-        NuvioImmersiveSystemUI.shared.activePlayer?.preferredScreenEdgesDeferringSystemGestures
+        SystemUI.shared.activePlayer?.preferredScreenEdgesDeferringSystemGestures
             ?? immersiveController(in: contentController)?.preferredScreenEdgesDeferringSystemGestures
             ?? []
     }
 
     override var prefersStatusBarHidden: Bool {
-        NuvioImmersiveSystemUI.shared.activePlayer?.prefersStatusBarHidden
+        SystemUI.shared.activePlayer?.prefersStatusBarHidden
             ?? immersiveController(in: contentController)?.prefersStatusBarHidden
             ?? false
     }
@@ -188,7 +188,7 @@ final class RootComposeViewController: UIViewController {
             current.setNeedsStatusBarAppearanceUpdate()
             controller = current.parent
         }
-        NuvioImmersiveSystemUI.shared.refresh()
+        SystemUI.shared.refresh()
     }
 
     private func setInteractiveContentPopGestureEnabled(_ enabled: Bool) {
@@ -1864,7 +1864,7 @@ struct NativeNavContentView: View {
 }
 
 struct ContentView: View {
-    @ObservedObject private var immersiveSystemUI = NuvioImmersiveSystemUI.shared
+    @ObservedObject private var systemUI = SystemUI.shared
 
     var body: some View {
         Group {
@@ -1875,8 +1875,8 @@ struct ContentView: View {
                     .ignoresSafeArea(.all)
             }
         }
-        .persistentSystemOverlays(immersiveSystemUI.isPlayerImmersive ? .hidden : .automatic)
-        .statusBarHidden(immersiveSystemUI.isPlayerImmersive)
+        .persistentSystemOverlays(systemUI.isPlayerImmersive ? .hidden : .automatic)
+        .statusBarHidden(systemUI.isPlayerImmersive)
     }
 }
 

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContent
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -105,15 +107,30 @@ private fun PlayerGestureFeedback(
                     val level = feedback.level?.coerceIn(0f, 1f) ?: 0f
                     val trackHeight = minOf(maxHeight / 4, 104.dp)
                     val animatedLevel by animateFloatAsState(level, tween(80), label = "playerGestureLevel")
-                    val reading = feedback.messageArgs.firstOrNull()?.toString()
-                        ?: "${(level * 100f).roundToInt()}%"
+                    val percent = (level * 100f).roundToInt()
+                    // Fork: gestures can supply their own reading (e.g. a custom label) via messageArgs.
+                    val reading = feedback.messageArgs.firstOrNull()?.toString() ?: percent.toString()
                     Column(
                         modifier = Modifier
                             .align(if (isBrightness) Alignment.CenterStart else Alignment.CenterEnd)
-                            .padding(horizontal = horizontalSafePadding + 8.dp),
+                            .padding(horizontal = horizontalSafePadding + 8.dp)
+                            .width(6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
+                        // Centered on the bar; unbounded width lets the digits overflow the 6dp
+                        // column evenly on both sides so the bar itself never moves.
+                        Text(
+                            text = reading,
+                            color = Color.White,
+                            style = MaterialTheme.nuvioTypeScale.bodySm.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                shadow = Shadow(Color.Black.copy(alpha = 0.8f), blurRadius = 8f),
+                            ),
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.wrapContentWidth(unbounded = true),
+                        )
+                        Spacer(Modifier.height(6.dp))
                         Box(
                             modifier = Modifier
                                 .semantics {
@@ -131,16 +148,6 @@ private fun PlayerGestureFeedback(
                                     .fillMaxWidth()
                                     .fillMaxHeight(animatedLevel)
                                     .background(MaterialTheme.themePalette.accentBrush()),
-                            )
-                        }
-                        if (reading.isNotBlank()) {
-                            Text(
-                                text = reading,
-                                color = Color.White,
-                                style = MaterialTheme.nuvioTypeScale.bodySm.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    shadow = Shadow(Color.Black.copy(alpha = 0.8f), blurRadius = 8f),
-                                ),
                             )
                         }
                     }

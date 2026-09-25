@@ -47,6 +47,7 @@ data class MetaDetails(
 enum class MoreLikeThisSource {
     TMDB,
     TRAKT,
+    SIMKL,
 }
 
 data class MoreLikeThisPage(

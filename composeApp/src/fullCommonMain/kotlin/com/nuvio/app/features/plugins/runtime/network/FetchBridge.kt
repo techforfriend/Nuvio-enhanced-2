@@ -12,6 +12,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 private const val MAX_FETCH_HEADER_VALUE_CHARS = 8 * 1024
 private const val FETCH_TRUNCATION_SUFFIX = "\n...[truncated]"
@@ -25,10 +27,11 @@ internal class FetchBridge : HostModule {
             val url = args.getOrNull(0)?.toString() ?: ""
             val method = args.getOrNull(1)?.toString() ?: "GET"
             val headersJson = args.getOrNull(2)?.toString() ?: "{}"
-            val body = args.getOrNull(3)?.toString() ?: ""
-            val followRedirects = args.getOrNull(4) as? Boolean ?: true
+            val bodyKind = args.getOrNull(3)?.toString() ?: "none"
+            val body = args.getOrNull(4)?.toString() ?: ""
+            val followRedirects = args.getOrNull(5) as? Boolean ?: true
             try {
-                performNativeFetch(url, method, headersJson, body, followRedirects)
+                performNativeFetch(url, method, headersJson, bodyKind, body, followRedirects)
             } catch (t: Throwable) {
                 log.e(t) { "Fetch bridge error for $method $url" }
                 InAppLogger.error(
@@ -42,6 +45,7 @@ internal class FetchBridge : HostModule {
                         "statusText" to JsonPrimitive(t.message ?: "Fetch failed"),
                         "url" to JsonPrimitive(url),
                         "body" to JsonPrimitive(""),
+                        "bodyBase64" to JsonPrimitive(""),
                         "headers" to JsonObject(emptyMap()),
                     ),
                 ).toString()
@@ -53,6 +57,7 @@ internal class FetchBridge : HostModule {
         url: String,
         method: String,
         headersJson: String,
+        bodyKind: String,
         body: String,
         followRedirects: Boolean,
     ): String {
@@ -64,7 +69,7 @@ internal class FetchBridge : HostModule {
         InAppLogger.info(
             "PluginRuntime/Fetch",
             "$method ${InAppLogger.redactUrl(url)} headers=${InAppLogger.headerKeys(headers)} " +
-                "bodyChars=${body.length} followRedirects=$followRedirects",
+                "bodyKind=$bodyKind bodyChars=${body.length} followRedirects=$followRedirects",
         )
 
         val response = runBlocking {
@@ -72,8 +77,9 @@ internal class FetchBridge : HostModule {
                 method = method,
                 url = url,
                 headers = headers,
-                body = body,
+                body = if (bodyKind == "text") body else "",
                 followRedirects = followRedirects,
+                bodyBytes = decodeBinaryBody(bodyKind, body),
             )
         }
 
@@ -95,11 +101,22 @@ internal class FetchBridge : HostModule {
                 "statusText" to JsonPrimitive(response.statusText),
                 "url" to JsonPrimitive(response.url),
                 "body" to JsonPrimitive(response.body),
+                "bodyBase64" to JsonPrimitive(encodeBase64(response.bodyBytes)),
                 "headers" to JsonObject(responseHeaders.mapValues { JsonPrimitive(it.value) }),
             ),
         )
         return result.toString()
     }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun decodeBinaryBody(bodyKind: String, body: String): ByteArray? = when (bodyKind) {
+        "base64" -> Base64.decode(body)
+        "none", "text" -> null
+        else -> error("Unsupported fetch body kind: $bodyKind")
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun encodeBase64(bytes: ByteArray): String = Base64.encode(bytes)
 
     private fun parseHeaders(headersJson: String): Map<String, String> {
         return runCatching {

@@ -21,9 +21,14 @@ internal fun PlayerScreenRuntime.finishTimelineScrub(positionMs: Long) {
     scrubbingPositionMs = positionMs.takeIf { playbackSnapshot.isLoading }
 }
 
-internal fun PlayerScreenRuntime.updatePlaybackSnapshot(snapshot: PlayerPlaybackSnapshot) {
+internal fun PlayerScreenRuntime.updatePlaybackSnapshot(
+    snapshot: PlayerPlaybackSnapshot,
+    playbackKey: PlaybackKey = activePlaybackKey,
+): Boolean {
+    if (playbackKey != activePlaybackKey) return false
     playbackSnapshot = snapshot
-    val targetPositionMs = scrubbingPositionMs ?: return
+    playbackSnapshotKey = playbackKey
+    val targetPositionMs = scrubbingPositionMs ?: return true
     if (!isScrubbingTimeline && (
             !snapshot.isLoading || snapshot.isEnded ||
                 abs(snapshot.positionMs - targetPositionMs) <= 1_000L
@@ -31,6 +36,7 @@ internal fun PlayerScreenRuntime.updatePlaybackSnapshot(snapshot: PlayerPlayback
     ) {
         scrubbingPositionMs = null
     }
+    return true
 }
 
 internal val PlayerScreenRuntime.activePlaybackIdentity: String
@@ -40,6 +46,14 @@ internal val PlayerScreenRuntime.activePlaybackIdentity: String
 
 internal val PlayerScreenRuntime.shouldTrackWatchProgress: Boolean
     get() = !isLiveTvPlayback && !parentMetaType.equals("live", ignoreCase = true)
+
+internal val PlayerScreenRuntime.activePlaybackKey: PlaybackKey
+    get() = PlaybackKey(
+        sourceIdentity = activePlaybackIdentity,
+        videoId = activeVideoId,
+        seasonNumber = activeSeasonNumber,
+        episodeNumber = activeEpisodeNumber,
+    )
 
 internal val PlayerScreenRuntime.playbackSession: WatchProgressPlaybackSession
     get() = WatchProgressPlaybackSession(
@@ -70,7 +84,7 @@ internal val PlayerScreenRuntime.playbackSession: WatchProgressPlaybackSession
     )
 
 internal fun PlayerScreenRuntime.resetIdentityStateIfNeeded() {
-    val identity = activePlaybackIdentity
+    val identity = activePlaybackKey
     if (lastResetPlaybackIdentity != identity) {
         lastResetPlaybackIdentity = identity
         shouldPlay = true
