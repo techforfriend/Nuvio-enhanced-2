@@ -186,8 +186,6 @@ object ProfileSettingsSync {
             ThemeSettingsRepository.amoledEnabled.map { "amoled" },
             ThemeSettingsRepository.liquidGlassNativeTabBarEnabled.map { "liquid_glass_tab_bar" },
             ThemeSettingsRepository.navBarGlowEnabled.map { "nav_bar_glow_enabled" },
-            ThemeSettingsRepository.navBarStyle.map { "nav_bar_style" },
-            ThemeSettingsRepository.navBarPosition.map { "nav_bar_position" },
             PosterCardStyleRepository.uiState.map { "poster_card_style" },
             CustomPosterUrlRepository.pattern.map { "custom_poster_url" },
             CardDepthStyleRepository.uiState.map { "card_depth_style" },

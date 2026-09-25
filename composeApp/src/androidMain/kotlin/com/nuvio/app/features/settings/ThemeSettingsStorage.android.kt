@@ -25,6 +25,9 @@ actual object ThemeSettingsStorage {
     private const val selectedAppLanguageKey = "selected_app_language"
     private const val NAV_BAR_STYLE_KEY = "nav_bar_style"
     private const val NAV_BAR_POSITION_KEY = "nav_bar_position"
+
+    private const val localNavBarStyleKey = "enhanced_local_nav_bar_style"
+    private const val localNavBarPositionKey = "enhanced_local_nav_bar_position"
     private const val navBarGlowEnabledKey = "nav_bar_glow_enabled"
     private val profileScopedSyncKeys = listOf(
         selectedThemeKey,
@@ -167,22 +170,26 @@ actual object ThemeSettingsStorage {
     }
 
     actual fun loadNavBarStyle(): String? =
-        preferences?.getString(ProfileScopedKey.of(NAV_BAR_STYLE_KEY), null)
+        loadRawString(localNavBarStyleKey) ?: loadRawString(NAV_BAR_STYLE_KEY)
 
     actual fun saveNavBarStyle(styleKey: String) {
-        preferences
-            ?.edit()
-            ?.putString(ProfileScopedKey.of(NAV_BAR_STYLE_KEY), styleKey)
-            ?.apply()
+        saveRawString(localNavBarStyleKey, styleKey)
     }
 
     actual fun loadNavBarPosition(): String? =
-        preferences?.getString(ProfileScopedKey.of(NAV_BAR_POSITION_KEY), null)
+        loadRawString(localNavBarPositionKey) ?: loadRawString(NAV_BAR_POSITION_KEY)
 
     actual fun saveNavBarPosition(positionKey: String) {
+        saveRawString(localNavBarPositionKey, positionKey)
+    }
+
+    private fun loadRawString(key: String): String? =
+        preferences?.getString(ProfileScopedKey.of(key), null)
+
+    private fun saveRawString(key: String, value: String) {
         preferences
             ?.edit()
-            ?.putString(ProfileScopedKey.of(NAV_BAR_POSITION_KEY), positionKey)
+            ?.putString(ProfileScopedKey.of(key), value)
             ?.apply()
     }
 
@@ -195,8 +202,8 @@ actual object ThemeSettingsStorage {
         loadTabBarBehavior()?.let { put(tabBarBehaviorKey, encodeSyncString(it)) }
         loadDynamicArtworkBackgroundEnabled()?.let { put(dynamicArtworkBackgroundEnabledKey, encodeSyncBoolean(it)) }
         loadShowCatalogAccentEnabled()?.let { put(showCatalogAccentEnabledKey, encodeSyncBoolean(it)) }
-        loadNavBarStyle()?.let { put(NAV_BAR_STYLE_KEY, encodeSyncString(it)) }
-        loadNavBarPosition()?.let { put(NAV_BAR_POSITION_KEY, encodeSyncString(it)) }
+        loadRawString(NAV_BAR_STYLE_KEY)?.let { put(NAV_BAR_STYLE_KEY, encodeSyncString(it)) }
+        loadRawString(NAV_BAR_POSITION_KEY)?.let { put(NAV_BAR_POSITION_KEY, encodeSyncString(it)) }
     }
 
     actual fun replaceFromSyncPayload(payload: JsonObject) {
@@ -212,8 +219,8 @@ actual object ThemeSettingsStorage {
         payload.decodeSyncString(tabBarBehaviorKey)?.let(::saveTabBarBehavior)
         payload.decodeSyncBoolean(dynamicArtworkBackgroundEnabledKey)?.let(::saveDynamicArtworkBackgroundEnabled)
         payload.decodeSyncBoolean(showCatalogAccentEnabledKey)?.let(::saveShowCatalogAccentEnabled)
-        payload.decodeSyncString(NAV_BAR_STYLE_KEY)?.let(::saveNavBarStyle)
-        payload.decodeSyncString(NAV_BAR_POSITION_KEY)?.let(::saveNavBarPosition)
+        payload.decodeSyncString(NAV_BAR_STYLE_KEY)?.let { saveRawString(NAV_BAR_STYLE_KEY, it) }
+        payload.decodeSyncString(NAV_BAR_POSITION_KEY)?.let { saveRawString(NAV_BAR_POSITION_KEY, it) }
         applySelectedAppLanguage(loadSelectedAppLanguage() ?: AppLanguage.DEVICE.code)
     }
 }
