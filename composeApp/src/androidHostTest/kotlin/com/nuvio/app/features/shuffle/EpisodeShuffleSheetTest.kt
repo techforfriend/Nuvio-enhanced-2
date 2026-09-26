@@ -2,12 +2,15 @@ package com.nuvio.app.features.shuffle
 
 import android.app.Application
 import android.content.Context
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.nuvio.app.core.ui.NuvioTheme
+import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.profiles.ProfileRepository
@@ -19,6 +22,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 @RunWith(RobolectricTestRunner::class)
@@ -60,19 +64,26 @@ class EpisodeShuffleSheetTest {
     }
 
     @Test
-    fun stopShuffleRestoresSavedSequentialMode() {
-        EpisodeShuffleRepository.save("show", EpisodeShuffleSettings(true, true), profileId)
-        show(settings = EpisodeShuffleSettings(true, true))
-        compose.onNodeWithText("Stop shuffle").performClick()
+    fun stoppingShuffleRestoresSequentialModeAndConfirms() {
+        val enabled = EpisodeShuffleSettings(true, true)
+        EpisodeShuffleRepository.save("show", enabled, profileId)
+        compose.setContent {
+            NuvioTheme {
+                val save = rememberShuffleSave("show", profileId, enabled)
+                Button(onClick = { save(enabled.copy(enabled = false)) }) { Text("Stop") }
+            }
+        }
+        compose.onNodeWithText("Stop").performClick()
         compose.runOnIdle {
             assertFalse(EpisodeShuffleRepository.readProfile(profileId).settings("show", "series").enabled)
+            assertEquals("Shuffle off", NuvioToastController.currentToast.value?.message)
         }
     }
 
     private fun show(watched: Set<String> = emptySet(), settings: EpisodeShuffleSettings = EpisodeShuffleSettings()) {
         compose.setContent {
             NuvioTheme {
-                EpisodeShuffleSheet(meta, profileId, settings, watched, emptyList(), true,
+                EpisodeShuffleSheet(meta, settings, { true }, watched, emptyList(), true,
                     onDismiss = {}, onPlay = {}, onPlayManually = null, onStartFromBeginning = {})
             }
         }

@@ -59,8 +59,8 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun EpisodeShuffleSheet(
     meta: MetaDetails,
-    profileId: Int,
     settings: EpisodeShuffleSettings,
+    onSave: (EpisodeShuffleSettings) -> Boolean,
     watchedKeys: Set<String>,
     progressEntries: List<WatchProgressEntry>,
     blurUnwatchedEpisodes: Boolean,
@@ -72,7 +72,6 @@ internal fun EpisodeShuffleSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val availability = rememberPlaybackAvailability()
-    val saveFailed = stringResource(Res.string.shuffle_save_failed)
     val progress = remember(meta.id, progressEntries) { shuffleEpisodeProgress(meta.id, progressEntries) }
     val picker by produceState<RandomEpisodePicker?>(null, meta, watchedKeys, progress) {
         val updated = withContext(Dispatchers.Default) {
@@ -100,12 +99,7 @@ internal fun EpisodeShuffleSheet(
         val episode = preview ?: return
         if (starting) return
         starting = true
-        if (EpisodeShuffleRepository.save(meta.id, EpisodeShuffleSettings(true, includeWatched), profileId)) {
-            dismiss { action(episode) }
-        } else {
-            starting = false
-            NuvioToastController.show(saveFailed)
-        }
+        if (onSave(EpisodeShuffleSettings(true, includeWatched))) dismiss { action(episode) } else starting = false
     }
 
     NuvioModalBottomSheet(
@@ -147,14 +141,6 @@ internal fun EpisodeShuffleSheet(
                         if (unwatchedCount == 0) Text(stringResource(Res.string.random_episode_caught_up),
                             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                }
-                if (settings.enabled) {
-                    Text(stringResource(if (settings.includeWatched) Res.string.shuffle_enabled_all else Res.string.shuffle_enabled_unwatched),
-                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-                    TextButton(onClick = {
-                        if (EpisodeShuffleRepository.save(meta.id, settings.copy(enabled = false), profileId)) dismiss()
-                        else NuvioToastController.show(saveFailed)
-                    }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(Res.string.shuffle_stop)) }
                 }
             } else {
                 val watched = readyPicker?.isWatched(preview) == true
@@ -221,6 +207,34 @@ internal fun EpisodeShuffleSheet(
                     Text(stringResource(Res.string.cw_action_start_from_beginning))
                 }
             }
+        }
+    }
+}
+
+@Composable
+internal fun rememberShuffleSave(
+    contentId: String,
+    profileId: Int,
+    current: EpisodeShuffleSettings,
+): (EpisodeShuffleSettings) -> Boolean {
+    val off = stringResource(Res.string.shuffle_disabled)
+    val all = stringResource(Res.string.shuffle_enabled_all)
+    val unwatched = stringResource(Res.string.shuffle_enabled_unwatched)
+    val failed = stringResource(Res.string.shuffle_save_failed)
+    return remember(contentId, profileId, current, off, all, unwatched, failed) {
+        { settings ->
+            val saved = EpisodeShuffleRepository.save(contentId, settings, profileId)
+            val changed = current.enabled != settings.enabled ||
+                (settings.enabled && current.includeWatched != settings.includeWatched)
+            when {
+                !saved -> NuvioToastController.show(failed)
+                changed -> NuvioToastController.show(when {
+                    !settings.enabled -> off
+                    settings.includeWatched -> all
+                    else -> unwatched
+                })
+            }
+            saved
         }
     }
 }

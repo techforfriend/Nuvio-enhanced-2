@@ -44,8 +44,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -124,6 +122,7 @@ import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.shuffle.EpisodeShuffleRepository
 import com.nuvio.app.features.shuffle.EpisodeShuffleSheet
 import com.nuvio.app.features.shuffle.ShuffleSurface
+import com.nuvio.app.features.shuffle.rememberShuffleSave
 import com.nuvio.app.features.shuffle.shufflePrimaryAction
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.streams.rememberPlaybackAvailability
@@ -612,6 +611,13 @@ fun MetaDetailsScreen(
                     ?.takeUnless { it.isCompleted }
                 val cwPrefs by ContinueWatchingPreferencesRepository.uiState.collectAsStateWithLifecycle()
                 val shuffleSettings = shuffleProfile.settings(meta.id, meta.type)
+                val hasShuffleEpisodes = remember(meta.videos) {
+                    meta.videos.any { (it.season ?: 0) > 0 && (it.episode ?: 0) > 0 }
+                }
+                val showShuffleButton = shuffleProfile.available &&
+                    meta.type.lowercase() in setOf("series", "tv", "show", "tvshow") &&
+                    (shuffleSettings.enabled || hasShuffleEpisodes)
+                val saveShuffle = rememberShuffleSave(meta.id, shuffleProfileId, shuffleSettings)
                 val seriesAction = remember(watchProgressUiState.entries, watchedUiState.items, meta, todayIsoDate, cwPrefs.upNextFromFurthestEpisode, watchedUiState.watchedKeys, shuffleSettings, shuffleVisit, shuffleProfileId) {
                     if (shuffleSettings.enabled) meta.shufflePrimaryAction(
                         profileId = shuffleProfileId,
@@ -952,11 +958,11 @@ fun MetaDetailsScreen(
                         savedProgress?.lastPositionMs,
                     )
                 }
-                if (showShuffle && shuffleProfile.available) {
+                if (showShuffle && showShuffleButton) {
                     EpisodeShuffleSheet(
                         meta = meta,
-                        profileId = shuffleProfileId,
                         settings = shuffleSettings,
+                        onSave = saveShuffle,
                         watchedKeys = watchedUiState.watchedKeys,
                         progressEntries = watchProgressUiState.entries,
                         blurUnwatchedEpisodes = metaScreenSettingsUiState.blurUnwatchedEpisodes,
@@ -1154,7 +1160,9 @@ fun MetaDetailsScreen(
                                     isSaved = isSaved,
                                     isWatched = isWatched,
                                     onPrimaryPlayClick = onPrimaryPlayClick,
-                                    onShuffleClick = if (shuffleProfile.available && meta.type.lowercase() in setOf("series", "tv", "show", "tvshow")) ({ showShuffle = true }) else null,
+                                    onShuffleClick = if (showShuffleButton) ({
+                                        if (shuffleSettings.enabled) saveShuffle(shuffleSettings.copy(enabled = false)) else showShuffle = true
+                                    }) else null,
                                     shuffleEnabled = shuffleSettings.enabled,
                                     onPrimaryPlayLongClick = onPrimaryPlayLongClick,
                                     onSaveClick = toggleSaved,
@@ -2217,11 +2225,20 @@ private fun ConfiguredMetaSections(
     fun RenderSection(key: MetaScreenSectionKey, showHeader: Boolean = true) {
         when (key) {
             MetaScreenSectionKey.ACTIONS -> {
+                val shuffleAction = onShuffleClick?.let { onClick ->
+                    DetailSecondaryAction(
+                        label = stringResource(if (shuffleEnabled) Res.string.shuffle_stop else Res.string.random_episode_title),
+                        icon = Icons.Default.Shuffle,
+                        isActive = shuffleEnabled,
+                        onClick = onClick,
+                    )
+                }
                 DetailActionButtons(
                     playLabel = if (isPrimaryPlayEnabled) playButtonLabel else stringResource(Res.string.playback_unavailable),
                     playEnabled = isPrimaryPlayEnabled,
-                    shuffleEnabled = shuffleEnabled,
+                    pinnedAction = shuffleAction?.takeIf { shuffleEnabled },
                     secondaryActions = buildList {
+                        if (!shuffleEnabled) shuffleAction?.let(::add)
                         add(DetailSecondaryAction(
                             label = if (isWatched) {
                                 stringResource(Res.string.hero_mark_unwatched)
@@ -2256,15 +2273,6 @@ private fun ConfiguredMetaSections(
                     onPlayClick = onPrimaryPlayClick,
                     onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
                 )
-                if (onShuffleClick != null) {
-                    TextButton(onClick = onShuffleClick) {
-                        Icon(Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text(
-                            stringResource(Res.string.random_episode_title),
-                            modifier = Modifier.padding(start = 8.dp),
-                        )
-                    }
-                }
             }
             MetaScreenSectionKey.OVERVIEW -> {
                 DetailMetaInfo(
