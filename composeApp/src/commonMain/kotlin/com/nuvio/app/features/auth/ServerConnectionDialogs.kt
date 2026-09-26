@@ -18,8 +18,6 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +41,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.network.ServerConfiguration
 import com.nuvio.app.core.network.ServerDiscoveryFailure
+import com.nuvio.app.core.ui.Menu
+import com.nuvio.app.core.ui.MenuItem
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.NuvioTokens
@@ -107,32 +107,26 @@ internal fun ServerConnectionMenu(
                 tint = MaterialTheme.nuvio.colors.textPrimary,
             )
         }
-        DropdownMenu(
+        Menu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            containerColor = MaterialTheme.nuvio.colors.surfacePopover,
-            shape = MaterialTheme.nuvio.shapes.compactCard,
         ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(Res.string.server_menu_official)) },
+            MenuItem(
+                text = stringResource(Res.string.server_menu_official),
                 enabled = activeServer.isCustom,
                 onClick = {
                     expanded = false
                     onUseOfficial()
                 },
             )
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        stringResource(
-                            if (activeServer.isCustom) {
-                                Res.string.server_menu_change_custom
-                            } else {
-                                Res.string.server_menu_custom
-                            },
-                        ),
-                    )
-                },
+            MenuItem(
+                text = stringResource(
+                    if (activeServer.isCustom) {
+                        Res.string.server_menu_change_custom
+                    } else {
+                        Res.string.server_menu_custom
+                    },
+                ),
                 onClick = {
                     expanded = false
                     onConnectCustom()

@@ -12,6 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.nuvio.app.core.ui.Menu
+import com.nuvio.app.core.ui.MenuItem
 import com.nuvio.app.core.ui.NuvioInputField
 import com.nuvio.app.core.ui.NuvioPrimaryButton
 import kotlinx.serialization.json.*
@@ -125,7 +127,7 @@ fun PluginSettingsDialog(
                                             Icon(Icons.Rounded.ArrowDropDown, contentDescription = null)
                                         }
                                     }
-                                    DropdownMenu(
+                                    Menu(
                                         expanded = expanded,
                                         onDismissRequest = { expanded = false },
                                         modifier = Modifier.fillMaxWidth(0.8f)
@@ -134,8 +136,9 @@ fun PluginSettingsDialog(
                                             val option = optionElement.jsonObject
                                             val optionLabel = option["label"]?.jsonPrimitive?.content ?: ""
                                             val optionValue = option["value"]?.jsonPrimitive?.content ?: ""
-                                            DropdownMenuItem(
-                                                text = { Text(optionLabel) },
+                                            MenuItem(
+                                                text = optionLabel,
+                                                selected = optionValue == currentValue,
                                                 onClick = {
                                                     currentSettings[key] = JsonPrimitive(optionValue)
                                                     expanded = false

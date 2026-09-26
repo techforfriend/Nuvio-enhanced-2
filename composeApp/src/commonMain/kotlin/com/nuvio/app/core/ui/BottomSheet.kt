@@ -26,7 +26,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -34,10 +33,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 
 private val SheetShape = RoundedCornerShape(NuvioTokens.Space.s28)
-
-private val SheetEdge = Brush.verticalGradient(
-    listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.04f)),
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,7 +73,7 @@ fun NuvioModalBottomSheet(
                         .padding(NuvioTokens.Space.s10)
                         .clip(SheetShape)
                         .background(containerColor)
-                        .border(tokens.borders.thin, SheetEdge, SheetShape),
+                        .border(tokens.borders.thin, SurfaceEdge, SheetShape),
                 ) {
                     if (showDragHandle) {
                         NuvioBottomSheetDragHandle(Modifier.align(Alignment.CenterHorizontally))
