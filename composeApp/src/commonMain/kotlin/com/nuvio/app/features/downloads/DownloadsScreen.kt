@@ -130,6 +130,7 @@ fun DownloadsScreen(
             title = stringResource(Res.string.action_delete_confirm_title),
             message = stringResource(Res.string.action_delete_confirm_message),
             isVisible = true,
+            destructive = true,
             confirmText = stringResource(Res.string.action_yes),
             dismissText = stringResource(Res.string.action_no),
             onConfirm = {
