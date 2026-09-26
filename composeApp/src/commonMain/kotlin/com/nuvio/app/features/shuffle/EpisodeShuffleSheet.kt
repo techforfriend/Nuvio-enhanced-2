@@ -105,6 +105,7 @@ internal fun EpisodeShuffleSheet(
     NuvioModalBottomSheet(
         onDismissRequest = { if (!starting) dismiss() },
         sheetState = sheetState,
+        fullHeight = true,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
