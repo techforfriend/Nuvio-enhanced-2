@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.2",
+          "buildVersion": "134",
+          "date": "2026-09-26T00:05:01Z",
+          "localizedDescription": "- fix(catalog): handle Simkl source in More Like This \"View all\" @luqmanfadlli\r\n- fix(streams): use multiplatform synchronization @tapframe\r\n- fix(exo): update buffer defaults @tapframe\r\n- update engine libs @tapframe\r\n- fix(ios): hide home indicator during playback @tapframe\r\n- feat(profile): show Taste DNA genres as a donut chart @luqmanfadlli\r\n- feat(profile): derive Taste DNA genres from watched titles @luqmanfadlli\r\n- fix(profile): measure movie/series leaning by distinct titles @luqmanfadlli\r\n- feat(auth): enable password manager autofill for sign-in/sign-up @luqmanfadlli\r\n- fix(settings): set navigation bar style/position locally @luqmanfadlli\r\n- update latest Vietnamese strings @blueocean2308\r\n- Delay next-episode card until post-credits scene ends @skoruppa\r\n- scope library poster overlay to LIBRARY screen toggle and react to changes @skoruppa\r\n- Use dedicated ImageLoader for stream badges to prevent cache revalidation @skoruppa\r\n- feat(profile): rework the Profile Insight hero, watch time and taste @luqmanfadlli\r\n- feat(library): denser poster grid per device and orientation @luqmanfadlli\r\n- feat: add landscape banner to Simkl More Like This items @skoruppa\r\n- added the percent value to the swipe up gesture bars @AdityasahuX07\r\n- feat(player): skip watched titles in movie recommendations @luqmanfadlli\r\n- fix(profile): let the insight collection grid fill the sheet @luqmanfadlli\r\n- fix(settings): show the tablet bars in the nav bar preview on iPad @luqmanfadlli\r\n- feat: add Simkl as third More Like This source @skoruppa\r\n- add per-screen toggles for custom poster URL overlay @skoruppa\r\n- fix(player): key player lifecycle by episode and source @tapframe",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.5.2-beta/Nuvio-0.5.2-Enhanced.ipa",
+          "size": 68152456,
+          "sha256": "d8be5c245910bc08832bd6f62da4502a64731a925ac4c57b084dfc06b767ecdd",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.1",
           "buildVersion": "133",
           "date": "2026-09-23T13:18:13Z",
