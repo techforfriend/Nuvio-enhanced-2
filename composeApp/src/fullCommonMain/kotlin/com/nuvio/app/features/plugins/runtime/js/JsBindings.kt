@@ -11,6 +11,7 @@ internal object JsBindings {
             if (typeof globalThis.window === 'undefined') globalThis.window = globalThis;
             if (typeof globalThis.self === 'undefined') globalThis.self = globalThis;
 
+            ${timerPolyfill()}
             ${fetchPolyfill()}
             ${abortControllerPolyfill()}
             ${base64Polyfill()}
@@ -61,6 +62,28 @@ internal object JsBindings {
                 }
             })();
         """.trimIndent()
+
+    private fun timerPolyfill() = """
+        // QuickJS has no event loop or native timers. Keep the timer callback
+        // available to async plugin code by waiting on its isolated worker.
+        if (typeof globalThis.setTimeout === 'undefined') {
+            var __plugin_timer_id = 0;
+            globalThis.setTimeout = function(callback, delay) {
+                var duration = Number(delay);
+                if (!isFinite(duration) || duration < 0) duration = 0;
+                duration = Math.min(duration, 60000);
+                var deadline = Date.now() + duration;
+                while (Date.now() < deadline) {}
+                if (typeof callback === 'function') {
+                    callback.apply(globalThis, Array.prototype.slice.call(arguments, 2));
+                }
+                return ++__plugin_timer_id;
+            };
+        }
+        if (typeof globalThis.clearTimeout === 'undefined') {
+            globalThis.clearTimeout = function() {};
+        }
+    """.trimIndent()
 
     private fun fetchPolyfill() = """
         function __normalize_fetch_headers(headers) {
