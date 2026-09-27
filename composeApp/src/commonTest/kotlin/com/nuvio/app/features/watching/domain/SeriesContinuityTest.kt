@@ -164,7 +164,7 @@ class SeriesContinuityTest {
         )
 
         assertNotNull(action)
-        assertEquals("Next Up • S1E3", action.label)
+        assertEquals("Next Up • S1 E3", action.label)
         assertEquals("show:1:3", action.videoId)
         assertEquals(3, action.episodeNumber)
     }
@@ -196,7 +196,7 @@ class SeriesContinuityTest {
         )
 
         assertNotNull(action)
-        assertEquals("Resume S1E2", action.label)
+        assertEquals("Resume S1 E2", action.label)
         assertEquals("show:1:2", action.videoId)
         assertEquals(1_500L, action.resumePositionMs)
     }
@@ -218,7 +218,7 @@ class SeriesContinuityTest {
         )
 
         assertNotNull(action)
-        assertEquals("Play S1E1", action.label)
+        assertEquals("Play S1 E1", action.label)
         assertEquals("show:1:1", action.videoId)
     }
 
@@ -320,7 +320,7 @@ class SeriesContinuityTest {
         )
 
         assertNotNull(action)
-        assertEquals("Play S0E1", action.label)
+        assertEquals("Play S0 E1", action.label)
     }
 
     @Test
@@ -350,7 +350,7 @@ class SeriesContinuityTest {
         )
 
         assertNotNull(action)
-        assertEquals("Next Up • S2E2", action.label)
+        assertEquals("Next Up • S2 E2", action.label)
         assertEquals("show:2:2", action.videoId)
     }
 }
