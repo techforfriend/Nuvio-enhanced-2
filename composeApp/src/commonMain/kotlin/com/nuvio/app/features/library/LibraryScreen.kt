@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -396,59 +397,6 @@ fun LibraryScreen(
                         }
                     },
                     modifier = Modifier.padding(horizontal = 16.dp),
-                    actions = {
-                        if (sourceMode == LibraryViewMode.Saved) {
-                            LibraryListManagementButton()
-                            val targetLayout = if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
-                                LibraryLayoutMode.VERTICAL
-                            } else {
-                                LibraryLayoutMode.HORIZONTAL
-                            }
-                            IconButton(
-                                onClick = {
-                                    LibraryDisplaySettingsRepository.setLayoutMode(targetLayout)
-                                },
-                            ) {
-                                Crossfade(
-                                    targetState = targetLayout,
-                                    animationSpec = tween(durationMillis = 140),
-                                    label = "libraryLayoutAction",
-                                ) { animatedTargetLayout ->
-                                    Icon(
-                                        imageVector = if (animatedTargetLayout == LibraryLayoutMode.VERTICAL) {
-                                            Icons.Rounded.GridView
-                                        } else {
-                                            Icons.Rounded.ViewAgenda
-                                        },
-                                        contentDescription = if (animatedTargetLayout == LibraryLayoutMode.VERTICAL) {
-                                            stringResource(Res.string.library_layout_show_vertical)
-                                        } else {
-                                            stringResource(Res.string.library_layout_show_horizontal)
-                                        },
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        }
-                        if (sourceMode != LibraryViewMode.Cloud) {
-                            val openCalendarLabel = stringResource(Res.string.library_calendar_open)
-                            IconButton(
-                                onClick = { showReleaseCalendar = true },
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .semantics { contentDescription = openCalendarLabel },
-                            ) {
-                                LibraryCalendarGlyph(
-                                    modifier = Modifier.size(19.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    cutoutColor = MaterialTheme.colorScheme.background,
-                                )
-                            }
-                        }
-                        if (onDownloadsClick != null) {
-                            LibraryDownloadsButton(onClick = onDownloadsClick)
-                        }
-                    },
                 )
                 LibrarySourceSwitch(
                     selectedMode = sourceMode,
@@ -456,7 +404,59 @@ fun LibraryScreen(
                         sourceModeName = mode.name
                     },
                     modifier = Modifier.padding(horizontal = 16.dp),
-                )
+                ) {
+                    if (sourceMode == LibraryViewMode.Saved) {
+                        LibraryListManagementButton()
+                        val targetLayout = if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
+                            LibraryLayoutMode.VERTICAL
+                        } else {
+                            LibraryLayoutMode.HORIZONTAL
+                        }
+                        IconButton(
+                            onClick = {
+                                LibraryDisplaySettingsRepository.setLayoutMode(targetLayout)
+                            },
+                        ) {
+                            Crossfade(
+                                targetState = targetLayout,
+                                animationSpec = tween(durationMillis = 140),
+                                label = "libraryLayoutAction",
+                            ) { animatedTargetLayout ->
+                                Icon(
+                                    imageVector = if (animatedTargetLayout == LibraryLayoutMode.VERTICAL) {
+                                        Icons.Rounded.GridView
+                                    } else {
+                                        Icons.Rounded.ViewAgenda
+                                    },
+                                    contentDescription = if (animatedTargetLayout == LibraryLayoutMode.VERTICAL) {
+                                        stringResource(Res.string.library_layout_show_vertical)
+                                    } else {
+                                        stringResource(Res.string.library_layout_show_horizontal)
+                                    },
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                    if (sourceMode != LibraryViewMode.Cloud) {
+                        val openCalendarLabel = stringResource(Res.string.library_calendar_open)
+                        IconButton(
+                            onClick = { showReleaseCalendar = true },
+                            modifier = Modifier
+                                .size(40.dp)
+                                .semantics { contentDescription = openCalendarLabel },
+                        ) {
+                            LibraryCalendarGlyph(
+                                modifier = Modifier.size(19.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                cutoutColor = MaterialTheme.colorScheme.background,
+                            )
+                        }
+                    }
+                    if (onDownloadsClick != null) {
+                        LibraryDownloadsButton(onClick = onDownloadsClick)
+                    }
+                }
                 Spacer(modifier = Modifier.height(6.dp))
             }
         }
@@ -848,10 +848,12 @@ private fun LibrarySourceSwitch(
     selectedMode: LibraryViewMode,
     onModeSelected: (LibraryViewMode) -> Unit,
     modifier: Modifier = Modifier,
+    trailingActions: @Composable RowScope.() -> Unit = {},
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         LibraryChip(
             label = stringResource(Res.string.library_source_saved),
@@ -862,6 +864,12 @@ private fun LibrarySourceSwitch(
             label = stringResource(Res.string.library_source_cloud),
             selected = selectedMode == LibraryViewMode.Cloud,
             onClick = { onModeSelected(LibraryViewMode.Cloud) },
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(0.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            content = trailingActions,
         )
     }
 }
