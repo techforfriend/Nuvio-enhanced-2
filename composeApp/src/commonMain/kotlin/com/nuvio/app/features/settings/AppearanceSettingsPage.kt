@@ -67,6 +67,8 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.nuvio.app.core.ui.NuvioBottomSheetDivider
 
 internal fun LazyListScope.appearanceSettingsContent(
     isTablet: Boolean,

@@ -89,6 +89,13 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.rounded.Check
 
 internal fun LazyListScope.playbackSettingsContent(
     isTablet: Boolean,
