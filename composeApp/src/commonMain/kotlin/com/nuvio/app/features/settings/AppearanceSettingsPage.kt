@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -25,7 +25,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.floatingNavigationGlowSupported
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.NuvioBottomSheetActionRow
-import com.nuvio.app.core.ui.NuvioBottomSheetDivider
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.core.ui.labelRes
@@ -372,12 +371,10 @@ private fun AppearanceLanguageBottomSheet(
                 )
             }
 
-            itemsIndexed(options) { index, option ->
-                if (index > 0) {
-                    NuvioBottomSheetDivider()
-                }
+            items(options) { option ->
                 NuvioBottomSheetActionRow(
                     title = stringResource(option.labelRes),
+                    selected = option.language == selectedLanguage,
                     onClick = {
                         onLanguageSelected(option.language)
                         coroutineScope.launch {

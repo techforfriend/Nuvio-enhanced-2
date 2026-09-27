@@ -57,7 +57,6 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.ViewAgenda
-import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.CircularProgressIndicator
@@ -107,6 +106,7 @@ import com.nuvio.app.core.ui.NuvioDropdownChip
 import com.nuvio.app.core.ui.NuvioDropdownOption
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
+import com.nuvio.app.core.ui.shimmer
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioShelfSection
 import com.nuvio.app.core.ui.NuvioViewAllPillSize
@@ -154,6 +154,7 @@ fun LibraryScreen(
     onCloudFilePlay: ((CloudLibraryItem, CloudLibraryFile) -> Unit)? = null,
     onConnectCloudClick: (() -> Unit)? = null,
     disintegrationRequest: DisintegrationRequest<String>? = null,
+    onDownloadsClick: (() -> Unit)? = null,
 ) {
     val uiState by remember {
         LibraryRepository.ensureLoaded()
@@ -443,6 +444,9 @@ fun LibraryScreen(
                                     cutoutColor = MaterialTheme.colorScheme.background,
                                 )
                             }
+                        }
+                        if (onDownloadsClick != null) {
+                            LibraryDownloadsButton(onClick = onDownloadsClick)
                         }
                     },
                 )
@@ -983,14 +987,9 @@ private fun LibraryChip(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = if (expanded) Arrangement.Center else Arrangement.spacedBy(6.dp),
         ) {
-            if (loading) {
-                NuvioLoadingIndicator(
-                    modifier = Modifier.size(12.dp),
-                    color = colorScheme.primary,
-                )
-            }
             Text(
                 text = label,
+                modifier = Modifier.shimmer(loading),
                 style = MaterialTheme.typography.labelMedium,
                 color = when {
                     error -> colorScheme.error

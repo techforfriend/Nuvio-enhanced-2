@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.nuvio.app.core.ui.shimmer
 import com.nuvio.app.isIos
 import dev.chrisbanes.haze.HazeInputScale
 import dev.chrisbanes.haze.hazeEffect
@@ -404,6 +405,7 @@ private fun ActiveScrapersStatusBlock(
                 ) {
                     Text(
                         text = addonName,
+                        modifier = Modifier.shimmer(),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Normal,

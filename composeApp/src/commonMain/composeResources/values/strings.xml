@@ -649,7 +649,6 @@
     <string name="detail_comments_spoiler_card">This comment contains spoilers.</string>
     <string name="detail_comments_spoiler_hidden_sheet">This comment contains spoilers and has been hidden.</string>
     <string name="detail_comments_title">Comments</string>
-    <string name="detail_play_random_episode">Play random episode</string>
     <string name="detail_tab_trailer">Trailer</string>
     <string name="detail_trailer_category_count">%1$s (%2$d)</string>
     <string name="detail_trailers_title">Trailers</string>
@@ -1305,8 +1304,6 @@
     <string name="settings_playback_libmpv_yuv420p">libmpv YUV420P Compatibility</string>
     <string name="settings_playback_libmpv_yuv420p_description">Force YUV420P output for devices with renderer or color issues.</string>
     <string name="settings_playback_section_next_episode">NEXT EPISODE</string>
-    <string name="settings_playback_random_episodes_include_watched">Include watched episodes in random playback</string>
-    <string name="settings_playback_random_episodes_include_watched_description">When disabled, random playback prioritizes unwatched episodes and only falls back to watched episodes when all are watched.</string>
     <string name="settings_playback_section_player">PLAYER</string>
     <string name="settings_playback_section_skip_segments">SKIP SEGMENTS</string>
     <string name="settings_playback_section_stream_auto_play">STREAM AUTO-PLAY</string>
@@ -2567,4 +2564,26 @@
     <string name="settings_nav_bar_position">Position</string>
     <string name="settings_nav_bar_position_bottom">Bottom</string>
     <string name="settings_nav_bar_position_top">Top</string>
+    <string name="random_episode_title">Shuffle</string>
+    <string name="layout_random_episode_sub">Shuffle episodes from any series. Turning this off pauses shuffle.</string>
+    <string name="random_episode_unwatched">Unwatched episodes</string>
+    <string name="random_episode_include_watched">All episodes</string>
+    <string name="random_episode_empty_subtitle">No episodes are available to shuffle.</string>
+    <string name="random_episode_caught_up">You have watched every episode. Choose All episodes to watch again.</string>
+    <string name="random_episode_loading">Loading episodes…</string>
+    <string name="shuffle_starting">Starting shuffle…</string>
+    <string name="shuffle_choose_episodes">Choose which episodes to shuffle.</string>
+    <string name="shuffle_preview_title">Your episode</string>
+    <string name="shuffle_play_episode">Play episode</string>
+    <string name="shuffle_again">Shuffle again</string>
+    <string name="shuffle_only_episode">This is the only episode in your selection.</string>
+    <string name="shuffle_artwork_hidden">Artwork hidden to avoid spoilers</string>
+    <string name="shuffle_stop">Stop shuffle</string>
+    <string name="shuffle_enabled_all">Shuffle on · All episodes</string>
+    <string name="shuffle_enabled_unwatched">Shuffle on · Unwatched episodes</string>
+    <string name="shuffle_disabled">Shuffle off</string>
+    <string name="shuffle_save_failed">Could not update shuffle. Try again.</string>
+    <string name="shuffle_change_selection">Choose episodes</string>
+    <string name="shuffle_badge">Episode shuffle enabled</string>
+    <string name="shuffle_unwatched">Unwatched</string>
 </resources>

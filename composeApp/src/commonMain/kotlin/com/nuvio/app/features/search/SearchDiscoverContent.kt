@@ -176,7 +176,6 @@ private fun CatalogLoadingFooter(modifier: Modifier = Modifier) {
     ) {
         NuvioLoadingIndicator(
             modifier = Modifier.size(22.dp),
-            color = MaterialTheme.colorScheme.primary,
         )
     }
 }

@@ -52,7 +52,6 @@ import org.jetbrains.compose.resources.stringResource
 
 internal sealed class SettingsSearchTarget {
     data class Page(val page: SettingsPage) : SettingsSearchTarget()
-    object Downloads : SettingsSearchTarget()
     object Collections : SettingsSearchTarget()
     object SwitchProfile : SettingsSearchTarget()
     object CheckForUpdates : SettingsSearchTarget()
@@ -99,7 +98,6 @@ internal fun settingsSearchEntries(
     val layoutPage = stringResource(Res.string.compose_settings_page_appearance)
     val advancedPage = stringResource(Res.string.compose_settings_page_advanced)
     val contentDiscoveryPage = stringResource(Res.string.compose_settings_page_content_discovery)
-    val downloadsPage = stringResource(Res.string.compose_settings_root_downloads_title)
     val playbackPage = stringResource(Res.string.compose_settings_page_playback)
     val streamsPage = stringResource(Res.string.compose_settings_page_streams)
     val integrationsPage = stringResource(Res.string.compose_settings_page_integrations)
@@ -110,6 +108,7 @@ internal fun settingsSearchEntries(
     val detailPage = stringResource(Res.string.compose_settings_page_meta_screen)
     val continueWatchingPage = stringResource(Res.string.compose_settings_page_continue_watching)
     val posterStylePage = stringResource(Res.string.compose_settings_page_poster_customization)
+    val downloadsPage = stringResource(Res.string.compose_settings_root_downloads_title)
     val addonsPage = stringResource(Res.string.compose_settings_page_addons)
     val pluginsPage = stringResource(Res.string.compose_settings_page_plugins)
     val collectionsPage = stringResource(Res.string.collections_header)
@@ -240,14 +239,6 @@ internal fun settingsSearchEntries(
         pageLabel = contentDiscoveryPage,
         section = stringResource(Res.string.settings_content_discovery_section_search),
         icon = Icons.Rounded.Search,
-    )
-    add(
-        key = "downloads",
-        title = downloadsPage,
-        description = stringResource(Res.string.compose_settings_root_downloads_description),
-        category = generalCategory,
-        icon = Icons.Rounded.CloudDownload,
-        target = SettingsSearchTarget.Downloads,
     )
     addRow(
         page = SettingsPage.Downloads,
@@ -841,6 +832,7 @@ internal fun settingsSearchEntries(
             ).joinToString(" "),
         ),
         PlaybackSearchRow("meta-episode-cards", stringResource(Res.string.settings_meta_episode_cards), stringResource(Res.string.settings_meta_episode_cards_description)),
+        PlaybackSearchRow("meta-shuffle", stringResource(Res.string.random_episode_title), stringResource(Res.string.layout_random_episode_sub)),
         PlaybackSearchRow("meta-blur-episodes", stringResource(Res.string.settings_meta_blur_unwatched_episodes), stringResource(Res.string.settings_meta_blur_unwatched_episodes_description)),
     ).forEach { row ->
         addRow(

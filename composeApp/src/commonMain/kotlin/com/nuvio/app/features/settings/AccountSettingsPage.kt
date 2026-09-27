@@ -166,6 +166,7 @@ private fun AccountSettingsBody(
         message = stringResource(Res.string.settings_account_delete_confirm_message),
         isVisible = showDeleteConfirm,
         isBusy = isDeletingAccount,
+        destructive = true,
         confirmText = stringResource(Res.string.settings_account_delete_account),
         dismissText = stringResource(Res.string.action_cancel),
         onConfirm = {

@@ -152,6 +152,7 @@ internal data class AppTabActions(
     val onLibrarySectionViewAllClick: ((LibrarySection, LibrarySortOption) -> Unit)? = null,
     val onCloudFilePlay: ((CloudLibraryItem, CloudLibraryFile) -> Unit)? = null,
     val onConnectCloudClick: (() -> Unit)? = null,
+    val onDownloadsClick: () -> Unit = {},
     val onContinueWatchingClick: ((ContinueWatchingItem) -> Unit)? = null,
     val onContinueWatchingLongPress: ((ContinueWatchingItem) -> Unit)? = null,
     val onLiveTvChannelClick: (LiveTvChannel) -> Unit = {},
@@ -161,7 +162,6 @@ internal data class AppTabActions(
     val onHomescreenSettingsClick: () -> Unit = {},
     val onMetaScreenSettingsClick: () -> Unit = {},
     val onContinueWatchingSettingsClick: () -> Unit = {},
-    val onDownloadsSettingsClick: () -> Unit = {},
     val onAddonsSettingsClick: () -> Unit = {},
     val onPluginsSettingsClick: () -> Unit = {},
     val onAccountSettingsClick: () -> Unit = {},
@@ -229,6 +229,7 @@ internal fun AppTabHost(
                     onSectionViewAllClick = actions.onLibrarySectionViewAllClick,
                     onCloudFilePlay = actions.onCloudFilePlay,
                     onConnectCloudClick = actions.onConnectCloudClick,
+                    onDownloadsClick = actions.onDownloadsClick,
                     disintegrationRequest = state.libraryDisintegrationRequest,
                 )
             }
@@ -255,7 +256,6 @@ internal fun AppTabHost(
                     onHomescreenClick = actions.onHomescreenSettingsClick,
                     onMetaScreenClick = actions.onMetaScreenSettingsClick,
                     onContinueWatchingClick = actions.onContinueWatchingSettingsClick,
-                    onDownloadsClick = actions.onDownloadsSettingsClick,
                     onAddonsClick = actions.onAddonsSettingsClick,
                     onPluginsClick = actions.onPluginsSettingsClick,
                     onAccountClick = actions.onAccountSettingsClick,
