@@ -1,13 +1,51 @@
 package com.nuvio.app.features.details
 
 import com.nuvio.app.features.watched.WatchedItem
+import com.nuvio.app.features.watched.releasedMainSeasonEpisodes
+import com.nuvio.app.features.watched.toEpisodeWatchedItem
+import com.nuvio.app.features.watched.toSeriesWatchedItem
 import com.nuvio.app.features.watchprogress.WatchProgressEntry
 import com.nuvio.app.features.watching.domain.WatchingContentRef
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class SeriesPlaybackResolverTest {
+    @Test
+    fun seriesPrimaryAction_restarts_at_first_episode_when_series_is_marked_watched() {
+        val meta = MetaDetails(
+            id = "show",
+            type = "series",
+            name = "Show",
+            videos = listOf(
+                MetaVideo(id = "show:0:1", title = "Special", season = 0, episode = 1, released = "2026-02-01"),
+                MetaVideo(id = "show:1:1", title = "Pilot", season = 1, episode = 1, released = "2026-03-01"),
+                MetaVideo(id = "show:1:2", title = "Finale", season = 1, episode = 2, released = "2026-03-08"),
+            ),
+        )
+        val todayIsoDate = "2026-03-30"
+        val watchedItems = listOf(meta.toSeriesWatchedItem(markedAtEpochMs = 200L)) +
+            meta.releasedMainSeasonEpisodes(todayIsoDate).map { episode ->
+                meta.toEpisodeWatchedItem(episode, markedAtEpochMs = 200L)
+            }
+
+        val action = meta.seriesPrimaryAction(
+            entries = emptyList(),
+            watchedItems = watchedItems,
+            todayIsoDate = todayIsoDate,
+            allowRewatch = true,
+        )
+
+        assertNotNull(action, "A watched series must still select an episode for the Play button")
+        assertEquals("show:1:1", action.videoId)
+        assertEquals(1, action.seasonNumber)
+        assertEquals(1, action.episodeNumber)
+        assertEquals("Pilot", action.episodeTitle)
+        assertEquals("Play S1 E1", action.label)
+        assertNull(action.resumePositionMs)
+    }
+
     @Test
     fun seriesPrimaryAction_uses_latest_watched_episode_when_manual_mark_exists() {
         val meta = MetaDetails(
@@ -148,6 +186,7 @@ class SeriesPlaybackResolverTest {
             entries = emptyList(),
             watchedItems = emptyList(),
             todayIsoDate = "2026-03-30",
+            allowRewatch = true,
         )
 
         assertNotNull(action)

@@ -14,6 +14,64 @@ class SeriesContinuityTest {
     )
 
     @Test
+    fun decideSeriesPrimaryAction_restarts_completed_series_from_first_episode() {
+        val action = decideSeriesPrimaryAction(
+            content = show,
+            episodes = episodes,
+            progressRecords = listOf(
+                WatchingProgressRecord(
+                    content = show,
+                    videoId = "show:1:3",
+                    seasonNumber = 1,
+                    episodeNumber = 3,
+                    lastUpdatedEpochMs = 100L,
+                    isCompleted = true,
+                ),
+            ),
+            watchedRecords = emptyList(),
+            todayIsoDate = "2026-03-30",
+            defaultVideoId = "ep2",
+            allowRewatch = true,
+        )
+
+        assertNotNull(action)
+        assertEquals("show:1:1", action.videoId)
+        assertEquals("Play S1 E1", action.label)
+        assertNull(action.resumePositionMs)
+    }
+
+    @Test
+    fun decideSeriesPrimaryAction_has_no_next_up_after_final_episode() {
+        val action = decideSeriesPrimaryAction(
+            content = show,
+            episodes = episodes,
+            progressRecords = emptyList(),
+            watchedRecords = listOf(
+                WatchingWatchedRecord(content = show, seasonNumber = 1, episodeNumber = 3, markedAtEpochMs = 100L),
+            ),
+            todayIsoDate = "2026-03-30",
+        )
+
+        assertNull(action)
+    }
+
+    @Test
+    fun decideSeriesPrimaryAction_does_not_rewatch_unavailable_episodes() {
+        val action = decideSeriesPrimaryAction(
+            content = show,
+            episodes = episodes.map { it.copy(available = false, releasedDate = null) },
+            progressRecords = emptyList(),
+            watchedRecords = listOf(
+                WatchingWatchedRecord(content = show, seasonNumber = 1, episodeNumber = 3, markedAtEpochMs = 100L),
+            ),
+            todayIsoDate = "2026-03-30",
+            allowRewatch = true,
+        )
+
+        assertNull(action)
+    }
+
+    @Test
     fun continueWatchingProgressEntries_drops_older_resume_when_latest_series_progress_is_completed() {
         val result = continueWatchingProgressEntries(
             progressRecords = listOf(
@@ -161,6 +219,7 @@ class SeriesContinuityTest {
                 ),
             ),
             todayIsoDate = "2026-03-30",
+            allowRewatch = true,
         )
 
         assertNotNull(action)
@@ -193,6 +252,7 @@ class SeriesContinuityTest {
                 ),
             ),
             todayIsoDate = "2026-03-30",
+            allowRewatch = true,
         )
 
         assertNotNull(action)
