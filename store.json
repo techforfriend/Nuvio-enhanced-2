@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.3",
+          "buildVersion": "135",
+          "date": "2026-09-27T05:17:38Z",
+          "localizedDescription": "- fix(ios): restore Now Playing controls by dropping mixWithOthers @luqmanfadlli\r\n- fix(home): use continue watching poster pattern @tapframe\r\n- fix(shuffle): open sheet at full height @tapframe\r\n- fix(details): move shuffle into actions menu @tapframe\r\n- feat(poster): support addon landscape posters @tapframe\r\n- feat(library): animate downloads icon during downloads @tapframe\r\n- feat(library): move downloads to library @tapframe\r\n- feat(ui): restyle dialogs @tapframe\r\n- feat(ui): restyle dropdown menus @tapframe\r\n- feat(ui): restyle bottom sheets @tapframe\r\n- fix(auth): use state-based text fields so autofill sees the username field @luqmanfadlli\r\n- fix(settings): keep Enhanced-only appearance settings device-local @luqmanfadlli\r\n- feat(streams): use shimmer for loading states @tapframe\r\n- feat(spinner): change indicator @tapframe\r\n- i18n(ur): add Urdu localization (#2067) @muzii9\r\n- feat(player): add episode shuffle @tapframe",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.5.3-beta/Nuvio-0.5.3-Enhanced.ipa",
+          "size": 68569946,
+          "sha256": "1477fe69e9b220accae4f8771ee6008820532ef6354fd68a5f98d06b45374484",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.2",
           "buildVersion": "134",
           "date": "2026-09-26T00:05:01Z",
