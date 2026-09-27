@@ -108,6 +108,7 @@ fun LibraryScreen(
     onCatalogClick: ((HomeCatalogSection) -> Unit)? = null,
     onPreviewClick: ((MetaPreview) -> Unit)? = null,
     onPreviewLongClick: ((MetaPreview) -> Unit)? = null,
+    onDownloadsClick: (() -> Unit)? = null,
     disintegrationRequest: DisintegrationRequest<String>? = null,
 ) {
     val uiState by remember {
@@ -344,6 +345,9 @@ fun LibraryScreen(
                                             )
                                         }
                                     }
+                                }
+                                if (onDownloadsClick != null) {
+                                    LibraryDownloadsButton(onClick = onDownloadsClick)
                                 }
                             },
                         )
