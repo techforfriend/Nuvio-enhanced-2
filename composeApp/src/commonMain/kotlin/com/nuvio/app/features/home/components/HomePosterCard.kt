@@ -21,7 +21,8 @@ fun HomePosterCard(
 ) {
     val posterCardStyle = rememberPosterCardStyleUiState()
     val isLandscapeMode = useLandscapeBackdropMode || posterCardStyle.catalogLandscapeModeEnabled
-    val ignoreLandscapePoster = posterCardStyle.alwaysShowLandscapeClearlogo
+    val hasCustomPosterOverlay = item.rawPosterUrl != null
+    val ignoreLandscapePoster = posterCardStyle.alwaysShowLandscapeClearlogo && !hasCustomPosterOverlay
     val imageUrl = if (isLandscapeMode) {
         if (ignoreLandscapePoster) (item.banner ?: item.poster) else (item.landscapePoster ?: item.banner ?: item.poster)
     } else item.poster
