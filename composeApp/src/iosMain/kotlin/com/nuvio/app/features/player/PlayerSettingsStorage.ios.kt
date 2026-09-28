@@ -56,6 +56,17 @@ actual object PlayerSettingsStorage {
     private const val decoderPriorityKey = "decoder_priority"
     private const val mapDV7ToHevcKey = "map_dv7_to_hevc"
     private const val tunnelingEnabledKey = "tunneling_enabled"
+    private const val exoNativeMemoryEnabledKey = "exo_native_memory_enabled"
+    private const val vodCacheEnabledKey = "vod_cache_enabled"
+    private const val vodCacheSizeModeKey = "vod_cache_size_mode"
+    private const val vodCacheSizeMbKey = "vod_cache_size_mb"
+    private const val bufferEngineEnabledKey = "buffer_engine_enabled"
+    private const val minBufferMsKey = "min_buffer_ms"
+    private const val maxBufferMsKey = "max_buffer_ms"
+    private const val bufferForPlaybackMsKey = "buffer_for_playback_ms"
+    private const val bufferForPlaybackAfterRebufferMsKey = "buffer_for_playback_after_rebuffer_ms"
+    private const val backBufferDurationMsKey = "back_buffer_duration_ms"
+    private const val targetBufferSizeMbKey = "target_buffer_size_mb"
     private const val streamAutoPlayModeKey = "stream_auto_play_mode"
     private const val streamAutoPlaySourceKey = "stream_auto_play_source"
     private const val streamAutoPlaySelectedAddonsKey = "stream_auto_play_selected_addons"
@@ -131,6 +142,17 @@ actual object PlayerSettingsStorage {
         decoderPriorityKey,
         mapDV7ToHevcKey,
         tunnelingEnabledKey,
+        exoNativeMemoryEnabledKey,
+        vodCacheEnabledKey,
+        vodCacheSizeModeKey,
+        vodCacheSizeMbKey,
+        bufferEngineEnabledKey,
+        minBufferMsKey,
+        maxBufferMsKey,
+        bufferForPlaybackMsKey,
+        bufferForPlaybackAfterRebufferMsKey,
+        backBufferDurationMsKey,
+        targetBufferSizeMbKey,
         streamAutoPlayModeKey,
         streamAutoPlaySourceKey,
         streamAutoPlaySelectedAddonsKey,
@@ -639,6 +661,61 @@ actual object PlayerSettingsStorage {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(tunnelingEnabledKey))
     }
 
+    actual fun loadExoNativeMemoryEnabled(): Boolean? = loadBoolean(exoNativeMemoryEnabledKey)
+
+    actual fun saveExoNativeMemoryEnabled(enabled: Boolean) {
+        saveBoolean(exoNativeMemoryEnabledKey, enabled)
+    }
+
+    actual fun loadVodCacheEnabled(): Boolean? = loadBoolean(vodCacheEnabledKey)
+
+    actual fun saveVodCacheEnabled(enabled: Boolean) {
+        saveBoolean(vodCacheEnabledKey, enabled)
+    }
+
+    actual fun loadVodCacheSizeMode(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(vodCacheSizeModeKey))
+
+    actual fun saveVodCacheSizeMode(mode: String) {
+        NSUserDefaults.standardUserDefaults.setObject(mode, forKey = ProfileScopedKey.of(vodCacheSizeModeKey))
+    }
+
+    actual fun loadVodCacheSizeMb(): Int? = loadInt(vodCacheSizeMbKey)
+
+    actual fun saveVodCacheSizeMb(sizeMb: Int) {
+        saveInt(vodCacheSizeMbKey, sizeMb)
+    }
+
+    actual fun loadBufferEngineEnabled(): Boolean? = loadBoolean(bufferEngineEnabledKey)
+
+    actual fun saveBufferEngineEnabled(enabled: Boolean) {
+        saveBoolean(bufferEngineEnabledKey, enabled)
+    }
+
+    actual fun loadMinBufferMs(): Int? = loadInt(minBufferMsKey)
+
+    actual fun saveMinBufferMs(value: Int) = saveInt(minBufferMsKey, value)
+
+    actual fun loadMaxBufferMs(): Int? = loadInt(maxBufferMsKey)
+
+    actual fun saveMaxBufferMs(value: Int) = saveInt(maxBufferMsKey, value)
+
+    actual fun loadBufferForPlaybackMs(): Int? = loadInt(bufferForPlaybackMsKey)
+
+    actual fun saveBufferForPlaybackMs(value: Int) = saveInt(bufferForPlaybackMsKey, value)
+
+    actual fun loadBufferForPlaybackAfterRebufferMs(): Int? = loadInt(bufferForPlaybackAfterRebufferMsKey)
+
+    actual fun saveBufferForPlaybackAfterRebufferMs(value: Int) = saveInt(bufferForPlaybackAfterRebufferMsKey, value)
+
+    actual fun loadBackBufferDurationMs(): Int? = loadInt(backBufferDurationMsKey)
+
+    actual fun saveBackBufferDurationMs(value: Int) = saveInt(backBufferDurationMsKey, value)
+
+    actual fun loadTargetBufferSizeMb(): Int? = loadInt(targetBufferSizeMbKey)
+
+    actual fun saveTargetBufferSizeMb(value: Int) = saveInt(targetBufferSizeMbKey, value)
+
     actual fun loadStreamAutoPlayMode(): String? {
         val defaults = NSUserDefaults.standardUserDefaults
         val key = ProfileScopedKey.of(streamAutoPlayModeKey)
@@ -1043,6 +1120,17 @@ actual object PlayerSettingsStorage {
         loadDecoderPriority()?.let { put(decoderPriorityKey, encodeSyncInt(it)) }
         loadMapDV7ToHevc()?.let { put(mapDV7ToHevcKey, encodeSyncBoolean(it)) }
         loadTunnelingEnabled()?.let { put(tunnelingEnabledKey, encodeSyncBoolean(it)) }
+        loadExoNativeMemoryEnabled()?.let { put(exoNativeMemoryEnabledKey, encodeSyncBoolean(it)) }
+        loadVodCacheEnabled()?.let { put(vodCacheEnabledKey, encodeSyncBoolean(it)) }
+        loadVodCacheSizeMode()?.let { put(vodCacheSizeModeKey, encodeSyncString(it)) }
+        loadVodCacheSizeMb()?.let { put(vodCacheSizeMbKey, encodeSyncInt(it)) }
+        loadBufferEngineEnabled()?.let { put(bufferEngineEnabledKey, encodeSyncBoolean(it)) }
+        loadMinBufferMs()?.let { put(minBufferMsKey, encodeSyncInt(it)) }
+        loadMaxBufferMs()?.let { put(maxBufferMsKey, encodeSyncInt(it)) }
+        loadBufferForPlaybackMs()?.let { put(bufferForPlaybackMsKey, encodeSyncInt(it)) }
+        loadBufferForPlaybackAfterRebufferMs()?.let { put(bufferForPlaybackAfterRebufferMsKey, encodeSyncInt(it)) }
+        loadBackBufferDurationMs()?.let { put(backBufferDurationMsKey, encodeSyncInt(it)) }
+        loadTargetBufferSizeMb()?.let { put(targetBufferSizeMbKey, encodeSyncInt(it)) }
         loadStreamAutoPlayMode()?.let { put(streamAutoPlayModeKey, encodeSyncString(it)) }
         loadStreamAutoPlaySource()?.let { put(streamAutoPlaySourceKey, encodeSyncString(it)) }
         loadStreamAutoPlaySelectedAddons()?.let { put(streamAutoPlaySelectedAddonsKey, encodeSyncStringSet(it)) }
@@ -1122,6 +1210,17 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncInt(decoderPriorityKey)?.let(::saveDecoderPriority)
         payload.decodeSyncBoolean(mapDV7ToHevcKey)?.let(::saveMapDV7ToHevc)
         payload.decodeSyncBoolean(tunnelingEnabledKey)?.let(::saveTunnelingEnabled)
+        payload.decodeSyncBoolean(exoNativeMemoryEnabledKey)?.let(::saveExoNativeMemoryEnabled)
+        payload.decodeSyncBoolean(vodCacheEnabledKey)?.let(::saveVodCacheEnabled)
+        payload.decodeSyncString(vodCacheSizeModeKey)?.let(::saveVodCacheSizeMode)
+        payload.decodeSyncInt(vodCacheSizeMbKey)?.let(::saveVodCacheSizeMb)
+        payload.decodeSyncBoolean(bufferEngineEnabledKey)?.let(::saveBufferEngineEnabled)
+        payload.decodeSyncInt(minBufferMsKey)?.let(::saveMinBufferMs)
+        payload.decodeSyncInt(maxBufferMsKey)?.let(::saveMaxBufferMs)
+        payload.decodeSyncInt(bufferForPlaybackMsKey)?.let(::saveBufferForPlaybackMs)
+        payload.decodeSyncInt(bufferForPlaybackAfterRebufferMsKey)?.let(::saveBufferForPlaybackAfterRebufferMs)
+        payload.decodeSyncInt(backBufferDurationMsKey)?.let(::saveBackBufferDurationMs)
+        payload.decodeSyncInt(targetBufferSizeMbKey)?.let(::saveTargetBufferSizeMb)
         payload.decodeSyncString(streamAutoPlayModeKey)?.let(::saveStreamAutoPlayMode)
         payload.decodeSyncString(streamAutoPlaySourceKey)?.let(::saveStreamAutoPlaySource)
         payload.decodeSyncStringSet(streamAutoPlaySelectedAddonsKey)?.let(::saveStreamAutoPlaySelectedAddons)
