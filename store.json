@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.4",
+          "buildVersion": "136",
+          "date": "2026-09-28T10:25:25Z",
+          "localizedDescription": "- fix(player): ignore short clips for tracking @tapframe\r\n- fix(ios): update quickjs to 1.0.15 @tapframe\r\n- feat(ratings): star rating row under details actions, fit icon row, episode badge @luqmanfadlli\r\n- fix(player): reduce buffer durations @tapframe\r\n- fix(details): keep custom posters when returning to a title @tapframe\r\n- feat(ratings): in-app ratings synced with Trakt, Simkl and MDBList @luqmanfadlli\r\n- fix(library): move header actions onto the Saved/Cloud row @luqmanfadlli\r\n- fix(settings): use shared chip on detail page @tapframe\r\n- fix(details): replay watched series from first episode @tapframe\r\n- fix(player): resume restored player from current position @tapframe\r\n- fix(i18n): align episode labels and metadata with tv @tapframe\r\n- fix(streams): prevent rotation during binge group lookup @tapframe\r\n- fix(profiles): center pin dialog content @tapframe\r\n- Plugin timeout (#2091) @paregi12",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.5.4-beta/Nuvio-0.5.4-Enhanced.ipa",
+          "size": 68808545,
+          "sha256": "f91bdec1f840041cff4e7ad54d66c0698a451dc0232aab2af32954f0a6abaffd",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.3",
           "buildVersion": "135",
           "date": "2026-09-27T05:17:38Z",
