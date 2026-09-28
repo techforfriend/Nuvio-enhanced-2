@@ -240,7 +240,7 @@
     <string name="collections_editor_trakt_sources">Danh sách Trakt</string>
     <string name="collections_editor_trakt_list">Danh sách Trakt</string>
     <string name="collections_editor_trakt_input_placeholder">Tìm kiếm tên, URL hoặc ID danh sách Trakt</string>
-    <string name="collections_editor_trakt_input_helper">Dùng URL danh sách công khai, ID hoặc tìm theo tên</string>
+    <string name="collections_editor_trakt_input_helper">Sử dụng URL danh sách công khai, ID hoặc tìm theo tên</string>
     <string name="collections_editor_trakt_title_placeholder">Xem cuối tuần, Đoạt giải thưởng</string>
     <string name="collections_editor_trakt_search_results">Kết quả tìm kiếm</string>
     <string name="collections_editor_trakt_trending">Đang thịnh hành</string>
