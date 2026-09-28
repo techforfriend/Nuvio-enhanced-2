@@ -2342,15 +2342,6 @@ private fun ConfiguredMetaSections(
                         onClick = onClick,
                     )
                 }
-                val rateAction = onRateClick?.let { onClick ->
-                    DetailSecondaryAction(
-                        label = userRating?.let { stringResource(Res.string.user_rating_action_rated, it) }
-                            ?: stringResource(Res.string.user_rating_action_rate),
-                        icon = if (userRating != null) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                        isActive = userRating != null,
-                        onClick = onClick,
-                    )
-                }
                 val iconActions = buildList {
                     onDownloadClick?.let { download ->
                         add(DetailSecondaryAction(
@@ -2396,7 +2387,6 @@ private fun ConfiguredMetaSections(
                         onClick = onSaveClick,
                         onLongClick = onSaveLongClick,
                     ))
-                    rateAction?.let(::add)
                 }
                 DetailActionButtons(
                     playLabel = if (isPrimaryPlayEnabled) playButtonLabel else stringResource(Res.string.playback_unavailable),
@@ -2432,12 +2422,13 @@ private fun ConfiguredMetaSections(
                             onClick = onSaveClick,
                             onLongClick = onSaveLongClick,
                         ))
-                        rateAction?.let(::add)
                     },
                     isTablet = isTablet,
                     onPlayClick = onPrimaryPlayClick,
                     onDownloadClick = onDownloadClick.takeIf { !settings.iconActionRow },
                     onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
+                    userRating = userRating,
+                    onRateClick = onRateClick,
                 )
             }
             MetaScreenSectionKey.OVERVIEW -> {
