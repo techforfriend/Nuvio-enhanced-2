@@ -215,6 +215,7 @@ internal class PlayerScreenRuntime(
     var showSubtitleModal by mutableStateOf(false)
     var showVideoSettingsModal by mutableStateOf(false)
     var showStreamInfoModal by mutableStateOf(false)
+    var showUserRatingSheet by mutableStateOf(false)
     var audioTracks by mutableStateOf<List<AudioTrack>>(emptyList())
     var subtitleTracks by mutableStateOf<List<SubtitleTrack>>(emptyList())
     var selectedAudioIndex by mutableStateOf(-1)
@@ -242,6 +243,7 @@ internal class PlayerScreenRuntime(
             showSubtitleModal ||
             showVideoSettingsModal ||
             showStreamInfoModal ||
+            showUserRatingSheet ||
             showSourcesPanel ||
             showQualityPanel ||
             showEpisodesPanel ||

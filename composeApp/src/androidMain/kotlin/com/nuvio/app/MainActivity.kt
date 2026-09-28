@@ -33,6 +33,7 @@ import com.nuvio.app.features.livetv.LiveTvStorage
 import com.nuvio.app.features.details.MetaScreenSettingsStorage
 import com.nuvio.app.features.details.OmdbEpisodeRatingsStorage
 import com.nuvio.app.features.details.OmdbSettingsStorage
+import com.nuvio.app.features.ratings.UserRatingsStorage
 import com.nuvio.app.features.home.HomeCatalogSettingsStorage
 import com.nuvio.app.features.mdblist.MdbListSettingsStorage
 import com.nuvio.app.features.notifications.EpisodeReleaseNotificationPlatform
@@ -125,6 +126,7 @@ open class MainActivity : AppCompatActivity() {
         TmdbSettingsStorage.initialize(applicationContext)
         OmdbEpisodeRatingsStorage.initialize(applicationContext)
         OmdbSettingsStorage.initialize(applicationContext)
+        UserRatingsStorage.initialize(applicationContext)
         MdbListSettingsStorage.initialize(applicationContext)
         TraktAuthStorage.initialize(applicationContext)
         TraktCommentsStorage.initialize(applicationContext)

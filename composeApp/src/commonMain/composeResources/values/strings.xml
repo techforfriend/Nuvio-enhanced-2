@@ -2586,4 +2586,21 @@
     <string name="shuffle_change_selection">Choose episodes</string>
     <string name="shuffle_badge">Episode shuffle enabled</string>
     <string name="shuffle_unwatched">Unwatched</string>
+    <string name="user_rating_action_rate">Rate</string>
+    <string name="user_rating_action_rated">Rated %1$d/10</string>
+    <string name="user_rating_rate_episode">Rate episode</string>
+    <string name="user_rating_rate_season">Rate %1$s</string>
+    <string name="user_rating_rate_show">Rate show</string>
+    <string name="user_rating_rate_movie">Rate movie</string>
+    <string name="user_rating_value">%1$d/10</string>
+    <string name="user_rating_not_rated">Not rated yet</string>
+    <string name="user_rating_loading">Loading your rating…</string>
+    <string name="user_rating_remove">Remove rating</string>
+    <string name="user_rating_sync_to">Sync rating to</string>
+    <string name="user_rating_syncs_with">Syncs with %1$s</string>
+    <string name="user_rating_saved">Rated %1$d/10 on %2$s</string>
+    <string name="user_rating_removed">Rating removed from %1$s</string>
+    <string name="user_rating_sync_failed">Couldn\'t sync rating to %1$s</string>
+    <string name="user_rating_last_failed">Last change didn\'t reach %1$s. Try again.</string>
+    <string name="user_rating_no_provider">Turn on at least one service to save ratings</string>
 </resources>

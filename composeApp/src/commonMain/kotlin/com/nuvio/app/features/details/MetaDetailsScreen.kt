@@ -32,6 +32,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
+import com.nuvio.app.features.ratings.UserRatingSheet
+import com.nuvio.app.features.ratings.UserRatingSheetRequest
+import com.nuvio.app.features.ratings.episodeUserRatingTarget
+import com.nuvio.app.features.ratings.rememberCanRate
+import com.nuvio.app.features.ratings.rememberUserRating
+import com.nuvio.app.features.ratings.seasonUserRatingTarget
+import com.nuvio.app.features.ratings.userRatingTarget
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.filled.CheckCircle
@@ -249,6 +258,7 @@ fun MetaDetailsScreen(
     var selectedEpisodeZoomAnchor by remember(type, id) { mutableStateOf<PosterZoomAnchor?>(null) }
     val episodeOverlayHazeState = rememberHazeState()
     var selectedSeasonForActions by remember(type, id) { mutableStateOf<Int?>(null) }
+    var userRatingSheetRequest by remember(type, id) { mutableStateOf<UserRatingSheetRequest?>(null) }
     val commentsEnabled by remember {
         TraktCommentsSettings.ensureLoaded()
         TraktCommentsSettings.enabled
@@ -557,6 +567,27 @@ fun MetaDetailsScreen(
                         }
                         Unit
                     }
+                }
+                val titleRatingTarget = remember(meta) { meta.userRatingTarget() }
+                val titleUserRating = rememberUserRating(titleRatingTarget)
+                val canRateTitle = rememberCanRate(titleRatingTarget)
+                val titleRatingSubtitle = stringResource(
+                    if (titleRatingTarget.scope == com.nuvio.app.features.tracking.TrackingRatingScope.MOVIE) {
+                        Res.string.user_rating_rate_movie
+                    } else {
+                        Res.string.user_rating_rate_show
+                    },
+                )
+                val openTitleRating: (() -> Unit)? = if (canRateTitle) {
+                    {
+                        userRatingSheetRequest = UserRatingSheetRequest(
+                            target = titleRatingTarget,
+                            title = meta.name,
+                            subtitle = titleRatingSubtitle,
+                        )
+                    }
+                } else {
+                    null
                 }
                 LaunchedEffect(meta.id, meta.type, watchProgressUiState.hasLoadedRemoteProgress) {
                     if (meta.type.lowercase() in setOf("series", "show", "tv", "tvshow")) {
@@ -1254,6 +1285,8 @@ fun MetaDetailsScreen(
                                     onSaveClick = toggleSaved,
                                     onSaveLongClick = openLibraryListPicker,
                                     onWatchedClick = toggleWatched,
+                                    userRating = titleUserRating,
+                                    onRateClick = openTitleRating,
                                     showManualPlayOption = showManualPlayOption,
                                     preferredEpisodeSeasonNumber = initialSeasonNumber ?: seriesAction?.seasonNumber,
                                     preferredEpisodeNumber = initialEpisodeNumber ?: seriesAction?.episodeNumber,
@@ -1398,6 +1431,11 @@ fun MetaDetailsScreen(
                                     progressByVideoId = progressByVideoId,
                                 )
                             }
+                            val episodeRatingTarget = remember(meta, selectedEpisode) {
+                                meta.episodeUserRatingTarget(selectedEpisode)
+                            }
+                            val canRateEpisode = rememberCanRate(episodeRatingTarget)
+                            val episodeUserRating = rememberUserRating(episodeRatingTarget)
                             EpisodeWatchedActionSheet(
                                 episode = selectedEpisode,
                                 seasonLabel = selectedEpisode.season?.let {
@@ -1432,6 +1470,25 @@ fun MetaDetailsScreen(
                                 showPlayManually = showManualPlayOption,
                                 onPlayManually = {
                                     onEpisodeManualPlayClick(selectedEpisode)
+                                },
+                                userRating = episodeUserRating,
+                                onRate = if (canRateEpisode && episodeRatingTarget != null) {
+                                    {
+                                        val request = UserRatingSheetRequest(
+                                            target = episodeRatingTarget,
+                                            title = selectedEpisode.title.ifBlank { meta.name },
+                                            subtitle = listOfNotNull(
+                                                meta.name,
+                                                localizedSeasonEpisodeCode(selectedEpisode.season, selectedEpisode.episode),
+                                            ).joinToString(" · "),
+                                        )
+                                        detailsScope.launch {
+                                            delay(RATING_SHEET_OPEN_DELAY_MS)
+                                            userRatingSheetRequest = request
+                                        }
+                                    }
+                                } else {
+                                    null
                                 },
                             )
                         }
@@ -1470,6 +1527,11 @@ fun MetaDetailsScreen(
                                     )
                                 }
                             }
+                            val seasonRatingTarget = remember(meta, selectedSeason) {
+                                meta.seasonUserRatingTarget(selectedSeason)
+                            }
+                            val canRateSeason = rememberCanRate(seasonRatingTarget)
+                            val seasonUserRating = rememberUserRating(seasonRatingTarget)
                             SeasonWatchedActionSheet(
                                 seasonLabel = seasonLabel,
                                 isSeasonWatched = isSeasonWatched,
@@ -1489,6 +1551,31 @@ fun MetaDetailsScreen(
                                         areCurrentlyWatched = false,
                                     )
                                 },
+                                userRating = seasonUserRating,
+                                onRate = if (canRateSeason) {
+                                    {
+                                        val request = UserRatingSheetRequest(
+                                            target = seasonRatingTarget,
+                                            title = seasonLabel,
+                                            subtitle = meta.name,
+                                        )
+                                        detailsScope.launch {
+                                            delay(RATING_SHEET_OPEN_DELAY_MS)
+                                            userRatingSheetRequest = request
+                                        }
+                                    }
+                                } else {
+                                    null
+                                },
+                            )
+                        }
+
+                        userRatingSheetRequest?.let { request ->
+                            UserRatingSheet(
+                                target = request.target,
+                                title = request.title,
+                                subtitle = request.subtitle,
+                                onDismiss = { userRatingSheetRequest = null },
                             )
                         }
 
@@ -1682,6 +1769,14 @@ fun MetaDetailsScreen(
             val seasonLabel = selectedEpisode.season?.let {
                 stringResource(Res.string.episodes_season, it)
             } ?: stringResource(Res.string.episodes_specials)
+            val zoomEpisodeRatingTarget = remember(meta, selectedEpisode) {
+                meta.episodeUserRatingTarget(selectedEpisode)
+            }
+            val canRateZoomEpisode = rememberCanRate(zoomEpisodeRatingTarget)
+            val zoomEpisodeUserRating = rememberUserRating(zoomEpisodeRatingTarget)
+            val rateEpisodeLabel = zoomEpisodeUserRating?.let {
+                "${stringResource(Res.string.user_rating_rate_episode)} · ${stringResource(Res.string.user_rating_value, it)}"
+            } ?: stringResource(Res.string.user_rating_rate_episode)
             NuvioPosterZoomActionOverlay(
                 imageUrl = zoomAnchor.imageUrl ?: selectedEpisode.thumbnail ?: meta.background ?: meta.poster,
                 title = selectedEpisode.title,
@@ -1744,6 +1839,28 @@ fun MetaDetailsScreen(
                             },
                         ),
                     )
+                    if (canRateZoomEpisode && zoomEpisodeRatingTarget != null) {
+                        add(
+                            PosterZoomOverlayAction(
+                                icon = if (zoomEpisodeUserRating != null) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                                label = rateEpisodeLabel,
+                                onSelected = {
+                                    val request = UserRatingSheetRequest(
+                                        target = zoomEpisodeRatingTarget,
+                                        title = selectedEpisode.title.ifBlank { meta.name },
+                                        subtitle = listOfNotNull(
+                                            meta.name,
+                                            localizedSeasonEpisodeCode(selectedEpisode.season, selectedEpisode.episode),
+                                        ).joinToString(" · "),
+                                    )
+                                    detailsScope.launch {
+                                        delay(RATING_SHEET_OPEN_DELAY_MS)
+                                        userRatingSheetRequest = request
+                                    }
+                                },
+                            ),
+                        )
+                    }
                     if (onPlayManually != null && StreamAutoPlayPolicy.isEffectivelyEnabled(playerSettingsUiState)) {
                         add(
                             PosterZoomOverlayAction(
@@ -1834,6 +1951,9 @@ private fun DetailHeaderOverlay(
     )
 }
 
+/** Lets the previous bottom sheet finish dismissing before the rating sheet is presented. */
+private const val RATING_SHEET_OPEN_DELAY_MS = 350L
+
 @Composable
 private fun selectedSeasonLabel(season: Int): String =
     if (season == 0) {
@@ -1912,6 +2032,8 @@ private fun LazyListScope.configuredMetaSectionItems(
     onSaveClick: () -> Unit,
     onSaveLongClick: (() -> Unit)?,
     onWatchedClick: () -> Unit,
+    userRating: Int? = null,
+    onRateClick: (() -> Unit)? = null,
     showManualPlayOption: Boolean,
     preferredEpisodeSeasonNumber: Int?,
     preferredEpisodeNumber: Int?,
@@ -1996,6 +2118,8 @@ private fun LazyListScope.configuredMetaSectionItems(
                     onSaveClick = onSaveClick,
                     onSaveLongClick = onSaveLongClick,
                     onWatchedClick = onWatchedClick,
+                    userRating = userRating,
+                    onRateClick = onRateClick,
                     showManualPlayOption = showManualPlayOption,
                     preferredEpisodeSeasonNumber = preferredEpisodeSeasonNumber,
                     preferredEpisodeNumber = preferredEpisodeNumber,
@@ -2153,6 +2277,8 @@ private fun ConfiguredMetaSections(
     onSaveClick: () -> Unit,
     onSaveLongClick: (() -> Unit)?,
     onWatchedClick: () -> Unit,
+    userRating: Int? = null,
+    onRateClick: (() -> Unit)? = null,
     showManualPlayOption: Boolean,
     preferredEpisodeSeasonNumber: Int?,
     preferredEpisodeNumber: Int?,
@@ -2216,6 +2342,15 @@ private fun ConfiguredMetaSections(
                         onClick = onClick,
                     )
                 }
+                val rateAction = onRateClick?.let { onClick ->
+                    DetailSecondaryAction(
+                        label = userRating?.let { stringResource(Res.string.user_rating_action_rated, it) }
+                            ?: stringResource(Res.string.user_rating_action_rate),
+                        icon = if (userRating != null) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                        isActive = userRating != null,
+                        onClick = onClick,
+                    )
+                }
                 val iconActions = buildList {
                     onDownloadClick?.let { download ->
                         add(DetailSecondaryAction(
@@ -2261,6 +2396,7 @@ private fun ConfiguredMetaSections(
                         onClick = onSaveClick,
                         onLongClick = onSaveLongClick,
                     ))
+                    rateAction?.let(::add)
                 }
                 DetailActionButtons(
                     playLabel = if (isPrimaryPlayEnabled) playButtonLabel else stringResource(Res.string.playback_unavailable),
@@ -2296,6 +2432,7 @@ private fun ConfiguredMetaSections(
                             onClick = onSaveClick,
                             onLongClick = onSaveLongClick,
                         ))
+                        rateAction?.let(::add)
                     },
                     isTablet = isTablet,
                     onPlayClick = onPrimaryPlayClick,

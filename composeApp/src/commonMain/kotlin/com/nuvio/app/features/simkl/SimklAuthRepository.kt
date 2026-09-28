@@ -53,6 +53,7 @@ object SimklAuthRepository : TrackingAuthProvider {
             TrackingCapability.PROGRESS_READ,
             TrackingCapability.PROGRESS_WRITE,
             TrackingCapability.SCROBBLE,
+            TrackingCapability.RATINGS,
         ),
     )
 

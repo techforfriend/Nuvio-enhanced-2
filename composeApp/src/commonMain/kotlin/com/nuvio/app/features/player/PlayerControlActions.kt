@@ -26,6 +26,8 @@ import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -104,6 +106,8 @@ internal fun PlayerControlActions(
     onQualityClick: (() -> Unit)? = null,
     onPictureInPictureClick: (() -> Unit)? = null,
     onInfoClick: (() -> Unit)? = null,
+    onRateClick: (() -> Unit)? = null,
+    userRating: Int? = null,
     onInteraction: () -> Unit,
 ) {
     val actions = listOfNotNull(
@@ -131,6 +135,14 @@ internal fun PlayerControlActions(
             PlayerControlAction(
                 stringResource(Res.string.compose_player_episodes), it,
                 painter = appIconPainter(AppIconResource.PlayerEpisodes),
+            )
+        },
+        onRateClick?.let {
+            PlayerControlAction(
+                userRating?.let { rating -> stringResource(Res.string.user_rating_action_rated, rating) }
+                    ?: stringResource(Res.string.user_rating_action_rate),
+                it,
+                icon = if (userRating != null) Icons.Rounded.Star else Icons.Rounded.StarBorder,
             )
         },
         onQualityClick?.let {

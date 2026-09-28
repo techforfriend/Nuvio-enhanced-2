@@ -41,6 +41,7 @@ enum class TrackingCapability {
     SCROBBLE,
     COMMENTS,
     RECOMMENDATIONS,
+    RATINGS,
 }
 
 data class TrackingProviderDescriptor(
@@ -81,6 +82,7 @@ object TrackingProviderRegistry {
     private val libraryProviders = mutableMapOf<TrackingProviderId, TrackingLibraryProvider>()
     private val watchedProviders = mutableMapOf<TrackingProviderId, TrackingWatchedProvider>()
     private val progressProviders = mutableMapOf<TrackingProviderId, TrackingProgressProvider>()
+    private val ratingProviders = mutableMapOf<TrackingProviderId, TrackingRatingProvider>()
 
     private val _connectedProviderIds = MutableStateFlow<Set<TrackingProviderId>>(emptySet())
     val connectedProviderIds: StateFlow<Set<TrackingProviderId>> = _connectedProviderIds.asStateFlow()
@@ -131,6 +133,17 @@ object TrackingProviderRegistry {
     fun registerProgressProvider(provider: TrackingProgressProvider) = synchronized(lock) {
         progressProviders[provider.providerId] = provider
     }
+
+    fun registerRatingProvider(provider: TrackingRatingProvider) = synchronized(lock) {
+        ratingProviders[provider.providerId] = provider
+    }
+
+    fun ratingProvider(id: TrackingProviderId): TrackingRatingProvider? = synchronized(lock) {
+        ratingProviders[id]
+    }
+
+    fun connectedRatingProviders(): List<TrackingRatingProvider> =
+        connectedPorts(ratingProviders, TrackingCapability.RATINGS)
 
     fun authProvider(id: TrackingProviderId): TrackingAuthProvider? = synchronized(lock) {
         authProviders[id]
