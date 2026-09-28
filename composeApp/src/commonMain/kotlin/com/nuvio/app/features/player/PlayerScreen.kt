@@ -42,6 +42,7 @@ fun PlayerScreen(
     initialPositionMs: Long = 0L,
     initialProgressFraction: Float? = null,
     contentLanguage: String? = null,
+    launchId: Long? = null,
 ) {
     PlayerScreenContent(
         PlayerScreenArgs(
@@ -82,6 +83,7 @@ fun PlayerScreen(
             initialPositionMs = initialPositionMs,
             initialProgressFraction = initialProgressFraction,
             contentLanguage = contentLanguage,
+            launchId = launchId,
         )
     )
 }

@@ -1,24 +1,27 @@
 package com.nuvio.app.core.format
 
-import com.nuvio.app.core.i18n.localizedMonthName
+import androidx.compose.ui.text.intl.Locale
 import com.nuvio.app.core.time.parseEpisodeReleaseLocalDate
 
-/**
- * Formats ISO calendar dates (yyyy-MM-dd or yyyy-MM-ddTHH:mm:ss…) for UI as "2025 February 1".
- * Other strings (e.g. year-only "2024", human text from addons) are returned unchanged.
- */
-fun formatReleaseDateForDisplay(raw: String): String {
-    val trimmed = raw.trim()
-    if (trimmed.isEmpty()) return raw
-    val datePart = parseEpisodeReleaseLocalDate(trimmed) ?: return raw
-    val parts = datePart.split('-')
-    if (parts.size != 3) return raw
-    val year = parts[0].toIntOrNull() ?: return raw
-    val month = parts[1].toIntOrNull()?.takeIf { it in 1..12 } ?: return raw
-    val day = parts[2].toIntOrNull()?.takeIf { it in 1..31 } ?: return raw
-    return "$year ${localizedMonthName(month)} $day"
+fun formatReleaseDateForDisplay(raw: String): String = formatReleaseDate(raw, includeYear = true)
+
+fun formatReleaseDateWithoutYear(raw: String): String = formatReleaseDate(raw, includeYear = false)
+
+internal fun formatReleaseDate(
+    raw: String,
+    includeYear: Boolean,
+    localeTag: String = Locale.current.toLanguageTag(),
+): String {
+    val date = parseEpisodeReleaseLocalDate(raw) ?: return raw
+    return formatCalendarDate(date, localeTag, includeYear)
 }
 
+internal expect fun formatCalendarDate(isoDate: String, localeTag: String, includeYear: Boolean): String
+
+/**
+ * Fork: picks the stored release info, then the hydrated one, then [fallback], and formats it.
+ * Used by Library and Profile Insight cards.
+ */
 internal fun resolveReleaseInfoForDisplay(
     stored: String?,
     hydrated: String?,
@@ -28,17 +31,6 @@ internal fun resolveReleaseInfoForDisplay(
         ?: hydrated?.trim()?.takeIf { it.isNotBlank() }
         ?: fallback,
 )
-
-fun formatReleaseDateWithoutYear(raw: String): String {
-    val trimmed = raw.trim()
-    if (trimmed.isEmpty()) return raw
-    val datePart = parseEpisodeReleaseLocalDate(trimmed) ?: return raw
-    val parts = datePart.split('-')
-    if (parts.size != 3) return raw
-    val month = parts[1].toIntOrNull()?.takeIf { it in 1..12 } ?: return raw
-    val day = parts[2].toIntOrNull()?.takeIf { it in 1..31 } ?: return raw
-    return "${localizedMonthName(month)} $day"
-}
 
 /**
  * Parses a release/air string (ISO date, year-only, or timestamp prefix) for compact UI (e.g. year chips).
