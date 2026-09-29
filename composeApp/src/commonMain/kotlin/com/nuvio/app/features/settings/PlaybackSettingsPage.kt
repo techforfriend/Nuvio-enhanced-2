@@ -31,6 +31,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -227,7 +228,7 @@ fun ValueBox(
 private fun SettingsSliderRow(
     title: String,
     value: Int,
-    valueText: String,
+    valueText: @Composable (Int) -> String,
     valueRange: IntRange,
     step: Int,
     isTablet: Boolean,
@@ -235,7 +236,16 @@ private fun SettingsSliderRow(
     onValueChange: (Int) -> Unit,
 ) {
     val horizontalPadding = if (isTablet) 20.dp else 16.dp
-    var sliderValue by remember(value) { mutableFloatStateOf(value.toFloat()) }
+    val rangeStart = valueRange.first.toFloat()
+    val rangeEnd = valueRange.last.toFloat()
+    var isDragging by remember { mutableStateOf(false) }
+    var sliderValue by remember { mutableFloatStateOf(value.toFloat()) }
+    LaunchedEffect(value) {
+        if (!isDragging) {
+            sliderValue = value.toFloat().coerceIn(rangeStart, rangeEnd)
+        }
+    }
+    val shownValue = sliderValue.roundToInt().coerceIn(valueRange.first, valueRange.last)
 
     Column(
         modifier = Modifier
@@ -255,13 +265,25 @@ private fun SettingsSliderRow(
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f),
             )
-            ValueBox(text = valueText, modifier = Modifier.wrapContentWidth())
+            ValueBox(text = valueText(shownValue), modifier = Modifier.wrapContentWidth())
         }
         Slider(
-            value = sliderValue.coerceIn(valueRange.first.toFloat(), valueRange.last.toFloat()),
-            onValueChange = { if (enabled) sliderValue = snapToStep(it, step.toFloat()) },
+            value = sliderValue.coerceIn(rangeStart, rangeEnd),
+            onValueChange = { raw ->
+                if (enabled) {
+                    isDragging = true
+                    val snapped = snapToStep(raw, step.toFloat()).coerceIn(rangeStart, rangeEnd)
+                    sliderValue = snapped
+                    val next = snapped.roundToInt().coerceIn(valueRange.first, valueRange.last)
+                    if (next != value) onValueChange(next)
+                }
+            },
             onValueChangeFinished = {
-                if (enabled) onValueChange(sliderValue.roundToInt().coerceIn(valueRange.first, valueRange.last))
+                isDragging = false
+                if (enabled) {
+                    val next = sliderValue.roundToInt().coerceIn(valueRange.first, valueRange.last)
+                    if (next != value) onValueChange(next)
+                }
             },
             enabled = enabled,
             valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
@@ -590,7 +612,7 @@ private fun PlaybackSettingsSection(
                 SettingsSliderRow(
                     title = stringResource(Res.string.settings_playback_subtitle_size),
                     value = subtitleStyle.fontSizeSp,
-                    valueText = stringResource(Res.string.compose_player_font_size_value, subtitleStyle.fontSizeSp),
+                    valueText = { size -> stringResource(Res.string.compose_player_font_size_value, size) },
                     valueRange = subtitleFontSizeRangeSp,
                     step = 2,
                     isTablet = isTablet,
@@ -603,7 +625,7 @@ private fun PlaybackSettingsSection(
                 SettingsSliderRow(
                     title = stringResource(Res.string.settings_playback_subtitle_vertical_offset),
                     value = subtitleStyle.bottomOffset,
-                    valueText = subtitleStyle.bottomOffset.toString(),
+                    valueText = { offset -> offset.toString() },
                     valueRange = 0..200,
                     step = 5,
                     isTablet = isTablet,
@@ -1050,7 +1072,9 @@ private fun PlaybackSettingsSection(
                         SettingsSliderRow(
                             title = stringResource(Res.string.settings_playback_buffer_min),
                             value = minSeconds,
-                            valueText = stringResource(Res.string.settings_playback_buffer_seconds, minSeconds),
+                            valueText = { seconds ->
+                                stringResource(Res.string.settings_playback_buffer_seconds, seconds)
+                            },
                             valueRange = PlaybackBufferSettings.MIN_DURATION_SEC..maxDurationSec,
                             step = durationStep,
                             isTablet = isTablet,
@@ -1060,10 +1084,12 @@ private fun PlaybackSettingsSection(
                         SettingsSliderRow(
                             title = stringResource(Res.string.settings_playback_buffer_max),
                             value = maxSeconds.coerceAtLeast(minSeconds),
-                            valueText = if (maxSeconds <= minSeconds) {
-                                stringResource(Res.string.settings_playback_buffer_same_as_min, minSeconds)
-                            } else {
-                                stringResource(Res.string.settings_playback_buffer_seconds, maxSeconds)
+                            valueText = { seconds ->
+                                if (seconds <= minSeconds) {
+                                    stringResource(Res.string.settings_playback_buffer_same_as_min, minSeconds)
+                                } else {
+                                    stringResource(Res.string.settings_playback_buffer_seconds, seconds)
+                                }
                             },
                             valueRange = minSeconds.coerceAtLeast(PlaybackBufferSettings.MIN_DURATION_SEC)..maxDurationSec,
                             step = durationStep,
@@ -1074,10 +1100,9 @@ private fun PlaybackSettingsSection(
                         SettingsSliderRow(
                             title = stringResource(Res.string.settings_playback_buffer_initial),
                             value = autoPlayPlayerSettings.bufferForPlaybackMs / 1_000,
-                            valueText = stringResource(
-                                Res.string.settings_playback_buffer_seconds,
-                                autoPlayPlayerSettings.bufferForPlaybackMs / 1_000,
-                            ),
+                            valueText = { seconds ->
+                                stringResource(Res.string.settings_playback_buffer_seconds, seconds)
+                            },
                             valueRange = PlaybackBufferSettings.MIN_START_SEC..PlaybackBufferSettings.MAX_START_SEC,
                             step = 1,
                             isTablet = isTablet,
@@ -1087,10 +1112,9 @@ private fun PlaybackSettingsSection(
                         SettingsSliderRow(
                             title = stringResource(Res.string.settings_playback_buffer_rebuffer),
                             value = autoPlayPlayerSettings.bufferForPlaybackAfterRebufferMs / 1_000,
-                            valueText = stringResource(
-                                Res.string.settings_playback_buffer_seconds,
-                                autoPlayPlayerSettings.bufferForPlaybackAfterRebufferMs / 1_000,
-                            ),
+                            valueText = { seconds ->
+                                stringResource(Res.string.settings_playback_buffer_seconds, seconds)
+                            },
                             valueRange = PlaybackBufferSettings.MIN_START_SEC..PlaybackBufferSettings.MAX_REBUFFER_SEC,
                             step = 1,
                             isTablet = isTablet,
@@ -1100,10 +1124,9 @@ private fun PlaybackSettingsSection(
                         SettingsSliderRow(
                             title = stringResource(Res.string.settings_playback_buffer_back),
                             value = autoPlayPlayerSettings.backBufferDurationMs / 1_000,
-                            valueText = stringResource(
-                                Res.string.settings_playback_buffer_seconds,
-                                autoPlayPlayerSettings.backBufferDurationMs / 1_000,
-                            ),
+                            valueText = { seconds ->
+                                stringResource(Res.string.settings_playback_buffer_seconds, seconds)
+                            },
                             valueRange = 0..PlaybackBufferSettings.MAX_BACK_SEC,
                             step = PlaybackBufferSettings.BACK_STEP_SEC,
                             isTablet = isTablet,
@@ -1128,7 +1151,9 @@ private fun PlaybackSettingsSection(
                         SettingsSliderRow(
                             title = stringResource(Res.string.settings_playback_buffer_target),
                             value = targetMb,
-                            valueText = stringResource(Res.string.settings_playback_vod_cache_size_value, targetMb),
+                            valueText = { megabytes ->
+                                stringResource(Res.string.settings_playback_vod_cache_size_value, megabytes)
+                            },
                             valueRange = PlaybackBufferSettings.MIN_TARGET_MB..maxTargetMb,
                             step = PlaybackBufferSettings.TARGET_STEP_MB,
                             isTablet = isTablet,
@@ -1181,7 +1206,9 @@ private fun PlaybackSettingsSection(
                                 SettingsSliderRow(
                                     title = stringResource(Res.string.settings_playback_vod_cache_size),
                                     value = sizeMb,
-                                    valueText = stringResource(Res.string.settings_playback_vod_cache_size_value, sizeMb),
+                                    valueText = { megabytes ->
+                                        stringResource(Res.string.settings_playback_vod_cache_size_value, megabytes)
+                                    },
                                     valueRange = VodCacheSizing.MIN_SIZE_MB..maxMb,
                                     step = vodCacheSliderStep(VodCacheSizing.MIN_SIZE_MB, maxMb),
                                     isTablet = isTablet,
