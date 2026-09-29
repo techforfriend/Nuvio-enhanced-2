@@ -111,6 +111,7 @@ import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.features.details.MetaDetailsRepository
+import com.nuvio.app.features.details.MetaLookupOutcome
 import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.library.LibraryItem
@@ -1757,6 +1758,7 @@ private fun buildProfileInsightsCore(
     val movieSeriesTotal = typeBalance.titleTotal
     val movieShare = typeBalance.movieShare
     val libraryGenresByKey = profileLibraryGenresByKey(libraryItems)
+    val lastActivityByTitleKey = profileLastActivityByTitleKey(watchedItems, progressEntries)
     val watchedDurationRefs = profileWatchedDurationRefs(watchedItems)
     val recentActivityCount = profileRecentActivityCount(
         watchedItems = watchedItems,
@@ -1821,7 +1823,9 @@ private fun buildProfileInsightsCore(
         watchedDurationRefs = watchedDurationRefs,
         hydrationRequest = ProfileTitleHydrationRequest(
             seedKeys = (typeBalance.titleKeys + watchedDurationRefs.map { ref -> ref.titleKey }).distinct(),
-            genreTargetKeys = typeBalance.titleKeys.filter { key -> key !in libraryGenresByKey },
+            genreTargetKeys = typeBalance.titleKeys
+                .filter { key -> key !in libraryGenresByKey }
+                .sortedByDescending { key -> lastActivityByTitleKey[key] ?: 0L },
         ),
     )
 }
@@ -1937,7 +1941,6 @@ private fun buildProfileInsightCollections(
             subtitle = "",
             items = libraryItems,
         ),
-        // Filled from the release calendar in the composable (see upcomingEpisodes).
         ProfileInsightCollectionKind.Upcoming to ProfileInsightCollection(
             title = upcomingTitle,
             subtitle = "",
@@ -2480,6 +2483,23 @@ private fun profileParseRuntimeMinutes(value: String?): Int? {
         ?.coerceAtLeast(0)
 }
 
+private fun profileLastActivityByTitleKey(
+    watchedItems: List<WatchedItem>,
+    progressEntries: List<WatchProgressEntry>,
+): Map<String, Long> {
+    val lastActivity = HashMap<String, Long>()
+    fun record(kind: String?, id: String, epochMs: Long) {
+        val cleanKind = kind ?: return
+        val key = "$cleanKind:${id.trim()}"
+        if (epochMs > (lastActivity[key] ?: Long.MIN_VALUE)) lastActivity[key] = epochMs
+    }
+    watchedItems.forEach { item -> record(item.type.profileCompletedContentKind(), item.id, item.markedAtEpochMs) }
+    progressEntries.forEach { entry ->
+        record(entry.parentMetaType.profileCompletedContentKind(), entry.parentMetaId, entry.lastUpdatedEpochMs)
+    }
+    return lastActivity
+}
+
 private fun profileLibraryGenresByKey(libraryItems: List<LibraryItem>): Map<String, List<String>> =
     libraryItems
         .mapNotNull { item ->
@@ -2557,6 +2577,7 @@ private data class StoredProfileTitleFacts(
     @SerialName("t") val titles: Map<String, StoredProfileTitle> = emptyMap(),
     @SerialName("f") val failures: Map<String, Long> = emptyMap(),
     @SerialName("u") val refreshedAtByProfile: Map<String, Long> = emptyMap(),
+    @SerialName("s") val fullSnapshotAtByProfile: Map<String, Long> = emptyMap(),
 )
 
 @Serializable
@@ -2609,6 +2630,16 @@ private object ProfileTitleFactsStore {
 
     private val json = Json { ignoreUnknownKeys = true }
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    private const val FETCH_BUDGET_PER_WINDOW = 150
+    private const val FETCH_BUDGET_WINDOW_MS = 60L * 60_000L
+    private var budgetWindowStartedAtEpochMs = 0L
+    private var fetchesInWindow = 0
+    private var pausedUntilEpochMs = 0L
+    private var lastRequest: ProfileTitleHydrationRequest? = null
+    private var resumeJob: Job? = null
+    private val fullSnapshotAtByProfile = mutableMapOf<Int, Long>()
 
     private val _facts = MutableStateFlow<Map<String, ProfileTitleFacts>>(emptyMap())
     val facts: StateFlow<Map<String, ProfileTitleFacts>> = _facts.asStateFlow()
@@ -2644,6 +2675,17 @@ private object ProfileTitleFactsStore {
             profileId.toIntOrNull()?.let { it to refreshedAt }
         }.toMap()
         _refreshedAtByProfile.value = restoredRefreshes + _refreshedAtByProfile.value
+        stored.fullSnapshotAtByProfile.forEach { (profileId, snapshotAt) ->
+            val index = profileId.toIntOrNull() ?: return@forEach
+            if (index !in fullSnapshotAtByProfile) fullSnapshotAtByProfile[index] = snapshotAt
+        }
+    }
+
+    fun fullSnapshotAt(profileId: Int): Long? = fullSnapshotAtByProfile[profileId]
+
+    fun markFullSnapshot(profileId: Int, snapshotAtEpochMs: Long) {
+        fullSnapshotAtByProfile[profileId] = snapshotAtEpochMs
+        scheduleSave()
     }
 
     fun clearFailures() {
@@ -2664,6 +2706,7 @@ private object ProfileTitleFactsStore {
     }
 
     suspend fun hydrate(request: ProfileTitleHydrationRequest) {
+        lastRequest = request
         ensureLoaded()
         seedFromMetaCache(request.seedKeys)
         fetchMissingGenres(request.genreTargetKeys)
@@ -2686,12 +2729,26 @@ private object ProfileTitleFactsStore {
 
     private suspend fun fetchMissingGenres(keys: List<String>) {
         val now = WatchedClock.nowEpochMs()
-        val targets = keys.filter { key ->
+        if (now < pausedUntilEpochMs) {
+            scheduleResume(pausedUntilEpochMs)
+            return
+        }
+        if (now - budgetWindowStartedAtEpochMs >= FETCH_BUDGET_WINDOW_MS) {
+            budgetWindowStartedAtEpochMs = now
+            fetchesInWindow = 0
+        }
+        val candidates = keys.filter { key ->
             key !in attemptedFetchKeys &&
                 _facts.value[key].needsRefresh(now) &&
                 failures[key]?.let { failedAt -> now - failedAt < FAILURE_RETRY_AFTER_MS } != true
         }
-        if (targets.isEmpty()) return
+        if (candidates.isEmpty()) return
+        val remainingBudget = FETCH_BUDGET_PER_WINDOW - fetchesInWindow
+        if (remainingBudget <= 0) {
+            scheduleResume(budgetWindowStartedAtEpochMs + FETCH_BUDGET_WINDOW_MS)
+            return
+        }
+        val targets = candidates.take(remainingBudget)
         val pending = mutableMapOf<String, ProfileTitleFacts>()
         val permits = Semaphore(FETCH_CONCURRENCY)
         try {
@@ -2699,18 +2756,28 @@ private object ProfileTitleFactsStore {
                 targets.forEach { key ->
                     launch {
                         permits.withPermit {
+                            // An addon started rate-limiting while we waited for a permit.
+                            if (WatchedClock.nowEpochMs() < pausedUntilEpochMs) return@withPermit
                             val (kind, id) = key.profileSplitTitleKey() ?: return@withPermit
                             if (!attemptedFetchKeys.add(key)) return@withPermit
+                            fetchesInWindow += 1
                             var settled = false
                             try {
-                                val meta = MetaDetailsRepository.fetch(type = kind, id = id, cacheResult = false)
+                                val outcome = MetaDetailsRepository.fetchLightweight(type = kind, id = id)
                                 settled = true
-                                if (meta != null) {
-                                    if (failures.remove(key) != null) syncFailedKeys()
-                                    pending[key] = meta.toProfileTitleFacts(WatchedClock.nowEpochMs())
-                                    if (pending.size >= PUBLISH_BATCH_SIZE) publish(pending)
-                                } else {
-                                    recordFailure(key)
+                                when (outcome) {
+                                    is MetaLookupOutcome.Loaded -> {
+                                        if (failures.remove(key) != null) syncFailedKeys()
+                                        pending[key] = outcome.meta.toProfileTitleFacts(WatchedClock.nowEpochMs())
+                                        if (pending.size >= PUBLISH_BATCH_SIZE) publish(pending)
+                                    }
+                                    is MetaLookupOutcome.Throttled -> {
+                                        // Not the title's fault: retry it once the addon allows.
+                                        attemptedFetchKeys.remove(key)
+                                        pausedUntilEpochMs = maxOf(pausedUntilEpochMs, outcome.retryAtEpochMs)
+                                    }
+                                    MetaLookupOutcome.Unavailable -> attemptedFetchKeys.remove(key)
+                                    MetaLookupOutcome.Failed -> recordFailure(key)
                                 }
                             } catch (error: CancellationException) {
                                 throw error
@@ -2728,6 +2795,19 @@ private object ProfileTitleFactsStore {
             }
         } finally {
             publish(pending)
+        }
+        val afterRun = WatchedClock.nowEpochMs()
+        when {
+            pausedUntilEpochMs > afterRun -> scheduleResume(pausedUntilEpochMs)
+            candidates.size > targets.size -> scheduleResume(budgetWindowStartedAtEpochMs + FETCH_BUDGET_WINDOW_MS)
+        }
+    }
+
+    private fun scheduleResume(atEpochMs: Long) {
+        if (resumeJob?.isActive == true) return
+        resumeJob = mainScope.launch {
+            delay((atEpochMs - WatchedClock.nowEpochMs()).coerceAtLeast(1_000L))
+            lastRequest?.let { request -> hydrate(request) }
         }
     }
 
@@ -2749,10 +2829,11 @@ private object ProfileTitleFactsStore {
         val factsSnapshot = _facts.value
         val failuresSnapshot = failures.toMap()
         val refreshedSnapshot = _refreshedAtByProfile.value
+        val fullSnapshotTimes = fullSnapshotAtByProfile.toMap()
         saveJob?.cancel()
         saveJob = ioScope.launch {
             delay(SAVE_DEBOUNCE_MS)
-            writeToDisk(factsSnapshot, failuresSnapshot, refreshedSnapshot)
+            writeToDisk(factsSnapshot, failuresSnapshot, refreshedSnapshot, fullSnapshotTimes)
         }
     }
 
@@ -2771,12 +2852,14 @@ private object ProfileTitleFactsStore {
         factsSnapshot: Map<String, ProfileTitleFacts>,
         failuresSnapshot: Map<String, Long>,
         refreshedSnapshot: Map<Int, Long>,
+        fullSnapshotTimes: Map<Int, Long>,
     ) {
         val now = WatchedClock.nowEpochMs()
         val stored = StoredProfileTitleFacts(
             titles = factsSnapshot.mapValues { (_, facts) -> facts.toStored() },
             failures = failuresSnapshot.filterValues { failedAt -> now - failedAt < FAILURE_RETRY_AFTER_MS },
             refreshedAtByProfile = refreshedSnapshot.mapKeys { (profileId, _) -> profileId.toString() },
+            fullSnapshotAtByProfile = fullSnapshotTimes.mapKeys { (profileId, _) -> profileId.toString() },
         )
         try {
             ProfileTitleFactsStorage.save(json.encodeToString(StoredProfileTitleFacts.serializer(), stored))
@@ -2794,6 +2877,7 @@ private class ProfileInsightsRefreshContext(
 
 private object ProfileInsightsRefresher {
     private const val COOLDOWN_MS = 30_000L
+    private const val FULL_SNAPSHOT_INTERVAL_MS = 24L * 60L * 60_000L
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val _isRefreshing = MutableStateFlow(false)
@@ -2822,12 +2906,26 @@ private object ProfileInsightsRefresher {
             try {
                 ProfileTitleFactsStore.ensureLoaded()
                 ProfileTitleFactsStore.clearFailures()
+                val lastFullSnapshotAt = ProfileTitleFactsStore.fullSnapshotAt(target.profileId)
+                val fullSnapshot = lastFullSnapshotAt == null || now - lastFullSnapshotAt >= FULL_SNAPSHOT_INTERVAL_MS
                 coroutineScope {
                     launch {
-                        runRefreshStep("watched") { WatchedRepository.forceSnapshotRefreshFromServer(target.profileId) }
+                        runRefreshStep("watched") {
+                            if (fullSnapshot) {
+                                WatchedRepository.forceSnapshotRefreshFromServer(target.profileId)
+                            } else {
+                                WatchedRepository.pullFromServer(target.profileId)
+                            }
+                        }
                     }
                     launch {
-                        runRefreshStep("progress") { WatchProgressRepository.forceSnapshotRefreshFromServer(target.profileId) }
+                        runRefreshStep("progress") {
+                            if (fullSnapshot) {
+                                WatchProgressRepository.forceSnapshotRefreshFromServer(target.profileId)
+                            } else {
+                                WatchProgressRepository.pullFromServer(target.profileId)
+                            }
+                        }
                     }
                     launch {
                         runRefreshStep("calendar") { forceRefreshLibraryReleaseSchedule(target.libraryItems) }
@@ -2836,6 +2934,7 @@ private object ProfileInsightsRefresher {
                         runRefreshStep("titles") { target.hydrationRequest?.let { ProfileTitleFactsStore.hydrate(it) } }
                     }
                 }
+                if (fullSnapshot) ProfileTitleFactsStore.markFullSnapshot(target.profileId, now)
                 ProfileTitleFactsStore.markRefreshed(target.profileId, WatchedClock.nowEpochMs())
             } finally {
                 _isRefreshing.value = false

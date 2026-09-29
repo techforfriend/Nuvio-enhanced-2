@@ -673,6 +673,11 @@ fun LibraryScreen(
                     LibraryReleaseCalendarCache.forceRefresh(uiState.items)
                 }
             },
+            onRetryFailed = {
+                coroutineScope.launch {
+                    LibraryReleaseCalendarCache.retryFailed(uiState.items)
+                }
+            },
         )
     }
 }
@@ -1432,6 +1437,7 @@ private fun LibraryReleaseCalendarPanel(
     onMonthRequested: (LibraryCalendarMonth) -> Unit,
     failedSeriesCount: Int = 0,
     onRefresh: (() -> Unit)? = null,
+    onRetryFailed: (() -> Unit)? = null,
 ) {
     val today = remember { parseLibraryCalendarDate(CurrentDateProvider.todayIsoDate()) ?: LibraryCalendarDate(1970, 1, 1) }
     val todayIso = today.iso
@@ -1513,10 +1519,11 @@ private fun LibraryReleaseCalendarPanel(
                         isRefreshing = isLoading,
                         onRefresh = onRefresh,
                     )
-                    if (failedSeriesCount > 0 && !isLoading && onRefresh != null) {
+                    val retryFailed = onRetryFailed ?: onRefresh
+                    if (failedSeriesCount > 0 && !isLoading && retryFailed != null) {
                         LibraryCalendarFailureBanner(
                             failedSeriesCount = failedSeriesCount,
-                            onRetry = onRefresh,
+                            onRetry = retryFailed,
                         )
                     }
 
@@ -2479,6 +2486,8 @@ private object LibraryReleaseCalendarCache {
     private var warmJobKey: String? = null
     private var monthJob: Job? = null
     private var lastForcedRefreshAtEpochMs = 0L
+    private var lastRetryAtEpochMs = 0L
+    private val seriesRefetchedAtEpochMs = mutableMapOf<String, Long>()
     private var retryJob: Job? = null
     private var retryAttempt = 0
     private var addonWatcher: Job? = null
@@ -2515,6 +2524,28 @@ private object LibraryReleaseCalendarCache {
         val job = scope.launch { runWarm(items, cacheKey, forceFull = true) }
         warmJob = job
         job.join()
+    }
+
+    suspend fun retryFailed(items: List<LibraryItem>) {
+        if (items.isEmpty()) return
+        lastItems = items
+        val now = WatchedClock.nowEpochMs()
+        if (now - lastRetryAtEpochMs < LIBRARY_CALENDAR_RETRY_COOLDOWN_MS) return
+        lastRetryAtEpochMs = now
+        resetRetry()
+        requestWarm(items)?.join()
+    }
+
+    private fun shouldBypassMetaCacheOnForce(
+        item: LibraryItem,
+        failedSeriesKeys: Set<String>,
+        seriesWithUpcomingEpisodes: Set<String>,
+        now: Long,
+    ): Boolean {
+        val key = item.librarySeriesKey()
+        if (key in failedSeriesKeys || key in seriesWithUpcomingEpisodes) return true
+        val refetchedAt = seriesRefetchedAtEpochMs[key] ?: return true
+        return now - refetchedAt >= LIBRARY_CALENDAR_FORCE_REUSE_WINDOW_MS
     }
 
     fun refreshIfStale() {
@@ -2629,13 +2660,33 @@ private object LibraryReleaseCalendarCache {
                     failedSeriesKeys = result.failedSeriesKeys,
                 )
             } else {
-                val addonsChanged = forceFull ||
-                    (previousBuild?.addonSignature != null && previousBuild.addonSignature != signature)
+                val addonsChanged =
+                    previousBuild?.addonSignature != null && previousBuild.addonSignature != signature
+                val now = WatchedClock.nowEpochMs()
+                val previouslyFailed = previousBuild?.failedSeriesKeys.orEmpty()
+                val seriesWithUpcomingEpisodes = previousEvents
+                    .filter { event -> event.key.startsWith("episode:") && event.date.iso >= today }
+                    .map { event -> event.item.librarySeriesKey() }
+                    .toSet()
+                val bypassMetaCacheFor: (LibraryItem) -> Boolean = when {
+                    addonsChanged -> { _ -> true }
+                    forceFull -> { item ->
+                        shouldBypassMetaCacheOnForce(item, previouslyFailed, seriesWithUpcomingEpisodes, now)
+                    }
+                    else -> { _ -> false }
+                }
                 val result = buildLibraryReleaseCalendarEvents(
                     items = items,
                     targetMonthKeys = targetMonthKeys,
-                    bypassMetaCache = addonsChanged,
+                    bypassMetaCacheFor = bypassMetaCacheFor,
                 )
+                if (forceFull || addonsChanged) {
+                    items.filter { item ->
+                        item.isLibrarySeries() &&
+                            item.librarySeriesKey() !in result.failedSeriesKeys &&
+                            bypassMetaCacheFor(item)
+                    }.forEach { item -> seriesRefetchedAtEpochMs[item.librarySeriesKey()] = now }
+                }
                 val preserved = previousEvents.filter { event ->
                     event.key.startsWith("episode:") &&
                         event.item.librarySeriesKey() in result.failedSeriesKeys &&
@@ -2721,7 +2772,9 @@ private suspend fun awaitLibraryAddonsSettled() {
 
 private const val LIBRARY_CALENDAR_ADDON_SETTLE_TIMEOUT_MS = 15_000L
 private const val LIBRARY_CALENDAR_FETCH_CONCURRENCY = 4
-private const val LIBRARY_CALENDAR_FORCE_REFRESH_COOLDOWN_MS = 30_000L
+private const val LIBRARY_CALENDAR_FORCE_REFRESH_COOLDOWN_MS = 5L * 60_000L
+private const val LIBRARY_CALENDAR_RETRY_COOLDOWN_MS = 30_000L
+private const val LIBRARY_CALENDAR_FORCE_REUSE_WINDOW_MS = 60L * 60_000L
 
 private fun LibraryItem.librarySeriesKey(): String = "${type.lowercase()}:$id"
 
@@ -2769,10 +2822,10 @@ private suspend fun buildLibraryReleaseCalendarEvents(
     items: List<LibraryItem>,
     targetMonthKeys: Set<String>,
     onlySeriesKeys: Set<String>? = null,
-    bypassMetaCache: Boolean = false,
+    bypassMetaCacheFor: (LibraryItem) -> Boolean = { false },
 ): LibraryCalendarBuildResult {
     val fallbackEvents = if (onlySeriesKeys == null) buildLibraryReleaseCalendarFallbackEvents(items) else emptyList()
-    val episodes = buildLibraryEpisodeCalendarEvents(items, targetMonthKeys, onlySeriesKeys, bypassMetaCache)
+    val episodes = buildLibraryEpisodeCalendarEvents(items, targetMonthKeys, onlySeriesKeys, bypassMetaCacheFor)
     return LibraryCalendarBuildResult(
         events = (episodes.events + fallbackEvents).withoutSupersededFallbacks(targetMonthKeys),
         failedSeriesKeys = episodes.failedSeriesKeys,
@@ -2802,7 +2855,7 @@ private suspend fun buildLibraryEpisodeCalendarEvents(
     items: List<LibraryItem>,
     targetMonthKeys: Set<String>,
     onlySeriesKeys: Set<String>?,
-    bypassMetaCache: Boolean,
+    bypassMetaCacheFor: (LibraryItem) -> Boolean,
 ): LibraryCalendarBuildResult =
     coroutineScope {
         val permits = Semaphore(LIBRARY_CALENDAR_FETCH_CONCURRENCY)
@@ -2814,7 +2867,7 @@ private suspend fun buildLibraryEpisodeCalendarEvents(
                 async {
                     permits.withPermit {
                         val details = try {
-                            MetaDetailsRepository.fetch(item.type, item.id, useCache = !bypassMetaCache)
+                            MetaDetailsRepository.fetch(item.type, item.id, useCache = !bypassMetaCacheFor(item))
                         } catch (error: CancellationException) {
                             throw error
                         } catch (error: Throwable) {
