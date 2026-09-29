@@ -111,6 +111,7 @@ import com.nuvio.app.features.home.HomeRepository
 import com.nuvio.app.features.home.buildAddonCatalogRefreshSignature
 import com.nuvio.app.features.home.components.HomeHeroTrailerPlaybackController
 import com.nuvio.app.features.home.components.shouldBlurContinueWatchingArtwork
+import com.nuvio.app.features.library.refreshLibraryReleaseScheduleIfStale
 import com.nuvio.app.features.library.warmLibraryReleaseSchedule
 import com.nuvio.app.features.library.LibraryItem
 import com.nuvio.app.features.library.LibraryRepository
@@ -752,6 +753,7 @@ internal fun MainAppContent(
                         NetworkStatusRepository.requestForegroundRefresh()
                         DeviceSessionRegistration.registerIfAuthenticated()
                         MemberAccessRepository.refreshIfStale()
+                        refreshLibraryReleaseScheduleIfStale()
                         if (syncProfileId != null) {
                             SyncManager.startPeriodicNuvioSyncPull(syncProfileId)
                             InAppLogger.debug("Sync/Foreground", "foreground pull requested profile=$syncProfileId")
