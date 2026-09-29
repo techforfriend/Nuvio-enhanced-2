@@ -54,6 +54,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material3.ButtonDefaults
@@ -62,10 +63,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -112,6 +118,7 @@ import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.library.LibraryUiState
 import com.nuvio.app.features.library.LibraryUpcomingEpisode
 import com.nuvio.app.features.library.libraryUpcomingEpisodesFlow
+import com.nuvio.app.features.library.forceRefreshLibraryReleaseSchedule
 import com.nuvio.app.features.library.warmLibraryReleaseSchedule
 import com.nuvio.app.features.profiles.AvatarCatalogItem
 import com.nuvio.app.features.profiles.AvatarRepository
@@ -303,6 +310,25 @@ private fun ProfileInsightsBody(
     LaunchedEffect(hydrationRequest) {
         hydrationRequest?.let { request -> ProfileTitleFactsStore.hydrate(request) }
     }
+    val refreshContext = ProfileInsightsRefreshContext(
+        profileId = activeProfileIndex,
+        libraryItems = libraryState.items,
+        hydrationRequest = hydrationRequest,
+    )
+    SideEffect {
+        ProfileInsightsRefresher.bind(refreshContext)
+    }
+    DisposableEffect(Unit) {
+        onDispose { ProfileInsightsRefresher.unbind() }
+    }
+    val isRefreshing by ProfileInsightsRefresher.isRefreshing.collectAsStateWithLifecycle()
+    val refreshedAtByProfile by ProfileTitleFactsStore.refreshedAtByProfile.collectAsStateWithLifecycle()
+    val failedFactKeys by ProfileTitleFactsStore.failedKeys.collectAsStateWithLifecycle()
+    val failedGenreTitleCount = remember(hydrationRequest, failedFactKeys, titleFacts) {
+        hydrationRequest?.genreTargetKeys?.count { key ->
+            key in failedFactKeys && titleFacts[key]?.genres.isNullOrEmpty()
+        } ?: 0
+    }
     val emptyCollections = remember(
         continueTitle,
         watchedTitle,
@@ -360,6 +386,12 @@ private fun ProfileInsightsBody(
                 .padding(top = if (isTablet) 18.dp else 14.dp),
             verticalArrangement = Arrangement.spacedBy(if (isTablet) 18.dp else 14.dp),
         ) {
+            ProfileInsightsRefreshStatusRow(
+                refreshedAtEpochMs = refreshedAtByProfile[activeProfileIndex],
+                failedGenreTitleCount = failedGenreTitleCount,
+                isRefreshing = isRefreshing,
+                onRefresh = ProfileInsightsRefresher::refresh,
+            )
             ProfileWatchTimeRow(stats = stats)
             SettingsSection(
                 title = stringResource(Res.string.profile_insights_section_taste),
@@ -2524,6 +2556,7 @@ private data class StoredProfileTitleFacts(
     @SerialName("v") val version: Int = PROFILE_TITLE_FACTS_STORAGE_VERSION,
     @SerialName("t") val titles: Map<String, StoredProfileTitle> = emptyMap(),
     @SerialName("f") val failures: Map<String, Long> = emptyMap(),
+    @SerialName("u") val refreshedAtByProfile: Map<String, Long> = emptyMap(),
 )
 
 @Serializable
@@ -2581,6 +2614,11 @@ private object ProfileTitleFactsStore {
     val facts: StateFlow<Map<String, ProfileTitleFacts>> = _facts.asStateFlow()
 
     private val failures = mutableMapOf<String, Long>()
+    private val _failedKeys = MutableStateFlow<Set<String>>(emptySet())
+    val failedKeys: StateFlow<Set<String>> = _failedKeys.asStateFlow()
+
+    private val _refreshedAtByProfile = MutableStateFlow<Map<Int, Long>>(emptyMap())
+    val refreshedAtByProfile: StateFlow<Map<Int, Long>> = _refreshedAtByProfile.asStateFlow()
 
     private val attemptedFetchKeys = mutableSetOf<String>()
 
@@ -2601,6 +2639,28 @@ private object ProfileTitleFactsStore {
         stored.failures.forEach { (key, failedAt) ->
             if (key !in failures) failures[key] = failedAt
         }
+        syncFailedKeys()
+        val restoredRefreshes = stored.refreshedAtByProfile.mapNotNull { (profileId, refreshedAt) ->
+            profileId.toIntOrNull()?.let { it to refreshedAt }
+        }.toMap()
+        _refreshedAtByProfile.value = restoredRefreshes + _refreshedAtByProfile.value
+    }
+
+    fun clearFailures() {
+        if (failures.isEmpty()) return
+        failures.keys.forEach(attemptedFetchKeys::remove)
+        failures.clear()
+        syncFailedKeys()
+        scheduleSave()
+    }
+
+    fun markRefreshed(profileId: Int, refreshedAtEpochMs: Long) {
+        _refreshedAtByProfile.value = _refreshedAtByProfile.value + (profileId to refreshedAtEpochMs)
+        scheduleSave()
+    }
+
+    private fun syncFailedKeys() {
+        _failedKeys.value = failures.keys.toSet()
     }
 
     suspend fun hydrate(request: ProfileTitleHydrationRequest) {
@@ -2646,7 +2706,7 @@ private object ProfileTitleFactsStore {
                                 val meta = MetaDetailsRepository.fetch(type = kind, id = id, cacheResult = false)
                                 settled = true
                                 if (meta != null) {
-                                    failures.remove(key)
+                                    if (failures.remove(key) != null) syncFailedKeys()
                                     pending[key] = meta.toProfileTitleFacts(WatchedClock.nowEpochMs())
                                     if (pending.size >= PUBLISH_BATCH_SIZE) publish(pending)
                                 } else {
@@ -2673,6 +2733,7 @@ private object ProfileTitleFactsStore {
 
     private fun recordFailure(key: String) {
         failures[key] = WatchedClock.nowEpochMs()
+        syncFailedKeys()
         scheduleSave()
     }
 
@@ -2687,10 +2748,11 @@ private object ProfileTitleFactsStore {
         if (!loaded) return
         val factsSnapshot = _facts.value
         val failuresSnapshot = failures.toMap()
+        val refreshedSnapshot = _refreshedAtByProfile.value
         saveJob?.cancel()
         saveJob = ioScope.launch {
             delay(SAVE_DEBOUNCE_MS)
-            writeToDisk(factsSnapshot, failuresSnapshot)
+            writeToDisk(factsSnapshot, failuresSnapshot, refreshedSnapshot)
         }
     }
 
@@ -2708,16 +2770,186 @@ private object ProfileTitleFactsStore {
     private fun writeToDisk(
         factsSnapshot: Map<String, ProfileTitleFacts>,
         failuresSnapshot: Map<String, Long>,
+        refreshedSnapshot: Map<Int, Long>,
     ) {
         val now = WatchedClock.nowEpochMs()
         val stored = StoredProfileTitleFacts(
             titles = factsSnapshot.mapValues { (_, facts) -> facts.toStored() },
             failures = failuresSnapshot.filterValues { failedAt -> now - failedAt < FAILURE_RETRY_AFTER_MS },
+            refreshedAtByProfile = refreshedSnapshot.mapKeys { (profileId, _) -> profileId.toString() },
         )
         try {
             ProfileTitleFactsStorage.save(json.encodeToString(StoredProfileTitleFacts.serializer(), stored))
         } catch (error: Throwable) {
             profileInsightsLog.w(error) { "Failed to persist profile title facts cache" }
+        }
+    }
+}
+
+private class ProfileInsightsRefreshContext(
+    val profileId: Int,
+    val libraryItems: List<LibraryItem>,
+    val hydrationRequest: ProfileTitleHydrationRequest?,
+)
+
+private object ProfileInsightsRefresher {
+    private const val COOLDOWN_MS = 30_000L
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private var context: ProfileInsightsRefreshContext? = null
+    private var job: Job? = null
+    private var lastStartedAtEpochMs = 0L
+
+    fun bind(context: ProfileInsightsRefreshContext) {
+        this.context = context
+    }
+
+    fun unbind() {
+        context = null
+    }
+
+    fun refresh() {
+        val target = context ?: return
+        if (job?.isActive == true) return
+        val now = WatchedClock.nowEpochMs()
+        if (now - lastStartedAtEpochMs < COOLDOWN_MS) return
+        lastStartedAtEpochMs = now
+        job = scope.launch {
+            _isRefreshing.value = true
+            try {
+                ProfileTitleFactsStore.ensureLoaded()
+                ProfileTitleFactsStore.clearFailures()
+                coroutineScope {
+                    launch {
+                        runRefreshStep("watched") { WatchedRepository.forceSnapshotRefreshFromServer(target.profileId) }
+                    }
+                    launch {
+                        runRefreshStep("progress") { WatchProgressRepository.forceSnapshotRefreshFromServer(target.profileId) }
+                    }
+                    launch {
+                        runRefreshStep("calendar") { forceRefreshLibraryReleaseSchedule(target.libraryItems) }
+                    }
+                    launch {
+                        runRefreshStep("titles") { target.hydrationRequest?.let { ProfileTitleFactsStore.hydrate(it) } }
+                    }
+                }
+                ProfileTitleFactsStore.markRefreshed(target.profileId, WatchedClock.nowEpochMs())
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+
+    private suspend fun runRefreshStep(name: String, block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            profileInsightsLog.w(error) { "Profile insights refresh step failed: $name" }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun ProfileInsightsPullToRefresh(
+    enabled: Boolean,
+    content: @Composable () -> Unit,
+) {
+    if (enabled) {
+        val isRefreshing by ProfileInsightsRefresher.isRefreshing.collectAsStateWithLifecycle()
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = ProfileInsightsRefresher::refresh,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            content()
+        }
+    } else {
+        content()
+    }
+}
+
+@Composable
+private fun ProfileInsightsRefreshStatusRow(
+    refreshedAtEpochMs: Long?,
+    failedGenreTitleCount: Int,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    val now by produceState(WatchedClock.nowEpochMs()) {
+        while (true) {
+            delay(60_000L)
+            value = WatchedClock.nowEpochMs()
+        }
+    }
+    val statusText = when {
+        isRefreshing -> stringResource(Res.string.profile_insights_refreshing)
+        refreshedAtEpochMs == null -> stringResource(Res.string.profile_insights_pull_to_refresh)
+        else -> {
+            val elapsedMinutes = ((now - refreshedAtEpochMs).coerceAtLeast(0L) / ProfileInsightsMinuteMs).toInt()
+            when {
+                elapsedMinutes < 1 -> stringResource(Res.string.profile_insights_updated_just_now)
+                elapsedMinutes < 60 -> stringResource(Res.string.profile_insights_updated_minutes, elapsedMinutes)
+                elapsedMinutes < 24 * 60 -> stringResource(Res.string.profile_insights_updated_hours, elapsedMinutes / 60)
+                else -> stringResource(Res.string.profile_insights_updated_days, elapsedMinutes / (24 * 60))
+            }
+        }
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = statusText,
+                style = MaterialTheme.typography.labelSmall,
+                color = tokens.colors.textMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (failedGenreTitleCount > 0 && !isRefreshing) {
+                Text(
+                    text = if (failedGenreTitleCount == 1) {
+                        stringResource(Res.string.profile_insights_genre_failures_single)
+                    } else {
+                        stringResource(Res.string.profile_insights_genre_failures, failedGenreTitleCount)
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        IconButton(
+            onClick = onRefresh,
+            enabled = !isRefreshing,
+            modifier = Modifier.size(36.dp),
+        ) {
+            if (isRefreshing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    strokeWidth = 2.dp,
+                    color = tokens.colors.textMuted,
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.Refresh,
+                    contentDescription = stringResource(Res.string.profile_insights_refresh),
+                    modifier = Modifier.size(20.dp),
+                    tint = tokens.colors.textMuted,
+                )
+            }
         }
     }
 }

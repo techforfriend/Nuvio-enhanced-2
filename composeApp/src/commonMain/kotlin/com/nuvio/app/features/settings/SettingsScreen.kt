@@ -703,6 +703,7 @@ private fun MobileSettingsScreen(
         }
 
         val profileDrawsOwnChrome = page == SettingsPage.Profile && showInternalHeader && !LocalUseNativeNavigation.current
+        ProfileInsightsPullToRefresh(enabled = page == SettingsPage.Profile) {
         NuvioScreen(
             modifier = Modifier.nestedScroll(rootSearchRevealConnection),
             listState = listState,
@@ -932,6 +933,7 @@ private fun MobileSettingsScreen(
                 )
             }
         }
+        }
     }
 }
 
@@ -1160,6 +1162,7 @@ private fun TabletSettingsScreen(
                     listState.animateScrollToItem(0)
                 }
             }
+            ProfileInsightsPullToRefresh(enabled = page == SettingsPage.Profile) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -1403,6 +1406,7 @@ private fun TabletSettingsScreen(
                         uiState = liveTvUiState,
                     )
                 }
+            }
             }
         }
     }

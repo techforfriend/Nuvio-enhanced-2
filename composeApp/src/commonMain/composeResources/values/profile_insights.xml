@@ -47,6 +47,16 @@
     <string name="profile_insights_genre_others">Others</string>
     <string name="profile_insights_genre_chart_description">Genre breakdown: %1$s</string>
     <string name="profile_insights_type_watch_time_split">Watch time: %1$d%% movies · %2$d%% series</string>
+    <string name="profile_insights_genre_failures">%1$d titles couldn't load genres</string>
+    <string name="profile_insights_genre_failures_single">1 title couldn't load genres</string>
+
+    <string name="profile_insights_refresh">Refresh</string>
+    <string name="profile_insights_refreshing">Refreshing…</string>
+    <string name="profile_insights_pull_to_refresh">Pull down to refresh from your account</string>
+    <string name="profile_insights_updated_just_now">Updated just now</string>
+    <string name="profile_insights_updated_minutes">Updated %1$d min ago</string>
+    <string name="profile_insights_updated_hours">Updated %1$d h ago</string>
+    <string name="profile_insights_updated_days">Updated %1$d d ago</string>
 
     <string name="profile_insights_taste_balance_learning">Learning your taste</string>
     <string name="profile_insights_taste_balance_movie">Movie leaning</string>

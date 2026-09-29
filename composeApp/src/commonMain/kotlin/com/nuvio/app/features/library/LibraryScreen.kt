@@ -65,6 +65,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -126,6 +127,7 @@ import com.nuvio.app.features.home.components.HomePosterCard
 import com.nuvio.app.features.home.components.HomeSkeletonRow
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.tracking.TrackingRefreshIntent
+import com.nuvio.app.features.watched.WatchedClock
 import com.nuvio.app.features.watched.WatchedRepository
 import com.nuvio.app.features.watchprogress.CurrentDateProvider
 import com.nuvio.app.features.watching.application.WatchingState
@@ -215,6 +217,12 @@ fun LibraryScreen(
     }
     val releaseCalendarLoading =
         releaseCalendarCacheState.cacheKey == releaseCalendarCacheKey && releaseCalendarCacheState.isWarming
+    val releaseCalendarFailedSeriesCount =
+        if (releaseCalendarCacheState.cacheKey == releaseCalendarCacheKey) {
+            releaseCalendarCacheState.failedSeriesKeys.size
+        } else {
+            0
+        }
     var selectedProviderId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedTypeName by rememberSaveable { mutableStateOf<String?>(null) }
     var cloudSearchQuery by rememberSaveable { mutableStateOf("") }
@@ -657,6 +665,12 @@ fun LibraryScreen(
             onMonthRequested = { month ->
                 coroutineScope.launch {
                     LibraryReleaseCalendarCache.ensureMonth(uiState.items, month.key)
+                }
+            },
+            failedSeriesCount = releaseCalendarFailedSeriesCount,
+            onRefresh = {
+                coroutineScope.launch {
+                    LibraryReleaseCalendarCache.forceRefresh(uiState.items)
                 }
             },
         )
@@ -1416,6 +1430,8 @@ private fun LibraryReleaseCalendarPanel(
     onPosterClick: ((LibraryItem) -> Unit)?,
     onCalendarEpisodeClick: ((LibraryItem, Int?, Int?) -> Unit)?,
     onMonthRequested: (LibraryCalendarMonth) -> Unit,
+    failedSeriesCount: Int = 0,
+    onRefresh: (() -> Unit)? = null,
 ) {
     val today = remember { parseLibraryCalendarDate(CurrentDateProvider.todayIsoDate()) ?: LibraryCalendarDate(1970, 1, 1) }
     val todayIso = today.iso
@@ -1494,7 +1510,15 @@ private fun LibraryReleaseCalendarPanel(
                         title = stringResource(Res.string.library_calendar_title),
                         subtitle = stringResource(Res.string.library_calendar_exact_dates_only),
                         onDismiss = onDismiss,
+                        isRefreshing = isLoading,
+                        onRefresh = onRefresh,
                     )
+                    if (failedSeriesCount > 0 && !isLoading && onRefresh != null) {
+                        LibraryCalendarFailureBanner(
+                            failedSeriesCount = failedSeriesCount,
+                            onRetry = onRefresh,
+                        )
+                    }
 
                     when {
                         events.isEmpty() && isLoading -> LibraryCalendarLoadingState()
@@ -1670,6 +1694,8 @@ private fun LibraryCalendarTopBar(
     title: String,
     subtitle: String,
     onDismiss: () -> Unit,
+    isRefreshing: Boolean = false,
+    onRefresh: (() -> Unit)? = null,
 ) {
     Row(
         modifier = Modifier
@@ -1700,6 +1726,28 @@ private fun LibraryCalendarTopBar(
                 overflow = TextOverflow.Ellipsis,
             )
         }
+        if (onRefresh != null) {
+            IconButton(
+                onClick = onRefresh,
+                enabled = !isRefreshing,
+                modifier = Modifier.size(40.dp),
+            ) {
+                if (isRefreshing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Rounded.Refresh,
+                        contentDescription = stringResource(Res.string.library_calendar_refresh),
+                        modifier = Modifier.size(22.dp),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        }
         IconButton(
             onClick = onDismiss,
             modifier = Modifier.size(40.dp),
@@ -1710,6 +1758,46 @@ private fun LibraryCalendarTopBar(
                 modifier = Modifier.size(22.dp),
                 tint = MaterialTheme.colorScheme.onSurface,
             )
+        }
+    }
+}
+
+@Composable
+private fun LibraryCalendarFailureBanner(
+    failedSeriesCount: Int,
+    onRetry: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f),
+        shape = RoundedCornerShape(16.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 16.dp, top = 6.dp, end = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = if (failedSeriesCount == 1) {
+                    stringResource(Res.string.library_calendar_failed_series_single)
+                } else {
+                    stringResource(Res.string.library_calendar_failed_series, failedSeriesCount)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onRetry) {
+                Text(
+                    text = stringResource(Res.string.library_calendar_retry),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
         }
     }
 }
@@ -2390,6 +2478,7 @@ private object LibraryReleaseCalendarCache {
     private var warmJob: Job? = null
     private var warmJobKey: String? = null
     private var monthJob: Job? = null
+    private var lastForcedRefreshAtEpochMs = 0L
     private var retryJob: Job? = null
     private var retryAttempt = 0
     private var addonWatcher: Job? = null
@@ -2407,6 +2496,25 @@ private object LibraryReleaseCalendarCache {
         lastItems = items
         ensureAddonWatcher()
         requestWarm(items)?.join()
+    }
+
+    suspend fun forceRefresh(items: List<LibraryItem>) {
+        if (items.isEmpty()) return
+        lastItems = items
+        ensureAddonWatcher()
+        warmJob?.takeIf { it.isActive }?.let { running ->
+            running.join()
+            return
+        }
+        val now = WatchedClock.nowEpochMs()
+        if (now - lastForcedRefreshAtEpochMs < LIBRARY_CALENDAR_FORCE_REFRESH_COOLDOWN_MS) return
+        lastForcedRefreshAtEpochMs = now
+        resetRetry()
+        val cacheKey = cacheKeyFor(items)
+        warmJobKey = cacheKey
+        val job = scope.launch { runWarm(items, cacheKey, forceFull = true) }
+        warmJob = job
+        job.join()
     }
 
     fun refreshIfStale() {
@@ -2460,7 +2568,7 @@ private object LibraryReleaseCalendarCache {
         return scope.launch { runWarm(items, cacheKey) }.also { warmJob = it }
     }
 
-    private suspend fun runWarm(items: List<LibraryItem>, cacheKey: String) {
+    private suspend fun runWarm(items: List<LibraryItem>, cacheKey: String, forceFull: Boolean = false) {
         val today = CurrentDateProvider.todayIsoDate()
         val targetMonthKeys = libraryCalendarWarmMonthKeys()
         val inMemory = _state.value.takeIf { it.cacheKey == cacheKey }
@@ -2499,13 +2607,14 @@ private object LibraryReleaseCalendarCache {
                     )
                 }
 
-            if (previousBuild != null && isFresh(previousBuild, cacheKey, signature)) {
+            if (!forceFull && previousBuild != null && isFresh(previousBuild, cacheKey, signature)) {
                 _state.value = previousBuild
                 resetRetry()
                 return
             }
 
-            val sameBuildContext = previousBuild != null &&
+            val sameBuildContext = !forceFull &&
+                previousBuild != null &&
                 previousBuild.builtOnIsoDate == today &&
                 previousBuild.addonSignature == signature &&
                 previousBuild.loadedMonthKeys.containsAll(targetMonthKeys)
@@ -2520,7 +2629,8 @@ private object LibraryReleaseCalendarCache {
                     failedSeriesKeys = result.failedSeriesKeys,
                 )
             } else {
-                val addonsChanged = previousBuild?.addonSignature != null && previousBuild.addonSignature != signature
+                val addonsChanged = forceFull ||
+                    (previousBuild?.addonSignature != null && previousBuild.addonSignature != signature)
                 val result = buildLibraryReleaseCalendarEvents(
                     items = items,
                     targetMonthKeys = targetMonthKeys,
@@ -2611,6 +2721,7 @@ private suspend fun awaitLibraryAddonsSettled() {
 
 private const val LIBRARY_CALENDAR_ADDON_SETTLE_TIMEOUT_MS = 15_000L
 private const val LIBRARY_CALENDAR_FETCH_CONCURRENCY = 4
+private const val LIBRARY_CALENDAR_FORCE_REFRESH_COOLDOWN_MS = 30_000L
 
 private fun LibraryItem.librarySeriesKey(): String = "${type.lowercase()}:$id"
 
@@ -2634,6 +2745,10 @@ private fun List<LibraryCalendarEvent>.withoutSupersededFallbacks(
 
 internal fun refreshLibraryReleaseScheduleIfStale() {
     LibraryReleaseCalendarCache.refreshIfStale()
+}
+
+internal suspend fun forceRefreshLibraryReleaseSchedule(items: List<LibraryItem>) {
+    LibraryReleaseCalendarCache.forceRefresh(items)
 }
 
 private fun libraryCalendarWarmMonthKeys(): Set<String> {

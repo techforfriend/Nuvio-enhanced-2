@@ -2062,6 +2062,8 @@
     <string name="library_calendar_empty_message">Saved movies and series episodes with exact dates will appear here.</string>
     <string name="library_calendar_empty_title">No calendar dates found</string>
     <string name="library_calendar_exact_dates_only">Shows saved titles and episode releases with exact dates.</string>
+    <string name="library_calendar_failed_series">%1$d series couldn't be loaded</string>
+    <string name="library_calendar_failed_series_single">1 series couldn't be loaded</string>
     <string name="library_calendar_loading">Loading saved releases...</string>
     <string name="library_calendar_agenda">Release agenda</string>
     <string name="library_calendar_available">Available now</string>
@@ -2072,8 +2074,10 @@
     <string name="library_calendar_no_month_events">No releases in this month.</string>
     <string name="library_calendar_open">Open calendar</string>
     <string name="library_calendar_previous_month">Previous month</string>
+    <string name="library_calendar_refresh">Refresh calendar</string>
     <string name="library_calendar_release_count">%1$d releases</string>
     <string name="library_calendar_release_count_single">1 release</string>
+    <string name="library_calendar_retry">Retry</string>
     <string name="library_calendar_selected_day">%1$s releases</string>
     <string name="library_calendar_today">Today</string>
     <string name="library_calendar_title">Calendar</string>
