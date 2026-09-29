@@ -66,6 +66,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -128,7 +129,18 @@ import com.nuvio.app.features.watchprogress.CurrentDateProvider
 import com.nuvio.app.features.watchprogress.WatchProgressEntry
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import com.nuvio.app.features.watchprogress.WatchProgressUiState
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -201,41 +213,14 @@ private fun ProfileInsightsBody(
         ?.trim()
         ?.takeIf { it.isNotBlank() }
         ?: profileNameFallback
-    var genreMetaVersion by remember { mutableStateOf(0) }
-    val baseStats = remember(activeProfileIndex, watchProgressState, watchedState, fullyWatchedSeriesKeys, libraryState, todayIsoDate, genreMetaVersion) {
-        runCatching {
-            buildProfileInsightsStats(
-                watchProgressState = watchProgressState,
-                watchedState = watchedState,
-                fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-                libraryState = libraryState,
-                todayIsoDate = todayIsoDate,
-            )
-        }.onFailure { error ->
-            profileInsightsLog.e(error) { "Failed to build profile insights stats profile=$activeProfileIndex" }
-        }.getOrElse {
-            emptyProfileInsightsStats()
-        }
-    }
-    val stats = remember(baseStats, upcomingEpisodes) {
-        baseStats.copy(upcomingCount = upcomingEpisodes.size)
-    }
-    LaunchedEffect(activeProfileIndex, baseStats.genreLookupMisses) {
-        val misses = baseStats.genreLookupMisses.take(PROFILE_GENRE_HYDRATION_LIMIT)
-        if (misses.isEmpty()) return@LaunchedEffect
-        var hydrated = 0
-        misses.forEach { (kind, id) ->
-            if (profileHydrateGenreMeta(kind, id)) hydrated++
-        }
-        if (hydrated > 0) genreMetaVersion++
-    }
     val continueTitle = stringResource(Res.string.profile_insights_stat_continue)
     val watchedTitle = stringResource(Res.string.profile_insights_stat_watched)
     val completedTitle = stringResource(Res.string.profile_insights_stat_completed)
     val ongoingTitle = stringResource(Res.string.profile_insights_stat_ongoing)
     val libraryTitle = stringResource(Res.string.profile_insights_stat_library)
     val upcomingTitle = stringResource(Res.string.profile_insights_stat_upcoming)
-    val baseInsightCollections = remember(
+    val core by produceState(
+        ProfileInsightsSnapshotCache.coreFor(activeProfileIndex),
         activeProfileIndex,
         watchProgressState,
         watchedState,
@@ -249,33 +234,81 @@ private fun ProfileInsightsBody(
         libraryTitle,
         upcomingTitle,
     ) {
-        runCatching {
-            buildProfileInsightCollections(
-                watchProgressState = watchProgressState,
-                watchedState = watchedState,
-                fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-                libraryState = libraryState,
-                todayIsoDate = todayIsoDate,
-                continueTitle = continueTitle,
-                watchedTitle = watchedTitle,
-                completedTitle = completedTitle,
-                ongoingTitle = ongoingTitle,
-                libraryTitle = libraryTitle,
-                upcomingTitle = upcomingTitle,
-            )
-        }.onFailure { error ->
-            profileInsightsLog.e(error) { "Failed to build profile insight collections profile=$activeProfileIndex" }
-        }.getOrElse {
-            emptyProfileInsightCollections(
-                continueTitle = continueTitle,
-                watchedTitle = watchedTitle,
-                completedTitle = completedTitle,
-                ongoingTitle = ongoingTitle,
-                libraryTitle = libraryTitle,
-                upcomingTitle = upcomingTitle,
-            )
+        val profileIndex = activeProfileIndex
+        val progressSnapshot = watchProgressState
+        val watchedSnapshot = watchedState
+        val fullyWatchedSnapshot = fullyWatchedSeriesKeys
+        val librarySnapshot = libraryState
+        val computed = withContext(Dispatchers.Default) {
+            try {
+                buildProfileInsightsCore(
+                    profileIndex = profileIndex,
+                    watchProgressState = progressSnapshot,
+                    watchedState = watchedSnapshot,
+                    fullyWatchedSeriesKeys = fullyWatchedSnapshot,
+                    libraryState = librarySnapshot,
+                    todayIsoDate = todayIsoDate,
+                    continueTitle = continueTitle,
+                    watchedTitle = watchedTitle,
+                    completedTitle = completedTitle,
+                    ongoingTitle = ongoingTitle,
+                    libraryTitle = libraryTitle,
+                    upcomingTitle = upcomingTitle,
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                profileInsightsLog.e(error) { "Failed to build profile insights profile=$profileIndex" }
+                null
+            }
+        }
+        if (computed != null) {
+            ProfileInsightsSnapshotCache.rememberCore(computed)
+            value = computed
         }
     }
+    val activeCore = core?.takeIf { snapshot -> snapshot.profileIndex == activeProfileIndex }
+    val titleFacts by ProfileTitleFactsStore.facts.collectAsStateWithLifecycle()
+    val resolvedStats by produceState(
+        ProfileInsightsSnapshotCache.statsFor(activeCore),
+        activeCore,
+        titleFacts,
+    ) {
+        val source = activeCore
+        if (source == null) {
+            value = null
+            return@produceState
+        }
+        val factsSnapshot = titleFacts
+        val computed = withContext(Dispatchers.Default) { source.resolveStats(factsSnapshot) }
+        ProfileInsightsSnapshotCache.rememberStats(source, computed)
+        value = computed
+    }
+    val stats = remember(resolvedStats, upcomingEpisodes) {
+        (resolvedStats ?: emptyProfileInsightsStats()).copy(upcomingCount = upcomingEpisodes.size)
+    }
+    val hydrationRequest = activeCore?.hydrationRequest
+    LaunchedEffect(hydrationRequest) {
+        hydrationRequest?.let { request -> ProfileTitleFactsStore.hydrate(request) }
+    }
+    val emptyCollections = remember(
+        continueTitle,
+        watchedTitle,
+        completedTitle,
+        ongoingTitle,
+        libraryTitle,
+        upcomingTitle,
+    ) {
+        emptyProfileInsightCollections(
+            continueTitle = continueTitle,
+            watchedTitle = watchedTitle,
+            completedTitle = completedTitle,
+            ongoingTitle = ongoingTitle,
+            libraryTitle = libraryTitle,
+            upcomingTitle = upcomingTitle,
+        )
+    }
+    val baseInsightCollections = activeCore?.collections ?: emptyCollections
     val insightCollections = remember(baseInsightCollections, upcomingEpisodes, upcomingTitle) {
         baseInsightCollections + (
             ProfileInsightCollectionKind.Upcoming to ProfileInsightCollection(
@@ -1234,7 +1267,7 @@ private fun ProfileTasteGenreDonut(segments: List<ProfileTasteSegment>) {
             }
         }
     }
-    var othersExpanded by remember(segments) { mutableStateOf(false) }
+    var othersExpanded by remember { mutableStateOf(false) }
     val chartDescription = stringResource(
         Res.string.profile_insights_genre_chart_description,
         slices.joinToString(", ") { "${it.label} ${it.share.profilePercentLabel()}" },
@@ -1573,13 +1606,76 @@ private fun profileInsightDurationLabel(durationMs: Long): String {
     return "~$formatted"
 }
 
-private fun buildProfileInsightsStats(
+private class ProfileInsightsCore(
+    val profileIndex: Int,
+    private val baseStats: ProfileInsightsStats,
+    val collections: Map<ProfileInsightCollectionKind, ProfileInsightCollection>,
+    private val typeBalance: ProfileTypeBalance,
+    private val libraryGenresByKey: Map<String, List<String>>,
+    private val progressDurationByKey: Map<String, Long>,
+    private val watchedDurationRefs: List<ProfileWatchedDurationRef>,
+    val hydrationRequest: ProfileTitleHydrationRequest,
+) {
+    fun resolveStats(facts: Map<String, ProfileTitleFacts>): ProfileInsightsStats {
+        val watchTime = profileWatchTimeSplit(
+            progressDurationByKey = progressDurationByKey,
+            watchedDurationRefs = watchedDurationRefs,
+            facts = facts,
+        )
+        val segments = buildProfileWatchedTitleGenreSegments(
+            titleKeys = typeBalance.titleKeys,
+            libraryGenresByKey = libraryGenresByKey,
+            facts = facts,
+        )
+        return baseStats.copy(
+            trackedDurationMs = watchTime.totalMs,
+            movieWatchTimeShare = watchTime.movieShare,
+            tasteSegments = segments,
+            topGenre = segments.firstOrNull()?.label,
+        )
+    }
+}
+
+private data class ProfileTitleHydrationRequest(
+    val seedKeys: List<String>,
+    val genreTargetKeys: List<String>,
+)
+
+private object ProfileInsightsSnapshotCache {
+    private var core: ProfileInsightsCore? = null
+    private var statsSource: ProfileInsightsCore? = null
+    private var stats: ProfileInsightsStats? = null
+
+    fun coreFor(profileIndex: Int): ProfileInsightsCore? =
+        core?.takeIf { snapshot -> snapshot.profileIndex == profileIndex }
+
+    fun rememberCore(snapshot: ProfileInsightsCore) {
+        core = snapshot
+    }
+
+    fun statsFor(source: ProfileInsightsCore?): ProfileInsightsStats? =
+        stats?.takeIf { source != null && statsSource === source }
+
+    fun rememberStats(source: ProfileInsightsCore, resolved: ProfileInsightsStats) {
+        statsSource = source
+        stats = resolved
+    }
+}
+
+private fun buildProfileInsightsCore(
+    profileIndex: Int,
     watchProgressState: WatchProgressUiState,
     watchedState: WatchedUiState,
     fullyWatchedSeriesKeys: Set<String>,
     libraryState: LibraryUiState,
     todayIsoDate: String,
-): ProfileInsightsStats {
+    continueTitle: String,
+    watchedTitle: String,
+    completedTitle: String,
+    ongoingTitle: String,
+    libraryTitle: String,
+    upcomingTitle: String,
+): ProfileInsightsCore {
     val now = WatchedClock.nowEpochMs()
     val recentCutoff = now - ProfileInsightsRecentWindowMs
     val progressEntries = watchProgressState.entries
@@ -1615,37 +1711,35 @@ private fun buildProfileInsightsStats(
         fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
     )
     val movieSeriesTotal = typeBalance.titleTotal
-    val watchedTitleGenres = buildProfileWatchedTitleGenres(
-        typeBalance = typeBalance,
-        libraryItems = libraryItems,
-    )
     val movieShare = typeBalance.movieShare
+    val libraryGenresByKey = profileLibraryGenresByKey(libraryItems)
+    val watchedDurationRefs = profileWatchedDurationRefs(watchedItems)
     val recentActivityCount = profileRecentActivityCount(
         watchedItems = watchedItems,
         progressEntries = progressEntries,
         recentCutoff = recentCutoff,
     )
+    val upcomingLibraryCount = libraryItems.count { item ->
+        item.profileReleaseIsoDate()?.let { releaseDate -> releaseDate >= todayIsoDate } == true
+    }
 
-    return ProfileInsightsStats(
+    val baseStats = ProfileInsightsStats(
         continueCount = continueEntries.size,
         watchedMovieCount = watchedMovieItems.size,
         completedCount = completedContentItems.size,
         episodesWatchedCount = watchedItems.profileWatchedEpisodeCount(),
         ongoingSeriesCount = ongoingSeriesItems.size,
         libraryCount = libraryItems.size,
-        trackedDurationMs = typeBalance.movieWatchTimeMs + typeBalance.seriesWatchTimeMs,
+        // Resolved against title facts in ProfileInsightsCore.resolveStats().
+        trackedDurationMs = 0L,
         recentActivityCount = recentActivityCount,
-        upcomingCount = libraryItems.count { item ->
-            item.profileReleaseIsoDate()?.let { releaseDate -> releaseDate >= todayIsoDate } == true
-        },
-        topGenre = watchedTitleGenres.segments.firstOrNull()?.label,
+        upcomingCount = upcomingLibraryCount,
+        topGenre = null,
         topType = normalizedTypes
             .mapNotNull(String::profileNormalizedType)
             .profileMostCommonValue(),
-        tasteSegments = watchedTitleGenres.segments,
-        genreLookupMisses = watchedTitleGenres.missingTitles,
+        tasteSegments = emptyList(),
         movieShare = movieShare,
-        movieWatchTimeShare = typeBalance.movieWatchTimeShare,
         typeBalanceLabel = when {
             movieSeriesTotal == 0 -> ProfileTasteBalanceLabel.Learning
             movieShare >= 0.62f -> ProfileTasteBalanceLabel.MovieLeaning
@@ -1657,21 +1751,41 @@ private fun buildProfileInsightsStats(
             continueCount = continueEntries.size,
             completedCount = watchedMovieItems.size + completedContentItems.size,
             recentActivityCount = recentActivityCount,
-            upcomingCount = libraryItems.count { item ->
-                item.profileReleaseIsoDate()?.let { releaseDate -> releaseDate >= todayIsoDate } == true
-            },
+            upcomingCount = upcomingLibraryCount,
             movieShare = movieShare,
             movieSeriesTotal = movieSeriesTotal,
+        ),
+    )
+
+    return ProfileInsightsCore(
+        profileIndex = profileIndex,
+        baseStats = baseStats,
+        collections = buildProfileInsightCollections(
+            watchProgressState = watchProgressState,
+            libraryState = libraryState,
+            watchedBuckets = watchedBuckets,
+            continueTitle = continueTitle,
+            watchedTitle = watchedTitle,
+            completedTitle = completedTitle,
+            ongoingTitle = ongoingTitle,
+            libraryTitle = libraryTitle,
+            upcomingTitle = upcomingTitle,
+        ),
+        typeBalance = typeBalance,
+        libraryGenresByKey = libraryGenresByKey,
+        progressDurationByKey = profileProgressDurationByActivityKey(progressEntries),
+        watchedDurationRefs = watchedDurationRefs,
+        hydrationRequest = ProfileTitleHydrationRequest(
+            seedKeys = (typeBalance.titleKeys + watchedDurationRefs.map { ref -> ref.titleKey }).distinct(),
+            genreTargetKeys = typeBalance.titleKeys.filter { key -> key !in libraryGenresByKey },
         ),
     )
 }
 
 private fun buildProfileInsightCollections(
     watchProgressState: WatchProgressUiState,
-    watchedState: WatchedUiState,
-    fullyWatchedSeriesKeys: Set<String>,
     libraryState: LibraryUiState,
-    todayIsoDate: String,
+    watchedBuckets: ProfileWatchedContentBuckets,
     continueTitle: String,
     watchedTitle: String,
     completedTitle: String,
@@ -1693,13 +1807,6 @@ private fun buildProfileInsightCollections(
             )
         }
         .toList()
-
-    val watchedBuckets = buildProfileWatchedContentBuckets(
-        watchedItems = watchedState.items,
-        fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-        libraryItems = libraryState.items,
-        progressEntries = watchProgressState.entries,
-    )
 
     val watchedMovieItems = watchedBuckets.watchedMovieItems
         .asSequence()
@@ -1911,8 +2018,7 @@ private fun buildProfileWatchedContentBuckets(
                 imageUrl = item.poster
                     ?: libraryItem?.poster
                     ?: libraryItem?.banner
-                    ?: progressItem?.profileArtworkUrl()
-                    ?: profileCachedArtworkUrl("movie", item.id),
+                    ?: progressItem?.profileArtworkUrl(),
                 markedAtEpochMs = item.markedAtEpochMs,
             )
         }
@@ -1953,8 +2059,7 @@ private fun buildProfileWatchedContentBuckets(
                         ?: libraryItem?.poster
                         ?: libraryItem?.banner
                         ?: progressItem?.profileArtworkUrl()
-                        ?: representative.poster
-                        ?: profileCachedArtworkUrl("series", representative.id),
+                        ?: representative.poster,
                     markedAtEpochMs = group.maxOf { item -> item.markedAtEpochMs },
                 )
             } else {
@@ -1973,8 +2078,7 @@ private fun buildProfileWatchedContentBuckets(
                     imageUrl = libraryItem?.poster
                         ?: libraryItem?.banner
                         ?: progressItem?.profileArtworkUrl()
-                        ?: representative.poster
-                        ?: profileCachedArtworkUrl("series", representative.id),
+                        ?: representative.poster,
                     markedAtEpochMs = group.maxOf { item -> item.markedAtEpochMs },
                 )
             }
@@ -2050,27 +2154,83 @@ private fun WatchProgressEntry.profileTrackedDurationMs(): Long {
     return (effectiveDurationMs * (explicitPercent / 100f)).toLong().coerceIn(0L, effectiveDurationMs)
 }
 
-private fun profileTrackedDurationByActivityKey(
-    watchedItems: List<WatchedItem>,
+private fun profileProgressDurationByActivityKey(
     progressEntries: List<WatchProgressEntry>,
 ): Map<String, Long> {
-    val durationByKey = mutableMapOf<String, Long>()
+    val durationByKey = HashMap<String, Long>()
+    progressEntries.forEach { entry ->
+        val key = entry.profileActivityKey() ?: return@forEach
+        val durationMs = entry.profileTrackedDurationMs()
+        if (durationMs > (durationByKey[key] ?: 0L)) durationByKey[key] = durationMs
+    }
+    return durationByKey
+}
 
-    fun record(key: String?, durationMs: Long) {
-        if (key == null || durationMs <= 0L) return
-        if (durationMs > (durationByKey[key] ?: 0L)) {
-            durationByKey[key] = durationMs
+private class ProfileWatchedDurationRef(
+    val activityKey: String,
+    val titleKey: String,
+    val isMovie: Boolean,
+    val season: Int?,
+    val episode: Int?,
+)
+
+private fun profileWatchedDurationRefs(watchedItems: List<WatchedItem>): List<ProfileWatchedDurationRef> {
+    val seenKeys = HashSet<String>()
+    return watchedItems.mapNotNull { item ->
+        val activityKey = item.profileActivityKey() ?: return@mapNotNull null
+        if (!seenKeys.add(activityKey)) return@mapNotNull null
+        val kind = item.type.profileCompletedContentKind() ?: return@mapNotNull null
+        ProfileWatchedDurationRef(
+            activityKey = activityKey,
+            titleKey = "$kind:${item.id.trim()}",
+            isMovie = kind == "movie",
+            season = item.season,
+            episode = item.episode,
+        )
+    }
+}
+
+private fun ProfileWatchedDurationRef.estimatedDurationMs(facts: ProfileTitleFacts?): Long {
+    val minutes = when {
+        isMovie && season == null && episode == null ->
+            facts?.runtimeMinutes?.toLong() ?: ProfileInsightsFallbackMovieMinutes
+        !isMovie && season != null && episode != null ->
+            facts?.episodeRuntimeMinutes?.get(profileEpisodeKey(season, episode))?.toLong()
+                ?: ProfileInsightsFallbackEpisodeMinutes
+        else -> return 0L
+    }
+    return minutes * ProfileInsightsMinuteMs
+}
+
+private class ProfileWatchTimeSplit(
+    val movieMs: Long,
+    val seriesMs: Long,
+) {
+    val totalMs: Long get() = movieMs + seriesMs
+
+    val movieShare: Float?
+        get() = if (totalMs > 0L) movieMs.toFloat() / totalMs.toFloat() else null
+}
+
+private fun profileWatchTimeSplit(
+    progressDurationByKey: Map<String, Long>,
+    watchedDurationRefs: List<ProfileWatchedDurationRef>,
+    facts: Map<String, ProfileTitleFacts>,
+): ProfileWatchTimeSplit {
+    val durationByKey = HashMap(progressDurationByKey)
+    watchedDurationRefs.forEach { ref ->
+        val durationMs = ref.estimatedDurationMs(facts[ref.titleKey])
+        if (durationMs > (durationByKey[ref.activityKey] ?: 0L)) durationByKey[ref.activityKey] = durationMs
+    }
+    var movieMs = 0L
+    var seriesMs = 0L
+    durationByKey.forEach { (key, durationMs) ->
+        when (key.substringBefore(':')) {
+            "movie" -> movieMs += durationMs
+            "series" -> seriesMs += durationMs
         }
     }
-
-    progressEntries.forEach { entry ->
-        record(entry.profileTrackableActivityKey(), entry.profileTrackedDurationMs())
-    }
-    watchedItems.forEach { item ->
-        record(item.profileTrackableActivityKey(), item.profileEstimatedDurationMs())
-    }
-
-    return durationByKey
+    return ProfileWatchTimeSplit(movieMs = movieMs, seriesMs = seriesMs)
 }
 
 private fun buildProfileTypeBalance(
@@ -2116,20 +2276,9 @@ private fun buildProfileTypeBalance(
         .filterValues { episodes -> episodes.size >= PROFILE_SERIES_MIN_ENGAGED_EPISODES }
         .keys
 
-    var movieWatchTimeMs = 0L
-    var seriesWatchTimeMs = 0L
-    profileTrackedDurationByActivityKey(watchedItems, progressEntries).forEach { (key, durationMs) ->
-        when (key.substringBefore(':')) {
-            "movie" -> movieWatchTimeMs += durationMs
-            "series" -> seriesWatchTimeMs += durationMs
-        }
-    }
-
     return ProfileTypeBalance(
         movieTitleIds = watchedMovieIds.toSet(),
         seriesTitleIds = engagedSeriesIds.toSet(),
-        movieWatchTimeMs = movieWatchTimeMs,
-        seriesWatchTimeMs = seriesWatchTimeMs,
     )
 }
 
@@ -2138,8 +2287,6 @@ private const val PROFILE_SERIES_MIN_ENGAGED_EPISODES = 2
 private data class ProfileTypeBalance(
     val movieTitleIds: Set<String>,
     val seriesTitleIds: Set<String>,
-    val movieWatchTimeMs: Long,
-    val seriesWatchTimeMs: Long,
 ) {
     val movieTitleCount: Int get() = movieTitleIds.size
     val seriesTitleCount: Int get() = seriesTitleIds.size
@@ -2149,11 +2296,8 @@ private data class ProfileTypeBalance(
     val movieShare: Float
         get() = if (titleTotal > 0) movieTitleCount.toFloat() / titleTotal.toFloat() else 0.5f
 
-    val movieWatchTimeShare: Float?
-        get() {
-            val total = movieWatchTimeMs + seriesWatchTimeMs
-            return if (total > 0L) movieWatchTimeMs.toFloat() / total.toFloat() else null
-        }
+    val titleKeys: List<String> =
+        movieTitleIds.map { id -> "movie:$id" } + seriesTitleIds.map { id -> "series:$id" }
 }
 
 private fun WatchProgressEntry.profileArtworkUrl(): String? =
@@ -2185,16 +2329,6 @@ private suspend fun profileFetchPosterMetadata(type: String?, id: String?): Pair
     }
 
     return artwork to releaseInfo
-}
-
-private fun profileCachedArtworkUrl(type: String?, id: String?): String? {
-    for ((lookupType, lookupId) in profileMetaLookupCandidates(type, id)) {
-        MetaDetailsRepository.peek(type = lookupType, id = lookupId)
-            .profileMetaArtworkUrl()
-            ?.let { return it }
-    }
-
-    return null
 }
 
 private fun MetaDetails?.profileMetaArtworkUrl(): String? =
@@ -2256,10 +2390,6 @@ private fun WatchProgressEntry.profileActivityKey(): String? {
     return "$kind:$contentId:${seasonNumber ?: -1}:${episodeNumber ?: -1}"
 }
 
-private fun WatchedItem.profileTrackableActivityKey(): String? = profileActivityKey()
-
-private fun WatchProgressEntry.profileTrackableActivityKey(): String? = profileActivityKey()
-
 private fun WatchedItem.isProfileTrackableActivity(): Boolean {
     val kind = type.profileCompletedContentKind() ?: return false
     return kind == "movie" || (kind == "series" && season != null && episode != null)
@@ -2268,25 +2398,6 @@ private fun WatchedItem.isProfileTrackableActivity(): Boolean {
 private fun WatchProgressEntry.isProfileTrackableActivity(): Boolean {
     val kind = parentMetaType.profileCompletedContentKind() ?: return false
     return kind == "movie" || (kind == "series" && seasonNumber != null && episodeNumber != null)
-}
-
-private fun WatchedItem.profileEstimatedDurationMs(): Long {
-    val kind = type.profileCompletedContentKind() ?: return 0L
-    val meta = profileCachedMeta(type, id)
-    val minutes = when {
-        kind == "movie" && season == null && episode == null ->
-            meta?.runtime?.let(::profileParseRuntimeMinutes)?.toLong()
-                ?: ProfileInsightsFallbackMovieMinutes
-        kind == "series" && season != null && episode != null ->
-            meta?.videos
-                ?.firstOrNull { video -> video.season == season && video.episode == episode }
-                ?.runtime
-                ?.takeIf { runtime -> runtime > 0 }
-                ?.toLong()
-                ?: ProfileInsightsFallbackEpisodeMinutes
-        else -> return 0L
-    }
-    return minutes * ProfileInsightsMinuteMs
 }
 
 private fun profileFallbackDurationMs(kind: String?, isEpisode: Boolean): Long = when {
@@ -2325,18 +2436,8 @@ private fun profileParseRuntimeMinutes(value: String?): Int? {
         ?.coerceAtLeast(0)
 }
 
-private const val PROFILE_GENRE_HYDRATION_LIMIT = 60
-
-private class ProfileWatchedTitleGenres(
-    val segments: List<ProfileTasteSegment>,
-    val missingTitles: List<Pair<String, String>>,
-)
-
-private fun buildProfileWatchedTitleGenres(
-    typeBalance: ProfileTypeBalance,
-    libraryItems: List<LibraryItem>,
-): ProfileWatchedTitleGenres {
-    val libraryGenresByKey = libraryItems
+private fun profileLibraryGenresByKey(libraryItems: List<LibraryItem>): Map<String, List<String>> =
+    libraryItems
         .mapNotNull { item ->
             val kind = item.type.profileCompletedContentKind() ?: return@mapNotNull null
             val genres = item.genres.profileCleanGenres()
@@ -2344,27 +2445,25 @@ private fun buildProfileWatchedTitleGenres(
         }
         .toMap()
 
-    val titles = typeBalance.movieTitleIds.map { "movie" to it } +
-        typeBalance.seriesTitleIds.map { "series" to it }
-    val missing = mutableListOf<Pair<String, String>>()
-    val counts = mutableMapOf<String, Int>()
-    titles.forEach { (kind, id) ->
-        val genres = libraryGenresByKey["$kind:$id"]
-            ?: profileCachedMeta(kind, id)?.genres?.profileCleanGenres()?.takeIf { it.isNotEmpty() }
-        if (genres == null) {
-            missing += kind to id
-            return@forEach
-        }
+private fun buildProfileWatchedTitleGenreSegments(
+    titleKeys: List<String>,
+    libraryGenresByKey: Map<String, List<String>>,
+    facts: Map<String, ProfileTitleFacts>,
+): List<ProfileTasteSegment> {
+    val counts = HashMap<String, Int>()
+    titleKeys.forEach { key ->
+        val genres = libraryGenresByKey[key]
+            ?: facts[key]?.genres?.takeIf { it.isNotEmpty() }
+            ?: return@forEach
         genres.forEach { genre -> counts[genre] = (counts[genre] ?: 0) + 1 }
     }
 
     val total = counts.values.sum().coerceAtLeast(1)
-    val segments = counts.toList()
+    return counts.toList()
         .sortedByDescending { (_, count) -> count }
         .map { (genre, count) ->
             ProfileTasteSegment(label = genre, share = count.toFloat() / total.toFloat())
         }
-    return ProfileWatchedTitleGenres(segments = segments, missingTitles = missing)
 }
 
 private fun List<String>.profileCleanGenres(): List<String> =
@@ -2372,17 +2471,107 @@ private fun List<String>.profileCleanGenres(): List<String> =
         .filter { genre -> genre.isNotBlank() }
         .distinctBy { genre -> genre.lowercase() }
 
-private suspend fun profileHydrateGenreMeta(kind: String, id: String): Boolean {
-    for ((lookupType, lookupId) in profileMetaLookupCandidates(kind, id)) {
-        val meta = MetaDetailsRepository.peek(type = lookupType, id = lookupId)
-            ?: runCatching { MetaDetailsRepository.fetch(type = lookupType, id = lookupId) }
-                .onFailure { error ->
-                    profileInsightsLog.w(error) { "Failed to hydrate genres for $lookupType/$lookupId" }
-                }
-                .getOrNull()
-        if (meta != null) return meta.genres.isNotEmpty()
+private class ProfileTitleFacts(
+    val genres: List<String>,
+    val runtimeMinutes: Int?,
+    val episodeRuntimeMinutes: Map<Long, Int>,
+)
+
+private fun profileEpisodeKey(season: Int, episode: Int): Long =
+    (season.toLong() shl 32) or (episode.toLong() and 0xFFFFFFFFL)
+
+private fun MetaDetails.toProfileTitleFacts(): ProfileTitleFacts =
+    ProfileTitleFacts(
+        genres = genres.profileCleanGenres(),
+        runtimeMinutes = profileParseRuntimeMinutes(runtime)?.takeIf { minutes -> minutes > 0 },
+        episodeRuntimeMinutes = buildMap {
+            videos.forEach { video ->
+                val season = video.season ?: return@forEach
+                val episode = video.episode ?: return@forEach
+                val minutes = video.runtime?.takeIf { it > 0 } ?: return@forEach
+                val key = profileEpisodeKey(season, episode)
+                if (key !in this) put(key, minutes)
+            }
+        },
+    )
+
+private fun String.profileSplitTitleKey(): Pair<String, String>? {
+    val kind = substringBefore(':', missingDelimiterValue = "").takeIf { it.isNotBlank() } ?: return null
+    val id = substringAfter(':', missingDelimiterValue = "").takeIf { it.isNotBlank() } ?: return null
+    return kind to id
+}
+
+private object ProfileTitleFactsStore {
+    private const val FETCH_CONCURRENCY = 4
+    private const val PUBLISH_BATCH_SIZE = 8
+    private const val SEED_YIELD_INTERVAL = 48
+
+    private val _facts = MutableStateFlow<Map<String, ProfileTitleFacts>>(emptyMap())
+    val facts: StateFlow<Map<String, ProfileTitleFacts>> = _facts.asStateFlow()
+
+    private val attemptedFetchKeys = mutableSetOf<String>()
+
+    suspend fun hydrate(request: ProfileTitleHydrationRequest) {
+        seedFromMetaCache(request.seedKeys)
+        fetchMissingGenres(request.genreTargetKeys)
     }
-    return false
+
+    private suspend fun seedFromMetaCache(keys: List<String>) {
+        val pending = mutableMapOf<String, ProfileTitleFacts>()
+        keys.forEachIndexed { index, key ->
+            if (index > 0 && index % SEED_YIELD_INTERVAL == 0) yield()
+            if (key in _facts.value) return@forEachIndexed
+            val (kind, id) = key.profileSplitTitleKey() ?: return@forEachIndexed
+            profileCachedMeta(kind, id)?.let { meta -> pending[key] = meta.toProfileTitleFacts() }
+        }
+        publish(pending)
+    }
+
+    private suspend fun fetchMissingGenres(keys: List<String>) {
+        val targets = keys.filter { key ->
+            key !in attemptedFetchKeys && _facts.value[key]?.genres.isNullOrEmpty()
+        }
+        if (targets.isEmpty()) return
+        val pending = mutableMapOf<String, ProfileTitleFacts>()
+        val permits = Semaphore(FETCH_CONCURRENCY)
+        try {
+            coroutineScope {
+                targets.forEach { key ->
+                    launch {
+                        permits.withPermit {
+                            val (kind, id) = key.profileSplitTitleKey() ?: return@withPermit
+                            if (!attemptedFetchKeys.add(key)) return@withPermit
+                            var settled = false
+                            try {
+                                val meta = MetaDetailsRepository.fetch(type = kind, id = id, cacheResult = false)
+                                settled = true
+                                if (meta != null) {
+                                    pending[key] = meta.toProfileTitleFacts()
+                                    if (pending.size >= PUBLISH_BATCH_SIZE) publish(pending)
+                                }
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: Throwable) {
+                                settled = true
+                                profileInsightsLog.w(error) { "Failed to hydrate title facts for $kind/$id" }
+                            } finally {
+                                // Cancelled mid-flight (e.g. the tab was left): allow a retry next time.
+                                if (!settled) attemptedFetchKeys.remove(key)
+                            }
+                        }
+                    }
+                }
+            }
+        } finally {
+            publish(pending)
+        }
+    }
+
+    private fun publish(pending: MutableMap<String, ProfileTitleFacts>) {
+        if (pending.isEmpty()) return
+        _facts.value = _facts.value + pending
+        pending.clear()
+    }
 }
 
 private fun buildProfileTasteDnaChips(
@@ -2547,7 +2736,6 @@ private data class ProfileInsightsStats(
     val topGenre: String?,
     val topType: String?,
     val tasteSegments: List<ProfileTasteSegment>,
-    val genreLookupMisses: List<Pair<String, String>> = emptyList(),
     val movieShare: Float,
     val movieWatchTimeShare: Float? = null,
     val typeBalanceLabel: ProfileTasteBalanceLabel,

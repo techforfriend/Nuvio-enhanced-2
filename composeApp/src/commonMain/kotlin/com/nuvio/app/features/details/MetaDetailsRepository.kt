@@ -193,10 +193,12 @@ object MetaDetailsRepository {
         val currentMeta = _uiState.value.meta?.takeIf { it.type == type && it.id == id }
         if (currentMeta != null) return currentMeta
 
-        val metaScreenSettingsFingerprint = buildMetaScreenSettingsFingerprint(MdbListSettingsRepository.snapshot())
         val cachedEntry = cachedMetaByRequestKey[requestKey] ?: return null
         val cachedMeta = cachedEntry.metaScreenMeta
-            ?.takeIf { cachedEntry.metaScreenSettingsFingerprint == metaScreenSettingsFingerprint }
+            ?.takeIf {
+                cachedEntry.metaScreenSettingsFingerprint ==
+                    buildMetaScreenSettingsFingerprint(MdbListSettingsRepository.snapshot())
+            }
             ?: cachedEntry.baseMeta
         return cachedMeta.withUnreleasedFilter()
     }
@@ -258,7 +260,7 @@ object MetaDetailsRepository {
             val payload = fetchAddonResponseText(url)
             log.d { "Raw payload length=${payload.length}, first 500 chars: ${payload.take(500)}" }
             InAppLogger.debug("Metadata/AddonFetch", "Meta payload length=${payload.length} type=$type id=$id")
-            val result = MetaDetailsParser.parse(payload)
+            val result = withContext(Dispatchers.Default) { MetaDetailsParser.parse(payload) }
             val tmdbEnriched = withTimeoutOrNull(TMDB_ENRICH_TIMEOUT_MS) {
                 TmdbMetadataService.enrichMeta(
                     meta = result,
