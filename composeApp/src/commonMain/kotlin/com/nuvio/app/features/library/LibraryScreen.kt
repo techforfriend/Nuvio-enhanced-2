@@ -2526,6 +2526,18 @@ private object LibraryReleaseCalendarCache {
         job.join()
     }
 
+    suspend fun clearAndRebuild() {
+        warmJob?.cancel()
+        monthJob?.cancel()
+        resetRetry()
+        seriesRefetchedAtEpochMs.clear()
+        lastForcedRefreshAtEpochMs = 0L
+        lastRetryAtEpochMs = 0L
+        _state.value = LibraryReleaseCalendarCacheState()
+        withContext(Dispatchers.Default) { LibraryReleaseScheduleStorage.savePayload("") }
+        lastItems.takeIf { it.isNotEmpty() }?.let { items -> requestWarm(items) }
+    }
+
     suspend fun retryFailed(items: List<LibraryItem>) {
         if (items.isEmpty()) return
         lastItems = items
@@ -2798,6 +2810,10 @@ private fun List<LibraryCalendarEvent>.withoutSupersededFallbacks(
 
 internal fun refreshLibraryReleaseScheduleIfStale() {
     LibraryReleaseCalendarCache.refreshIfStale()
+}
+
+internal suspend fun clearLibraryReleaseScheduleCache() {
+    LibraryReleaseCalendarCache.clearAndRebuild()
 }
 
 internal suspend fun forceRefreshLibraryReleaseSchedule(items: List<LibraryItem>) {

@@ -21,15 +21,24 @@ import com.nuvio.app.core.ui.DialogButtonStyle
 import com.nuvio.app.core.ui.DialogSurface
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.features.details.MetaDetailsRepository
+import com.nuvio.app.features.library.clearLibraryReleaseScheduleCache
 import com.nuvio.app.features.profiles.ProfileRepository
+import com.nuvio.app.features.watched.WatchedClock
 import com.nuvio.app.features.watchprogress.ContinueWatchingEnrichmentCache
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
 import nuvio.composeapp.generated.resources.settings_advanced_clear_cw_cache
 import nuvio.composeapp.generated.resources.settings_advanced_clear_cw_cache_done
 import nuvio.composeapp.generated.resources.settings_advanced_clear_cw_cache_subtitle
+import nuvio.composeapp.generated.resources.settings_advanced_clear_metadata_cache
+import nuvio.composeapp.generated.resources.settings_advanced_clear_metadata_cache_done
+import nuvio.composeapp.generated.resources.settings_advanced_clear_metadata_cache_subtitle
 import nuvio.composeapp.generated.resources.settings_advanced_debug_logs
 import nuvio.composeapp.generated.resources.settings_advanced_debug_logs_description
 import nuvio.composeapp.generated.resources.settings_advanced_remember_last_profile
@@ -141,6 +150,22 @@ internal fun LazyListScope.advancedSettingsContent(
                         }
                     },
                 )
+                var metadataCleared by rememberSaveable { mutableStateOf(MetadataCacheClearer.recentlyCleared()) }
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.settings_advanced_clear_metadata_cache),
+                    description = if (metadataCleared) {
+                        stringResource(Res.string.settings_advanced_clear_metadata_cache_done)
+                    } else {
+                        stringResource(Res.string.settings_advanced_clear_metadata_cache_subtitle)
+                    },
+                    isTablet = isTablet,
+                    onClick = {
+                        if (!metadataCleared && !MetadataCacheClearer.recentlyCleared()) {
+                            metadataCleared = true
+                            MetadataCacheClearer.clear()
+                        }
+                    },
+                )
             }
         }
     }
@@ -157,6 +182,25 @@ internal fun LazyListScope.advancedSettingsContent(
                     onClick = onDebugLogsClick,
                 )
             }
+        }
+    }
+}
+
+private object MetadataCacheClearer {
+    private const val COOLDOWN_MS = 5L * 60_000L
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var lastClearedAtEpochMs = 0L
+
+    fun recentlyCleared(): Boolean =
+        lastClearedAtEpochMs != 0L && WatchedClock.nowEpochMs() - lastClearedAtEpochMs < COOLDOWN_MS
+
+    fun clear() {
+        if (recentlyCleared()) return
+        lastClearedAtEpochMs = WatchedClock.nowEpochMs()
+        MetaDetailsRepository.clearCachedMetadata()
+        scope.launch {
+            clearProfileInsightTitleFacts()
+            clearLibraryReleaseScheduleCache()
         }
     }
 }

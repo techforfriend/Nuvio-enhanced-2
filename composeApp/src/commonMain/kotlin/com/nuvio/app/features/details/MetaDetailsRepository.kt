@@ -205,6 +205,10 @@ object MetaDetailsRepository {
         return cachedMeta.withUnreleasedFilter()
     }
 
+    fun clearCachedMetadata() {
+        cachedMetaByRequestKey.clear()
+    }
+
     fun clear() {
         activeRequestKey = null
         cachedMetaByRequestKey.clear()
