@@ -1,5 +1,14 @@
 package com.nuvio.app.features.ratings
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -33,12 +42,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -46,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
+import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.core.ui.nuvioSafeBottomPadding
 import com.nuvio.app.features.tracking.TRACKING_RATING_MAX
@@ -53,6 +66,7 @@ import com.nuvio.app.features.tracking.TRACKING_RATING_MIN
 import com.nuvio.app.features.tracking.TrackingProviderId
 import com.nuvio.app.features.tracking.TrackingProviderRegistry
 import com.nuvio.app.features.tracking.TrackingRatingTarget
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.user_rating_last_failed
@@ -64,6 +78,8 @@ import nuvio.composeapp.generated.resources.user_rating_sync_to
 import nuvio.composeapp.generated.resources.user_rating_syncs_with
 import nuvio.composeapp.generated.resources.user_rating_value
 import org.jetbrains.compose.resources.stringResource
+
+private const val RATING_SETTLE_MS = 560L
 
 /** Observes the current personal rating of [target], loading it on first use. */
 @Composable
@@ -178,6 +194,22 @@ fun UserRatingContent(
     val enabled = providers.filterNot { it in state.disabledProviders }
     val entry = state.entries[UserRatingsRepository.entryKey(target)] ?: UserRatingEntry()
     val current = entry.ratingFor(enabled)
+    val scope = rememberCoroutineScope()
+    var previewRating by remember { mutableStateOf<Int?>(null) }
+    var settling by remember { mutableStateOf(false) }
+    val displayed = previewRating ?: current
+    val canEdit = enabled.isNotEmpty() && !entry.isSaving && !settling
+
+    fun commitRating(rating: Int) {
+        if (!canEdit) return
+        settling = true
+        previewRating = rating
+        UserRatingsRepository.rate(target, rating)
+        scope.launch {
+            delay(RATING_SETTLE_MS)
+            onDone()
+        }
+    }
 
     Column(
         modifier = modifier,
@@ -205,33 +237,51 @@ fun UserRatingContent(
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(
-                imageVector = if (current != null) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                imageVector = if (displayed != null) Icons.Rounded.Star else Icons.Rounded.StarBorder,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(28.dp),
             )
-            Text(
-                text = when {
-                    current != null -> stringResource(Res.string.user_rating_value, current)
-                    entry.isLoading -> stringResource(Res.string.user_rating_loading)
-                    else -> stringResource(Res.string.user_rating_not_rated)
+            AnimatedContent(
+                targetState = Triple(displayed, entry.isLoading, settling),
+                transitionSpec = {
+                    (fadeIn(tween(NuvioTokens.Motion.fastMillis)) +
+                        scaleIn(initialScale = 0.86f, animationSpec = tween(NuvioTokens.Motion.fastMillis))) togetherWith
+                        (fadeOut(tween(120)) + scaleOut(targetScale = 0.92f, animationSpec = tween(120)))
                 },
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+                label = "user_rating_value_text",
+            ) { (value, loading, _) ->
+                Text(
+                    text = when {
+                        value != null -> stringResource(Res.string.user_rating_value, value)
+                        loading -> stringResource(Res.string.user_rating_loading)
+                        else -> stringResource(Res.string.user_rating_not_rated)
+                    },
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
             if (entry.isLoading || entry.isSaving) {
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
             }
         }
 
-        UserRatingScale(
-            selected = current,
-            enabled = enabled.isNotEmpty() && !entry.isSaving,
-            onSelect = { rating ->
-                UserRatingsRepository.rate(target, rating)
-                onDone()
+        UserRatingStarPicker(
+            selected = displayed,
+            enabled = canEdit,
+            onSelect = ::commitRating,
+            onPreview = { value ->
+                if (value != null) previewRating = value
             },
+            modifier = Modifier.fillMaxWidth(),
+            starSize = 46.dp,
+        )
+
+        UserRatingScale(
+            selected = displayed,
+            enabled = canEdit,
+            onSelect = ::commitRating,
         )
 
         when {
@@ -289,7 +339,7 @@ fun UserRatingContent(
                     UserRatingsRepository.remove(target)
                     onDone()
                 },
-                enabled = !entry.isSaving,
+                enabled = !entry.isSaving && !settling,
             ) {
                 Text(
                     text = stringResource(Res.string.user_rating_remove),
@@ -314,10 +364,19 @@ private fun UserRatingScale(
             val filled = selected != null && value <= selected
             val isSelected = value == selected
             val label = stringResource(Res.string.user_rating_value, value)
+            val scale by animateFloatAsState(
+                targetValue = if (isSelected) 1.08f else 1f,
+                animationSpec = spring(dampingRatio = 0.52f, stiffness = 520f),
+                label = "rating_chip_scale_$value",
+            )
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .aspectRatio(1f)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    }
                     .clip(CircleShape)
                     .background(
                         when {
