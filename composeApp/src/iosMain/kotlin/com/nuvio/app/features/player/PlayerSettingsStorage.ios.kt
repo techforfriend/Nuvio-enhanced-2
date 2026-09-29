@@ -56,6 +56,7 @@ actual object PlayerSettingsStorage {
     private const val decoderPriorityKey = "decoder_priority"
     private const val mapDV7ToHevcKey = "map_dv7_to_hevc"
     private const val tunnelingEnabledKey = "tunneling_enabled"
+    // Device memory and disk cache follow this phone, so these stay out of profile sync.
     private const val exoNativeMemoryEnabledKey = "exo_native_memory_enabled"
     private const val vodCacheEnabledKey = "vod_cache_enabled"
     private const val vodCacheSizeModeKey = "vod_cache_size_mode"
@@ -142,17 +143,6 @@ actual object PlayerSettingsStorage {
         decoderPriorityKey,
         mapDV7ToHevcKey,
         tunnelingEnabledKey,
-        exoNativeMemoryEnabledKey,
-        vodCacheEnabledKey,
-        vodCacheSizeModeKey,
-        vodCacheSizeMbKey,
-        bufferEngineEnabledKey,
-        minBufferMsKey,
-        maxBufferMsKey,
-        bufferForPlaybackMsKey,
-        bufferForPlaybackAfterRebufferMsKey,
-        backBufferDurationMsKey,
-        targetBufferSizeMbKey,
         streamAutoPlayModeKey,
         streamAutoPlaySourceKey,
         streamAutoPlaySelectedAddonsKey,
@@ -1120,17 +1110,6 @@ actual object PlayerSettingsStorage {
         loadDecoderPriority()?.let { put(decoderPriorityKey, encodeSyncInt(it)) }
         loadMapDV7ToHevc()?.let { put(mapDV7ToHevcKey, encodeSyncBoolean(it)) }
         loadTunnelingEnabled()?.let { put(tunnelingEnabledKey, encodeSyncBoolean(it)) }
-        loadExoNativeMemoryEnabled()?.let { put(exoNativeMemoryEnabledKey, encodeSyncBoolean(it)) }
-        loadVodCacheEnabled()?.let { put(vodCacheEnabledKey, encodeSyncBoolean(it)) }
-        loadVodCacheSizeMode()?.let { put(vodCacheSizeModeKey, encodeSyncString(it)) }
-        loadVodCacheSizeMb()?.let { put(vodCacheSizeMbKey, encodeSyncInt(it)) }
-        loadBufferEngineEnabled()?.let { put(bufferEngineEnabledKey, encodeSyncBoolean(it)) }
-        loadMinBufferMs()?.let { put(minBufferMsKey, encodeSyncInt(it)) }
-        loadMaxBufferMs()?.let { put(maxBufferMsKey, encodeSyncInt(it)) }
-        loadBufferForPlaybackMs()?.let { put(bufferForPlaybackMsKey, encodeSyncInt(it)) }
-        loadBufferForPlaybackAfterRebufferMs()?.let { put(bufferForPlaybackAfterRebufferMsKey, encodeSyncInt(it)) }
-        loadBackBufferDurationMs()?.let { put(backBufferDurationMsKey, encodeSyncInt(it)) }
-        loadTargetBufferSizeMb()?.let { put(targetBufferSizeMbKey, encodeSyncInt(it)) }
         loadStreamAutoPlayMode()?.let { put(streamAutoPlayModeKey, encodeSyncString(it)) }
         loadStreamAutoPlaySource()?.let { put(streamAutoPlaySourceKey, encodeSyncString(it)) }
         loadStreamAutoPlaySelectedAddons()?.let { put(streamAutoPlaySelectedAddonsKey, encodeSyncStringSet(it)) }
@@ -1210,17 +1189,6 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncInt(decoderPriorityKey)?.let(::saveDecoderPriority)
         payload.decodeSyncBoolean(mapDV7ToHevcKey)?.let(::saveMapDV7ToHevc)
         payload.decodeSyncBoolean(tunnelingEnabledKey)?.let(::saveTunnelingEnabled)
-        payload.decodeSyncBoolean(exoNativeMemoryEnabledKey)?.let(::saveExoNativeMemoryEnabled)
-        payload.decodeSyncBoolean(vodCacheEnabledKey)?.let(::saveVodCacheEnabled)
-        payload.decodeSyncString(vodCacheSizeModeKey)?.let(::saveVodCacheSizeMode)
-        payload.decodeSyncInt(vodCacheSizeMbKey)?.let(::saveVodCacheSizeMb)
-        payload.decodeSyncBoolean(bufferEngineEnabledKey)?.let(::saveBufferEngineEnabled)
-        payload.decodeSyncInt(minBufferMsKey)?.let(::saveMinBufferMs)
-        payload.decodeSyncInt(maxBufferMsKey)?.let(::saveMaxBufferMs)
-        payload.decodeSyncInt(bufferForPlaybackMsKey)?.let(::saveBufferForPlaybackMs)
-        payload.decodeSyncInt(bufferForPlaybackAfterRebufferMsKey)?.let(::saveBufferForPlaybackAfterRebufferMs)
-        payload.decodeSyncInt(backBufferDurationMsKey)?.let(::saveBackBufferDurationMs)
-        payload.decodeSyncInt(targetBufferSizeMbKey)?.let(::saveTargetBufferSizeMb)
         payload.decodeSyncString(streamAutoPlayModeKey)?.let(::saveStreamAutoPlayMode)
         payload.decodeSyncString(streamAutoPlaySourceKey)?.let(::saveStreamAutoPlaySource)
         payload.decodeSyncStringSet(streamAutoPlaySelectedAddonsKey)?.let(::saveStreamAutoPlaySelectedAddons)
