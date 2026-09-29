@@ -131,7 +131,13 @@ import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import com.nuvio.app.features.watchprogress.WatchProgressUiState
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.roundToInt
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -141,6 +147,9 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -269,6 +278,9 @@ private fun ProfileInsightsBody(
     }
     val activeCore = core?.takeIf { snapshot -> snapshot.profileIndex == activeProfileIndex }
     val titleFacts by ProfileTitleFactsStore.facts.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) {
+        ProfileTitleFactsStore.ensureLoaded()
+    }
     val resolvedStats by produceState(
         ProfileInsightsSnapshotCache.statsFor(activeCore),
         activeCore,
@@ -2475,12 +2487,17 @@ private class ProfileTitleFacts(
     val genres: List<String>,
     val runtimeMinutes: Int?,
     val episodeRuntimeMinutes: Map<Long, Int>,
+    val resolvedAtEpochMs: Long,
 )
 
 private fun profileEpisodeKey(season: Int, episode: Int): Long =
     (season.toLong() shl 32) or (episode.toLong() and 0xFFFFFFFFL)
 
-private fun MetaDetails.toProfileTitleFacts(): ProfileTitleFacts =
+private fun profileEpisodeKeySeason(key: Long): Int = (key shr 32).toInt()
+
+private fun profileEpisodeKeyEpisode(key: Long): Int = key.toInt()
+
+private fun MetaDetails.toProfileTitleFacts(resolvedAtEpochMs: Long): ProfileTitleFacts =
     ProfileTitleFacts(
         genres = genres.profileCleanGenres(),
         runtimeMinutes = profileParseRuntimeMinutes(runtime)?.takeIf { minutes -> minutes > 0 },
@@ -2493,6 +2510,7 @@ private fun MetaDetails.toProfileTitleFacts(): ProfileTitleFacts =
                 if (key !in this) put(key, minutes)
             }
         },
+        resolvedAtEpochMs = resolvedAtEpochMs,
     )
 
 private fun String.profileSplitTitleKey(): Pair<String, String>? {
@@ -2501,35 +2519,117 @@ private fun String.profileSplitTitleKey(): Pair<String, String>? {
     return kind to id
 }
 
+@Serializable
+private data class StoredProfileTitleFacts(
+    @SerialName("v") val version: Int = PROFILE_TITLE_FACTS_STORAGE_VERSION,
+    @SerialName("t") val titles: Map<String, StoredProfileTitle> = emptyMap(),
+    @SerialName("f") val failures: Map<String, Long> = emptyMap(),
+)
+
+@Serializable
+private data class StoredProfileTitle(
+    @SerialName("g") val genres: List<String> = emptyList(),
+    @SerialName("r") val runtimeMinutes: Int? = null,
+    @SerialName("e") val episodeRuntimes: List<Int> = emptyList(),
+    @SerialName("a") val resolvedAtEpochMs: Long = 0L,
+)
+
+private const val PROFILE_TITLE_FACTS_STORAGE_VERSION = 1
+
+private fun ProfileTitleFacts.toStored(): StoredProfileTitle =
+    StoredProfileTitle(
+        genres = genres,
+        runtimeMinutes = runtimeMinutes,
+        episodeRuntimes = buildList(episodeRuntimeMinutes.size * 3) {
+            episodeRuntimeMinutes.forEach { (key, minutes) ->
+                add(profileEpisodeKeySeason(key))
+                add(profileEpisodeKeyEpisode(key))
+                add(minutes)
+            }
+        },
+        resolvedAtEpochMs = resolvedAtEpochMs,
+    )
+
+private fun StoredProfileTitle.toFacts(): ProfileTitleFacts =
+    ProfileTitleFacts(
+        genres = genres,
+        runtimeMinutes = runtimeMinutes,
+        episodeRuntimeMinutes = buildMap {
+            var index = 0
+            while (index + 2 < episodeRuntimes.size) {
+                put(profileEpisodeKey(episodeRuntimes[index], episodeRuntimes[index + 1]), episodeRuntimes[index + 2])
+                index += 3
+            }
+        },
+        resolvedAtEpochMs = resolvedAtEpochMs,
+    )
+
 private object ProfileTitleFactsStore {
     private const val FETCH_CONCURRENCY = 4
     private const val PUBLISH_BATCH_SIZE = 8
     private const val SEED_YIELD_INTERVAL = 48
+    private const val SAVE_DEBOUNCE_MS = 1_500L
+
+    private const val FACTS_MAX_AGE_MS = 30L * 24L * 60L * 60L * 1000L
+
+    private const val FAILURE_RETRY_AFTER_MS = 3L * 24L * 60L * 60L * 1000L
+
+    private val json = Json { ignoreUnknownKeys = true }
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val _facts = MutableStateFlow<Map<String, ProfileTitleFacts>>(emptyMap())
     val facts: StateFlow<Map<String, ProfileTitleFacts>> = _facts.asStateFlow()
 
+    private val failures = mutableMapOf<String, Long>()
+
     private val attemptedFetchKeys = mutableSetOf<String>()
 
+    private var loaded = false
+    private var loading: Deferred<StoredProfileTitleFacts?>? = null
+    private var saveJob: Job? = null
+
+    suspend fun ensureLoaded() {
+        if (loaded) return
+        val job = loading ?: ioScope.async { readFromDisk() }.also { loading = it }
+        val stored = job.await()
+        if (loaded) return
+        loaded = true
+        loading = null
+        if (stored == null) return
+        val restored = stored.titles.mapValues { (_, title) -> title.toFacts() }
+        _facts.value = restored + _facts.value
+        stored.failures.forEach { (key, failedAt) ->
+            if (key !in failures) failures[key] = failedAt
+        }
+    }
+
     suspend fun hydrate(request: ProfileTitleHydrationRequest) {
+        ensureLoaded()
         seedFromMetaCache(request.seedKeys)
         fetchMissingGenres(request.genreTargetKeys)
     }
 
+    private fun ProfileTitleFacts?.needsRefresh(now: Long): Boolean =
+        this == null || now - resolvedAtEpochMs > FACTS_MAX_AGE_MS
+
     private suspend fun seedFromMetaCache(keys: List<String>) {
+        val now = WatchedClock.nowEpochMs()
         val pending = mutableMapOf<String, ProfileTitleFacts>()
         keys.forEachIndexed { index, key ->
             if (index > 0 && index % SEED_YIELD_INTERVAL == 0) yield()
-            if (key in _facts.value) return@forEachIndexed
+            if (!_facts.value[key].needsRefresh(now)) return@forEachIndexed
             val (kind, id) = key.profileSplitTitleKey() ?: return@forEachIndexed
-            profileCachedMeta(kind, id)?.let { meta -> pending[key] = meta.toProfileTitleFacts() }
+            profileCachedMeta(kind, id)?.let { meta -> pending[key] = meta.toProfileTitleFacts(now) }
         }
         publish(pending)
     }
 
     private suspend fun fetchMissingGenres(keys: List<String>) {
+        val now = WatchedClock.nowEpochMs()
         val targets = keys.filter { key ->
-            key !in attemptedFetchKeys && _facts.value[key]?.genres.isNullOrEmpty()
+            key !in attemptedFetchKeys &&
+                _facts.value[key].needsRefresh(now) &&
+                failures[key]?.let { failedAt -> now - failedAt < FAILURE_RETRY_AFTER_MS } != true
         }
         if (targets.isEmpty()) return
         val pending = mutableMapOf<String, ProfileTitleFacts>()
@@ -2546,13 +2646,17 @@ private object ProfileTitleFactsStore {
                                 val meta = MetaDetailsRepository.fetch(type = kind, id = id, cacheResult = false)
                                 settled = true
                                 if (meta != null) {
-                                    pending[key] = meta.toProfileTitleFacts()
+                                    failures.remove(key)
+                                    pending[key] = meta.toProfileTitleFacts(WatchedClock.nowEpochMs())
                                     if (pending.size >= PUBLISH_BATCH_SIZE) publish(pending)
+                                } else {
+                                    recordFailure(key)
                                 }
                             } catch (error: CancellationException) {
                                 throw error
                             } catch (error: Throwable) {
                                 settled = true
+                                recordFailure(key)
                                 profileInsightsLog.w(error) { "Failed to hydrate title facts for $kind/$id" }
                             } finally {
                                 // Cancelled mid-flight (e.g. the tab was left): allow a retry next time.
@@ -2567,10 +2671,54 @@ private object ProfileTitleFactsStore {
         }
     }
 
+    private fun recordFailure(key: String) {
+        failures[key] = WatchedClock.nowEpochMs()
+        scheduleSave()
+    }
+
     private fun publish(pending: MutableMap<String, ProfileTitleFacts>) {
         if (pending.isEmpty()) return
         _facts.value = _facts.value + pending
         pending.clear()
+        scheduleSave()
+    }
+
+    private fun scheduleSave() {
+        if (!loaded) return
+        val factsSnapshot = _facts.value
+        val failuresSnapshot = failures.toMap()
+        saveJob?.cancel()
+        saveJob = ioScope.launch {
+            delay(SAVE_DEBOUNCE_MS)
+            writeToDisk(factsSnapshot, failuresSnapshot)
+        }
+    }
+
+    private fun readFromDisk(): StoredProfileTitleFacts? =
+        try {
+            ProfileTitleFactsStorage.load()
+                ?.takeIf { it.isNotBlank() }
+                ?.let { payload -> json.decodeFromString(StoredProfileTitleFacts.serializer(), payload) }
+                ?.takeIf { stored -> stored.version == PROFILE_TITLE_FACTS_STORAGE_VERSION }
+        } catch (error: Throwable) {
+            profileInsightsLog.w(error) { "Discarding unreadable profile title facts cache" }
+            null
+        }
+
+    private fun writeToDisk(
+        factsSnapshot: Map<String, ProfileTitleFacts>,
+        failuresSnapshot: Map<String, Long>,
+    ) {
+        val now = WatchedClock.nowEpochMs()
+        val stored = StoredProfileTitleFacts(
+            titles = factsSnapshot.mapValues { (_, facts) -> facts.toStored() },
+            failures = failuresSnapshot.filterValues { failedAt -> now - failedAt < FAILURE_RETRY_AFTER_MS },
+        )
+        try {
+            ProfileTitleFactsStorage.save(json.encodeToString(StoredProfileTitleFacts.serializer(), stored))
+        } catch (error: Throwable) {
+            profileInsightsLog.w(error) { "Failed to persist profile title facts cache" }
+        }
     }
 }
 
