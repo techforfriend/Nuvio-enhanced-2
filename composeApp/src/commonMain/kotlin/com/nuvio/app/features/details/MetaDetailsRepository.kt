@@ -251,8 +251,6 @@ object MetaDetailsRepository {
     private val backgroundBackoffUntilByHost = mutableMapOf<String, Long>()
 
     internal suspend fun fetchLightweight(type: String, id: String): MetaLookupOutcome {
-        cachedMetaByRequestKey["$type:$id"]?.let { cached -> return MetaLookupOutcome.Loaded(cached.baseMeta) }
-
         val metaLookupId = resolveMetaLookupId(itemId = id, itemType = type)
         val manifests = findReadyMetaManifests(type = type, id = metaLookupId)
         if (manifests.isEmpty()) {

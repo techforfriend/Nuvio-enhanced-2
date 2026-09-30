@@ -187,7 +187,7 @@ internal fun LazyListScope.advancedSettingsContent(
 }
 
 private object MetadataCacheClearer {
-    private const val COOLDOWN_MS = 5L * 60_000L
+    private const val COOLDOWN_MS = 60L * 60_000L
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var lastClearedAtEpochMs = 0L
 

@@ -330,6 +330,9 @@ private fun ProfileInsightsBody(
             key in failedFactKeys && titleFacts[key]?.genres.isNullOrEmpty()
         } ?: 0
     }
+    val factsProgress = remember(hydrationRequest, failedFactKeys, titleFacts) {
+        hydrationRequest?.let { request -> profileTitleFactsProgress(request, titleFacts, failedFactKeys) }
+    }
     val emptyCollections = remember(
         continueTitle,
         watchedTitle,
@@ -390,6 +393,7 @@ private fun ProfileInsightsBody(
             ProfileInsightsRefreshStatusRow(
                 refreshedAtEpochMs = refreshedAtByProfile[activeProfileIndex],
                 failedGenreTitleCount = failedGenreTitleCount,
+                factsProgress = factsProgress,
                 isRefreshing = isRefreshing,
                 onRefresh = ProfileInsightsRefresher::refresh,
             )
@@ -398,7 +402,7 @@ private fun ProfileInsightsBody(
                 title = stringResource(Res.string.profile_insights_section_taste),
                 isTablet = isTablet,
             ) {
-                ProfileTasteCard(stats = stats)
+                ProfileTasteCard(stats = stats, factsProgress = factsProgress)
             }
         }
     }
@@ -1169,7 +1173,10 @@ private fun ProfileInsightPosterTile(
 }
 
 @Composable
-private fun ProfileTasteCard(stats: ProfileInsightsStats) {
+private fun ProfileTasteCard(
+    stats: ProfileInsightsStats,
+    factsProgress: ProfileTitleFactsProgress? = null,
+) {
     val tokens = MaterialTheme.nuvio
     val fallbackType = when (stats.topType) {
         "movie" -> stringResource(Res.string.profile_insights_type_movie)
@@ -1235,6 +1242,19 @@ private fun ProfileTasteCard(stats: ProfileInsightsStats) {
             }
             if (stats.tasteSegments.isNotEmpty()) {
                 ProfileTasteGenreDonut(segments = stats.tasteSegments)
+                if (factsProgress != null && factsProgress.genresPending) {
+                    Text(
+                        text = stringResource(
+                            Res.string.profile_insights_genre_partial,
+                            factsProgress.genreResolved,
+                            factsProgress.genreTotal,
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.nuvio.colors.textMuted,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
             ProfileTasteBalanceBar(stats = stats)
             if (stats.dnaChips.isNotEmpty()) {
@@ -1683,7 +1703,9 @@ private class ProfileInsightsCore(
 
 private data class ProfileTitleHydrationRequest(
     val seedKeys: List<String>,
+    val genreTitleKeys: List<String>,
     val genreTargetKeys: List<String>,
+    val fetchTargetKeys: List<String>,
 )
 
 private object ProfileInsightsSnapshotCache {
@@ -1759,6 +1781,7 @@ private fun buildProfileInsightsCore(
     val movieShare = typeBalance.movieShare
     val libraryGenresByKey = profileLibraryGenresByKey(libraryItems)
     val lastActivityByTitleKey = profileLastActivityByTitleKey(watchedItems, progressEntries)
+    val trackedTitleKeys = (typeBalance.titleKeys + watchedDurationRefs.map { ref -> ref.titleKey }).distinct()
     val watchedDurationRefs = profileWatchedDurationRefs(watchedItems)
     val recentActivityCount = profileRecentActivityCount(
         watchedItems = watchedItems,
@@ -1822,10 +1845,12 @@ private fun buildProfileInsightsCore(
         progressDurationByKey = profileProgressDurationByActivityKey(progressEntries),
         watchedDurationRefs = watchedDurationRefs,
         hydrationRequest = ProfileTitleHydrationRequest(
-            seedKeys = (typeBalance.titleKeys + watchedDurationRefs.map { ref -> ref.titleKey }).distinct(),
+            seedKeys = trackedTitleKeys,
+            genreTitleKeys = typeBalance.titleKeys,
             genreTargetKeys = typeBalance.titleKeys
                 .filter { key -> key !in libraryGenresByKey }
                 .sortedByDescending { key -> lastActivityByTitleKey[key] ?: 0L },
+            fetchTargetKeys = trackedTitleKeys.sortedByDescending { key -> lastActivityByTitleKey[key] ?: 0L },
         ),
     )
 }
@@ -2530,9 +2555,21 @@ private fun buildProfileWatchedTitleGenreSegments(
         }
 }
 
+// Addons and TMDB name genres differently ("Sci-Fi" vs "Science Fiction", TV-only combined
+// genres such as "Action & Adventure"). Normalize so every device and source counts alike.
+private val profileGenreAliases = mapOf(
+    "sci-fi" to "Science Fiction",
+    "sci fi" to "Science Fiction",
+    "scifi" to "Science Fiction",
+    "science-fiction" to "Science Fiction",
+    "science fiction" to "Science Fiction",
+)
+
 private fun List<String>.profileCleanGenres(): List<String> =
-    map { genre -> genre.trim() }
+    flatMap { genre -> genre.split('&') }
+        .map { genre -> genre.trim() }
         .filter { genre -> genre.isNotBlank() }
+        .map { genre -> profileGenreAliases[genre.lowercase()] ?: genre }
         .distinctBy { genre -> genre.lowercase() }
 
 private class ProfileTitleFacts(
@@ -2540,6 +2577,9 @@ private class ProfileTitleFacts(
     val runtimeMinutes: Int?,
     val episodeRuntimeMinutes: Map<Long, Int>,
     val resolvedAtEpochMs: Long,
+    // Seeded from the shared meta cache: runtimes only. Its genres may be TMDB-enriched or
+    // localized, so it is still fetched from the addon to keep genres consistent across devices.
+    val partial: Boolean = false,
 )
 
 private fun profileEpisodeKey(season: Int, episode: Int): Long =
@@ -2549,9 +2589,12 @@ private fun profileEpisodeKeySeason(key: Long): Int = (key shr 32).toInt()
 
 private fun profileEpisodeKeyEpisode(key: Long): Int = key.toInt()
 
-private fun MetaDetails.toProfileTitleFacts(resolvedAtEpochMs: Long): ProfileTitleFacts =
+private fun MetaDetails.toProfileTitleFacts(
+    resolvedAtEpochMs: Long,
+    partial: Boolean = false,
+): ProfileTitleFacts =
     ProfileTitleFacts(
-        genres = genres.profileCleanGenres(),
+        genres = if (partial) emptyList() else genres.profileCleanGenres(),
         runtimeMinutes = profileParseRuntimeMinutes(runtime)?.takeIf { minutes -> minutes > 0 },
         episodeRuntimeMinutes = buildMap {
             videos.forEach { video ->
@@ -2563,6 +2606,7 @@ private fun MetaDetails.toProfileTitleFacts(resolvedAtEpochMs: Long): ProfileTit
             }
         },
         resolvedAtEpochMs = resolvedAtEpochMs,
+        partial = partial,
     )
 
 private fun String.profileSplitTitleKey(): Pair<String, String>? {
@@ -2586,6 +2630,7 @@ private data class StoredProfileTitle(
     @SerialName("r") val runtimeMinutes: Int? = null,
     @SerialName("e") val episodeRuntimes: List<Int> = emptyList(),
     @SerialName("a") val resolvedAtEpochMs: Long = 0L,
+    @SerialName("p") val partial: Boolean = false,
 )
 
 private const val PROFILE_TITLE_FACTS_STORAGE_VERSION = 1
@@ -2602,11 +2647,12 @@ private fun ProfileTitleFacts.toStored(): StoredProfileTitle =
             }
         },
         resolvedAtEpochMs = resolvedAtEpochMs,
+        partial = partial,
     )
 
 private fun StoredProfileTitle.toFacts(): ProfileTitleFacts =
     ProfileTitleFacts(
-        genres = genres,
+        genres = genres.profileCleanGenres(),
         runtimeMinutes = runtimeMinutes,
         episodeRuntimeMinutes = buildMap {
             var index = 0
@@ -2616,6 +2662,7 @@ private fun StoredProfileTitle.toFacts(): ProfileTitleFacts =
             }
         },
         resolvedAtEpochMs = resolvedAtEpochMs,
+        partial = partial,
     )
 
 private object ProfileTitleFactsStore {
@@ -2695,6 +2742,9 @@ private object ProfileTitleFactsStore {
         _facts.value = emptyMap()
         failures.clear()
         attemptedFetchKeys.clear()
+        // A clear should visibly start over; the clear itself is limited to once an hour.
+        budgetWindowStartedAtEpochMs = WatchedClock.nowEpochMs()
+        fetchesInWindow = 0
         syncFailedKeys()
         scheduleSave()
         lastRequest?.let { request -> mainScope.launch { hydrate(request) } }
@@ -2721,25 +2771,28 @@ private object ProfileTitleFactsStore {
         lastRequest = request
         ensureLoaded()
         seedFromMetaCache(request.seedKeys)
-        fetchMissingGenres(request.genreTargetKeys)
+        fetchMissingFacts(request.fetchTargetKeys)
     }
 
-    private fun ProfileTitleFacts?.needsRefresh(now: Long): Boolean =
+    private fun ProfileTitleFacts?.isStale(now: Long): Boolean =
         this == null || now - resolvedAtEpochMs > FACTS_MAX_AGE_MS
+
+    private fun ProfileTitleFacts?.needsFetch(now: Long): Boolean =
+        this == null || partial || isStale(now)
 
     private suspend fun seedFromMetaCache(keys: List<String>) {
         val now = WatchedClock.nowEpochMs()
         val pending = mutableMapOf<String, ProfileTitleFacts>()
         keys.forEachIndexed { index, key ->
             if (index > 0 && index % SEED_YIELD_INTERVAL == 0) yield()
-            if (!_facts.value[key].needsRefresh(now)) return@forEachIndexed
+            if (!_facts.value[key].isStale(now)) return@forEachIndexed
             val (kind, id) = key.profileSplitTitleKey() ?: return@forEachIndexed
-            profileCachedMeta(kind, id)?.let { meta -> pending[key] = meta.toProfileTitleFacts(now) }
+            profileCachedMeta(kind, id)?.let { meta -> pending[key] = meta.toProfileTitleFacts(now, partial = true) }
         }
         publish(pending)
     }
 
-    private suspend fun fetchMissingGenres(keys: List<String>) {
+    private suspend fun fetchMissingFacts(keys: List<String>) {
         val now = WatchedClock.nowEpochMs()
         if (now < pausedUntilEpochMs) {
             scheduleResume(pausedUntilEpochMs)
@@ -2751,7 +2804,7 @@ private object ProfileTitleFactsStore {
         }
         val candidates = keys.filter { key ->
             key !in attemptedFetchKeys &&
-                _facts.value[key].needsRefresh(now) &&
+                _facts.value[key].needsFetch(now) &&
                 failures[key]?.let { failedAt -> now - failedAt < FAILURE_RETRY_AFTER_MS } != true
         }
         if (candidates.isEmpty()) return
@@ -2881,6 +2934,37 @@ private object ProfileTitleFactsStore {
     }
 }
 
+// How far genre/runtime hydration has got, so partial numbers are not mistaken for final ones.
+private class ProfileTitleFactsProgress(
+    val detailsResolved: Int,
+    val detailsTotal: Int,
+    val detailsPending: Boolean,
+    val genreResolved: Int,
+    val genreTotal: Int,
+    val genresPending: Boolean,
+)
+
+private fun profileTitleFactsProgress(
+    request: ProfileTitleHydrationRequest,
+    facts: Map<String, ProfileTitleFacts>,
+    failedKeys: Set<String>,
+): ProfileTitleFactsProgress {
+    fun isFetched(key: String) = facts[key]?.partial == false
+    val detailsResolved = request.fetchTargetKeys.count(::isFetched)
+    val detailsFailed = request.fetchTargetKeys.count { key -> !isFetched(key) && key in failedKeys }
+    val genreTargets = request.genreTargetKeys.toHashSet()
+    val genreResolved = request.genreTitleKeys.count { key -> key !in genreTargets || isFetched(key) }
+    val genreFailed = request.genreTitleKeys.count { key -> key in genreTargets && !isFetched(key) && key in failedKeys }
+    return ProfileTitleFactsProgress(
+        detailsResolved = detailsResolved,
+        detailsTotal = request.fetchTargetKeys.size,
+        detailsPending = detailsResolved + detailsFailed < request.fetchTargetKeys.size,
+        genreResolved = genreResolved,
+        genreTotal = request.genreTitleKeys.size,
+        genresPending = genreResolved + genreFailed < request.genreTitleKeys.size,
+    )
+}
+
 internal suspend fun clearProfileInsightTitleFacts() {
     ProfileTitleFactsStore.clearAll()
 }
@@ -2993,6 +3077,7 @@ internal fun ProfileInsightsPullToRefresh(
 private fun ProfileInsightsRefreshStatusRow(
     refreshedAtEpochMs: Long?,
     failedGenreTitleCount: Int,
+    factsProgress: ProfileTitleFactsProgress?,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
 ) {
@@ -3032,6 +3117,19 @@ private fun ProfileInsightsRefreshStatusRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (factsProgress != null && factsProgress.detailsPending) {
+                Text(
+                    text = stringResource(
+                        Res.string.profile_insights_details_progress,
+                        factsProgress.detailsResolved,
+                        factsProgress.detailsTotal,
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = tokens.colors.textMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             if (failedGenreTitleCount > 0 && !isRefreshing) {
                 Text(
                     text = if (failedGenreTitleCount == 1) {
