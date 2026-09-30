@@ -9,6 +9,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -17,6 +19,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.layout.onSizeChanged
@@ -330,6 +333,18 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
             showP2pRebufferStats = showP2pRebufferStats,
             p2pRebufferMessage = p2pRebufferMessage,
             p2pRebufferProgress = p2pRebufferProgress,
+        )
+        SubtitleSyncByEarCard(
+            visible = showSubtitleSyncByEar,
+            subtitleDelayMs = subtitleDelayMs,
+            heardCaptured = subtitleSyncHeardPositionMs != null,
+            sawCaptured = subtitleSyncSawPositionMs != null,
+            onHeard = { captureSubtitleSyncHeard() },
+            onSaw = { captureSubtitleSyncSaw() },
+            onClose = { closeSubtitleSyncByEar() },
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 16.dp, start = horizontalSafePadding, end = horizontalSafePadding),
         )
         RenderPlayerModals(displayedPositionMs = displayedPositionMs)
     }
@@ -751,6 +766,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         onSubtitleStyleChanged = PlayerSettingsRepository::setSubtitleStyle,
         onSubtitleDelayChanged = { delayMs -> setSubtitleDelay(delayMs) },
         onSubtitleDelayReset = { setSubtitleDelay(0) },
+        onSyncByEarClick = { openSubtitleSyncByEar() },
         onAutoSyncCapture = { captureSubtitleAutoSyncTime() },
         onAutoSyncCueSelected = { cue -> applySubtitleAutoSyncCue(cue) },
         onAutoSyncReload = { loadSubtitleAutoSyncCues(force = true) },
