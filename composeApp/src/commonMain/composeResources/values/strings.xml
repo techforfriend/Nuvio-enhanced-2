@@ -607,6 +607,9 @@
     <string name="settings_advanced_clear_cw_cache">Clear Continue Watching Cache</string>
     <string name="settings_advanced_clear_cw_cache_subtitle">Remove cached Continue Watching data and refresh watch progress</string>
     <string name="settings_advanced_clear_cw_cache_done">Cache cleared</string>
+    <string name="settings_advanced_clear_metadata_cache">Clear Metadata Cache</string>
+    <string name="settings_advanced_clear_metadata_cache_subtitle">Remove cached genres, runtimes and release calendar data, then fetch them again</string>
+    <string name="settings_advanced_clear_metadata_cache_done">Cache cleared. Refreshing in the background</string>
     <string name="settings_licenses_attributions_section_app">APP LICENSE</string>
     <string name="settings_licenses_attributions_section_data">DATA &amp; SERVICES</string>
     <string name="settings_licenses_attributions_section_playback">PLAYBACK LICENSE</string>
@@ -724,7 +727,7 @@
     <string name="settings_tab_bar_behavior_auto_hide_description">Slides away when you scroll down, returns when you scroll up.</string>
     <string name="settings_tab_bar_behavior_morphed">Morphed</string>
     <string name="settings_tab_bar_behavior_morphed_description">Shrinks to a compact pill when you scroll down, expands when you scroll up.</string>
-    <string name="settings_appearance_dynamic_artwork_background_description">Tint the home screen with a soft gradient built from the featured artwork\'s colours.</string>
+    <string name="settings_appearance_dynamic_artwork_background_description">Tint the home screen with a soft gradient built from the featured artwork's colours.</string>
     <string name="settings_appearance_app_icon">App Icon</string>
     <string name="settings_appearance_app_icon_arctic_blue">Arctic Blue</string>
     <string name="settings_appearance_app_icon_android_confirmation_message">Changing to %1$s will close Nuvio. Tap OK to continue.</string>
@@ -2070,6 +2073,8 @@
     <string name="library_calendar_empty_message">Saved movies and series episodes with exact dates will appear here.</string>
     <string name="library_calendar_empty_title">No calendar dates found</string>
     <string name="library_calendar_exact_dates_only">Shows saved titles and episode releases with exact dates.</string>
+    <string name="library_calendar_failed_series">%1$d series couldn't be loaded</string>
+    <string name="library_calendar_failed_series_single">1 series couldn't be loaded</string>
     <string name="library_calendar_loading">Loading saved releases...</string>
     <string name="library_calendar_agenda">Release agenda</string>
     <string name="library_calendar_available">Available now</string>
@@ -2080,8 +2085,10 @@
     <string name="library_calendar_no_month_events">No releases in this month.</string>
     <string name="library_calendar_open">Open calendar</string>
     <string name="library_calendar_previous_month">Previous month</string>
+    <string name="library_calendar_refresh">Refresh calendar</string>
     <string name="library_calendar_release_count">%1$d releases</string>
     <string name="library_calendar_release_count_single">1 release</string>
+    <string name="library_calendar_retry">Retry</string>
     <string name="library_calendar_selected_day">%1$s releases</string>
     <string name="library_calendar_today">Today</string>
     <string name="library_calendar_title">Calendar</string>
