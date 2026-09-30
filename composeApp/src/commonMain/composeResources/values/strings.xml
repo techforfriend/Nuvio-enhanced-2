@@ -477,6 +477,14 @@
     <string name="compose_player_select_addon_subtitle_first">Select an addon subtitle first</string>
     <string name="compose_player_subs">Subs</string>
     <string name="compose_player_subtitle_delay">Subtitle Delay</string>
+    <string name="compose_player_sync_by_ear">Sync by ear</string>
+    <string name="compose_player_sync_by_ear_hint">Tap when you hear a line and when its subtitle shows, in either order.</string>
+    <string name="compose_player_sync_by_ear_heard">Heard</string>
+    <string name="compose_player_sync_by_ear_saw">Saw</string>
+    <string name="compose_player_sync_by_ear_in_sync">Now: In sync</string>
+    <string name="compose_player_sync_by_ear_offset">Now: %1$s</string>
+    <string name="compose_player_sync_by_ear_waiting_saw">Heard captured. Tap Saw when its subtitle shows.</string>
+    <string name="compose_player_sync_by_ear_waiting_heard">Saw captured. Tap Heard when you hear the line.</string>
     <string name="compose_player_subtitles">Subtitles</string>
     <string name="compose_player_text_opacity">Text Opacity</string>
     <string name="compose_player_brightness_level">Brightness %1$s</string>
