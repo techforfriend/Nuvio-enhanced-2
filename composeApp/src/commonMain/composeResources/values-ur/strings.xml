@@ -2298,7 +2298,7 @@
     <string name="player_torrent_peer_info">%1$d seeds · %2$d peers</string>
     <string name="player_torrent_buffered_status">%1$s buffered · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%</string>
     <string name="player_torrent_connecting_peers">Peers سے کنکشن ہو رہا ہے…</string>
     <string name="player_torrent_starting_engine">P2P engine شروع کیا جا رہا ہے…</string>
     <string name="player_torrent_fetching_metadata">Torrent metadata حاصل کیا جا رہا ہے…</string>

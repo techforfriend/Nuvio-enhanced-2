@@ -984,7 +984,7 @@
     <string name="settings_playback_threshold_mode_percentage">Procento</string>
     <string name="settings_playback_threshold_percentage">Prahové procento</string>
     <string name="settings_playback_threshold_percentage_description">Nouzový limit, pokud neexistuje žádná časová značka pro outro.</string>
-    <string name="settings_playback_threshold_percentage_value">%1$s%%</string>
+    <string name="settings_playback_threshold_percentage_value">%1$s%</string>
     <string name="settings_playback_timeout_instant">Okamžitě</string>
     <string name="settings_playback_timeout_seconds">%1$ss</string>
     <string name="settings_playback_timeout_unlimited">Bez omezení</string>
@@ -1321,7 +1321,7 @@
     <string name="streams_no_direct_link">Není k dispozici žádný přímý odkaz na stream</string>
     <string name="streams_no_metadata">Nejsou k dispozici žádná metadata</string>
     <string name="streams_refresh">Obnovit streamy</string>
-    <string name="streams_resume_from_percent">Pokračovat od %1$d%%</string>
+    <string name="streams_resume_from_percent">Pokračovat od %1$d%</string>
     <string name="streams_resume_from_time">Pokračovat od %1$s</string>
     <string name="streams_size">VELIKOST %1$s</string>
     <string name="streams_torrent_not_supported">Tento typ streamu není podporován</string>
@@ -1341,7 +1341,7 @@
     <string name="updates_download_failed">Stahování selhalo</string>
     <string name="updates_download_empty_body">Prázdné tělo stahování</string>
     <string name="updates_download_file_missing">Stažený soubor aktualizace chybí.</string>
-    <string name="updates_downloading_progress">Stahování %1$d%%</string>
+    <string name="updates_downloading_progress">Stahování %1$d%</string>
     <string name="updates_install_failed">Nelze spustit instalaci</string>
     <string name="updates_latest_version">Používáte nejnovější verzi.</string>
     <string name="updates_message_allow_installs">Povolte instalace aplikací pro Nuvio, pak se vraťte a pokračujte.</string>
@@ -1913,7 +1913,7 @@
     <string name="player_torrent_peer_info">%1$d seederů · %2$d peerů</string>
     <string name="player_torrent_buffered_status">%1$s uloženo do paměti (buffer) · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d peerů · %2$d seederů · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d peerů · %2$d seederů · %3$d%</string>
     <string name="player_torrent_connecting_peers">Připojování k peerům…</string>
     <string name="player_torrent_starting_engine">Spouštění enginu P2P…</string>
     <string name="player_error_failed_start_torrent">Nepodařilo se spustit torrent: %1$s</string>

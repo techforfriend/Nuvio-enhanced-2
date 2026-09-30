@@ -2260,7 +2260,7 @@ Utilizas esta función bajo tu propia responsabilidad. P2P se puede desactivar e
     <string name="player_torrent_peer_info">%1$d semillas · %2$d pares</string>
     <string name="player_torrent_buffered_status">%1$s almacenado en búfer · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d pares · %2$d semillas · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d pares · %2$d semillas · %3$d%</string>
     <string name="player_torrent_connecting_peers">Conectándose con sus compañeros...</string>
     <string name="player_torrent_starting_engine">Arrancando el motor P2P...</string>
     <string name="player_torrent_fetching_metadata">Obteniendo metadatos del torrent…</string>

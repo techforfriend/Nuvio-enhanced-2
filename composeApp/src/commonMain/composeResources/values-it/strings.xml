@@ -1923,7 +1923,7 @@
   <string name="player_torrent_peer_info">%1$d seed · %2$d peer</string>
   <string name="player_torrent_buffered_status">%1$s nel buffer · %2$s · %3$s</string>
   <string name="player_torrent_status">%1$s · %2$s</string>
-  <string name="player_torrent_stats">%1$d peer · %2$d seed · %3$d%%</string>
+  <string name="player_torrent_stats">%1$d peer · %2$d seed · %3$d%</string>
   <string name="player_torrent_connecting_peers">Connessione ai peer…</string>
   <string name="player_torrent_starting_engine">Avvio del motore P2P…</string>
   <string name="player_error_failed_start_torrent">Impossibile avviare il torrent: %1$s</string>

@@ -2209,7 +2209,7 @@
     <string name="player_torrent_peer_info">%1$d сийда · %2$d пиъра</string>
     <string name="player_torrent_buffered_status">%1$s буферирано · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d пиъра · %2$d сийда · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d пиъра · %2$d сийда · %3$d%</string>
     <string name="player_torrent_connecting_peers">Свързване с пиъри…</string>
     <string name="player_torrent_starting_engine">Стартиране на P2P двигател…</string>
     <string name="player_torrent_fetching_metadata">Извличане на торент метаданни…</string>
