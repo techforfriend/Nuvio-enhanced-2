@@ -28,7 +28,7 @@
     <string name="profile_insights_stat_library">Library</string>
     <string name="profile_insights_stat_library_caption">Titles saved to your library</string>
     <string name="profile_insights_stat_time">Watch Time</string>
-    <string name="profile_insights_stat_time_caption">Approximate time tracked, from title runtimes</string>
+    <string name="profile_insights_stat_time_caption">Approximate time tracked from title runtimes</string>
     <string name="profile_insights_stat_upcoming">Upcoming</string>
     <string name="profile_insights_stat_upcoming_caption">Saved titles with upcoming release dates</string>
 
@@ -46,7 +46,9 @@
     <string name="profile_insights_type_series">Series</string>
     <string name="profile_insights_genre_others">Others</string>
     <string name="profile_insights_genre_chart_description">Genre breakdown: %1$s</string>
-    <string name="profile_insights_type_watch_time_split">Watch time: %1$d%% movies · %2$d%% series</string>
+    <string name="profile_insights_type_watch_time_split">Watch time: %1$d% movies · %2$d% series</string>
+    <string name="profile_insights_genre_partial">Based on %1$d of %2$d titles so far</string>
+    <string name="profile_insights_details_progress">Loading title details · %1$d of %2$d</string>
     <string name="profile_insights_genre_failures">%1$d titles couldn't load genres</string>
     <string name="profile_insights_genre_failures_single">1 title couldn't load genres</string>
 
