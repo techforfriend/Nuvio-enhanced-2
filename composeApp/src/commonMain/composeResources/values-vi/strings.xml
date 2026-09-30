@@ -2299,7 +2299,7 @@
     <string name="player_torrent_peer_info">%1$d seed · %2$d peer</string>
     <string name="player_torrent_buffered_status">Đã đệm %1$s · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d peer · %2$d seed · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d peer · %2$d seed · %3$d%</string>
     <string name="player_torrent_connecting_peers">Đang kết nối tới các người dùng ngang hàng…</string>
     <string name="player_torrent_starting_engine">Đang khởi động lõi P2P…</string>
     <string name="player_torrent_fetching_metadata">Đang lấy siêu dữ liệu torrent…</string>

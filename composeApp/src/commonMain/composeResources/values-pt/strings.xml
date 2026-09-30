@@ -956,7 +956,7 @@
     <string name="settings_playback_threshold_mode_percentage">Percentagem</string>
     <string name="settings_playback_threshold_percentage">Percentagem de tolerância</string>
     <string name="settings_playback_threshold_percentage_description">Alternativa quando não existe uma marca de tempo para o final.</string>
-    <string name="settings_playback_threshold_percentage_value">%1$s%%</string>
+    <string name="settings_playback_threshold_percentage_value">%1$s%</string>
     <string name="settings_playback_timeout_instant">Instantâneo</string>
     <string name="settings_playback_timeout_seconds">%1$ss</string>
     <string name="settings_playback_timeout_unlimited">Ilimitado</string>
@@ -1291,7 +1291,7 @@
     <string name="streams_no_direct_link">Nenhum link de stream direto disponível</string>
     <string name="streams_no_metadata">Nenhum metadado disponível</string>
     <string name="streams_refresh">Atualizar streams</string>
-    <string name="streams_resume_from_percent">Retomar a partir de %1$d%%</string>
+    <string name="streams_resume_from_percent">Retomar a partir de %1$d%</string>
     <string name="streams_resume_from_time">Retomar a partir de %1$s</string>
     <string name="streams_size">TAMANHO %1$s</string>
     <string name="streams_torrent_not_supported">Este tipo de stream não é suportado</string>
@@ -1311,7 +1311,7 @@
     <string name="updates_download_failed">Falha na transferência</string>
     <string name="updates_download_empty_body">Corpo da transferência vazio</string>
     <string name="updates_download_file_missing">O ficheiro de atualização transferido está em falta.</string>
-    <string name="updates_downloading_progress">A transferir %1$d%%</string>
+    <string name="updates_downloading_progress">A transferir %1$d%</string>
     <string name="updates_install_failed">Não foi possível iniciar a instalação</string>
     <string name="updates_latest_version">Estás a utilizar a versão mais recente.</string>
     <string name="updates_message_allow_installs">Ativa a instalação de apps para o Nuvio e depois volta para continuar.</string>
@@ -1840,7 +1840,7 @@
     <string name="player_torrent_peer_info">%1$d seeds · %2$d peers</string>
     <string name="player_torrent_buffered_status">%1$s em buffer · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%</string>
     <string name="player_torrent_connecting_peers">A ligar aos peers…</string>
     <string name="player_torrent_starting_engine">A iniciar motor P2P…</string>
     <string name="player_error_failed_start_torrent">Falha ao iniciar o torrent: %1$s</string>

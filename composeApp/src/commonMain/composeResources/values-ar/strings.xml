@@ -2092,7 +2092,7 @@
     <string name="player_torrent_peer_info">%1$d Seeders · %2$d Peers</string>
     <string name="player_torrent_buffered_status">تم تخزين %1$s مؤقتًا · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d Peers · %2$d Seeders · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d Peers · %2$d Seeders · %3$d%</string>
     <string name="player_torrent_connecting_peers">جارٍ الاتصال بـ Peers…</string>
     <string name="player_torrent_starting_engine">جارٍ تشغيل محرك P2P…</string>
     <string name="player_torrent_fetching_metadata">جارٍ جلب البيانات الوصفية للتورنت…</string>

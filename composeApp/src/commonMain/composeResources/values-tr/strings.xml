@@ -2118,7 +2118,7 @@ Bu özelliği tamamen kendi sorumluluğunuzda kullanırsınız. P2P istediğiniz
     <string name="player_torrent_peer_info">%1$d seed · %2$d eş</string>
     <string name="player_torrent_buffered_status">%1$s önbelleğe alındı · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d eş · %2$d seed · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d eş · %2$d seed · %3$d%</string>
     <string name="player_torrent_connecting_peers">Eşlere bağlanılıyor…</string>
     <string name="player_torrent_starting_engine">P2P motoru başlatılıyor…</string>
     <string name="player_torrent_fetching_metadata">Torrent üst verileri alınıyor…</string>

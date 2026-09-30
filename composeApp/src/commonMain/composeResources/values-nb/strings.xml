@@ -1128,7 +1128,7 @@ Du bruker denne funksjonen helt på eget ansvar. P2P kan deaktiveres når som he
     <string name="player_torrent_peer_info">%1$d seeds · %2$d peers</string>
     <string name="player_torrent_preparing_stream">Forbereder torrent-strøm…</string>
     <string name="player_torrent_starting_engine">Starter P2P-motor…</string>
-    <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_unable_to_play_stream">Kan ikke spille denne strømmen.</string>
     <string name="player_video_settings_brightness">Lysstyrke</string>

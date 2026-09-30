@@ -718,7 +718,7 @@
     <string name="settings_playback_section_p2p">סטרימינג P2P</string>
     <string name="settings_p2p_subtitle">אפשר מקורות Stream עמית-לעמית (חינמי אך טעינה איטית).</string>
     <string name="player_torrent_peer_info">%1$d מקורות · %2$d עמיתים</string>
-    <string name="player_torrent_stats">%1$d עמיתים · %2$d מקורות · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d עמיתים · %2$d מקורות · %3$d%</string>
     <string name="player_torrent_connecting_peers">מתחבר לעמיתים\u2026</string>
     <string name="player_error_failed_start_torrent">התחלת הטורנט נכשלה: %1$s</string>
     <string name="player_error_torrent">שגיאת טורנט: %1$s</string>

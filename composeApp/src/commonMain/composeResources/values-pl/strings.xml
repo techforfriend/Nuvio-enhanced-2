@@ -1613,7 +1613,7 @@
     <string name="player_torrent_connecting_peers">Łączenie z peerami…</string>
     <string name="player_torrent_peer_info">%1$d seedów · %2$d peerów</string>
     <string name="player_torrent_starting_engine">Uruchamianie silnika P2P…</string>
-    <string name="player_torrent_stats">%1$d peerów · %2$d seedów · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d peerów · %2$d seedów · %3$d%</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_video_settings_brightness">Jasność</string>
     <string name="player_video_settings_contrast">Kontrast</string>

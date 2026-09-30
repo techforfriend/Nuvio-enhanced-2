@@ -2213,7 +2213,7 @@
     <string name="player_torrent_peer_info">%1$d сидов · %2$d пиров</string>
     <string name="player_torrent_buffered_status">%1$s буферизовано · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d пиров · %2$d сидов · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d пиров · %2$d сидов · %3$d%</string>
     <string name="player_torrent_connecting_peers">Подключение к пирам…</string>
     <string name="player_torrent_starting_engine">Запуск P2P-движка…</string>
     <string name="player_torrent_fetching_metadata">Получение метаданных торрента…</string>

@@ -1010,7 +1010,7 @@
     <string name="settings_playback_threshold_mode_percentage">Procentaj</string>
     <string name="settings_playback_threshold_percentage">Procentaj limită</string>
     <string name="settings_playback_threshold_percentage_description">Soluție de rezervă când nu există un marcaj de timp outro.</string>
-    <string name="settings_playback_threshold_percentage_value">%1$s%%</string>
+    <string name="settings_playback_threshold_percentage_value">%1$s%</string>
     <string name="settings_playback_timeout_instant">Instant</string>
     <string name="settings_playback_timeout_seconds">%1$ss</string>
     <string name="settings_playback_timeout_unlimited">Nelimitat</string>
@@ -1347,7 +1347,7 @@
     <string name="streams_no_direct_link">Niciun link direct de flux disponibil</string>
     <string name="streams_no_metadata">Nicio metadată disponibilă</string>
     <string name="streams_refresh">Reîmprospătează fluxurile</string>
-    <string name="streams_resume_from_percent">Reia de la %1$d%%</string>
+    <string name="streams_resume_from_percent">Reia de la %1$d%</string>
     <string name="streams_resume_from_time">Reia de la %1$s</string>
     <string name="streams_size">DIMENSIUNE %1$s</string>
     <string name="streams_torrent_not_supported">Acest tip de flux nu este acceptat</string>
@@ -1367,7 +1367,7 @@
     <string name="updates_download_failed">Descărcarea a eșuat</string>
     <string name="updates_download_empty_body">Corpul descărcării este gol</string>
     <string name="updates_download_file_missing">Fișierul de actualizare descărcat lipsește.</string>
-    <string name="updates_downloading_progress">Se descarcă %1$d%%</string>
+    <string name="updates_downloading_progress">Se descarcă %1$d%</string>
     <string name="updates_install_failed">Nu s-a putut porni instalarea</string>
     <string name="updates_latest_version">Utilizezi cea mai recentă versiune.</string>
     <string name="updates_message_allow_installs">Activează instalarea aplicațiilor pentru Nuvio, apoi revino și continuă.</string>
@@ -1908,7 +1908,7 @@
     <string name="player_torrent_peer_info">%1$d seeds · %2$d peers</string>
     <string name="player_torrent_buffered_status">%1$s stocați în buffer · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%</string>
     <string name="player_torrent_connecting_peers">Se conectează la peers…</string>
     <string name="player_torrent_starting_engine">Se pornește motorul P2P…</string>
     <string name="player_error_failed_start_torrent">Nu s-a putut porni torrentul: %1$s</string>

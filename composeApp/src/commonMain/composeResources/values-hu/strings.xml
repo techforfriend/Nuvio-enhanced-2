@@ -1460,7 +1460,7 @@
     <string name="settings_meta_hero_trailer_playback_description">Előzetesek automatikus lejátszása a fejlécben, ha elérhető előzetes.</string>
     <string name="community_donation_progress_title">E havi szerver- és karbantartási költségek</string>
     <string name="community_donation_progress_complete">Fedezve. A további támogatások mostantól a fejlesztésre fordítódnak.</string>
-    <string name="community_donation_progress_remaining">100%% felett a további támogatások a fejlesztésre fordítódnak.</string>
+    <string name="community_donation_progress_remaining">100% felett a további támogatások a fejlesztésre fordítódnak.</string>
     <string name="community_loading_donation_progress">Támogatási állapot betöltése…</string>
     <string name="settings_playback_external_player_forward_subtitles">Feliratok továbbítása a külső lejátszónak</string>
     <string name="settings_playback_external_player_forward_subtitles_description">Lekéri a kiegészítő feliratokat a preferált nyelveden, és átadja azokat a külső lejátszónak.</string>
@@ -1893,7 +1893,7 @@
     <string name="player_torrent_peer_info">%1$d seeder · %2$d peer</string>
     <string name="player_torrent_buffered_status">%1$s pufferelve · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d peer · %2$d seeder · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d peer · %2$d seeder · %3$d%</string>
     <string name="player_torrent_connecting_peers">Kapcsolódás a peerekhez…</string>
     <string name="player_torrent_starting_engine">P2P motor indítása…</string>
     <string name="player_error_failed_start_torrent">Nem sikerült elindítani a torrentet: %1$s</string>

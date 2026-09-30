@@ -1908,7 +1908,7 @@
     <string name="player_torrent_peer_info">%1$d シード · %2$d ピア</string>
     <string name="player_torrent_buffered_status">%1$s バッファ済み · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d ピア · %2$d シード · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d ピア · %2$d シード · %3$d%</string>
     <string name="player_torrent_connecting_peers">ピアに接続中…</string>
     <string name="player_torrent_starting_engine">P2Pエンジンを起動中…</string>
     <string name="player_error_failed_start_torrent">トレントの開始に失敗しました：%1$s</string>

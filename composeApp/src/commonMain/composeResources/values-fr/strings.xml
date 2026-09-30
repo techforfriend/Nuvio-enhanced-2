@@ -1942,7 +1942,7 @@
     <string name="player_torrent_peer_info">%1$d sources · %2$d pairs</string>
     <string name="player_torrent_buffered_status">%1$s en mémoire tampon · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d pairs · %2$d sources · %3$d %%</string>
+    <string name="player_torrent_stats">%1$d pairs · %2$d sources · %3$d %</string>
     <string name="player_torrent_connecting_peers">Connexion aux pairs…</string>
     <string name="player_torrent_starting_engine">Démarrage du moteur P2P…</string>
     <string name="player_error_failed_start_torrent">Impossible de démarrer le torrent : %1$s</string>

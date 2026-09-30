@@ -1751,7 +1751,7 @@
     <string name="player_torrent_preparing_stream">Προετοιμασία ροής torrent…</string>
     <string name="player_torrent_connecting_status">%1$s · %2$s · %3$s</string>
     <string name="player_torrent_loading_status">%1$s ληφθέντα · %2$s · %3$s</string>
-    <string name="player_torrent_stats">%1$d ομότιμοι · %2$d διαμοιραστές · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d ομότιμοι · %2$d διαμοιραστές · %3$d%</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_video_settings_brightness">Φωτεινότητα</string>
     <string name="player_video_settings_contrast">Αντίθεση</string>
