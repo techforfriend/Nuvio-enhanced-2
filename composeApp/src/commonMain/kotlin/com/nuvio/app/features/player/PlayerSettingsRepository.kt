@@ -64,6 +64,7 @@ data class PlayerSettingsUiState(
     val decoderPriority: Int = 1,
     val mapDV7ToHevc: Boolean = false,
     val tunnelingEnabled: Boolean = false,
+    val androidAudioPassthroughEnabled: Boolean = false,
     val streamAutoPlayMode: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL,
     val streamAutoPlaySource: StreamAutoPlaySource = StreamAutoPlaySource.ALL_SOURCES,
     val streamAutoPlaySelectedAddons: Set<String> = emptySet(),
@@ -138,6 +139,7 @@ object PlayerSettingsRepository {
     private var decoderPriority = 1
     private var mapDV7ToHevc = false
     private var tunnelingEnabled = false
+    private var androidAudioPassthroughEnabled = false
     private var streamAutoPlayMode = StreamAutoPlayMode.MANUAL
     private var streamAutoPlaySource = StreamAutoPlaySource.ALL_SOURCES
     private var streamAutoPlaySelectedAddons: Set<String> = emptySet()
@@ -217,6 +219,7 @@ object PlayerSettingsRepository {
         decoderPriority = 1
         mapDV7ToHevc = false
         tunnelingEnabled = false
+        androidAudioPassthroughEnabled = false
         streamAutoPlayMode = StreamAutoPlayMode.MANUAL
         streamAutoPlaySource = StreamAutoPlaySource.ALL_SOURCES
         streamAutoPlaySelectedAddons = emptySet()
@@ -325,6 +328,7 @@ object PlayerSettingsRepository {
         decoderPriority = PlayerSettingsStorage.loadDecoderPriority() ?: 1
         mapDV7ToHevc = PlayerSettingsStorage.loadMapDV7ToHevc() ?: false
         tunnelingEnabled = PlayerSettingsStorage.loadTunnelingEnabled() ?: false
+        androidAudioPassthroughEnabled = PlayerSettingsStorage.loadAndroidAudioPassthroughEnabled() ?: false
         streamAutoPlayMode = PlayerSettingsStorage.loadStreamAutoPlayMode()
             ?.let { runCatching { StreamAutoPlayMode.valueOf(it) }.getOrNull() }
             ?: StreamAutoPlayMode.MANUAL
@@ -673,6 +677,14 @@ object PlayerSettingsRepository {
         tunnelingEnabled = enabled
         publish()
         PlayerSettingsStorage.saveTunnelingEnabled(enabled)
+    }
+
+    fun setAndroidAudioPassthroughEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (androidAudioPassthroughEnabled == enabled) return
+        androidAudioPassthroughEnabled = enabled
+        publish()
+        PlayerSettingsStorage.saveAndroidAudioPassthroughEnabled(enabled)
     }
 
     fun setStreamAutoPlayMode(mode: StreamAutoPlayMode) {
@@ -1044,6 +1056,7 @@ object PlayerSettingsRepository {
             decoderPriority = decoderPriority,
             mapDV7ToHevc = mapDV7ToHevc,
             tunnelingEnabled = tunnelingEnabled,
+            androidAudioPassthroughEnabled = androidAudioPassthroughEnabled,
             streamAutoPlayMode = streamAutoPlayMode,
             streamAutoPlaySource = streamAutoPlaySource,
             streamAutoPlaySelectedAddons = streamAutoPlaySelectedAddons,

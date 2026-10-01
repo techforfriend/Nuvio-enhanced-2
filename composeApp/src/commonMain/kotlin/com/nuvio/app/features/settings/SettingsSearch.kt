@@ -681,6 +681,7 @@ internal fun settingsSearchEntries(
                 PlaybackSearchRow("decoder-priority", stringResource(Res.string.settings_playback_decoder_priority)),
                 PlaybackSearchRow("dv7-hevc", stringResource(Res.string.settings_playback_map_dv7_to_hevc), stringResource(Res.string.settings_playback_map_dv7_to_hevc_description)),
                 PlaybackSearchRow("tunneled-playback", stringResource(Res.string.settings_playback_tunneled_playback), stringResource(Res.string.settings_playback_tunneled_playback_description)),
+                PlaybackSearchRow("audio-passthrough", stringResource(Res.string.settings_playback_audio_passthrough), stringResource(Res.string.settings_playback_audio_passthrough_description)),
             ),
         )
         addPlaybackRows(

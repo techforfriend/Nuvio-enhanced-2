@@ -1378,6 +1378,8 @@
     <string name="settings_playback_timeout_seconds">%1$ss</string>
     <string name="settings_playback_timeout_unlimited">Unlimited</string>
     <string name="settings_playback_tunneled_playback">Tunneled Playback</string>
+    <string name="settings_playback_audio_passthrough">Audio Passthrough</string>
+    <string name="settings_playback_audio_passthrough_description">Send Dolby and DTS audio undecoded to a soundbar or AV receiver. Leave off on phones: volume boost and dialogue-friendly stereo downmix only work when the app decodes audio</string>
     <string name="settings_playback_tunneled_playback_description">Hardware-level audio/video sync. May improve playback on some Android TV devices</string>
     <string name="settings_tmdb_api_key_label">API key</string>
     <string name="settings_tmdb_api_key_override_description">Use your own TMDB API key, or leave blank to use the default.</string>

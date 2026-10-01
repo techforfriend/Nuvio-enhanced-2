@@ -62,6 +62,7 @@ actual object PlayerSettingsStorage {
     private const val decoderPriorityKey = "decoder_priority"
     private const val mapDV7ToHevcKey = "map_dv7_to_hevc"
     private const val tunnelingEnabledKey = "tunneling_enabled"
+    private const val androidAudioPassthroughEnabledKey = "android_audio_passthrough_enabled"
     private const val streamAutoPlayModeKey = "stream_auto_play_mode"
     private const val streamAutoPlaySourceKey = "stream_auto_play_source"
     private const val streamAutoPlaySelectedAddonsKey = "stream_auto_play_selected_addons"
@@ -794,6 +795,23 @@ actual object PlayerSettingsStorage {
         preferences
             ?.edit()
             ?.putInt(ProfileScopedKey.of(decoderPriorityKey), priority)
+            ?.apply()
+    }
+
+    actual fun loadAndroidAudioPassthroughEnabled(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(androidAudioPassthroughEnabledKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, false)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveAndroidAudioPassthroughEnabled(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(androidAudioPassthroughEnabledKey), enabled)
             ?.apply()
     }
 

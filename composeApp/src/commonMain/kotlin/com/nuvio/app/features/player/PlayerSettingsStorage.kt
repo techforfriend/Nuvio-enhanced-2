@@ -89,6 +89,8 @@ internal expect object PlayerSettingsStorage {
     fun saveMapDV7ToHevc(enabled: Boolean)
     fun loadTunnelingEnabled(): Boolean?
     fun saveTunnelingEnabled(enabled: Boolean)
+    fun loadAndroidAudioPassthroughEnabled(): Boolean?
+    fun saveAndroidAudioPassthroughEnabled(enabled: Boolean)
     fun loadStreamAutoPlayMode(): String?
     fun saveStreamAutoPlayMode(mode: String)
     fun loadStreamAutoPlaySource(): String?

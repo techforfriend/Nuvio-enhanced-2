@@ -51,6 +51,7 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.TransferListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.ForwardingAudioSink
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
@@ -83,6 +84,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlin.math.abs
+import kotlin.math.exp
+import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
@@ -292,7 +296,9 @@ private fun ExoPlayerSurface(
     var initializedVideoDecoderName by remember(playerSourceKey) { mutableStateOf<String?>(null) }
     var initializedAudioDecoderName by remember(playerSourceKey) { mutableStateOf<String?>(null) }
     val effectiveDecoderPriority = decoderPriorityOverride ?: playerSettings.decoderPriority
-    val volumeBoostAudioProcessor = remember(playerSourceKey) { VolumeBoostAudioProcessor() }
+    val volumeBoostAudioProcessor = remember(playerSourceKey) {
+        PlayerOutputAudioProcessor(stereoDownmixEnabled = !playerSettings.androidAudioPassthroughEnabled)
+    }
 
     var resolvedMediaItem by remember(playerSourceKey, externalSubtitles) {
         mutableStateOf(
@@ -383,6 +389,7 @@ private fun ExoPlayerSurface(
             },
             shouldStripSdhProvider = { currentSubtitleStyle.stripSdh },
             volumeBoostAudioProcessor = volumeBoostAudioProcessor,
+            audioPassthroughEnabled = playerSettings.androidAudioPassthroughEnabled,
             videoBoundsFractionProvider = {
                 playerViewRef?.videoBoundsFraction(latestVideoAspectRatio.value)
             },
@@ -909,7 +916,7 @@ private fun ExoPlayerSurface(
                 }
 
                 override fun currentPlayerVolume(): PlayerAudioLevel {
-                    val current = volumeBoostAudioProcessor.gain.coerceIn(0f, 2f)
+                    val current = volumeBoostAudioProcessor.level.coerceIn(0f, 2f)
                     return PlayerAudioLevel(
                         fraction = current,
                         isMuted = current <= 0.001f,
@@ -923,7 +930,7 @@ private fun ExoPlayerSurface(
                     // ExoPlayer#setVolume is effectively a normal 0..1 output volume control on many devices,
                     // so values above 1 may not create audible amplification.
                     exoPlayer.volume = 1f
-                    volumeBoostAudioProcessor.gain = target
+                    volumeBoostAudioProcessor.level = target
                     return PlayerAudioLevel(
                         fraction = target,
                         isMuted = target <= 0.001f,
@@ -1497,6 +1504,8 @@ private class NuvioLibmpvView(
     @Volatile
     private var latestSnapshot = PlayerPlaybackSnapshot()
     @Volatile
+    private var libmpvVolumeLevel = 1f
+    @Volatile
     private var latestAudioTracks: List<LibmpvTrack> = emptyList()
     @Volatile
     private var latestSubtitleTracks: List<LibmpvTrack> = emptyList()
@@ -1513,6 +1522,7 @@ private class NuvioLibmpvView(
             mpv.setOptionString("vf", "format=yuv420p")
         }
         mpv.setOptionString("msg-level", "all=warn")
+        mpv.setOptionString("volume-max", "$LIBMPV_VOLUME_MAX").logIfMpvError("volume-max")
         mpv.setOptionString("tls-verify", "yes")
         mpv.setOptionString("tls-ca-file", "${context.filesDir.path}/cacert.pem")
         mpv.setOptionString("demuxer-lavf-o", "protocol_whitelist=[file,crypto,data,http,https,tcp,tls]").logIfMpvError("demuxer-lavf-o")
@@ -1888,6 +1898,24 @@ private class NuvioLibmpvView(
             override fun setMuted(muted: Boolean) {
                 InAppLogger.debug("MPV/Android", "control muted=$muted")
                 executeMpv { mpv.setPropertyBoolean("mute", muted) }
+            }
+
+            override fun currentPlayerVolume(): PlayerAudioLevel = PlayerAudioLevel(
+                fraction = libmpvVolumeLevel,
+                isMuted = libmpvVolumeLevel <= 0.001f,
+            )
+
+            override fun setPlayerVolume(level: Float): PlayerAudioLevel {
+                val target = level.coerceIn(0f, 2f)
+                libmpvVolumeLevel = target
+                val mpvVolume = (100.0 * playerBoostLinearGain(target).toDouble().pow(1.0 / 3.0))
+                    .coerceIn(0.0, LIBMPV_VOLUME_MAX.toDouble())
+                InAppLogger.debug("MPV/Android", "control volume target=$target mpvVolume=$mpvVolume")
+                executeMpv { mpv.setPropertyDouble("volume", mpvVolume) }
+                return PlayerAudioLevel(
+                    fraction = target,
+                    isMuted = target <= 0.001f,
+                )
             }
 
             override fun getAudioTracks(): List<AudioTrack> {
@@ -2852,37 +2880,137 @@ private fun ExoPlayer.logCurrentTracks(context: String) {
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)
-private class VolumeBoostAudioProcessor : BaseAudioProcessor() {
+internal fun playerBoostLinearGain(level: Float): Float {
+    val clamped = level.coerceIn(0f, 2f)
+    if (clamped <= 1f) return clamped
+    return 10f.pow((clamped - 1f) * PLAYER_MAX_BOOST_DB / 20f)
+}
+
+private const val PLAYER_MAX_BOOST_DB = 12f
+private const val LIBMPV_VOLUME_MAX = 200
+
+private class PlayerOutputAudioProcessor(
+    private val stereoDownmixEnabled: Boolean,
+) : BaseAudioProcessor() {
     @Volatile
-    var gain: Float = 1f
+    var level: Float = 1f
         set(value) {
             field = value.coerceIn(0f, 2f)
         }
 
+    private var downmix = false
+    private var limiterGain = 1f
+    private var releaseCoefficient = 0f
+    private val frame = FloatArray(MAX_CHANNELS)
+
     override fun onConfigure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat {
-        return if (inputAudioFormat.encoding == C.ENCODING_PCM_16BIT) {
-            inputAudioFormat
+        if (inputAudioFormat.encoding != C.ENCODING_PCM_16BIT) return AudioProcessor.AudioFormat.NOT_SET
+        val channels = inputAudioFormat.channelCount
+        if (channels <= 0 || channels > MAX_CHANNELS) return AudioProcessor.AudioFormat.NOT_SET
+        downmix = stereoDownmixEnabled && (channels == 6 || channels == 8)
+        releaseCoefficient = 1f - exp(-1f / (LIMITER_RELEASE_SECONDS * inputAudioFormat.sampleRate))
+        return if (downmix) {
+            AudioProcessor.AudioFormat(inputAudioFormat.sampleRate, 2, C.ENCODING_PCM_16BIT)
         } else {
-            AudioProcessor.AudioFormat.NOT_SET
+            inputAudioFormat
         }
     }
 
     override fun queueInput(inputBuffer: ByteBuffer) {
-        val inputSize = inputBuffer.remaining()
-        val outputBuffer = replaceOutputBuffer(inputSize).order(ByteOrder.nativeOrder())
+        val inputChannels = inputAudioFormat.channelCount
+        val outputChannels = outputAudioFormat.channelCount
         val input = inputBuffer.order(ByteOrder.nativeOrder())
-        val localGain = gain
+        val frames = input.remaining() / (2 * inputChannels)
+        val output = replaceOutputBuffer(frames * outputChannels * 2).order(ByteOrder.nativeOrder())
+        val gain = playerBoostLinearGain(level)
 
-        while (input.remaining() >= 2) {
-            val sample = input.short.toInt()
-            val amplified = (sample * localGain)
-                .toInt()
-                .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
-            outputBuffer.putShort(amplified.toShort())
+        if (!downmix && gain == 1f && limiterGain >= 1f) {
+            val bytes = frames * inputChannels * 2
+            val slice = input.duplicate()
+            slice.limit(slice.position() + bytes)
+            output.put(slice)
+        } else {
+            repeat(frames) {
+                if (downmix) {
+                    readFrame(input, inputChannels)
+                    downmixToStereo(inputChannels)
+                } else {
+                    readFrame(input, inputChannels)
+                }
+                var peak = 0f
+                for (channel in 0 until outputChannels) {
+                    val boosted = frame[channel] * gain
+                    frame[channel] = boosted
+                    val magnitude = abs(boosted)
+                    if (magnitude > peak) peak = magnitude
+                }
+                // Instant attack, smooth release: never exceed the ceiling, recover gradually.
+                if (peak * limiterGain > LIMITER_CEILING) {
+                    limiterGain = LIMITER_CEILING / peak
+                } else {
+                    limiterGain += (1f - limiterGain) * releaseCoefficient
+                    if (limiterGain > 0.9999f) limiterGain = 1f
+                }
+                for (channel in 0 until outputChannels) {
+                    val sample = (frame[channel] * limiterGain * Short.MAX_VALUE)
+                        .roundToInt()
+                        .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                    output.putShort(sample.toShort())
+                }
+            }
         }
 
         input.position(input.limit())
-        outputBuffer.flip()
+        output.flip()
+    }
+
+    private fun readFrame(input: ByteBuffer, channels: Int) {
+        for (channel in 0 until channels) {
+            frame[channel] = input.short / SHORT_SCALE
+        }
+    }
+
+    private fun downmixToStereo(channels: Int) {
+        val frontLeft = frame[0]
+        val frontRight = frame[1]
+        val center = frame[2]
+        var surroundLeft = frame[4]
+        var surroundRight = frame[5]
+        if (channels == 8) {
+            surroundLeft += frame[6]
+            surroundRight += frame[7]
+        }
+        frame[0] = DOWNMIX_SCALE * (frontLeft + center + SURROUND_COEFFICIENT * surroundLeft)
+        frame[1] = DOWNMIX_SCALE * (frontRight + center + SURROUND_COEFFICIENT * surroundRight)
+    }
+
+    override fun onFlush() {
+        limiterGain = 1f
+    }
+
+    override fun onReset() {
+        limiterGain = 1f
+        downmix = false
+    }
+
+    private companion object {
+        const val MAX_CHANNELS = 8
+        const val SHORT_SCALE = 32768f
+        const val LIMITER_CEILING = 0.94f
+        const val LIMITER_RELEASE_SECONDS = 0.15f
+        const val SURROUND_COEFFICIENT = 0.707f
+        const val DOWNMIX_SCALE = 0.8f
+    }
+}
+
+@androidx.annotation.OptIn(UnstableApi::class)
+private class PcmOnlyAudioSink(sink: AudioSink) : ForwardingAudioSink(sink) {
+    override fun supportsFormat(format: Format): Boolean =
+        getFormatSupport(format) != AudioSink.SINK_FORMAT_UNSUPPORTED
+
+    override fun getFormatSupport(format: Format): Int {
+        if (format.sampleMimeType != MimeTypes.AUDIO_RAW) return AudioSink.SINK_FORMAT_UNSUPPORTED
+        return super.getFormatSupport(format)
     }
 }
 
@@ -2929,7 +3057,8 @@ private class SubtitleOffsetRenderersFactory(
     private val subtitleDelayUsProvider: () -> Long,
     private val shouldNormalizeCuePositionProvider: () -> Boolean,
     private val shouldStripSdhProvider: () -> Boolean,
-    private val volumeBoostAudioProcessor: VolumeBoostAudioProcessor,
+    private val volumeBoostAudioProcessor: PlayerOutputAudioProcessor,
+    private val audioPassthroughEnabled: Boolean,
     private val videoBoundsFractionProvider: () -> RectF?,
 ) : DefaultRenderersFactory(context) {
     override fun buildAudioSink(
@@ -2937,11 +3066,12 @@ private class SubtitleOffsetRenderersFactory(
         enableFloatOutput: Boolean,
         enableAudioTrackPlaybackParams: Boolean,
     ): AudioSink? {
-        return DefaultAudioSink.Builder(context)
+        val sink = DefaultAudioSink.Builder(context)
             .setEnableFloatOutput(false)
             .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
             .setAudioProcessors(arrayOf(volumeBoostAudioProcessor))
             .build()
+        return if (audioPassthroughEnabled) sink else PcmOnlyAudioSink(sink)
     }
 
     override fun buildTextRenderers(

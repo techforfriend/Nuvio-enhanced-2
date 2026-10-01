@@ -1017,6 +1017,15 @@ private fun PlaybackSettingsSection(
                         isTablet = isTablet,
                         onCheckedChange = PlayerSettingsRepository::setTunnelingEnabled,
                     )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_playback_audio_passthrough),
+                        description = stringResource(Res.string.settings_playback_audio_passthrough_description),
+                        checked = autoPlayPlayerSettings.androidAudioPassthroughEnabled,
+                        enabled = exoOptionsEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = PlayerSettingsRepository::setAndroidAudioPassthroughEnabled,
+                    )
                 }
             }
         }
