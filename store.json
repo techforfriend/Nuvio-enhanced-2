@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.5",
+          "buildVersion": "137",
+          "date": "2026-10-01T05:54:34Z",
+          "localizedDescription": "- feat(visualsubtitlesync) @chrisk325\r\n- feat(i18n): add Bengali (বাংলা) language support and UI localization @TanvirSdq\r\n- i18n(el): translate new strings and finish the Greek wording sweep @nosvasedis\r\n- Fix clearlogo + backdrop @skoruppa\r\n- fix(profile): make Profile Insight consistent across devices @luqmanfadlli\r\n- Fix hero alignment to follow HeroContentBlock alignment @ThEgIGN\r\n- feat(userratings): add shimmer animation to stars @chrisk325\r\n- feat(userratings): add animation to the bottomsheet @chrisk325\r\n- fix(player): show the swipe-to-seek preview in the new player layout @deejay189393\r\n- feat(settings): add Clear Metadata Cache to Advanced settings @luqmanfadlli\r\n- perf(profile,library): keep background metadata lookups within API limits @luqmanfadlli\r\n- feat(profile,library): add manual refresh and surface load failures @luqmanfadlli\r\n- fix(library): stop caching failed release lookups in the calendar @luqmanfadlli\r\n- fix(debrid): select requested episode files @tapframe\r\n- perf(profile): persist Profile Insight title facts across launches @luqmanfadlli\r\n- perf(profile): compute Profile Insight stats off the main thread @luqmanfadlli\r\n- i18n(vi): update latest Vietnamese strings (#2096) @blueocean2308\r\n- Translation improvements and adjustments for Slovak language (#2104) @mmsw91\r\n- fix(mdblist): show newest library additions first (#2103) @halibiram",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.5.5-beta/Nuvio-0.5.5-Enhanced.ipa",
+          "size": 69276861,
+          "sha256": "a1891e0ceeb55fc96637b547800b03f11ff324486463d6fd5164fa352939778a",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.4",
           "buildVersion": "136",
           "date": "2026-09-28T10:25:25Z",
