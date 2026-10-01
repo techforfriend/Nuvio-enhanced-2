@@ -357,6 +357,7 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
         onDispose {
             playerController?.clearNowPlayingInfo()
             P2pStreamingEngine.shutdown()
+            cancelNextEpisodePreload()
             PlayerStreamsRepository.clearAll()
         }
     }
