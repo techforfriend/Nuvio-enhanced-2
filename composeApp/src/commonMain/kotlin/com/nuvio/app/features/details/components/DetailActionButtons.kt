@@ -22,7 +22,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -58,8 +60,22 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_play
 import nuvio.composeapp.generated.resources.details_download_action
 import nuvio.composeapp.generated.resources.details_actions_menu_label
+import nuvio.composeapp.generated.resources.hero_add_to_library
+import nuvio.composeapp.generated.resources.hero_mark_unwatched
+import nuvio.composeapp.generated.resources.hero_mark_watched
+import nuvio.composeapp.generated.resources.hero_remove_from_library
+import nuvio.composeapp.generated.resources.playback_unavailable
+import nuvio.composeapp.generated.resources.random_episode_title
+import nuvio.composeapp.generated.resources.shuffle_stop
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.rounded.Replay
+import nuvio.composeapp.generated.resources.details_action_start_from_beginning
+import nuvio.composeapp.generated.resources.sidebar_library
+import nuvio.composeapp.generated.resources.streams_open_external_player
 import org.jetbrains.compose.resources.stringResource
 
 data class DetailSecondaryAction(
@@ -326,6 +342,104 @@ fun DetailActionButtons(
             )
         }
     }
+}
+
+// Upstream's single entry point for the detail actions (phone sections and the tablet hero).
+// Fork additions: download / play from start / external player in the icon row, the icon-row
+// layout itself, the user rating stars, and the fork's watched/library icons.
+@Composable
+fun DetailActions(
+    playLabel: String,
+    playEnabled: Boolean,
+    isSaved: Boolean,
+    isWatched: Boolean,
+    isTablet: Boolean,
+    shuffleEnabled: Boolean,
+    onPlayClick: () -> Unit,
+    onPlayLongClick: (() -> Unit)?,
+    onShuffleClick: (() -> Unit)?,
+    onWatchedClick: () -> Unit,
+    onSaveClick: () -> Unit,
+    onSaveLongClick: (() -> Unit)?,
+    onDownloadClick: (() -> Unit)? = null,
+    onPlayFromStartClick: (() -> Unit)? = null,
+    onPlayExternallyClick: (() -> Unit)? = null,
+    iconActionRow: Boolean = false,
+    userRating: Int? = null,
+    onRateClick: (() -> Unit)? = null,
+) {
+    val shuffleAction = onShuffleClick?.let { onClick ->
+        DetailSecondaryAction(
+            label = stringResource(if (shuffleEnabled) Res.string.shuffle_stop else Res.string.random_episode_title),
+            icon = Icons.Default.Shuffle,
+            isActive = shuffleEnabled,
+            onClick = onClick,
+        )
+    }
+    val watchedAction = DetailSecondaryAction(
+        label = stringResource(if (isWatched) Res.string.hero_mark_unwatched else Res.string.hero_mark_watched),
+        icon = if (isWatched) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+        isActive = isWatched,
+        onClick = onWatchedClick,
+    )
+    val saveAction = DetailSecondaryAction(
+        label = stringResource(if (isSaved) Res.string.hero_remove_from_library else Res.string.hero_add_to_library),
+        icon = Icons.Default.Add,
+        drawable = Res.drawable.sidebar_library.takeIf { isSaved },
+        isActive = isSaved,
+        onClick = onSaveClick,
+        onLongClick = onSaveLongClick,
+    )
+    val iconActions = buildList {
+        onDownloadClick?.let { download ->
+            add(
+                DetailSecondaryAction(
+                    label = stringResource(Res.string.details_download_action),
+                    icon = Icons.Rounded.Download,
+                    onClick = download,
+                ),
+            )
+        }
+        onPlayFromStartClick?.let { playFromStart ->
+            add(
+                DetailSecondaryAction(
+                    label = stringResource(Res.string.details_action_start_from_beginning),
+                    icon = Icons.Rounded.Replay,
+                    onClick = playFromStart,
+                ),
+            )
+        }
+        shuffleAction?.let(::add)
+        onPlayExternallyClick?.let { playExternally ->
+            add(
+                DetailSecondaryAction(
+                    label = stringResource(Res.string.streams_open_external_player),
+                    icon = Icons.AutoMirrored.Rounded.OpenInNew,
+                    onClick = playExternally,
+                ),
+            )
+        }
+        add(watchedAction)
+        add(saveAction)
+    }
+    DetailActionButtons(
+        playLabel = if (playEnabled) playLabel else stringResource(Res.string.playback_unavailable),
+        playEnabled = playEnabled,
+        pinnedAction = shuffleAction?.takeIf { shuffleEnabled },
+        iconActionRow = iconActionRow,
+        iconActions = iconActions,
+        secondaryActions = buildList {
+            if (!shuffleEnabled) shuffleAction?.let(::add)
+            add(watchedAction)
+            add(saveAction)
+        },
+        isTablet = isTablet,
+        onPlayClick = onPlayClick,
+        onDownloadClick = onDownloadClick.takeIf { !iconActionRow },
+        onPlayLongClick = onPlayLongClick,
+        userRating = userRating,
+        onRateClick = onRateClick,
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
