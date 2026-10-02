@@ -1405,6 +1405,10 @@
     <string name="player_skip_intro">Skip Intro</string>
     <string name="player_skip_outro">Skip Outro</string>
     <string name="player_skip_recap">Skip Recap</string>
+    <string name="player_auto_skip_intro_notification">Intro skipped to %1$s</string>
+    <string name="player_auto_skip_recap_notification">Recap skipped to %1$s</string>
+    <string name="player_auto_skip_outro_notification">Outro skipped to %1$s</string>
+    <string name="player_auto_skip_movie_credits_notification">Credits skipped to %1$s</string>
     <string name="compose_player_no_subtitles_found">No subtitles found</string>
     <string name="lang_afrikaans">Afrikaans</string>
     <string name="lang_albanian">Albanian</string>
