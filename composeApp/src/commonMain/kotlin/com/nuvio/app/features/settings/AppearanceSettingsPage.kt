@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.floatingNavigationGlowSupported
+import com.nuvio.app.isIos
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.NuvioBottomSheetActionRow
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
