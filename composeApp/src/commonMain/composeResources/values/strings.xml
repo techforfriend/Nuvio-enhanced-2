@@ -1506,6 +1506,10 @@
     <string name="detail_more_like_this_powered_by_trakt">Powered by Trakt</string>
     <string name="detail_more_like_this_powered_by_simkl">Powered by Simkl</string>
     <string name="details_seasons">Seasons</string>
+    <plurals name="details_season_count">
+        <item quantity="one">%1$d Season</item>
+        <item quantity="other">%1$d Seasons</item>
+    </plurals>
     <string name="details_series_missing_numbers">This addon returned videos for the series, but none included season or episode numbers.</string>
     <string name="details_series_no_metadata">This addon did not provide episode metadata for this series.</string>
     <string name="details_series_unpublished">Episodes have not been published by this addon yet.</string>
