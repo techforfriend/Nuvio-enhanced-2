@@ -2,6 +2,7 @@ package com.nuvio.app.features.streams
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -29,7 +30,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,8 +45,8 @@ import androidx.compose.ui.unit.sp
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.collections_tab_all
 import nuvio.composeapp.generated.resources.streams_refresh
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
-import kotlin.math.ceil
 
 @Composable
 internal fun ProviderFilterRow(
@@ -51,9 +54,13 @@ internal fun ProviderFilterRow(
     selectedFilter: String?,
     onFilterSelected: (String?) -> Unit,
     onRefresh: (() -> Unit)? = null,
+    isRefreshing: Boolean = groups.any { it.isLoading },
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
     spacing: Dp = 8.dp,
+    refreshChip: @Composable (Boolean, () -> Unit) -> Unit = { isLoading, onClick ->
+        RefreshChip(isLoading = isLoading, onClick = onClick)
+    },
     filterChip: @Composable (AddonStreamGroup?, Boolean, () -> Unit) -> Unit = { group, isSelected, onClick ->
         FilterChip(
             label = group?.addonName ?: stringResource(Res.string.collections_tab_all),
@@ -78,10 +85,7 @@ internal fun ProviderFilterRow(
         horizontalArrangement = Arrangement.spacedBy(spacing),
     ) {
         if (onRefresh != null) {
-            RefreshChip(
-                isLoading = groups.any { it.isLoading },
-                onClick = onRefresh,
-            )
+            refreshChip(isRefreshing, onRefresh)
         }
         filterChip(null, selectedFilter == null) { onFilterSelected(null) }
         addonGroups.forEach { group ->
@@ -91,29 +95,37 @@ internal fun ProviderFilterRow(
 }
 
 @Composable
+internal fun rememberRefreshRotation(isLoading: Boolean): Animatable<Float, AnimationVector1D> {
+    val rotation = remember { Animatable(0f) }
+    var hasCompletedFullRotation by remember { mutableStateOf(false) }
+    LaunchedEffect(isLoading) {
+        if (isLoading) {
+            delay(100)
+            hasCompletedFullRotation = false
+            rotation.animateTo(360f, remainingTurn(rotation.value))
+            hasCompletedFullRotation = true
+            rotation.snapTo(0f)
+            rotation.animateTo(360f, infiniteRepeatable(tween(durationMillis = 1000, easing = LinearEasing)))
+        } else {
+            if (hasCompletedFullRotation && rotation.value > 0f) {
+                rotation.animateTo(360f, remainingTurn(rotation.value))
+            }
+            rotation.snapTo(0f)
+            hasCompletedFullRotation = false
+        }
+    }
+    return rotation
+}
+
+private fun remainingTurn(rotation: Float) =
+    tween<Float>(durationMillis = ((360f - rotation) / 360f * 1000).toInt(), easing = LinearEasing)
+
+@Composable
 private fun RefreshChip(
     isLoading: Boolean,
     onClick: () -> Unit,
 ) {
-    val rotation = remember { Animatable(0f) }
-    LaunchedEffect(isLoading) {
-        if (isLoading) {
-            rotation.animateTo(
-                targetValue = rotation.value + 360f,
-                animationSpec = infiniteRepeatable(tween(durationMillis = 1000, easing = LinearEasing)),
-            )
-        } else if (rotation.value > 0f) {
-            val target = ceil(rotation.value / 360f) * 360f
-            rotation.animateTo(
-                targetValue = target,
-                animationSpec = tween(
-                    durationMillis = ((target - rotation.value) / 360f * 1000).toInt(),
-                    easing = LinearEasing,
-                ),
-            )
-            rotation.snapTo(0f)
-        }
-    }
+    val rotation = rememberRefreshRotation(isLoading)
     FilterChip(
         icon = Icons.Rounded.Refresh,
         contentDescription = stringResource(Res.string.streams_refresh),
