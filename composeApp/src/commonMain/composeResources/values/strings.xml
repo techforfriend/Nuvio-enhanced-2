@@ -2407,4 +2407,23 @@
     <string name="movie_status_rumored">Rumored</string>
     <string name="movie_status_in_production">In Production</string>
     <string name="movie_status_post_production">Post Production</string>
+    <string name="cd_switch_player_engine">Switch player engine</string>
+    <string name="cd_stream_info">Stream info</string>
+    <string name="player_engine_switching_manual_message">Switching to %1$s...</string>
+    <string name="stream_info_section_source">SOURCE</string>
+    <string name="stream_info_section_video">VIDEO</string>
+    <string name="stream_info_section_audio">AUDIO</string>
+    <string name="stream_info_section_subtitle">SUBTITLE</string>
+    <string name="stream_info_codec">Codec</string>
+    <string name="stream_info_resolution">Resolution</string>
+    <string name="stream_info_frame_rate">Frame Rate</string>
+    <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_channels">Channels</string>
+    <string name="stream_info_sample_rate">Sample Rate</string>
+    <string name="stream_info_language">Language</string>
+    <string name="stream_info_name">Name</string>
+    <string name="stream_info_source">Source</string>
+    <string name="stream_info_subtitle_source_addon">Addon</string>
+    <string name="stream_info_subtitle_source_embedded">Embedded</string>
+    <string name="stream_info_player_engine">Player Engine</string>
 </resources>
