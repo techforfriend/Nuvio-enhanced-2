@@ -65,6 +65,17 @@ data class PlayerSettingsUiState(
     val mapDV7ToHevc: Boolean = false,
     val tunnelingEnabled: Boolean = false,
     val androidAudioPassthroughEnabled: Boolean = false,
+    val exoNativeMemoryEnabled: Boolean = false,
+    val customPlaybackBuffersEnabled: Boolean = false,
+    val vodDiskCacheEnabled: Boolean = false,
+    val vodDiskCacheAutoSize: Boolean = true,
+    val playbackMinBufferSeconds: Int = 50,
+    val playbackMaxBufferSeconds: Int = 50,
+    val playbackStartBufferSeconds: Int = 3,
+    val playbackRebufferSeconds: Int = 5,
+    val playbackBackBufferSeconds: Int = 10,
+    val playbackTargetBufferMb: Int = 256,
+    val vodDiskCacheSizeMb: Int = 2048,
     val streamAutoPlayMode: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL,
     val streamAutoPlaySource: StreamAutoPlaySource = StreamAutoPlaySource.ALL_SOURCES,
     val streamAutoPlaySelectedAddons: Set<String> = emptySet(),
@@ -84,7 +95,6 @@ data class PlayerSettingsUiState(
     val nextEpisodeThresholdMode: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE,
     val nextEpisodeThresholdPercent: Float = 99f,
     val nextEpisodeThresholdMinutesBeforeEnd: Float = 2f,
-    val preloadNextEpisodeSources: Boolean = false,
     val useLibass: Boolean = false,
     val libassRenderType: String = "CUES",
     val iosVideoOutputPreset: IosVideoOutputPreset = IosVideoOutputPreset.NativeEdr,
@@ -141,6 +151,17 @@ object PlayerSettingsRepository {
     private var mapDV7ToHevc = false
     private var tunnelingEnabled = false
     private var androidAudioPassthroughEnabled = false
+    private var exoNativeMemoryEnabled = false
+    private var customPlaybackBuffersEnabled = false
+    private var vodDiskCacheEnabled = false
+    private var vodDiskCacheAutoSize = true
+    private var playbackMinBufferSeconds = 50
+    private var playbackMaxBufferSeconds = 50
+    private var playbackStartBufferSeconds = 3
+    private var playbackRebufferSeconds = 5
+    private var playbackBackBufferSeconds = 10
+    private var playbackTargetBufferMb = 256
+    private var vodDiskCacheSizeMb = 2048
     private var streamAutoPlayMode = StreamAutoPlayMode.MANUAL
     private var streamAutoPlaySource = StreamAutoPlaySource.ALL_SOURCES
     private var streamAutoPlaySelectedAddons: Set<String> = emptySet()
@@ -160,7 +181,6 @@ object PlayerSettingsRepository {
     private var nextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE
     private var nextEpisodeThresholdPercent = 99f
     private var nextEpisodeThresholdMinutesBeforeEnd = 2f
-    private var preloadNextEpisodeSources = false
     private var useLibass = false
     private var libassRenderType = "CUES"
     private var iosVideoOutputPreset = IosVideoOutputPreset.NativeEdr
@@ -222,6 +242,17 @@ object PlayerSettingsRepository {
         mapDV7ToHevc = false
         tunnelingEnabled = false
         androidAudioPassthroughEnabled = false
+        exoNativeMemoryEnabled = false
+        customPlaybackBuffersEnabled = false
+        vodDiskCacheEnabled = false
+        vodDiskCacheAutoSize = true
+        playbackMinBufferSeconds = 50
+        playbackMaxBufferSeconds = 50
+        playbackStartBufferSeconds = 3
+        playbackRebufferSeconds = 5
+        playbackBackBufferSeconds = 10
+        playbackTargetBufferMb = 256
+        vodDiskCacheSizeMb = 2048
         streamAutoPlayMode = StreamAutoPlayMode.MANUAL
         streamAutoPlaySource = StreamAutoPlaySource.ALL_SOURCES
         streamAutoPlaySelectedAddons = emptySet()
@@ -241,7 +272,6 @@ object PlayerSettingsRepository {
         nextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE
         nextEpisodeThresholdPercent = 99f
         nextEpisodeThresholdMinutesBeforeEnd = 2f
-        preloadNextEpisodeSources = false
         useLibass = false
         libassRenderType = "CUES"
         iosVideoOutputPreset = IosVideoOutputPreset.NativeEdr
@@ -332,6 +362,17 @@ object PlayerSettingsRepository {
         mapDV7ToHevc = PlayerSettingsStorage.loadMapDV7ToHevc() ?: false
         tunnelingEnabled = PlayerSettingsStorage.loadTunnelingEnabled() ?: false
         androidAudioPassthroughEnabled = PlayerSettingsStorage.loadAndroidAudioPassthroughEnabled() ?: false
+        exoNativeMemoryEnabled = PlayerSettingsStorage.loadExoNativeMemoryEnabled() ?: false
+        customPlaybackBuffersEnabled = PlayerSettingsStorage.loadCustomPlaybackBuffersEnabled() ?: false
+        vodDiskCacheEnabled = PlayerSettingsStorage.loadVodDiskCacheEnabled() ?: false
+        vodDiskCacheAutoSize = PlayerSettingsStorage.loadVodDiskCacheAutoSize() ?: true
+        playbackMinBufferSeconds = PlayerSettingsStorage.loadPlaybackMinBufferSeconds() ?: 50
+        playbackMaxBufferSeconds = PlayerSettingsStorage.loadPlaybackMaxBufferSeconds() ?: 50
+        playbackStartBufferSeconds = PlayerSettingsStorage.loadPlaybackStartBufferSeconds() ?: 3
+        playbackRebufferSeconds = PlayerSettingsStorage.loadPlaybackRebufferSeconds() ?: 5
+        playbackBackBufferSeconds = PlayerSettingsStorage.loadPlaybackBackBufferSeconds() ?: 10
+        playbackTargetBufferMb = PlayerSettingsStorage.loadPlaybackTargetBufferMb() ?: 256
+        vodDiskCacheSizeMb = PlayerSettingsStorage.loadVodDiskCacheSizeMb() ?: 2048
         streamAutoPlayMode = PlayerSettingsStorage.loadStreamAutoPlayMode()
             ?.let { runCatching { StreamAutoPlayMode.valueOf(it) }.getOrNull() }
             ?: StreamAutoPlayMode.MANUAL
@@ -379,7 +420,6 @@ object PlayerSettingsRepository {
             ?: NextEpisodeThresholdMode.PERCENTAGE
         nextEpisodeThresholdPercent = PlayerSettingsStorage.loadNextEpisodeThresholdPercent() ?: 99f
         nextEpisodeThresholdMinutesBeforeEnd = PlayerSettingsStorage.loadNextEpisodeThresholdMinutesBeforeEnd() ?: 2f
-        preloadNextEpisodeSources = PlayerSettingsStorage.loadPreloadNextEpisodeSources() ?: false
         useLibass = PlayerSettingsStorage.loadUseLibass() ?: false
         libassRenderType = PlayerSettingsStorage.loadLibassRenderType() ?: "CUES"
         iosVideoOutputPreset = PlayerSettingsStorage.loadIosVideoOutputPreset()
@@ -691,6 +731,94 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveAndroidAudioPassthroughEnabled(enabled)
     }
 
+    fun setExoNativeMemoryEnabled(value: Boolean) {
+        ensureLoaded()
+        if (exoNativeMemoryEnabled == value) return
+        exoNativeMemoryEnabled = value
+        publish()
+        PlayerSettingsStorage.saveExoNativeMemoryEnabled(value)
+    }
+
+    fun setCustomPlaybackBuffersEnabled(value: Boolean) {
+        ensureLoaded()
+        if (customPlaybackBuffersEnabled == value) return
+        customPlaybackBuffersEnabled = value
+        publish()
+        PlayerSettingsStorage.saveCustomPlaybackBuffersEnabled(value)
+    }
+
+    fun setVodDiskCacheEnabled(value: Boolean) {
+        ensureLoaded()
+        if (vodDiskCacheEnabled == value) return
+        vodDiskCacheEnabled = value
+        publish()
+        PlayerSettingsStorage.saveVodDiskCacheEnabled(value)
+    }
+
+    fun setVodDiskCacheAutoSize(value: Boolean) {
+        ensureLoaded()
+        if (vodDiskCacheAutoSize == value) return
+        vodDiskCacheAutoSize = value
+        publish()
+        PlayerSettingsStorage.saveVodDiskCacheAutoSize(value)
+    }
+
+    fun setPlaybackMinBufferSeconds(value: Int) {
+        ensureLoaded()
+        if (playbackMinBufferSeconds == value) return
+        playbackMinBufferSeconds = value
+        publish()
+        PlayerSettingsStorage.savePlaybackMinBufferSeconds(value)
+    }
+
+    fun setPlaybackMaxBufferSeconds(value: Int) {
+        ensureLoaded()
+        if (playbackMaxBufferSeconds == value) return
+        playbackMaxBufferSeconds = value
+        publish()
+        PlayerSettingsStorage.savePlaybackMaxBufferSeconds(value)
+    }
+
+    fun setPlaybackStartBufferSeconds(value: Int) {
+        ensureLoaded()
+        if (playbackStartBufferSeconds == value) return
+        playbackStartBufferSeconds = value
+        publish()
+        PlayerSettingsStorage.savePlaybackStartBufferSeconds(value)
+    }
+
+    fun setPlaybackRebufferSeconds(value: Int) {
+        ensureLoaded()
+        if (playbackRebufferSeconds == value) return
+        playbackRebufferSeconds = value
+        publish()
+        PlayerSettingsStorage.savePlaybackRebufferSeconds(value)
+    }
+
+    fun setPlaybackBackBufferSeconds(value: Int) {
+        ensureLoaded()
+        if (playbackBackBufferSeconds == value) return
+        playbackBackBufferSeconds = value
+        publish()
+        PlayerSettingsStorage.savePlaybackBackBufferSeconds(value)
+    }
+
+    fun setPlaybackTargetBufferMb(value: Int) {
+        ensureLoaded()
+        if (playbackTargetBufferMb == value) return
+        playbackTargetBufferMb = value
+        publish()
+        PlayerSettingsStorage.savePlaybackTargetBufferMb(value)
+    }
+
+    fun setVodDiskCacheSizeMb(value: Int) {
+        ensureLoaded()
+        if (vodDiskCacheSizeMb == value) return
+        vodDiskCacheSizeMb = value
+        publish()
+        PlayerSettingsStorage.saveVodDiskCacheSizeMb(value)
+    }
+
     fun setStreamAutoPlayMode(mode: StreamAutoPlayMode) {
         ensureLoaded()
         if (streamAutoPlayMode == mode) return
@@ -844,14 +972,6 @@ object PlayerSettingsRepository {
         nextEpisodeThresholdMinutesBeforeEnd = minutes
         publish()
         PlayerSettingsStorage.saveNextEpisodeThresholdMinutesBeforeEnd(minutes)
-    }
-
-    fun setPreloadNextEpisodeSources(enabled: Boolean) {
-        ensureLoaded()
-        if (preloadNextEpisodeSources == enabled) return
-        preloadNextEpisodeSources = enabled
-        publish()
-        PlayerSettingsStorage.savePreloadNextEpisodeSources(enabled)
     }
 
     fun setUseLibass(enabled: Boolean) {
@@ -1069,6 +1189,17 @@ object PlayerSettingsRepository {
             mapDV7ToHevc = mapDV7ToHevc,
             tunnelingEnabled = tunnelingEnabled,
             androidAudioPassthroughEnabled = androidAudioPassthroughEnabled,
+            exoNativeMemoryEnabled = exoNativeMemoryEnabled,
+            customPlaybackBuffersEnabled = customPlaybackBuffersEnabled,
+            vodDiskCacheEnabled = vodDiskCacheEnabled,
+            vodDiskCacheAutoSize = vodDiskCacheAutoSize,
+            playbackMinBufferSeconds = playbackMinBufferSeconds,
+            playbackMaxBufferSeconds = playbackMaxBufferSeconds,
+            playbackStartBufferSeconds = playbackStartBufferSeconds,
+            playbackRebufferSeconds = playbackRebufferSeconds,
+            playbackBackBufferSeconds = playbackBackBufferSeconds,
+            playbackTargetBufferMb = playbackTargetBufferMb,
+            vodDiskCacheSizeMb = vodDiskCacheSizeMb,
             streamAutoPlayMode = streamAutoPlayMode,
             streamAutoPlaySource = streamAutoPlaySource,
             streamAutoPlaySelectedAddons = streamAutoPlaySelectedAddons,
@@ -1088,7 +1219,6 @@ object PlayerSettingsRepository {
             nextEpisodeThresholdMode = nextEpisodeThresholdMode,
             nextEpisodeThresholdPercent = nextEpisodeThresholdPercent,
             nextEpisodeThresholdMinutesBeforeEnd = nextEpisodeThresholdMinutesBeforeEnd,
-            preloadNextEpisodeSources = preloadNextEpisodeSources,
             useLibass = useLibass,
             libassRenderType = libassRenderType,
             iosVideoOutputPreset = iosVideoOutputPreset,
