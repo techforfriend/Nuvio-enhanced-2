@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.6",
+          "buildVersion": "138",
+          "date": "2026-10-03T01:19:21Z",
+          "localizedDescription": "- fix(settings): restore missing isIos import in AppearanceSettingsPage @luqmanfadlli \r\n- feat(details): use desktop hero layout on tablets @tapframe\r\n- feat(settings): show restart prompt when layout direction changes @tapframe\r\n- fix(ios): declare supported localizations @tapframe\r\n- fix(player): auto-play next episode on end after dismissing prompt @tapframe\r\n- i18n(vi): update latest Vietnamese strings (#2146) @blueocean2308\r\n- Preload next episode sources (#2140) @skoruppa\r\n- Fix mising poster fallback in Catalog Screen (#2139) @skoruppa\r\n- fix(player): backport automatic skip notifications from Desktop (#2137) @Laskco\r\n- fix(player): make Android volume boost audible on Dolby audio @luqmanfadlli",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.5.6-beta/Nuvio-0.5.6-Enhanced.ipa",
+          "size": 69320719,
+          "sha256": "0ed987de20b6badf0f5c3462bc0a2bb2687791184b4fe30d65fd12913e99bb94",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.5",
           "buildVersion": "137",
           "date": "2026-10-01T05:54:34Z",
