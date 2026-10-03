@@ -115,6 +115,7 @@ import com.nuvio.app.features.details.components.EpisodeWatchedActionSheet
 import com.nuvio.app.features.details.components.SeasonWatchedActionSheet
 import com.nuvio.app.features.details.components.TabletDetailBackdrop
 import com.nuvio.app.features.details.components.TabletDetailHero
+import com.nuvio.app.features.details.components.TabletDetailHeroActions
 import com.nuvio.app.features.details.components.TrailerPlayerPopup
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.mdblist.MdbListSettingsRepository
@@ -1137,6 +1138,8 @@ fun MetaDetailsScreen(
                     val colorScheme = MaterialTheme.colorScheme
                     val useTabletLayout = minOf(maxWidth, maxHeight) >= 600.dp
                     val isTablet = useTabletLayout || maxWidth >= 720.dp
+                    val tabletViewportHeight = maxHeight
+                    val isTabletLandscape = maxWidth > maxHeight
                     val contentHorizontalPadding = if (isTablet) 32.dp else 18.dp
                     val contentMaxWidth = detailTabletContentMaxWidth(maxWidth, isTablet)
                     val backdropUrl = meta.background ?: meta.poster
@@ -1272,6 +1275,7 @@ fun MetaDetailsScreen(
                                             showOverallRatings = metaScreenSettingsUiState.showOverallRatings,
                                             isMdbListActive = mdbListSettings.isActive,
                                             horizontalPadding = contentHorizontalPadding,
+                                            viewportHeight = tabletViewportHeight,
                                             heroTrailerSourceUrl = heroTrailerSourceUrl,
                                             heroTrailerReady = heroTrailerReady,
                                             heroTrailerMuted = heroTrailerMuted,
@@ -1279,13 +1283,13 @@ fun MetaDetailsScreen(
                                             onHeightChanged = { heroHeightPx.intValue = it },
                                             actions = if (isSectionEnabled(MetaScreenSectionKey.ACTIONS)) {
                                                 {
-                                                    DetailActions(
+                                                    TabletDetailHeroActions(
                                                         playLabel = playButtonLabel,
                                                         playEnabled = isPrimaryPlayEnabled,
                                                         isSaved = isSaved,
                                                         isWatched = isWatched,
-                                                        isTablet = true,
                                                         shuffleEnabled = shuffleSettings.enabled,
+                                                        landscape = isTabletLandscape,
                                                         onPlayClick = onPrimaryPlayClick,
                                                         onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
                                                         onShuffleClick = onShuffleClick,
@@ -1295,7 +1299,6 @@ fun MetaDetailsScreen(
                                                         onDownloadClick = onDownloadClick,
                                                         onPlayFromStartClick = onPlayFromStartClick,
                                                         onPlayExternallyClick = onPlayExternallyClick,
-                                                        iconActionRow = metaScreenSettingsUiState.iconActionRow,
                                                         userRating = titleUserRating,
                                                         onRateClick = openTitleRating,
                                                     )

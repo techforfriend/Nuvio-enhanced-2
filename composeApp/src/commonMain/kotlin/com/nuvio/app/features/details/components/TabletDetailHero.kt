@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -242,6 +243,7 @@ fun TabletDetailHero(
     showOverallRatings: Boolean,
     isMdbListActive: Boolean,
     horizontalPadding: Dp,
+    viewportHeight: Dp,
     heroTrailerSourceUrl: String?,
     heroTrailerReady: Boolean,
     heroTrailerMuted: Boolean,
@@ -258,22 +260,24 @@ fun TabletDetailHero(
     )
     var logoLoadError by remember(meta.id, meta.logo) { mutableStateOf(false) }
     val logoUrl = meta.logo?.takeIf { it.isNotBlank() }
+    val heroMinHeight = if (viewportHeight > 0.dp) viewportHeight else TabletHeroHeight
+    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = TabletHeroHeight)
+            .heightIn(min = heroMinHeight)
             .onSizeChanged { onHeightChanged(it.height) },
     ) {
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .widthIn(max = 760.dp)
+                .fillMaxWidth()
                 .padding(
                     start = horizontalPadding,
-                    end = space.s32,
+                    end = horizontalPadding,
                     top = TabletHeroTopInset,
-                    bottom = space.s40,
+                    bottom = bottomInset + space.s24,
                 ),
         ) {
             if (logoUrl != null && !logoLoadError) {
@@ -350,7 +354,7 @@ fun TabletDetailHero(
                 )
             }
             if (actions != null) {
-                Spacer(modifier = Modifier.height(space.s28))
+                Spacer(modifier = Modifier.height(space.s24))
                 actions()
             }
         }
