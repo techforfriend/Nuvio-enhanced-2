@@ -1,7 +1,10 @@
 package com.nuvio.app.features.streams
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,6 +43,7 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.collections_tab_all
 import nuvio.composeapp.generated.resources.streams_refresh
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.ceil
 
 @Composable
 internal fun ProviderFilterRow(
@@ -74,10 +78,8 @@ internal fun ProviderFilterRow(
         horizontalArrangement = Arrangement.spacedBy(spacing),
     ) {
         if (onRefresh != null) {
-            FilterChip(
-                icon = Icons.Rounded.Refresh,
-                contentDescription = stringResource(Res.string.streams_refresh),
-                isSelected = false,
+            RefreshChip(
+                isLoading = groups.any { it.isLoading },
                 onClick = onRefresh,
             )
         }
@@ -89,10 +91,44 @@ internal fun ProviderFilterRow(
 }
 
 @Composable
+private fun RefreshChip(
+    isLoading: Boolean,
+    onClick: () -> Unit,
+) {
+    val rotation = remember { Animatable(0f) }
+    LaunchedEffect(isLoading) {
+        if (isLoading) {
+            rotation.animateTo(
+                targetValue = rotation.value + 360f,
+                animationSpec = infiniteRepeatable(tween(durationMillis = 1000, easing = LinearEasing)),
+            )
+        } else if (rotation.value > 0f) {
+            val target = ceil(rotation.value / 360f) * 360f
+            rotation.animateTo(
+                targetValue = target,
+                animationSpec = tween(
+                    durationMillis = ((target - rotation.value) / 360f * 1000).toInt(),
+                    easing = LinearEasing,
+                ),
+            )
+            rotation.snapTo(0f)
+        }
+    }
+    FilterChip(
+        icon = Icons.Rounded.Refresh,
+        contentDescription = stringResource(Res.string.streams_refresh),
+        iconModifier = Modifier.graphicsLayer { rotationZ = rotation.value },
+        isSelected = false,
+        onClick = onClick,
+    )
+}
+
+@Composable
 private fun FilterChip(
     label: String? = null,
     icon: ImageVector? = null,
     contentDescription: String? = null,
+    iconModifier: Modifier = Modifier,
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
@@ -147,7 +183,7 @@ private fun FilterChip(
                     imageVector = icon,
                     contentDescription = contentDescription,
                     tint = contentColor,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(20.dp).then(iconModifier),
                 )
             }
             if (label != null) {
