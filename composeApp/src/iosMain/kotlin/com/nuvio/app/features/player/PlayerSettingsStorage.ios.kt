@@ -82,7 +82,6 @@ actual object PlayerSettingsStorage {
     private const val nextEpisodeThresholdModeKey = "next_episode_threshold_mode"
     private const val nextEpisodeThresholdPercentKey = "next_episode_threshold_percent_v2"
     private const val nextEpisodeThresholdMinutesBeforeEndKey = "next_episode_threshold_minutes_before_end_v2"
-    private const val preloadNextEpisodeSourcesKey = "preload_next_episode_sources"
     private const val useLibassKey = "use_libass"
     private const val libassRenderTypeKey = "libass_render_type"
     private const val iosVideoOutputPresetKey = "ios_video_output_preset"
@@ -156,7 +155,6 @@ actual object PlayerSettingsStorage {
         nextEpisodeThresholdModeKey,
         nextEpisodeThresholdPercentKey,
         nextEpisodeThresholdMinutesBeforeEndKey,
-        preloadNextEpisodeSourcesKey,
         useLibassKey,
         libassRenderTypeKey,
         iosVideoOutputPresetKey,
@@ -941,12 +939,6 @@ actual object PlayerSettingsStorage {
         NSUserDefaults.standardUserDefaults.setFloat(minutes, forKey = ProfileScopedKey.of(nextEpisodeThresholdMinutesBeforeEndKey))
     }
 
-    actual fun loadPreloadNextEpisodeSources(): Boolean? = loadBoolean(preloadNextEpisodeSourcesKey)
-
-    actual fun savePreloadNextEpisodeSources(enabled: Boolean) {
-        saveBoolean(preloadNextEpisodeSourcesKey, enabled)
-    }
-
     actual fun loadUseLibass(): Boolean? = null
 
     actual fun saveUseLibass(enabled: Boolean) {}
@@ -954,6 +946,50 @@ actual object PlayerSettingsStorage {
     actual fun loadLibassRenderType(): String? = null
 
     actual fun saveLibassRenderType(renderType: String) {}
+
+    actual fun loadExoNativeMemoryEnabled(): Boolean? = null
+
+    actual fun saveExoNativeMemoryEnabled(value: Boolean) {}
+
+    actual fun loadCustomPlaybackBuffersEnabled(): Boolean? = null
+
+    actual fun saveCustomPlaybackBuffersEnabled(value: Boolean) {}
+
+    actual fun loadVodDiskCacheEnabled(): Boolean? = null
+
+    actual fun saveVodDiskCacheEnabled(value: Boolean) {}
+
+    actual fun loadVodDiskCacheAutoSize(): Boolean? = null
+
+    actual fun saveVodDiskCacheAutoSize(value: Boolean) {}
+
+    actual fun loadPlaybackMinBufferSeconds(): Int? = null
+
+    actual fun savePlaybackMinBufferSeconds(value: Int) {}
+
+    actual fun loadPlaybackMaxBufferSeconds(): Int? = null
+
+    actual fun savePlaybackMaxBufferSeconds(value: Int) {}
+
+    actual fun loadPlaybackStartBufferSeconds(): Int? = null
+
+    actual fun savePlaybackStartBufferSeconds(value: Int) {}
+
+    actual fun loadPlaybackRebufferSeconds(): Int? = null
+
+    actual fun savePlaybackRebufferSeconds(value: Int) {}
+
+    actual fun loadPlaybackBackBufferSeconds(): Int? = null
+
+    actual fun savePlaybackBackBufferSeconds(value: Int) {}
+
+    actual fun loadPlaybackTargetBufferMb(): Int? = null
+
+    actual fun savePlaybackTargetBufferMb(value: Int) {}
+
+    actual fun loadVodDiskCacheSizeMb(): Int? = null
+
+    actual fun saveVodDiskCacheSizeMb(value: Int) {}
 
     actual fun loadIosVideoOutputPreset(): String? =
         NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(iosVideoOutputPresetKey))
@@ -1117,7 +1153,6 @@ actual object PlayerSettingsStorage {
         loadNextEpisodeThresholdMode()?.let { put(nextEpisodeThresholdModeKey, encodeSyncString(it)) }
         loadNextEpisodeThresholdPercent()?.let { put(nextEpisodeThresholdPercentKey, encodeSyncFloat(it)) }
         loadNextEpisodeThresholdMinutesBeforeEnd()?.let { put(nextEpisodeThresholdMinutesBeforeEndKey, encodeSyncFloat(it)) }
-        loadPreloadNextEpisodeSources()?.let { put(preloadNextEpisodeSourcesKey, encodeSyncBoolean(it)) }
         loadUseLibass()?.let { put(useLibassKey, encodeSyncBoolean(it)) }
         loadLibassRenderType()?.let { put(libassRenderTypeKey, encodeSyncString(it)) }
         loadIosVideoOutputPreset()?.let { put(iosVideoOutputPresetKey, encodeSyncString(it)) }
@@ -1202,7 +1237,6 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncString(nextEpisodeThresholdModeKey)?.let(::saveNextEpisodeThresholdMode)
         payload.decodeSyncFloat(nextEpisodeThresholdPercentKey)?.let(::saveNextEpisodeThresholdPercent)
         payload.decodeSyncFloat(nextEpisodeThresholdMinutesBeforeEndKey)?.let(::saveNextEpisodeThresholdMinutesBeforeEnd)
-        payload.decodeSyncBoolean(preloadNextEpisodeSourcesKey)?.let(::savePreloadNextEpisodeSources)
         payload.decodeSyncBoolean(useLibassKey)?.let(::saveUseLibass)
         payload.decodeSyncString(libassRenderTypeKey)?.let(::saveLibassRenderType)
         payload.decodeSyncString(iosVideoOutputPresetKey)?.let(::saveIosVideoOutputPreset)
