@@ -4,6 +4,8 @@ package com.nuvio.app.features.player
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.os.SharedMemory
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
@@ -18,10 +20,12 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import java.io.File
 import java.io.IOException
 import java.io.InterruptedIOException
+import java.io.RandomAccessFile
 import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 
 private const val MB = 1024L * 1024L
-private const val READ_AHEAD_CHUNK_BYTES = 1 shl 20
+private const val READ_AHEAD_BLOCK_BYTES = 16 shl 20
 
 internal fun isProgressivePlaybackSource(
     url: String,
@@ -81,6 +85,7 @@ internal fun DataSource.Factory.withPlaybackBuffering(
 ): DataSource.Factory {
     if (bufferedUrls.isEmpty() || (!settings.vodDiskCacheEnabled && !settings.exoNativeMemoryEnabled)) return this
     val plainFactory = this
+    val cacheDirectory = context.cacheDir
     var bufferedFactory: DataSource.Factory = plainFactory
     if (settings.vodDiskCacheEnabled) {
         bufferedFactory = CacheDataSource.Factory()
@@ -92,7 +97,7 @@ internal fun DataSource.Factory.withPlaybackBuffering(
     if (readAheadBytes > 0L) {
         val upstreamFactory = bufferedFactory
         bufferedFactory = DataSource.Factory {
-            NativeReadAheadDataSource(upstreamFactory.createDataSource(), readAheadBytes)
+            NativeReadAheadDataSource(upstreamFactory.createDataSource(), readAheadBytes, cacheDirectory)
         }
     }
     val finalBufferedFactory = bufferedFactory
@@ -154,21 +159,43 @@ private class SelectiveBufferedDataSource(
     }
 }
 
+private class NativeBlock(val buffer: ByteBuffer, private val onFree: () -> Unit) {
+    fun free() = onFree()
+}
+
+private fun allocateNativeBlock(directory: File): NativeBlock {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+        val memory = SharedMemory.create("nuvio_read_ahead", READ_AHEAD_BLOCK_BYTES)
+        val mapped = memory.mapReadWrite()
+        return NativeBlock(mapped) {
+            SharedMemory.unmap(mapped)
+            memory.close()
+        }
+    }
+    val file = File.createTempFile("read_ahead", ".bin", directory)
+    val randomAccessFile = RandomAccessFile(file, "rw")
+    val mapped = randomAccessFile.channel.map(FileChannel.MapMode.READ_WRITE, 0, READ_AHEAD_BLOCK_BYTES.toLong())
+    file.delete()
+    return NativeBlock(mapped) { runCatching { randomAccessFile.close() } }
+}
+
 private class NativeReadAheadDataSource(
     private val upstream: DataSource,
     private val capacityBytes: Long,
+    private val directory: File,
 ) : DataSource {
-    private class Chunk {
-        val buffer: ByteBuffer = ByteBuffer.allocateDirect(READ_AHEAD_CHUNK_BYTES)
+    private class Chunk(val block: NativeBlock) {
         var written = 0
         var consumed = 0
     }
 
     private val lock = Object()
     private val chunks = ArrayDeque<Chunk>()
+    private val freeBlocks = ArrayDeque<NativeBlock>()
     private var queuedBytes = 0L
     private var ended = false
     private var failure: IOException? = null
+    private var readerActive = false
 
     @Volatile
     private var closed = false
@@ -181,31 +208,40 @@ private class NativeReadAheadDataSource(
     }
 
     override fun open(dataSpec: DataSpec): Long {
-        reader?.join(2_000L)
+        reader?.join(5_000L)
         val length = upstream.open(dataSpec)
         openedUri = upstream.uri
         openedHeaders = upstream.responseHeaders
-        closed = false
-        ended = false
-        failure = null
-        queuedBytes = 0L
-        chunks.clear()
-        val first = Chunk()
-        chunks.addLast(first)
-        reader = Thread({ fill(first) }, "nuvio-native-read-ahead").apply {
+        synchronized(lock) {
+            closed = false
+            ended = false
+            failure = null
+            queuedBytes = 0L
+            readerActive = true
+        }
+        reader = Thread({ fill() }, "nuvio-native-read-ahead").apply {
             isDaemon = true
             start()
         }
         return length
     }
 
-    private fun fill(firstChunk: Chunk) {
+    private fun obtainBlock(): NativeBlock {
+        synchronized(lock) { freeBlocks.removeLastOrNull() }?.let { return it }
+        return try {
+            allocateNativeBlock(directory)
+        } catch (error: Throwable) {
+            throw IOException(error)
+        }
+    }
+
+    private fun fill() {
         val scratch = ByteArray(32 * 1024)
-        var tail = firstChunk
+        var tail: Chunk? = null
         try {
             while (!closed) {
                 synchronized(lock) {
-                    while (queuedBytes >= capacityBytes && !closed) lock.wait()
+                    while (!closed && queuedBytes >= capacityBytes) lock.wait()
                 }
                 if (closed) break
                 val read = upstream.read(scratch, 0, scratch.size)
@@ -218,14 +254,17 @@ private class NativeReadAheadDataSource(
                 }
                 var offset = 0
                 while (offset < read) {
-                    if (tail.written == READ_AHEAD_CHUNK_BYTES) {
-                        tail = Chunk()
-                        synchronized(lock) { chunks.addLast(tail) }
+                    var current = tail
+                    if (current == null || current.written == READ_AHEAD_BLOCK_BYTES) {
+                        current = Chunk(obtainBlock())
+                        synchronized(lock) { chunks.addLast(current) }
+                        tail = current
                     }
-                    val count = minOf(read - offset, READ_AHEAD_CHUNK_BYTES - tail.written)
-                    tail.buffer.duplicate().apply { position(tail.written) }.put(scratch, offset, count)
+                    val chunk: Chunk = current
+                    val count = minOf(read - offset, READ_AHEAD_BLOCK_BYTES - chunk.written)
+                    chunk.block.buffer.duplicate().apply { position(chunk.written) }.put(scratch, offset, count)
                     synchronized(lock) {
-                        tail.written += count
+                        chunk.written += count
                         queuedBytes += count
                         lock.notifyAll()
                     }
@@ -233,17 +272,25 @@ private class NativeReadAheadDataSource(
                 }
             }
         } catch (_: InterruptedException) {
-        } catch (error: IOException) {
+        } catch (error: Throwable) {
             synchronized(lock) {
-                failure = error
+                if (!closed) failure = error as? IOException ?: IOException(error)
                 lock.notifyAll()
             }
-        } catch (error: RuntimeException) {
+        } finally {
             synchronized(lock) {
-                failure = IOException(error)
-                lock.notifyAll()
+                readerActive = false
+                if (closed) releaseBlocks()
             }
         }
+    }
+
+    private fun releaseBlocks() {
+        chunks.forEach { it.block.free() }
+        chunks.clear()
+        freeBlocks.forEach { it.free() }
+        freeBlocks.clear()
+        queuedBytes = 0L
     }
 
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
@@ -254,10 +301,13 @@ private class NativeReadAheadDataSource(
                 val head = chunks.firstOrNull()
                 if (head != null && head.consumed < head.written) {
                     val count = minOf(length, head.written - head.consumed)
-                    head.buffer.duplicate().apply { position(head.consumed) }.get(buffer, offset, count)
+                    head.block.buffer.duplicate().apply { position(head.consumed) }.get(buffer, offset, count)
                     head.consumed += count
                     queuedBytes -= count
-                    if (head.consumed == READ_AHEAD_CHUNK_BYTES) chunks.removeFirst()
+                    if (head.consumed == READ_AHEAD_BLOCK_BYTES) {
+                        chunks.removeFirst()
+                        freeBlocks.addLast(head.block)
+                    }
                     lock.notifyAll()
                     result = count
                     continue
@@ -285,8 +335,7 @@ private class NativeReadAheadDataSource(
     override fun close() {
         synchronized(lock) {
             closed = true
-            chunks.clear()
-            queuedBytes = 0L
+            if (!readerActive) releaseBlocks()
             lock.notifyAll()
         }
         runCatching { upstream.close() }
