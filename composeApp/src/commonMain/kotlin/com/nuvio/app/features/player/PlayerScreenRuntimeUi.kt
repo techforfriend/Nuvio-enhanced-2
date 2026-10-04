@@ -507,8 +507,12 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         },
         onAudioModalDismissed = { showAudioModal = false },
         showSubtitleModal = showSubtitleModal,
-        subtitleTracks = subtitleTracks,
-        selectedSubtitleIndex = selectedSubtitleIndex,
+        subtitleTracks = serverSubtitleTracks.ifEmpty { subtitleTracks },
+        selectedSubtitleIndex = if (serverSubtitleTracks.isEmpty()) {
+            selectedSubtitleIndex
+        } else {
+            serverSubtitleTracks.firstOrNull { it.isSelected }?.index ?: -1
+        },
         addonSubtitles = visibleAddonSubtitles,
         selectedAddonSubtitleId = selectedAddonSubtitleId,
         isLoadingAddonSubtitles = isLoadingAddonSubtitles,
@@ -517,17 +521,22 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         selectedAddonSubtitle = selectedAddonSubtitle,
         subtitleAutoSyncState = subtitleAutoSyncState,
         onBuiltInSubtitleTrackSelected = { index ->
-            val wasCustom = useCustomSubtitles
-            isUserExplicitSubtitleSelection = true
-            preferredSubtitleSelectionApplied = true
-            selectedSubtitleIndex = index
-            selectedAddonSubtitleId = null
-            useCustomSubtitles = false
-            persistInternalSubtitlePreference(subtitleTracks.firstOrNull { it.index == index })
-            if (wasCustom) {
-                playerController?.clearExternalSubtitleAndSelect(index)
+            if (serverSubtitleTracks.isNotEmpty() && index >= 0) {
+                selectServerSubtitleTrack(index)
             } else {
-                playerController?.selectSubtitleTrack(index)
+                val wasCustom = useCustomSubtitles
+                isUserExplicitSubtitleSelection = true
+                preferredSubtitleSelectionApplied = true
+                selectedSubtitleIndex = index
+                selectedAddonSubtitleId = null
+                useCustomSubtitles = false
+                persistInternalSubtitlePreference(subtitleTracks.firstOrNull { it.index == index })
+                if (wasCustom) {
+                    playerController?.clearExternalSubtitleAndSelect(index)
+                } else {
+                    playerController?.selectSubtitleTrack(index)
+                }
+                if (hasBurnedInServerSubtitle) clearServerSubtitleTrack()
             }
         },
         onAddonSubtitleSelected = { addon ->
@@ -538,6 +547,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
             preferredSubtitleSelectionApplied = true
             persistAddonSubtitlePreference(addon)
             playerController?.setSubtitleUri(addon.url)
+            if (hasBurnedInServerSubtitle) clearServerSubtitleTrack()
         },
         onFetchAddonSubtitles = { fetchAddonSubtitlesForActiveItem() },
         onSubtitleStyleChanged = PlayerSettingsRepository::setSubtitleStyle,

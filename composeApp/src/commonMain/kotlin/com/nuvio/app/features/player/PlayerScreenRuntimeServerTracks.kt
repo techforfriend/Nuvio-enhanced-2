@@ -2,12 +2,18 @@ package com.nuvio.app.features.player
 
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.features.servers.ServerPlayback
+import com.nuvio.app.features.servers.ServerPlaybackSession
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.servers_audio_switch_failed
+import nuvio.composeapp.generated.resources.servers_subtitle_switch_failed
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
 
-internal fun PlayerScreenRuntime.refreshServerAudioTracks() {
+internal val PlayerScreenRuntime.hasBurnedInServerSubtitle: Boolean
+    get() = ServerPlayback.burnInSubtitles(activeSourceUrl).any { it.selected }
+
+internal fun PlayerScreenRuntime.refreshServerTracks() {
     serverAudioTracks = ServerPlayback.audioTracks(activeSourceUrl).map { track ->
         AudioTrack(
             index = track.index,
@@ -16,6 +22,19 @@ internal fun PlayerScreenRuntime.refreshServerAudioTracks() {
             language = track.language,
             isSelected = track.selected,
         )
+    }
+    serverSubtitleTracks = ServerPlayback.burnInSubtitles(activeSourceUrl).map { track ->
+        SubtitleTrack(
+            index = track.index,
+            id = track.index.toString(),
+            label = track.label,
+            language = track.language,
+            isSelected = track.selected,
+        )
+    }
+    if (serverSubtitleTracks.any { it.isSelected }) {
+        isUserExplicitSubtitleSelection = true
+        preferredSubtitleSelectionApplied = true
     }
 }
 
@@ -45,15 +64,41 @@ internal fun PlayerScreenRuntime.selectServerAudioTrack(index: Int) {
     switchServerAudioTrack(index)
 }
 
+internal fun PlayerScreenRuntime.selectServerSubtitleTrack(index: Int) {
+    if (serverSubtitleTracks.any { it.isSelected && it.index == index }) return
+    isUserExplicitSubtitleSelection = true
+    preferredSubtitleSelectionApplied = true
+    selectedSubtitleIndex = -1
+    selectedAddonSubtitleId = null
+    if (useCustomSubtitles) {
+        playerController?.clearExternalSubtitleAndSelect(-1)
+    } else {
+        playerController?.selectSubtitleTrack(-1)
+    }
+    useCustomSubtitles = false
+    restartServerStream(Res.string.servers_subtitle_switch_failed) { url -> ServerPlayback.switchSubtitle(url, index) }
+}
+
+internal fun PlayerScreenRuntime.clearServerSubtitleTrack() {
+    restartServerStream(Res.string.servers_subtitle_switch_failed) { url -> ServerPlayback.switchSubtitle(url, null) }
+}
+
 private fun PlayerScreenRuntime.switchServerAudioTrack(index: Int) {
     if (serverAudioTracks.any { it.isSelected && it.index == index }) return
-    if (serverAudioSwitchJob?.isActive == true) return
+    restartServerStream(Res.string.servers_audio_switch_failed) { url -> ServerPlayback.switchAudio(url, index) }
+}
+
+private fun PlayerScreenRuntime.restartServerStream(
+    failureMessage: StringResource,
+    restart: suspend (String) -> ServerPlaybackSession?,
+) {
+    if (serverTrackSwitchJob?.isActive == true) return
     val url = activeSourceUrl
     val positionMs = if (initialSeekApplied) playbackSnapshot.positionMs.coerceAtLeast(0L) else activeInitialPositionMs
-    serverAudioSwitchJob = scope.launch {
-        val playback = ServerPlayback.switchAudio(url, index)
+    serverTrackSwitchJob = scope.launch {
+        val playback = restart(url)
         if (playback == null) {
-            NuvioToastController.show(getString(Res.string.servers_audio_switch_failed))
+            NuvioToastController.show(getString(failureMessage))
             return@launch
         }
         if (activeSourceUrl != url) {

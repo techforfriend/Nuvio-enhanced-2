@@ -275,7 +275,7 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
     }
 
     LaunchedEffect(activeSourceUrl, preferredAudioLanguageTargets) {
-        refreshServerAudioTracks()
+        refreshServerTracks()
         applyPreferredServerAudioTrack()
     }
 

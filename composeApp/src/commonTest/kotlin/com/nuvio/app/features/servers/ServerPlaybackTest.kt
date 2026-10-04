@@ -153,12 +153,38 @@ class ServerPlaybackTest {
     }
 
     @Test
-    fun directPlayLeavesAudioToThePlayer() = runTest {
+    fun burnsInSubtitlesByRestartingTheTranscode() = runTest {
+        val provider = FakeServerProvider(transcodes = true)
+        val connection = installFakeServer(provider)
+        val url = assertNotNull(ServerPlayback.prepare(ServerStreams.candidates(ServerItemRef(connection.id, "42")).single()).playableDirectUrl)
+        val japanese = assertNotNull(ServerPlayback.switchAudio(url, 2))
+
+        val burnedIn = assertNotNull(ServerPlayback.switchSubtitle(japanese.url, 3))
+
+        val request = provider.playbackRequests.last()
+        assertEquals(3, request.subtitleStreamIndex)
+        assertEquals(2, request.audioStreamIndex)
+        assertFalse(request.capabilities.allowDirectPlay)
+        assertEquals(listOf(3), ServerPlayback.burnInSubtitles(burnedIn.url).filter { it.selected }.map { it.index })
+
+        val english = assertNotNull(ServerPlayback.switchAudio(burnedIn.url, 1))
+        assertEquals(3, provider.playbackRequests.last().subtitleStreamIndex)
+
+        val cleared = assertNotNull(ServerPlayback.switchSubtitle(english.url, null))
+        assertNull(provider.playbackRequests.last().subtitleStreamIndex)
+        assertTrue(ServerPlayback.burnInSubtitles(cleared.url).none { it.selected })
+        ServerPlayback.stop(cleared.url)
+    }
+
+    @Test
+    fun directPlayLeavesTracksToThePlayer() = runTest {
         val connection = installFakeServer()
         val url = assertNotNull(ServerPlayback.prepare(ServerStreams.candidates(ServerItemRef(connection.id, "7")).single()).playableDirectUrl)
 
         assertTrue(ServerPlayback.audioTracks(url).isEmpty())
+        assertTrue(ServerPlayback.burnInSubtitles(url).isEmpty())
         assertNull(ServerPlayback.switchAudio(url, 2))
+        assertNull(ServerPlayback.switchSubtitle(url, 3))
         assertTrue(ServerPlayback.isServerSource(url))
         ServerPlayback.stop(url)
     }

@@ -198,7 +198,8 @@ internal class PlayerScreenRuntime(
     var playbackEngineOverride by mutableStateOf<AndroidPlaybackEngine?>(null)
     var audioTracks by mutableStateOf<List<AudioTrack>>(emptyList())
     var serverAudioTracks by mutableStateOf<List<AudioTrack>>(emptyList())
-    var serverAudioSwitchJob by mutableStateOf<Job?>(null)
+    var serverSubtitleTracks by mutableStateOf<List<SubtitleTrack>>(emptyList())
+    var serverTrackSwitchJob by mutableStateOf<Job?>(null)
     var serverAudioPreferenceKey: String? = null
     var subtitleTracks by mutableStateOf<List<SubtitleTrack>>(emptyList())
     var selectedAudioIndex by mutableStateOf(-1)

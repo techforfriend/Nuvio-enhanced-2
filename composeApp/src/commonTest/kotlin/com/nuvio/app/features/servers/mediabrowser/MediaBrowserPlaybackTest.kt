@@ -168,6 +168,25 @@ class MediaBrowserPlaybackTest {
     }
 
     @Test
+    fun listsBurnInSubtitles() {
+        val playback = jellyfin.playbackSession(
+            session,
+            request.copy(capabilities = ServerPlayerCapabilities(directPlayAll = true, allowDirectPlay = false)),
+            info(
+                """{"Id": "ms1",
+                   "MediaStreams": [
+                     {"Type": "Subtitle", "Index": 3, "Codec": "PGSSUB", "Language": "eng", "DisplayTitle": "English - PGSSUB", "DeliveryMethod": "Encode"},
+                     {"Type": "Subtitle", "Index": 4, "Codec": "subrip", "Language": "spa", "DeliveryMethod": "External",
+                      "DeliveryUrl": "/Videos/item1/ms1/Subtitles/4/0/Stream.srt"}],
+                   "TranscodingUrl": "/videos/item1/master.m3u8?SubtitleStreamIndex=3&SubtitleMethod=Encode&TranscodeReasons=AudioCodecNotSupported%2C%20SubtitleCodecNotSupported"}""",
+            ),
+            deviceId = "d1",
+        )
+        assertEquals(listOf(Triple(3, "English - PGSSUB", true)), playback.burnInSubtitles.map { Triple(it.index, it.label, it.selected) })
+        assertEquals(listOf("spa"), playback.subtitles.map { it.language })
+    }
+
+    @Test
     fun leavesEmbeddedSubtitlesToThePlayer() {
         val playback = jellyfin.playbackSession(
             session,

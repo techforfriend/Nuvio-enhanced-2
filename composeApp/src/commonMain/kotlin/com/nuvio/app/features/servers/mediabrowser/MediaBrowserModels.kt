@@ -129,6 +129,7 @@ internal data class PlaybackInfoRequest(
     @SerialName("UserId") val userId: String,
     @SerialName("MediaSourceId") val mediaSourceId: String?,
     @SerialName("AudioStreamIndex") val audioStreamIndex: Int? = null,
+    @SerialName("SubtitleStreamIndex") val subtitleStreamIndex: Int? = null,
     @SerialName("MaxStreamingBitrate") val maxStreamingBitrate: Long,
     @SerialName("EnableDirectPlay") val enableDirectPlay: Boolean = true,
     @SerialName("EnableDirectStream") val enableDirectStream: Boolean = true,

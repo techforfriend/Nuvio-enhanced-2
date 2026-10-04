@@ -89,17 +89,21 @@ internal class FakeServerProvider(
         playbackRequests += request
         if (transcodes) {
             val audio = request.audioStreamIndex ?: 1
+            val subtitle = request.subtitleStreamIndex
             return ServerPlaybackSession(
                 target = request.target,
                 mediaSourceId = request.target.mediaSourceId ?: "default",
-                url = "https://fake.example/${request.target.item.itemId}/master.m3u8?AudioStreamIndex=$audio",
+                url = "https://fake.example/${request.target.item.itemId}/master.m3u8?AudioStreamIndex=$audio&SubtitleStreamIndex=$subtitle",
                 headers = emptyMap(),
                 subtitles = emptyList(),
                 playSessionId = "ps$audio",
                 playMethod = ServerPlayMethod.TRANSCODE,
                 audioTracks = listOf(
-                    ServerAudioTrack(index = 1, label = "English", language = "eng", selected = audio == 1),
-                    ServerAudioTrack(index = 2, label = "Japanese", language = "jpn", selected = audio == 2),
+                    ServerTrack(index = 1, label = "English", language = "eng", selected = audio == 1),
+                    ServerTrack(index = 2, label = "Japanese", language = "jpn", selected = audio == 2),
+                ),
+                burnInSubtitles = listOf(
+                    ServerTrack(index = 3, label = "English PGS", language = "eng", selected = subtitle == 3),
                 ),
             )
         }

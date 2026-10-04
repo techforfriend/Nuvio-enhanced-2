@@ -155,19 +155,22 @@ class MediaBrowserRequestTest {
     }
 
     @Test
-    fun transcodesHevcWithoutBreakingOnNonKeyFrames() = runTest {
+    fun transcodesHevcAndBurnsInImageSubtitles() = runTest {
         val http = TestHttp { """{"PlaySessionId": "ps1", "MediaSources": [{"Id": "ms1", "TranscodingUrl": "/videos/i1/master.m3u8"}]}""" }
         val jellyfin = JellyfinProvider(http.client)
         val target = ServerPlaybackTarget(ServerItemRef("cabc", "i1"), mediaSourceId = "ms1")
 
         jellyfin.preparePlayback(
             session("jellyfin", "https://media.example.com/jellyfin"),
-            ServerPlaybackRequest(target, ServerPlayerCapabilities(directPlayAll = true, allowDirectPlay = false)),
+            ServerPlaybackRequest(target, ServerPlayerCapabilities(directPlayAll = true, allowDirectPlay = false), subtitleStreamIndex = 3),
         )
 
         val request = http.requests.single()
+        assertEquals("3", request.url.parameters["subtitleStreamIndex"])
+        assertTrue(request.text.contains("\"SubtitleStreamIndex\":3"))
         assertTrue(request.text.contains("\"VideoCodec\":\"hevc,h264\",\"AudioCodec\":\"aac,mp3,ac3\""))
         assertTrue(request.text.contains("\"BreakOnNonKeyFrames\":false"))
+        assertTrue(request.text.contains("{\"Format\":\"pgssub\",\"Method\":\"Encode\"}"))
     }
 
     @Test
