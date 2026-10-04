@@ -166,7 +166,7 @@ internal data class TranscodingProfile(
     @SerialName("Context") val context: String = "Streaming",
     @SerialName("MaxAudioChannels") val maxAudioChannels: String = "6",
     @SerialName("MinSegments") val minSegments: Int = 1,
-    @SerialName("BreakOnNonKeyFrames") val breakOnNonKeyFrames: Boolean = true,
+    @SerialName("BreakOnNonKeyFrames") val breakOnNonKeyFrames: Boolean = false,
 )
 
 @Serializable

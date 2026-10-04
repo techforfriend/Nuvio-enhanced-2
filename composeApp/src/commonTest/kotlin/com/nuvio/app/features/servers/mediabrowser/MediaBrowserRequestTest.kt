@@ -133,6 +133,44 @@ class MediaBrowserRequestTest {
     }
 
     @Test
+    fun offersEveryFormatOnlyToPlayersThatDecodeEverything() = runTest {
+        val http = TestHttp {
+            """{"PlaySessionId": "ps1", "MediaSources": [{"Id": "ms1", "SupportsDirectPlay": true, "TranscodingUrl": "/videos/i1/master.m3u8"}]}"""
+        }
+        val jellyfin = JellyfinProvider(http.client)
+        val session = session("jellyfin", "https://media.example.com/jellyfin")
+        val target = ServerPlaybackTarget(ServerItemRef("cabc", "i1"), mediaSourceId = "ms1")
+
+        jellyfin.preparePlayback(session, ServerPlaybackRequest(target, ServerPlayerCapabilities(directPlayAll = true)))
+        jellyfin.preparePlayback(session, ServerPlaybackRequest(target, ServerPlayerCapabilities(directPlayAll = true, allowDirectPlay = false)))
+        jellyfin.preparePlayback(session, ServerPlaybackRequest(target, ServerPlayerCapabilities(directPlayAll = false)))
+
+        val (direct, fallback, limited) = http.requests
+        assertEquals("1000000000", direct.url.parameters["maxStreamingBitrate"])
+        assertTrue(direct.text.contains("\"MaxStreamingBitrate\":1000000000"))
+        assertTrue(direct.text.contains("\"DirectPlayProfiles\":[{\"Type\":\"Video\"}]"))
+        assertFalse(fallback.text.contains("\"DirectPlayProfiles\":[{\"Type\":\"Video\"}]"))
+        assertFalse(limited.text.contains("\"DirectPlayProfiles\":[{\"Type\":\"Video\"}]"))
+        assertTrue(limited.text.contains("\"AudioCodec\":\"aac,mp3,ac3,eac3,flac,opus,vorbis\""))
+    }
+
+    @Test
+    fun transcodesHevcWithoutBreakingOnNonKeyFrames() = runTest {
+        val http = TestHttp { """{"PlaySessionId": "ps1", "MediaSources": [{"Id": "ms1", "TranscodingUrl": "/videos/i1/master.m3u8"}]}""" }
+        val jellyfin = JellyfinProvider(http.client)
+        val target = ServerPlaybackTarget(ServerItemRef("cabc", "i1"), mediaSourceId = "ms1")
+
+        jellyfin.preparePlayback(
+            session("jellyfin", "https://media.example.com/jellyfin"),
+            ServerPlaybackRequest(target, ServerPlayerCapabilities(directPlayAll = true, allowDirectPlay = false)),
+        )
+
+        val request = http.requests.single()
+        assertTrue(request.text.contains("\"VideoCodec\":\"hevc,h264\",\"AudioCodec\":\"aac,mp3,ac3\""))
+        assertTrue(request.text.contains("\"BreakOnNonKeyFrames\":false"))
+    }
+
+    @Test
     fun embyPreparesAndReportsPlaybackThroughApiRoot() = runTest {
         val http = TestHttp { request ->
             if (request.url.encodedPath.endsWith("/PlaybackInfo")) {

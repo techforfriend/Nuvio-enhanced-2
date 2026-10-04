@@ -468,7 +468,7 @@ internal abstract class MediaBrowserProvider(
     private fun deviceProfile(capabilities: ServerPlayerCapabilities) = DeviceProfile(
         name = "Nuvio",
         maxStreamingBitrate = MAX_STREAMING_BITRATE,
-        directPlayProfiles = if (capabilities.directPlayAll) {
+        directPlayProfiles = if (capabilities.directPlayAll && capabilities.allowDirectPlay) {
             listOf(DirectPlayProfile())
         } else {
             listOf(
@@ -482,7 +482,7 @@ internal abstract class MediaBrowserProvider(
         transcodingProfiles = listOf(
             TranscodingProfile(
                 container = "ts",
-                videoCodec = "h264",
+                videoCodec = "hevc,h264",
                 audioCodec = "aac,mp3,ac3",
                 protocol = "hls",
             ),
@@ -504,7 +504,7 @@ internal abstract class MediaBrowserProvider(
 
     private companion object {
         const val API_KEY = "api_key"
-        const val MAX_STREAMING_BITRATE = 120_000_000L
+        const val MAX_STREAMING_BITRATE = 1_000_000_000L
         const val LIST_FIELDS = "Overview,Genres,ProviderIds,PremiereDate"
         const val DETAIL_FIELDS = "Overview,Genres,ProviderIds,People,Studios,PremiereDate,EndDate"
         val TEXT_SUBTITLES = listOf("srt", "subrip", "ass", "ssa", "vtt", "webvtt")
