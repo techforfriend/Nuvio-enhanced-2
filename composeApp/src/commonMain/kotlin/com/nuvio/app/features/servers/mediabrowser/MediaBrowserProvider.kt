@@ -25,6 +25,7 @@ import com.nuvio.app.features.streams.StreamSubtitle
 import io.ktor.client.HttpClient
 import io.ktor.http.HttpMethod
 import io.ktor.http.Url
+import io.ktor.http.decodeURLQueryComponent
 import kotlinx.serialization.DeserializationStrategy
 
 internal data class Endpoint(
@@ -367,6 +368,7 @@ internal abstract class MediaBrowserProvider(
             playMethod = method,
             audioTracks = audioTracks(source, url, request.audioStreamIndex),
             burnInSubtitles = burnInSubtitles(source, url),
+            transcodeReasons = transcodeReasons(url),
         )
     }
 
@@ -393,6 +395,14 @@ internal abstract class MediaBrowserProvider(
             selected = index == selected,
         )
     }
+
+    private fun transcodeReasons(url: String): List<String> =
+        queryValue(url, "TranscodeReasons")
+            ?.decodeURLQueryComponent()
+            ?.split(',')
+            ?.map(String::trim)
+            ?.filter(String::isNotEmpty)
+            .orEmpty()
 
     override suspend fun report(
         session: ServerSession,

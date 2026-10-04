@@ -165,6 +165,7 @@ class ServerPlaybackSession(
     val playMethod: ServerPlayMethod,
     val audioTracks: List<ServerTrack> = emptyList(),
     val burnInSubtitles: List<ServerTrack> = emptyList(),
+    val transcodeReasons: List<String> = emptyList(),
 ) {
     override fun toString(): String = "ServerPlaybackSession(item=${target.item.itemId}, method=$playMethod)"
 }

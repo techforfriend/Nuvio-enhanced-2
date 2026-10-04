@@ -665,6 +665,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         streamName = activeStreamTitle,
         streamDescription = activeStreamSubtitle,
         playbackEngine = playerController?.playbackEngine,
+        serverPlayback = serverPlaybackSummary(),
         mediaInfo = streamMediaInfo,
         audioTrack = audioTracks.firstOrNull { it.index == selectedAudioIndex },
         subtitleTrack = subtitleTracks.firstOrNull { it.index == selectedSubtitleIndex }.takeIf { !useCustomSubtitles },

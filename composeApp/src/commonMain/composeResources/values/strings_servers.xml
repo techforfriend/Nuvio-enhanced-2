@@ -50,6 +50,9 @@
     <string name="library_server_load_failed">Couldn't load %1$s</string>
     <string name="servers_audio_switch_failed">Couldn't switch the audio track.</string>
     <string name="servers_subtitle_switch_failed">Couldn't switch the subtitle track.</string>
+    <string name="servers_play_method_direct_play">Direct play</string>
+    <string name="servers_play_method_direct_stream">Direct stream</string>
+    <string name="servers_play_method_transcode">Transcoding</string>
     <string name="servers_watched_failed">Could not update watched state on the server.</string>
     <string name="servers_resume_row">Continue watching</string>
     <string name="servers_failure_unsupported">The server doesn't support this item.</string>

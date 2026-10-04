@@ -1,14 +1,18 @@
 package com.nuvio.app.features.player
 
+import androidx.compose.runtime.Composable
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.features.servers.ServerPlayback
 import com.nuvio.app.features.servers.ServerPlaybackSession
+import com.nuvio.app.features.servers.label
+import com.nuvio.app.features.servers.readableTranscodeReason
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.servers_audio_switch_failed
 import nuvio.composeapp.generated.resources.servers_subtitle_switch_failed
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.stringResource
 
 internal val PlayerScreenRuntime.hasBurnedInServerSubtitle: Boolean
     get() = ServerPlayback.burnInSubtitles(activeSourceUrl).any { it.selected }
@@ -36,6 +40,14 @@ internal fun PlayerScreenRuntime.refreshServerTracks() {
         isUserExplicitSubtitleSelection = true
         preferredSubtitleSelectionApplied = true
     }
+}
+
+@Composable
+internal fun PlayerScreenRuntime.serverPlaybackSummary(): String? {
+    val session = ServerPlayback.session(activeSourceUrl) ?: return null
+    val method = stringResource(session.playMethod.label())
+    val reasons = session.transcodeReasons.joinToString(", ", transform = ::readableTranscodeReason)
+    return if (reasons.isEmpty()) method else "$method · $reasons"
 }
 
 internal fun PlayerScreenRuntime.applyPreferredServerAudioTrack() {
