@@ -17,7 +17,6 @@ internal object NuvioExoPlayerPerformanceHelper {
     private const val MIN_BUFFER_MS = 15_000
     private const val MAX_BUFFER_MS = 45_000
     private const val BUFFER_FOR_PLAYBACK_MS = 3_000
-    private const val BACK_BUFFER_MS = 15_000
     private const val BACK_BUFFER_TARGET_SHARE_NUM = 1L
     private const val BACK_BUFFER_TARGET_SHARE_DEN = 2L
 
@@ -89,7 +88,7 @@ internal object NuvioExoPlayerPerformanceHelper {
         }
         if (!enabled) {
             return DefaultLoadControl.Builder()
-                .setBackBuffer(10_000, true)
+                .setBackBuffer(PlaybackBufferSettings.DEFAULT_BACK_BUFFER_MS, true)
                 .setBufferDurationsMs(
                     DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
                     50_000,
@@ -106,7 +105,7 @@ internal object NuvioExoPlayerPerformanceHelper {
             maxBufferMs = MAX_BUFFER_MS,
             bufferForPlaybackMs = BUFFER_FOR_PLAYBACK_MS,
             bufferForPlaybackAfterRebufferMs = BUFFER_FOR_PLAYBACK_MS,
-            backBufferMs = effectiveBackBufferMs(BACK_BUFFER_MS, MIN_BUFFER_MS),
+            backBufferMs = PlaybackBufferSettings.DEFAULT_BACK_BUFFER_MS,
         )
     }
 
