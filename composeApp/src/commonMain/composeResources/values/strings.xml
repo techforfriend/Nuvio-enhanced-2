@@ -1384,8 +1384,8 @@
     <string name="settings_playback_tunneled_playback">Tunneled Playback</string>
     <string name="settings_playback_audio_passthrough">Audio Passthrough</string>
     <string name="settings_playback_audio_passthrough_description">Send Dolby and DTS audio undecoded to a soundbar or AV receiver. Leave off on phones: volume boost and dialogue-friendly stereo downmix only work when the app decodes audio</string>
-    <string name="settings_playback_exo_native_memory">ExoPlayer Native Memory</string>
-    <string name="settings_playback_exo_native_memory_description">Keep playback buffers in native memory instead of the Java heap, so large files can buffer further without memory pressure.</string>
+    <string name="settings_playback_exo_native_memory">ExoPlayer Native Memory (Experimental)</string>
+    <string name="settings_playback_exo_native_memory_description">Keep playback buffers in native memory instead of the Java heap, so large files can buffer further without memory pressure. Use more RAM.</string>
     <string name="settings_playback_exo_native_memory_info">Device memory: %1$s GB. Safe buffer limit: %2$s MB.</string>
     <string name="settings_playback_custom_buffers">Custom Playback Buffers</string>
     <string name="settings_playback_custom_buffers_description">Override the player buffer. When off, ExoPlayer uses its normal buffer, or the native-memory defaults if that option is on.</string>

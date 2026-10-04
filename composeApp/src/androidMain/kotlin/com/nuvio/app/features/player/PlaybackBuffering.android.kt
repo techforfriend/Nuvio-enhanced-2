@@ -189,16 +189,31 @@ private class NativeReadAheadDataSource(
         var consumed = 0
     }
 
-    private val lock = Object()
-    private val chunks = ArrayDeque<Chunk>()
-    private val freeBlocks = ArrayDeque<NativeBlock>()
-    private var queuedBytes = 0L
-    private var ended = false
-    private var failure: IOException? = null
-    private var readerActive = false
+    private class Session {
+        val lock = Object()
+        val chunks = ArrayDeque<Chunk>()
+        val freeBlocks = ArrayDeque<NativeBlock>()
+        var queuedBytes = 0L
+        var ended = false
+        var failure: IOException? = null
+        var readerDone = false
+        var released = false
 
-    @Volatile
-    private var closed = false
+        @Volatile
+        var closed = false
+
+        fun releaseIfIdle() {
+            if (!closed || !readerDone || released) return
+            released = true
+            chunks.forEach { it.block.free() }
+            chunks.clear()
+            freeBlocks.forEach { it.free() }
+            freeBlocks.clear()
+            queuedBytes = 0L
+        }
+    }
+
+    private var session: Session? = null
     private var reader: Thread? = null
     private var openedUri: Uri? = null
     private var openedHeaders: Map<String, List<String>> = emptyMap()
@@ -208,26 +223,35 @@ private class NativeReadAheadDataSource(
     }
 
     override fun open(dataSpec: DataSpec): Long {
-        reader?.join(5_000L)
+        session?.let { previous ->
+            synchronized(previous.lock) {
+                previous.closed = true
+                previous.lock.notifyAll()
+                previous.releaseIfIdle()
+            }
+        }
+        reader?.let { previousReader ->
+            if (previousReader.isAlive) previousReader.join(READER_SHUTDOWN_TIMEOUT_MS)
+            if (previousReader.isAlive) {
+                throw IOException("Previous read-ahead reader is still shutting down")
+            }
+        }
+        reader = null
+        session = null
         val length = upstream.open(dataSpec)
         openedUri = upstream.uri
         openedHeaders = upstream.responseHeaders
-        synchronized(lock) {
-            closed = false
-            ended = false
-            failure = null
-            queuedBytes = 0L
-            readerActive = true
-        }
-        reader = Thread({ fill() }, "nuvio-native-read-ahead").apply {
+        val current = Session()
+        session = current
+        reader = Thread({ fill(current) }, "nuvio-native-read-ahead").apply {
             isDaemon = true
             start()
         }
         return length
     }
 
-    private fun obtainBlock(): NativeBlock {
-        synchronized(lock) { freeBlocks.removeLastOrNull() }?.let { return it }
+    private fun obtainBlock(current: Session): NativeBlock {
+        synchronized(current.lock) { current.freeBlocks.removeLastOrNull() }?.let { return it }
         return try {
             allocateNativeBlock(directory)
         } catch (error: Throwable) {
@@ -235,90 +259,98 @@ private class NativeReadAheadDataSource(
         }
     }
 
-    private fun fill() {
+    private fun fill(current: Session) {
         val scratch = ByteArray(32 * 1024)
         var tail: Chunk? = null
         try {
-            while (!closed) {
-                synchronized(lock) {
-                    while (!closed && queuedBytes >= capacityBytes) lock.wait()
+            while (!current.closed) {
+                synchronized(current.lock) {
+                    while (!current.closed && current.queuedBytes >= capacityBytes) current.lock.wait()
                 }
-                if (closed) break
+                if (current.closed) break
                 val read = upstream.read(scratch, 0, scratch.size)
                 if (read == C.RESULT_END_OF_INPUT) {
-                    synchronized(lock) {
-                        ended = true
-                        lock.notifyAll()
+                    synchronized(current.lock) {
+                        current.ended = true
+                        current.lock.notifyAll()
                     }
                     break
                 }
                 var offset = 0
                 while (offset < read) {
-                    var current = tail
-                    if (current == null || current.written == READ_AHEAD_BLOCK_BYTES) {
-                        current = Chunk(obtainBlock())
-                        synchronized(lock) { chunks.addLast(current) }
-                        tail = current
+                    var chunk = tail
+                    if (chunk == null || chunk.written == READ_AHEAD_BLOCK_BYTES) {
+                        val block = obtainBlock(current)
+                        val newChunk = Chunk(block)
+                        val accepted = synchronized(current.lock) {
+                            if (current.closed) {
+                                false
+                            } else {
+                                current.chunks.addLast(newChunk)
+                                true
+                            }
+                        }
+                        if (!accepted) {
+                            block.free()
+                            return
+                        }
+                        chunk = newChunk
+                        tail = newChunk
                     }
-                    val chunk: Chunk = current
-                    val count = minOf(read - offset, READ_AHEAD_BLOCK_BYTES - chunk.written)
-                    chunk.block.buffer.duplicate().apply { position(chunk.written) }.put(scratch, offset, count)
-                    synchronized(lock) {
-                        chunk.written += count
-                        queuedBytes += count
-                        lock.notifyAll()
+                    val target: Chunk = chunk
+                    val count = minOf(read - offset, READ_AHEAD_BLOCK_BYTES - target.written)
+                    target.block.buffer.duplicate().apply { position(target.written) }.put(scratch, offset, count)
+                    synchronized(current.lock) {
+                        target.written += count
+                        current.queuedBytes += count
+                        current.lock.notifyAll()
                     }
                     offset += count
                 }
             }
         } catch (_: InterruptedException) {
         } catch (error: Throwable) {
-            synchronized(lock) {
-                if (!closed) failure = error as? IOException ?: IOException(error)
-                lock.notifyAll()
+            synchronized(current.lock) {
+                if (!current.closed) current.failure = error as? IOException ?: IOException(error)
+                current.lock.notifyAll()
             }
         } finally {
-            synchronized(lock) {
-                readerActive = false
-                if (closed) releaseBlocks()
+            synchronized(current.lock) {
+                current.readerDone = true
+                current.lock.notifyAll()
+                current.releaseIfIdle()
             }
         }
     }
 
-    private fun releaseBlocks() {
-        chunks.forEach { it.block.free() }
-        chunks.clear()
-        freeBlocks.forEach { it.free() }
-        freeBlocks.clear()
-        queuedBytes = 0L
-    }
-
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
         if (length == 0) return 0
-        return synchronized(lock) {
+        val current = session ?: return C.RESULT_END_OF_INPUT
+        return synchronized(current.lock) {
             var result = Int.MIN_VALUE
             while (result == Int.MIN_VALUE) {
-                val head = chunks.firstOrNull()
+                if (current.closed) throw IOException("Read-ahead source is closed")
+                val head = current.chunks.firstOrNull()
                 if (head != null && head.consumed < head.written) {
                     val count = minOf(length, head.written - head.consumed)
                     head.block.buffer.duplicate().apply { position(head.consumed) }.get(buffer, offset, count)
                     head.consumed += count
-                    queuedBytes -= count
+                    current.queuedBytes -= count
                     if (head.consumed == READ_AHEAD_BLOCK_BYTES) {
-                        chunks.removeFirst()
-                        freeBlocks.addLast(head.block)
+                        current.chunks.removeFirst()
+                        current.freeBlocks.addLast(head.block)
                     }
-                    lock.notifyAll()
+                    current.lock.notifyAll()
                     result = count
                     continue
                 }
-                failure?.let { throw it }
-                if (ended) {
+                current.failure?.let { throw it }
+                if (current.ended || current.readerDone) {
                     result = C.RESULT_END_OF_INPUT
                     continue
                 }
                 try {
-                    lock.wait()
+                    current.lock.wait()
                 } catch (_: InterruptedException) {
                     Thread.currentThread().interrupt()
                     throw InterruptedIOException()
@@ -333,11 +365,19 @@ private class NativeReadAheadDataSource(
     override fun getResponseHeaders(): Map<String, List<String>> = openedHeaders
 
     override fun close() {
-        synchronized(lock) {
-            closed = true
-            if (!readerActive) releaseBlocks()
-            lock.notifyAll()
+        session?.let { current ->
+            synchronized(current.lock) {
+                current.closed = true
+                current.lock.notifyAll()
+                current.releaseIfIdle()
+            }
         }
         runCatching { upstream.close() }
+        reader?.let { if (it.isAlive) it.join(READER_CLOSE_WAIT_MS) }
+    }
+
+    private companion object {
+        const val READER_SHUTDOWN_TIMEOUT_MS = 5_000L
+        const val READER_CLOSE_WAIT_MS = 500L
     }
 }
