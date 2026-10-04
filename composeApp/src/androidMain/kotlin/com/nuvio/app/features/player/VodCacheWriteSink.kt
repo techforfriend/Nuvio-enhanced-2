@@ -9,31 +9,21 @@ import java.io.IOException
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicLong
 
-// CacheDataSource writes through the sink on the read path, so a slow write delays the next read;
-// that cost measured at 30 percent of playback on a remux and collapsed the forward buffer.
-// Nothing here may throw once the span is open, because CacheDataSource treats any sink exception
-// as a cache failure and stops using the cache for the rest of the source's life.
 @UnstableApi
 internal class VodCacheWriteSink(
     private val delegate: DataSink,
     private val counters: Counters
 ) : DataSink {
 
-    // Counters live outside so the factory can report them without holding a sink reference.
     class Counters {
         val bytesWritten = AtomicLong(0L)
         val writeTimeMs = AtomicLong(0L)
         val enqueueTimeMs = AtomicLong(0L)
         val errors = AtomicLong(0L)
         val blockedMs = AtomicLong(0L)
-        // Nanoseconds because a single write runs well under a millisecond, which a millisecond
-        // clock records as nothing at all. Enqueue covers both, and they point at different fixes:
-        // buffer time is contention on the pool, copy time is the device being out of cpu.
         val bufferTimeNs = AtomicLong(0L)
         val copyTimeNs = AtomicLong(0L)
         val allocations = AtomicLong(0L)
-        // Close runs on the read thread and waits for the worker to drain this span,
-        // so a slow disk shows up here rather than in the enqueue or blocked counters.
         val closeWaitMs = AtomicLong(0L)
         val spans = AtomicLong(0L)
 
@@ -56,7 +46,6 @@ internal class VodCacheWriteSink(
 
     private val queuedBytes = AtomicLong(0L)
 
-    // Only the loading thread touches these, and only between open and close.
     private var pending: ByteArray? = null
     private var pendingLength = 0
 
@@ -72,8 +61,6 @@ internal class VodCacheWriteSink(
         if (failed) return
         val startMs = SystemClock.elapsedRealtime()
         var blocked = false
-        // Dropping writes instead of waiting would leave CacheDataSink committing a range whose
-        // bytes are not the ones it claims.
         val waitUntilMs = startMs + MAX_BACKPRESSURE_WAIT_MS
         while (queuedBytes.get() + length > MAX_QUEUED_BYTES &&
             SystemClock.elapsedRealtime() < waitUntilMs
@@ -82,22 +69,15 @@ internal class VodCacheWriteSink(
             try {
                 Thread.sleep(BACKPRESSURE_SLEEP_MS)
             } catch (e: InterruptedException) {
-                // A seek cancels the load by interrupting this thread, so stop waiting and let the
-                // caller see the interrupt.
                 Thread.currentThread().interrupt()
                 break
             }
         }
         if (queuedBytes.get() + length > MAX_QUEUED_BYTES) {
-            // The disk has been behind for the full wait, so stop caching this span. The worker
-            // runs writes in order, which makes the committed span a contiguous prefix, and the
-            // delegate commits only what it was handed.
             failed = true
             counters.blockedMs.addAndGet(SystemClock.elapsedRealtime() - startMs)
             return
         }
-        // The reads arrive around a kilobyte each, so handing every one to the worker meant a
-        // buffer and a task per kilobyte; filling one buffer first cuts both by the buffer size.
         var consumed = 0
         while (consumed < length) {
             val beforeBufferNs = System.nanoTime()
@@ -135,8 +115,6 @@ internal class VodCacheWriteSink(
     }
 
     override fun close() {
-        // The tail of the span is still held back, and it has to reach the worker before the latch
-        // below or the delegate would commit a span missing its last bytes.
         if (failed) {
             pending?.let(::recycleBuffer)
             pending = null
@@ -144,8 +122,6 @@ internal class VodCacheWriteSink(
         } else {
             flushPending()
         }
-        // The writer is ordered, so a task queued here runs after this span's writes and before
-        // the delegate commits them.
         val done = java.util.concurrent.CountDownLatch(1)
         writer.execute { done.countDown() }
         val waitStartMs = SystemClock.elapsedRealtime()
@@ -157,7 +133,6 @@ internal class VodCacheWriteSink(
             false
         }
         if (!drained) {
-            // Queued writes skip once failed is set, so only the write already running is left to wait on.
             failed = true
             Log.w(TAG, "VOD_CACHE: close gave up on the rest of this span (interrupted=$interrupted)")
             while (true) {
@@ -204,26 +179,18 @@ internal class VodCacheWriteSink(
         const val MAX_QUEUED_BYTES = 24L * 1024L * 1024L
         const val BACKPRESSURE_SLEEP_MS = 2L
         const val MAX_BACKPRESSURE_WAIT_MS = 2_000L
-        // A seek or exit waits on close from the load thread, so a slow disk only gets this long.
         const val MAX_CLOSE_WAIT_MS = 500L
         const val POOL_CAPACITY = 64
 
-        // One worker for every sink: a thread per span cost thousands of threads over a playback.
         private val writer = Executors.newSingleThreadExecutor { runnable ->
             Thread({
-                // Java thread priority barely moves an Android thread; the background group is what
-                // keeps disk writes from competing with the codec and the UI.
                 android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
                 runnable.run()
             }, "VodCacheWrite")
         }
 
-        // One size for every buffer is what lets the pool be taken from one end instead of searched
-        // for one large enough; this matches the allocator's chunk, which is what a read hands over.
-        // The allocs counter says how often a write arrives larger than this.
         const val BUFFER_BYTES = 64 * 1024
 
-        // Shared because a sink is closed and replaced for every cached region.
         private val bufferPool = ArrayDeque<ByteArray>()
 
         fun takeBuffer(counters: Counters): ByteArray {
@@ -241,4 +208,3 @@ internal class VodCacheWriteSink(
         }
     }
 }
-

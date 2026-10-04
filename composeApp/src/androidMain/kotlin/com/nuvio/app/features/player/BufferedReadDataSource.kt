@@ -7,9 +7,6 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.TransferListener
 
-// The matroska extractor pulls ebml fields one at a time, which measured at 184 bytes per read and
-// 1.4 million reads for a few minutes of playback. Every one of those crossed the disk cache and
-// paid its per call cost, so they are served from one buffer filled by a single large read instead.
 @UnstableApi
 internal class BufferedReadDataSource(
     private val delegate: DataSource,
@@ -32,7 +29,6 @@ internal class BufferedReadDataSource(
         if (length == 0) return 0
         if (position == limit) {
             if (endOfInput) return C.RESULT_END_OF_INPUT
-            // A read larger than the buffer would gain nothing by being copied through it.
             if (length >= buffer.size) return delegate.read(target, offset, length)
             val filled = delegate.read(buffer, 0, buffer.size)
             if (filled == C.RESULT_END_OF_INPUT) {

@@ -9,10 +9,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 
-/**
- * Turns on the forked ExoPlayer native allocator. Buffers live in a native arena instead of the
- * Java heap, so the player can keep a much larger target without growing the managed heap.
- */
 @UnstableApi
 internal object NuvioExoPlayerPerformanceHelper {
     const val ALLOCATOR_SEGMENT_SIZE = 64 * 1024

@@ -215,7 +215,6 @@ internal object VodCache {
                 try {
                     cache.removeSpan(span)
                 } catch (_: Exception) {
-                    // A locked span is dropped by the evictor later.
                 }
                 yield()
             }

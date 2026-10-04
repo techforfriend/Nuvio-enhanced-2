@@ -15,7 +15,7 @@ internal data class PlaybackBufferSettings(
         const val DEFAULT_BUFFER_FOR_PLAYBACK_MS = 5_000
         const val DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 3_000
         const val DEFAULT_BACK_BUFFER_MS = 0
-        const val DEFAULT_TARGET_BUFFER_MB = 50
+        const val DEFAULT_TARGET_BUFFER_MB = 100
 
         const val MIN_DURATION_SEC = 5
         const val MAX_DURATION_SEC_HEAP = 120
