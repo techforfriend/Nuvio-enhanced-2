@@ -691,9 +691,25 @@ object PlayerSettingsRepository {
         val supported = enabled && isExoNativeMemorySupported()
         if (exoNativeMemoryEnabled == supported) return
         exoNativeMemoryEnabled = supported
+        resetBufferSettingsToDefaults()
         applyExoPlayerNativeMemory(supported)
         publish()
         PlayerSettingsStorage.saveExoNativeMemoryEnabled(supported)
+    }
+
+    private fun resetBufferSettingsToDefaults() {
+        minBufferMs = PlaybackBufferSettings.DEFAULT_MIN_BUFFER_MS
+        maxBufferMs = PlaybackBufferSettings.DEFAULT_MAX_BUFFER_MS
+        bufferForPlaybackMs = PlaybackBufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_MS
+        bufferForPlaybackAfterRebufferMs = PlaybackBufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
+        backBufferDurationMs = PlaybackBufferSettings.DEFAULT_BACK_BUFFER_MS
+        targetBufferSizeMb = PlaybackBufferSettings.DEFAULT_TARGET_BUFFER_MB
+        PlayerSettingsStorage.saveMinBufferMs(minBufferMs)
+        PlayerSettingsStorage.saveMaxBufferMs(maxBufferMs)
+        PlayerSettingsStorage.saveBufferForPlaybackMs(bufferForPlaybackMs)
+        PlayerSettingsStorage.saveBufferForPlaybackAfterRebufferMs(bufferForPlaybackAfterRebufferMs)
+        PlayerSettingsStorage.saveBackBufferDurationMs(backBufferDurationMs)
+        PlayerSettingsStorage.saveTargetBufferSizeMb(targetBufferSizeMb)
     }
 
     fun setBufferEngineEnabled(enabled: Boolean) {
