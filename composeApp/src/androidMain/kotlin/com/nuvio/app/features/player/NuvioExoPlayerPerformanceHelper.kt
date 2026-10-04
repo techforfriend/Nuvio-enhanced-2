@@ -44,7 +44,7 @@ internal object NuvioExoPlayerPerformanceHelper {
             totalMem < 3.2 * gb -> 650
             totalMem < 4.8 * gb -> 1200
             totalMem < 6.8 * gb -> 2000
-            else -> 2500
+            else -> 2000
         }
     }
 
