@@ -1,5 +1,6 @@
 package com.nuvio.app.features.servers
 
+import co.touchlab.kermit.Logger
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.features.watched.WatchedItem
 import com.nuvio.app.features.watched.WatchedRepository
@@ -18,13 +19,19 @@ import nuvio.composeapp.generated.resources.servers_watched_failed
 import org.jetbrains.compose.resources.getString
 
 internal object ServerWatched {
+    private val log = Logger.withTag("ServerWatched")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     fun isServerItem(item: WatchedItem): Boolean = ServerItemRef.isServerId(item.id)
 
     suspend fun apply(items: Collection<WatchedItem>, played: Boolean) {
-        val failed = write(targets(items), played)
-        if (failed.isEmpty()) return
+        val targets = targets(items)
+        val failed = write(targets, played)
+        if (failed.isEmpty()) {
+            if (targets.isNotEmpty()) log.i { "Marked ${targets.size} server items played=$played" }
+            return
+        }
+        log.w { "Could not mark ${failed.size} of ${targets.size} server items played=$played" }
         reportFailure()
         if (played) {
             val series = failed.filter { it.episode != null }.distinctBy { it.id }
@@ -48,16 +55,30 @@ internal object ServerWatched {
                     ?: return@flatMap emptyList()
                 connections.filter { ServerMatcher.supports(it, request.kind) }.flatMap { connection ->
                     try {
-                        ServerMatcher.match(connection, request, forceRefresh = false).map { it to item }
+                        ServerMatcher.match(connection, request, forceRefresh = false)
+                            .also { if (it.isEmpty()) log.i { "No ${connection.providerId} match for ${item.label()}" } }
+                            .map { it to item }
                     } catch (error: CancellationException) {
                         throw error
-                    } catch (_: Throwable) {
+                    } catch (error: Throwable) {
                         lookupFailures++
+                        log.w(error) { "Looking up ${item.label()} on ${connection.providerId} failed" }
                         emptyList()
                     }
                 }
             }.distinctBy { it.first }
-            if (lookupFailures > 0 || write(targets, played).isNotEmpty()) reportFailure()
+            if (lookupFailures > 0) {
+                log.w { "Skipped mirroring played=$played after $lookupFailures failed lookups" }
+                reportFailure()
+                return@launch
+            }
+            val failed = write(targets, played)
+            if (failed.isNotEmpty()) {
+                log.w { "Could not mirror played=$played to ${failed.size} of ${targets.size} server items" }
+                reportFailure()
+                return@launch
+            }
+            log.i { "Mirrored played=$played to ${targets.size} server items" }
         }
     }
 
@@ -93,7 +114,8 @@ internal object ServerWatched {
             true
         } catch (error: CancellationException) {
             throw error
-        } catch (_: Throwable) {
+        } catch (error: Throwable) {
+            log.w(error) { "Setting played=$played on ${ref.label()} failed" }
             false
         }
 
@@ -102,12 +124,17 @@ internal object ServerWatched {
             ServerCatalog.details(ref)
         } catch (error: CancellationException) {
             throw error
-        } catch (_: Throwable) {
+        } catch (error: Throwable) {
+            log.w(error) { "Refreshing ${ref.label()} after a failed write failed" }
             return
         }
         ServerUserStateProjection.apply(details)
         WatchedRepository.reconcileSeriesWatchedState(details.meta, CurrentDateProvider.todayIsoDate())
     }
+
+    private fun ServerItemRef.label(): String = "${ServerRepository.connection(connectionId)?.providerId ?: connectionId} item $itemId"
+
+    private fun WatchedItem.label(): String = "$type ${videoId ?: id}"
 
     private suspend fun reportFailure() {
         NuvioToastController.show(getString(Res.string.servers_watched_failed))

@@ -27,6 +27,7 @@ internal class FakeServerProvider(
     val reported = mutableListOf<ServerPlaybackEventType>()
     val playbackRequests = mutableListOf<ServerPlaybackRequest>()
     val playedChanges = mutableListOf<Pair<String, Boolean>>()
+    val userStates = mutableMapOf<String, List<ServerUserState>>()
     val failingPlayed = mutableSetOf<String>()
     val failingLibraries = mutableSetOf<String>()
     private val lock = SynchronizedObject()
@@ -73,6 +74,7 @@ internal class FakeServerProvider(
             },
         ),
         externalIds = indexedIds[itemId] ?: TrackingExternalIds(),
+        userStates = userStates[itemId].orEmpty(),
     )
 
     override suspend fun candidates(session: ServerSession, itemId: String): List<ServerCandidate> = listOf(

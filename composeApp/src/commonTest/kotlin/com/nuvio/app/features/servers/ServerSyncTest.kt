@@ -33,7 +33,7 @@ class ServerSyncTest {
         assertEquals(
             setOf(
                 "id", "provider_id", "name", "address", "remote_server_id", "remote_user_id",
-                "user_name", "token", "libraries", "enabled", "use_catalog_metadata",
+                "user_name", "token", "libraries", "enabled", "use_catalog_metadata", "import_watch_state",
             ),
             payload.keys,
         )
@@ -49,6 +49,18 @@ class ServerSyncTest {
 
         assertEquals(listOf("local-a", "remote-b", "local-c"), merged.map { it.id })
         assertEquals("new", merged.first().token)
+    }
+
+    @Test
+    fun keepsLocalImportSettingWhenRemoteHasNone() {
+        val merged = mergeSyncedServers(
+            local = listOf(synced("local-a", "s1").copy(importWatchState = true)),
+            remote = listOf(synced("remote-a", "s1"), synced("remote-b", "s2").copy(importWatchState = false)),
+            syncedKeys = null,
+        )
+
+        assertEquals(listOf(true, false), merged.map { it.importWatchState })
+        assertFalse(merged.last().toConnection("c", "k").importWatchState)
     }
 
     @Test

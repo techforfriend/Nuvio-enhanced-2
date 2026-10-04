@@ -150,6 +150,7 @@ object ServerRepository {
             libraries = existing?.libraries.orEmpty(),
             enabled = true,
             useCatalogMetadata = existing?.useCatalogMetadata ?: false,
+            importWatchState = existing?.importWatchState ?: false,
         )
         val libraries = provider.libraries(ServerSession(draft, signIn.token))
         if (startedGeneration != generation || profileId != loadedProfileId) {
@@ -188,6 +189,10 @@ object ServerRepository {
 
     fun setCatalogMetadata(connectionId: String, enabled: Boolean) {
         updateConnection(connectionId) { it.copy(useCatalogMetadata = enabled) }
+    }
+
+    fun setImportWatchState(connectionId: String, enabled: Boolean) {
+        updateConnection(connectionId) { it.copy(importWatchState = enabled) }
     }
 
     fun setEnabled(connectionId: String, enabled: Boolean) {

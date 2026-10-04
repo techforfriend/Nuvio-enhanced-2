@@ -177,6 +177,21 @@ class ServerPlaybackTest {
     }
 
     @Test
+    fun resumesFromTheServerOnlyWhenItWatchedMoreRecently() = runTest {
+        val provider = FakeServerProvider().apply {
+            userStates["7"] = listOf(ServerUserState("v7", positionMs = 30_000L, durationMs = 60_000L, played = false, lastPlayedEpochMs = 5_000L))
+        }
+        val connection = installFakeServer(provider)
+        val url = assertNotNull(ServerPlayback.prepare(ServerStreams.candidates(ServerItemRef(connection.id, "7")).single()).playableDirectUrl)
+
+        assertEquals(30_000L, ServerPlayback.newerResumePositionMs(url, savedAtEpochMs = null))
+        assertEquals(30_000L, ServerPlayback.newerResumePositionMs(url, savedAtEpochMs = 4_000L))
+        assertNull(ServerPlayback.newerResumePositionMs(url, savedAtEpochMs = 5_000L))
+        assertNull(ServerPlayback.newerResumePositionMs("https://other.example/7", savedAtEpochMs = null))
+        ServerPlayback.stop(url)
+    }
+
+    @Test
     fun directPlayLeavesTracksToThePlayer() = runTest {
         val connection = installFakeServer()
         val url = assertNotNull(ServerPlayback.prepare(ServerStreams.candidates(ServerItemRef(connection.id, "7")).single()).playableDirectUrl)

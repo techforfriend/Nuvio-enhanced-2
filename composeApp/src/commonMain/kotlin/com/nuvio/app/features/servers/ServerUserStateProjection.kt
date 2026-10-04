@@ -10,7 +10,7 @@ internal object ServerUserStateProjection {
     fun apply(details: ServerItemDetails) {
         val meta = details.meta
         val ref = ServerItemRef.parse(meta.id) ?: return
-        val connection = ServerRepository.connection(ref.connectionId) ?: return
+        val connection = ServerRepository.connection(ref.connectionId)?.takeIf { it.importWatchState } ?: return
         val label = ServerRepository.sourceLabel(connection)
         val isSeries = meta.type == ServerMediaKind.SERIES.contentType
 

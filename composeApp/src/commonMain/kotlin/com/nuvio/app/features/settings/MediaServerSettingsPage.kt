@@ -47,6 +47,8 @@ import nuvio.composeapp.generated.resources.servers_catalog_metadata
 import nuvio.composeapp.generated.resources.servers_catalog_metadata_description
 import nuvio.composeapp.generated.resources.servers_enabled
 import nuvio.composeapp.generated.resources.servers_enabled_description
+import nuvio.composeapp.generated.resources.servers_import_watch_state
+import nuvio.composeapp.generated.resources.servers_import_watch_state_description
 import nuvio.composeapp.generated.resources.servers_libraries
 import nuvio.composeapp.generated.resources.servers_libraries_description
 import nuvio.composeapp.generated.resources.servers_no_libraries
@@ -158,6 +160,17 @@ private fun MediaServerSettingsBody(
                     enabled = connection.enabled,
                     isTablet = isTablet,
                     onCheckedChange = { ServerRepository.setCatalogMetadata(connection.id, it) },
+                )
+            }
+            if (provider?.supports(ServerCapability.USER_STATE_READ) == true) {
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.servers_import_watch_state),
+                    description = stringResource(Res.string.servers_import_watch_state_description, provider.displayName),
+                    checked = connection.importWatchState,
+                    enabled = connection.enabled,
+                    isTablet = isTablet,
+                    onCheckedChange = { ServerRepository.setImportWatchState(connection.id, it) },
                 )
             }
         }

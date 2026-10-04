@@ -15,6 +15,7 @@ import com.nuvio.app.features.servers.ServerPlayback
 import com.nuvio.app.features.servers.serverPlaybackMessage
 import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.features.streams.StreamLinkCacheRepository
+import com.nuvio.app.features.watchprogress.WatchProgressEntry
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import com.nuvio.app.features.watchprogress.buildPlaybackVideoId
 import kotlinx.coroutines.CancellationException
@@ -49,13 +50,13 @@ internal fun PlayerScreenRuntime.resolveDebridForPlayer(
 
 internal fun PlayerScreenRuntime.prepareServerForPlayer(
     stream: StreamItem,
-    onPrepared: (StreamItem) -> Unit,
+    onPrepared: suspend (StreamItem) -> Unit,
 ): Boolean {
     if (!stream.needsServerPreparation) return false
     scope.launch {
         runCatching { ServerPlayback.prepare(stream) }
             .onFailure { if (it is CancellationException) throw it }
-            .onSuccess(onPrepared)
+            .onSuccess { onPrepared(it) }
             .onFailure { NuvioToastController.show(it.serverPlaybackMessage()) }
     }
     return true
@@ -308,8 +309,12 @@ internal fun PlayerScreenRuntime.switchToSource(stream: StreamItem) {
     PlayerStreamsRepository.pauseSearchForPlayback()
 }
 
-internal fun PlayerScreenRuntime.switchToEpisodeStream(stream: StreamItem, episode: MetaVideo) {
-    if (prepareServerForPlayer(stream) { switchToEpisodeStream(it, episode) }) return
+internal fun PlayerScreenRuntime.switchToEpisodeStream(
+    stream: StreamItem,
+    episode: MetaVideo,
+    serverResumeMs: Long? = null,
+) {
+    if (prepareServerForPlayer(stream) { switchToEpisodeStream(it, episode, newerServerResumeMs(it, episode)) }) return
     if (
         resolveDebridForPlayer(
             stream = stream,
@@ -337,7 +342,7 @@ internal fun PlayerScreenRuntime.switchToEpisodeStream(stream: StreamItem, episo
     flushWatchProgress()
     stopActiveP2pStream()
     val epVideoId = episode.id
-    val resume = resolveEpisodeResume(epVideoId, episode)
+    val resume = serverResumeMs?.let { EpisodeResume(positionMs = it, fraction = null) } ?: resolveEpisodeResume(epVideoId, episode)
     if (playerSettingsUiState.streamReuseLastLinkEnabled) {
         saveDirectStreamForReuse(stream, url, epVideoId, episode.season, episode.episode)
     }
@@ -490,19 +495,26 @@ private fun PlayerScreenRuntime.resetEpisodePanelAndNextEpisodeState() {
     PlayerStreamsRepository.clearEpisodeStreams()
 }
 
-private fun PlayerScreenRuntime.resolveEpisodeResume(epVideoId: String, episode: MetaVideo): EpisodeResume {
+private fun PlayerScreenRuntime.episodeProgress(epVideoId: String, episode: MetaVideo): WatchProgressEntry? {
     val epResumeVideoId = buildPlaybackVideoId(
         parentMetaId = parentMetaId,
         seasonNumber = episode.season,
         episodeNumber = episode.episode,
         fallbackVideoId = epVideoId,
     )
-    val epEntry = WatchProgressRepository.progressForVideo(
+    return WatchProgressRepository.progressForVideo(
         videoId = epVideoId.takeIf { it.isNotBlank() } ?: epResumeVideoId,
         parentMetaId = parentMetaId,
         seasonNumber = episode.season,
         episodeNumber = episode.episode,
-    )?.takeIf { !it.isCompleted }
+    )
+}
+
+private suspend fun PlayerScreenRuntime.newerServerResumeMs(stream: StreamItem, episode: MetaVideo): Long? =
+    ServerPlayback.newerResumePositionMs(stream.playableDirectUrl, episodeProgress(episode.id, episode)?.lastUpdatedEpochMs)
+
+private fun PlayerScreenRuntime.resolveEpisodeResume(epVideoId: String, episode: MetaVideo): EpisodeResume {
+    val epEntry = episodeProgress(epVideoId, episode)?.takeIf { !it.isCompleted }
     val epResumeFraction = epEntry?.progressPercent
         ?.takeIf { it > 0f }
         ?.let { (it / 100f).coerceIn(0f, 1f) }

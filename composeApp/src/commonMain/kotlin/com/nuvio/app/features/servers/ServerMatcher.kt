@@ -1,5 +1,6 @@
 package com.nuvio.app.features.servers
 
+import co.touchlab.kermit.Logger
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.tmdb.TmdbService
 import com.nuvio.app.features.tracking.TrackingExternalIds
@@ -42,6 +43,7 @@ internal class LibraryIndex(entries: List<ServerIndexEntry>) {
 }
 
 internal object ServerMatcher {
+    private val log = Logger.withTag("ServerMatcher")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val lock = SynchronizedObject()
     private val indexes = mutableMapOf<String, IndexBuild>()
@@ -105,8 +107,10 @@ internal object ServerMatcher {
 
     private suspend fun index(connection: ServerConnection, library: ServerLibrary, forceRefresh: Boolean): LibraryIndex {
         val build = build(connection, library, forceRefresh)
-        return withTimeoutOrNull(INDEX_WAIT_MS) { build.result.await() }
-            ?: throw ServerException(ServerFailure.INCOMPLETE)
+        return withTimeoutOrNull(INDEX_WAIT_MS) { build.result.await() } ?: run {
+            log.w { "${connection.providerId} library ${library.name} was not indexed within ${INDEX_WAIT_MS}ms" }
+            throw ServerException(ServerFailure.INCOMPLETE)
+        }
     }
 
     private fun build(connection: ServerConnection, library: ServerLibrary, forceRefresh: Boolean): IndexBuild {
@@ -121,11 +125,14 @@ internal object ServerMatcher {
         }
         scope.launch {
             try {
-                build.result.complete(LibraryIndex(fetchEntries(connection, library)))
+                val entries = fetchEntries(connection, library)
+                log.i { "Indexed ${entries.size} items in ${connection.providerId} library ${library.name} in ${nowMs() - now}ms" }
+                build.result.complete(LibraryIndex(entries))
             } catch (error: Throwable) {
                 build.failed = true
                 build.result.completeExceptionally(error)
                 if (error is CancellationException) throw error
+                log.w(error) { "Indexing ${connection.providerId} library ${library.name} failed" }
             }
         }
         return build

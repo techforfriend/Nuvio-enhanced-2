@@ -42,6 +42,7 @@ import com.nuvio.app.features.streams.StreamsScreen
 import com.nuvio.app.features.streams.shouldShowAutoPlayLoading
 import com.nuvio.app.features.streams.shouldUseLandscapeAutoPlayLoading
 import com.nuvio.app.features.streams.StreamsUiState
+import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import com.nuvio.app.navigation.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -153,6 +154,17 @@ internal fun StreamDestination(
             language = meta?.language?.takeIf { it.isNotBlank() } ?: fallbackLanguage,
             country = meta?.country,
         )
+    }
+
+    suspend fun serverResumePositionMs(stream: StreamItem): Long? {
+        if (stream.serverTarget == null || launch.startFromBeginning) return null
+        val saved = WatchProgressRepository.progressForVideo(
+            videoId = effectiveVideoId,
+            parentMetaId = launch.parentMetaId,
+            seasonNumber = launch.seasonNumber,
+            episodeNumber = launch.episodeNumber,
+        )
+        return ServerPlayback.newerResumePositionMs(stream.playableDirectUrl, saved?.lastUpdatedEpochMs)
     }
 
     fun openP2pStream(
@@ -449,6 +461,7 @@ internal fun StreamDestination(
             return@LaunchedEffect
         }
         autoPlayHandled = true
+        val serverResumeMs = serverResumePositionMs(stream)
         if (playerSettings.streamReuseLastLinkEnabled && stream.serverTarget == null) {
             val cacheKey = StreamLinkCacheRepository.contentKey(
                 type = launch.type,
@@ -497,8 +510,8 @@ internal fun StreamDestination(
             videoId = effectiveVideoId,
             parentMetaId = launch.parentMetaId ?: effectiveVideoId,
             parentMetaType = launch.parentMetaType ?: launch.type,
-            initialPositionMs = launch.resumePositionMs ?: 0L,
-            initialProgressFraction = launch.resumeProgressFraction,
+            initialPositionMs = serverResumeMs ?: launch.resumePositionMs ?: 0L,
+            initialProgressFraction = launch.resumeProgressFraction.takeIf { serverResumeMs == null },
             contentLanguage = resolveLaunchContentLanguage(),
         )
         if (playerSettings.externalPlayerEnabled && stream.serverTarget == null) {
@@ -554,11 +567,12 @@ internal fun StreamDestination(
                         NuvioToastController.show(error.serverPlaybackMessage())
                         return@launch
                     }
+                val serverResumeMs = serverResumePositionMs(prepared)
                 preparingServerStream = false
                 openSelectedStream(
                     stream = prepared,
-                    resolvedResumePositionMs = resolvedResumePositionMs,
-                    resolvedResumeProgressFraction = resolvedResumeProgressFraction,
+                    resolvedResumePositionMs = serverResumeMs ?: resolvedResumePositionMs,
+                    resolvedResumeProgressFraction = resolvedResumeProgressFraction.takeIf { serverResumeMs == null },
                     forceExternal = false,
                     forceInternal = true,
                 )

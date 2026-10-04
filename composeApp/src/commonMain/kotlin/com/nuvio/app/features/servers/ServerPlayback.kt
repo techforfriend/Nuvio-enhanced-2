@@ -76,6 +76,26 @@ internal object ServerPlayback {
 
     fun session(url: String?): ServerPlaybackSession? = url?.let { synchronized(lock) { active[it] } }?.playback
 
+    suspend fun newerResumePositionMs(url: String?, savedAtEpochMs: Long?): Long? {
+        val current = url?.let { synchronized(lock) { active[it] } } ?: return null
+        val state = try {
+            withTimeoutOrNull(RESUME_TIMEOUT_MS) {
+                current.provider.details(current.session, current.playback.target.item.itemId).userStates.firstOrNull()
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            log.w { "Reading the resume point for ${current.label} failed: ${error.serverFailure()}" }
+            null
+        } ?: return null
+        val lastPlayed = state.lastPlayedEpochMs
+            ?.takeIf { !state.played && state.positionMs > 0L && state.durationMs > 0L }
+            ?: return null
+        if (savedAtEpochMs != null && savedAtEpochMs >= lastPlayed) return null
+        log.i { "Resuming ${current.label} from the server at ${state.positionMs}ms" }
+        return state.positionMs
+    }
+
     fun isServerSource(url: String?): Boolean = url != null && synchronized(lock) { url in active }
 
     fun onPlaybackSnapshot(
@@ -113,6 +133,7 @@ internal object ServerPlayback {
         )
         val playback = runCatching { current.provider.preparePlayback(current.session, request) }
             .onFailure { if (it is CancellationException) throw it }
+            .onFailure { log.w { "Playback restart for ${current.label} failed: ${it.serverFailure()} (${it.message})" } }
             .getOrNull()
             ?: return null
         stop(url)
@@ -132,6 +153,7 @@ internal object ServerPlayback {
         val session: ServerSession,
         val playback: ServerPlaybackSession,
     ) {
+        val label = "${provider.id} item ${playback.target.item.itemId}"
         private val events = Channel<ServerPlaybackEvent>(Channel.UNLIMITED)
         var started = false
             private set
@@ -141,14 +163,21 @@ internal object ServerPlayback {
         private var lastReportAtMs = 0L
 
         init {
+            log.i { "Prepared $label as ${playback.playMethod} ${playback.transcodeReasons}" }
             scope.launch {
                 for (event in events) {
                     try {
-                        withTimeoutOrNull(REPORT_TIMEOUT_MS) { provider.report(session, playback, event) }
+                        val sent = withTimeoutOrNull(REPORT_TIMEOUT_MS) { provider.report(session, playback, event) }
+                        when {
+                            sent == null -> log.w { "Playback report ${event.type} for $label timed out" }
+                            event.type != ServerPlaybackEventType.PROGRESS -> {
+                                log.i { "Playback report ${event.type} for $label sent at ${event.positionMs}ms" }
+                            }
+                        }
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Throwable) {
-                        log.w { "Playback report ${event.type} failed: ${error.serverFailure()}" }
+                        log.w { "Playback report ${event.type} for $label failed: ${error.serverFailure()} (${error.message})" }
                     }
                 }
             }
@@ -196,4 +225,5 @@ internal object ServerPlayback {
     private const val PROGRESS_INTERVAL_MS = 10_000L
     private const val SEEK_THRESHOLD_MS = 5_000L
     private const val REPORT_TIMEOUT_MS = 10_000L
+    private const val RESUME_TIMEOUT_MS = 2_000L
 }
