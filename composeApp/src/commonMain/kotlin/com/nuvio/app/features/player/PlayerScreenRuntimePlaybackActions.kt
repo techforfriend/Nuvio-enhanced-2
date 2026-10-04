@@ -10,9 +10,12 @@ import com.nuvio.app.features.watchprogress.WatchProgressClock
 import com.nuvio.app.features.watchprogress.WatchProgressPlaybackSession
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import com.nuvio.app.features.watchprogress.buildPlaybackVideoId
+import com.nuvio.app.features.watching.domain.isShortPlaceholderDuration
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.player_engine_switching_manual_message
 import kotlin.math.abs
 
 internal fun PlayerScreenRuntime.finishTimelineScrub(positionMs: Long) {
@@ -26,7 +29,11 @@ internal fun PlayerScreenRuntime.updatePlaybackSnapshot(
     playbackKey: PlaybackKey = activePlaybackKey,
 ): Boolean {
     if (playbackKey != activePlaybackKey) return false
-    playbackSnapshot = snapshot
+    playbackSnapshot = if (snapshot.durationMs <= 0L && playbackSnapshotKey == playbackKey) {
+        snapshot.copy(durationMs = playbackSnapshot.durationMs)
+    } else {
+        snapshot
+    }
     playbackSnapshotKey = playbackKey
     val targetPositionMs = scrubbingPositionMs ?: return true
     if (!isScrubbingTimeline && (
@@ -50,6 +57,7 @@ internal val PlayerScreenRuntime.activePlaybackKey: PlaybackKey
         videoId = activeVideoId,
         seasonNumber = activeSeasonNumber,
         episodeNumber = activeEpisodeNumber,
+        playbackEngine = playbackEngineOverride,
     )
 
 internal val PlayerScreenRuntime.playbackSession: WatchProgressPlaybackSession
@@ -188,12 +196,14 @@ internal fun PlayerScreenRuntime.currentTrackingMedia(): TrackingMediaReference 
     snapshotTrackingScrobbleItemInputs().buildMedia()
 
 internal fun PlayerScreenRuntime.emitTrackingScrobbleStart() {
+    if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return
     if (hasRequestedScrobbleStartForCurrentItem) return
     hasRequestedScrobbleStartForCurrentItem = true
     val requestGeneration = scrobbleStartRequestGeneration + 1L
     scrobbleStartRequestGeneration = requestGeneration
 
     scope.launch {
+        if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return@launch
         val media = currentTrackingMedia()
         if (!media.hasResolvableIdentity) {
             hasRequestedScrobbleStartForCurrentItem = false
@@ -232,6 +242,7 @@ private fun PlayerScreenRuntime.emitTrackingScrobbleTerminal(
     action: TrackingScrobbleAction,
     progressPercent: Float?,
 ) {
+    if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return
     val provided = progressPercent
     if (!hasRequestedScrobbleStartForCurrentItem && (provided ?: 0f) < 80f) return
 
@@ -254,6 +265,7 @@ private fun PlayerScreenRuntime.emitTrackingScrobbleTerminal(
 }
 
 internal fun PlayerScreenRuntime.emitStopScrobbleForCurrentProgress() {
+    if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return
     val progressPercent = currentPlaybackProgressPercent()
     if (!shouldSendStopScrobble(hasRequestedScrobbleStartForCurrentItem, progressPercent)) {
         return
@@ -280,9 +292,11 @@ internal fun shouldUpdateTrackingScrobbleAfterSeek(
 ): Boolean = hasActiveScrobble && progressPercent >= 1f && progressPercent < 80f
 
 internal fun PlayerScreenRuntime.emitTrackingSeekScrobbleStart() {
+    if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return
     val mediaSnapshot = currentTrackingMedia
     val inputsSnapshot = snapshotTrackingScrobbleItemInputs()
     scope.launch {
+        if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return@launch
         val media = mediaSnapshot ?: inputsSnapshot.buildMedia()
         if (!media.hasResolvableIdentity) return@launch
         TrackingScrobbleCoordinator.scrobbleSeek(
@@ -340,6 +354,7 @@ internal fun PlayerScreenRuntime.scheduleProgressSyncAfterSeek() {
     seekProgressSyncJob?.cancel()
     seekProgressSyncJob = scope.launch {
         delay(PlayerSeekProgressSyncDebounceMs)
+        if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return@launch
         WatchProgressRepository.upsertPlaybackProgress(
             session = playbackSession,
             snapshot = playbackSnapshot,
@@ -362,12 +377,15 @@ internal fun PlayerScreenRuntime.scheduleProgressSyncAfterSeek() {
             progressPercent = progressPercent.toDouble(),
         )
         scope.launch {
+            if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return@launch
             TrackingScrobbleCoordinator.scrobbleSeek(
                 profileId = profileId,
                 action = TrackingScrobbleAction.STOP,
                 event = stopEvent,
             )
-            if (!shouldRestartScrobbleAfterSeek || !shouldPlay || playbackSnapshot.isEnded) return@launch
+            if (!shouldRestartScrobbleAfterSeek || !shouldPlay || playbackSnapshot.isEnded ||
+                isShortPlaceholderDuration(playbackSnapshot.durationMs)
+            ) return@launch
             if (playbackSnapshot.isPlaying) {
                 pendingSeekScrobbleRestart = false
                 TrackingScrobbleCoordinator.scrobbleSeek(
@@ -393,4 +411,30 @@ internal fun PlayerScreenRuntime.persistPlaybackProgressTick() {
         snapshot = playbackSnapshot,
         syncRemote = false,
     )
+}
+
+internal fun PlayerScreenRuntime.switchPlaybackEngine() {
+    val engine = playerController?.playbackEngine ?: return
+    val target = if (engine == AndroidPlaybackEngine.Libmpv) AndroidPlaybackEngine.ExoPlayer else AndroidPlaybackEngine.Libmpv
+    flushWatchProgress()
+    if (initialSeekApplied) {
+        activeInitialPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
+        activeInitialProgressFraction = null
+    }
+    playbackEngineOverride = target
+    showGestureFeedback(
+        GestureFeedbackState(
+            messageRes = Res.string.player_engine_switching_manual_message,
+            messageArgs = listOf(target.label),
+        ),
+    )
+}
+
+internal fun PlayerScreenRuntime.openStreamInfo() {
+    refreshTracks()
+    val controller = playerController
+    scope.launch {
+        streamMediaInfo = controller?.getMediaInfo() ?: PlayerMediaInfo()
+        showStreamInfo = true
+    }
 }
