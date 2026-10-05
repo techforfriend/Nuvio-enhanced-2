@@ -1307,6 +1307,11 @@
     <string name="settings_tracking_anime_id_tvdb">Ưu tiên TVDB</string>
     <string name="settings_tracking_anime_id_tvdb_description">Dùng ID TVDB để nhóm các mùa phim. Tùy chọn này ổn định hơn IMDb đối với anime bị IMDb tách riêng theo mùa.</string>
     <string name="settings_tracking_anime_section">Tính năng Simkl</string>
+    <string name="settings_tracking_mdblist_section">Tính năng MDBList</string>
+    <string name="settings_mdblist_library_lists">Danh sách Thư viện</string>
+    <string name="settings_mdblist_library_lists_description">Chọn danh sách MDBList nào xuất hiện trong Thư viện và trong quản lý danh sách. Danh sách Theo dõi luôn được hiển thị.</string>
+    <string name="settings_mdblist_library_lists_summary">%1$d trong số %2$d được hiển</string>
+    <string name="settings_mdblist_library_lists_empty">Không tìm thấy danh sách nào trong tài khoản MDBList của bạn. Đồng bộ để tải chúng.</string>
     <string name="settings_simkl_connect">Kết nối Simkl</string>
     <string name="settings_simkl_connected_as">Đã kết nối với %1$s</string>
     <string name="settings_simkl_default_user">Người dùng Simkl</string>
