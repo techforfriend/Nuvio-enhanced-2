@@ -1,5 +1,7 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.features.whatsnew.WhatsNewSettingsScreen
+
 import com.nuvio.app.navigation.LocalUseNativeNavigation
 import com.nuvio.app.core.build.AppFeaturePolicy
 
@@ -144,6 +146,7 @@ fun SettingsScreen(
     onAccountClick: () -> Unit = {},
     onSupportersContributorsClick: () -> Unit = {},
     onLicensesAttributionsClick: () -> Unit = {},
+    onWhatsNewClick: () -> Unit = {},
     onCheckForUpdatesClick: (() -> Unit)? = null,
     onTestUpdateBannerClick: (() -> Unit)? = null,
     onCollectionsClick: () -> Unit = {},
@@ -353,6 +356,11 @@ fun SettingsScreen(
         } else {
             onLicensesAttributionsClick
         }
+        val openWhatsNew = if (onNavigatePage != null) {
+            { openPage(SettingsPage.WhatsNew) }
+        } else {
+            onWhatsNewClick
+        }
 
         LaunchedEffect(page, currentPage) {
             if (page.name != currentPage) {
@@ -463,6 +471,7 @@ fun SettingsScreen(
                         onPosterClick = onPosterClick,
                         onSupportersContributorsClick = openSupportersContributors,
                         onLicensesAttributionsClick = openLicensesAttributions,
+                        onWhatsNewClick = openWhatsNew,
                         onCheckForUpdatesClick = onCheckForUpdatesClick,
                         onTestUpdateBannerClick = onTestUpdateBannerClick,
                         onCollectionsClick = onCollectionsClick,
@@ -545,6 +554,7 @@ fun SettingsScreen(
                         onAccountClick = openAccount,
                         onSupportersContributorsClick = openSupportersContributors,
                         onLicensesAttributionsClick = openLicensesAttributions,
+                        onWhatsNewClick = openWhatsNew,
                         onCheckForUpdatesClick = onCheckForUpdatesClick,
                         onTestUpdateBannerClick = onTestUpdateBannerClick,
                         onCollectionsClick = onCollectionsClick,
@@ -633,12 +643,16 @@ private fun MobileSettingsScreen(
     onAccountClick: () -> Unit = {},
     onSupportersContributorsClick: () -> Unit = {},
     onLicensesAttributionsClick: () -> Unit = {},
+    onWhatsNewClick: () -> Unit = {},
     onCheckForUpdatesClick: (() -> Unit)? = null,
     onTestUpdateBannerClick: (() -> Unit)? = null,
     onCollectionsClick: () -> Unit = {},
 ) {
     val saveableStateHolder = rememberSaveableStateHolder()
     saveableStateHolder.SaveableStateProvider(page.name) {
+        if (page == SettingsPage.WhatsNew) {
+            WhatsNewSettingsScreen(onBack = onNavigateBack)
+        } else {
         var settingsSearchQuery by rememberSaveable { mutableStateOf("") }
         var rootSearchVisible by rememberSaveable { mutableStateOf(false) }
         var rootSearchRevealAnimating by rememberSaveable { mutableStateOf(false) }
@@ -671,6 +685,7 @@ private fun MobileSettingsScreen(
                         }
                     }
                     SettingsPage.LicensesAttributions -> onLicensesAttributionsClick()
+                    SettingsPage.WhatsNew -> onWhatsNewClick()
                     SettingsPage.ContinueWatching -> onContinueWatchingClick()
                     SettingsPage.Addons -> onAddonsClick()
                     SettingsPage.Plugins -> {
@@ -757,6 +772,7 @@ private fun MobileSettingsScreen(
                             onTrackingClick = { onPageChange(SettingsPage.TraktAuthentication) },
                             onSupportersContributorsClick = onSupportersContributorsClick,
                             onLicensesAttributionsClick = onLicensesAttributionsClick,
+                             onWhatsNewClick = onWhatsNewClick,
                             onCheckForUpdatesClick = onCheckForUpdatesClick,
                             onTestUpdateBannerClick = onTestUpdateBannerClick,
                             onAccountClick = onAccountClick,
@@ -787,6 +803,7 @@ private fun MobileSettingsScreen(
                 SettingsPage.LicensesAttributions -> licensesAttributionsContent(
                     isTablet = false,
                 )
+                 SettingsPage.WhatsNew -> Unit
                 SettingsPage.Playback -> playbackSettingsContent(
                     isTablet = false,
                     showLoadingOverlay = showLoadingOverlay,
@@ -935,6 +952,7 @@ private fun MobileSettingsScreen(
         }
         }
     }
+    }
 }
 
 @Composable
@@ -1051,6 +1069,7 @@ private fun TabletSettingsScreen(
     onPosterClick: ((MetaPreview) -> Unit)? = null,
     onSupportersContributorsClick: () -> Unit = {},
     onLicensesAttributionsClick: () -> Unit = {},
+    onWhatsNewClick: () -> Unit = {},
     onCheckForUpdatesClick: (() -> Unit)? = null,
     onTestUpdateBannerClick: (() -> Unit)? = null,
     onCollectionsClick: () -> Unit = {},
@@ -1115,6 +1134,9 @@ private fun TabletSettingsScreen(
         }
 
         saveableStateHolder.SaveableStateProvider(page.name) {
+            if (page == SettingsPage.WhatsNew) {
+                WhatsNewSettingsScreen(onBack = onNavigateBack)
+            } else {
             var settingsSearchQuery by rememberSaveable { mutableStateOf("") }
             var rootSearchVisible by rememberSaveable { mutableStateOf(false) }
             var rootSearchRevealAnimating by rememberSaveable { mutableStateOf(false) }
@@ -1228,6 +1250,7 @@ private fun TabletSettingsScreen(
                                 onTrackingClick = { openInlinePage(SettingsPage.TraktAuthentication) },
                                 onSupportersContributorsClick = { openInlinePage(SettingsPage.SupportersContributors) },
                                 onLicensesAttributionsClick = { openInlinePage(SettingsPage.LicensesAttributions) },
+                                 onWhatsNewClick = { openInlinePage(SettingsPage.WhatsNew) },
                                 onCheckForUpdatesClick = onCheckForUpdatesClick,
                                 onTestUpdateBannerClick = onTestUpdateBannerClick,
                                 onAccountClick = { openInlinePage(SettingsPage.Account) },
@@ -1261,6 +1284,7 @@ private fun TabletSettingsScreen(
                     SettingsPage.LicensesAttributions -> licensesAttributionsContent(
                         isTablet = true,
                     )
+                     SettingsPage.WhatsNew -> Unit
                     SettingsPage.Playback -> playbackSettingsContent(
                         isTablet = true,
                         showLoadingOverlay = showLoadingOverlay,
@@ -1408,6 +1432,7 @@ private fun TabletSettingsScreen(
                 }
             }
             }
+        }
         }
     }
 }
