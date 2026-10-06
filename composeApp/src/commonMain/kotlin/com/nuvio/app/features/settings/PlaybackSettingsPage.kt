@@ -479,6 +479,15 @@ private fun PlaybackSettingsSection(
                 }
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_seek_preview),
+                    description = stringResource(Res.string.settings_playback_seek_preview_description),
+                    checked = autoPlayPlayerSettings.seekPreviewEnabled,
+                    enabled = !autoPlayPlayerSettings.externalPlayerEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = PlayerSettingsRepository::setSeekPreviewEnabled,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
                     title = stringResource(Res.string.settings_playback_touch_gestures),
                     description = stringResource(Res.string.settings_playback_touch_gestures_description),
                     checked = touchGesturesEnabled,

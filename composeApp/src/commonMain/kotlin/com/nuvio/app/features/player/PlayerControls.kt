@@ -7,6 +7,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -84,6 +87,8 @@ import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.appIconPainter
 import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvioTypeScale
+import com.nuvio.app.features.player.seekpreview.SeekPreviewController
+import com.nuvio.app.features.player.seekpreview.SeekPreviewOverlay
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
@@ -138,6 +143,7 @@ internal fun PlayerControlsShell(
     onScrubFinished: (Long) -> Unit,
     horizontalSafePadding: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
+    seekPreview: SeekPreviewController? = null,
 ) {
     val density = LocalDensity.current
     var timelineHeight by remember { mutableStateOf(0.dp) }
@@ -279,6 +285,7 @@ internal fun PlayerControlsShell(
                     onLiveChannelsClick = onLiveChannelsClick,
                     qualityLabel = qualityLabel,
                     onQualityClick = onQualityClick,
+                    seekPreview = seekPreview,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
@@ -316,6 +323,7 @@ internal fun PlayerControlsShell(
                             onInteraction()
                             onScrubFinished(it)
                         },
+                        seekPreview = seekPreview,
                     )
                     PlayerControlActions(
                         playbackSnapshot = playbackSnapshot,
@@ -679,6 +687,7 @@ private fun ProgressControls(
     onLiveChannelsClick: (() -> Unit)? = null,
     qualityLabel: String? = null,
     onQualityClick: (() -> Unit)? = null,
+    seekPreview: SeekPreviewController? = null,
     modifier: Modifier = Modifier,
 ) {
     val aspectRatioPainter = appIconPainter(AppIconResource.PlayerAspectRatio)
@@ -693,6 +702,7 @@ private fun ProgressControls(
             metrics = metrics,
             onScrubChange = onScrubChange,
             onScrubFinished = onScrubFinished,
+            seekPreview = seekPreview,
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -825,39 +835,50 @@ internal fun PlayerSeekBar(
     onScrubFinished: (Long) -> Unit,
     modifier: Modifier = Modifier,
     bufferedPositionMs: Long = 0L,
+    seekPreview: SeekPreviewController? = null,
 ) {
     val seekDurationMs = durationMs.coerceAtLeast(1L)
     val bufferedFraction = playerBufferedFraction(bufferedPositionMs, durationMs)
     val seekDescription = stringResource(Res.string.player_seek_position)
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val isDragged by interactionSource.collectIsDraggedAsState()
     Column(modifier = modifier) {
-        // Upstream pulled the seek bar out of ProgressControls; the fork's tap-to-seek wrapper
-        // follows it here rather than staying at the call site, so the trailer player's seek bar
-        // gets the same behaviour.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(metrics.sliderTouchHeight)
-                .graphicsLayer(scaleY = metrics.sliderScaleY)
-                .tapToSeekOnTimeline(
-                    durationMs = durationMs,
-                    currentPositionMs = { displayedPositionMs },
-                    onSeek = { positionMs ->
-                        val targetPositionMs = positionMs.coerceIn(0L, seekDurationMs)
-                        onScrubChange(targetPositionMs)
-                        onScrubFinished(targetPositionMs)
-                    },
-                ),
-        ) {
-            Slider(
+        Box {
+            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .semantics { contentDescription = seekDescription },
-                value = displayedPositionMs.coerceIn(0L, seekDurationMs).toFloat(),
-                onValueChange = { value -> onScrubChange(value.toLong()) },
-                onValueChangeFinished = { onScrubFinished(displayedPositionMs.coerceIn(0L, seekDurationMs)) },
-                enabled = durationMs > 0L,
-                valueRange = 0f..seekDurationMs.toFloat(),
-                track = { sliderState -> PlayerProgressTrack(sliderState, bufferedFraction) },
+                    .fillMaxWidth()
+                    .height(metrics.sliderTouchHeight)
+                    .graphicsLayer(scaleY = metrics.sliderScaleY)
+                    .tapToSeekOnTimeline(
+                        durationMs = durationMs,
+                        currentPositionMs = { displayedPositionMs },
+                        onSeek = { positionMs ->
+                            val targetPositionMs = positionMs.coerceIn(0L, seekDurationMs)
+                            onScrubChange(targetPositionMs)
+                            onScrubFinished(targetPositionMs)
+                        },
+                    ),
+            ) {
+                Slider(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .semantics { contentDescription = seekDescription },
+                    value = displayedPositionMs.coerceIn(0L, seekDurationMs).toFloat(),
+                    onValueChange = { value -> onScrubChange(value.toLong()) },
+                    onValueChangeFinished = { onScrubFinished(displayedPositionMs.coerceIn(0L, seekDurationMs)) },
+                    enabled = durationMs > 0L,
+                    valueRange = 0f..seekDurationMs.toFloat(),
+                    interactionSource = interactionSource,
+                    track = { sliderState -> PlayerProgressTrack(sliderState, bufferedFraction) },
+                )
+            }
+            SeekPreviewOverlay(
+                controller = seekPreview,
+                active = durationMs > 0L && (isPressed || isDragged),
+                positionMs = displayedPositionMs.coerceIn(0L, seekDurationMs),
+                durationMs = durationMs,
+                modifier = Modifier.matchParentSize(),
             )
         }
         Row(

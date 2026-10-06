@@ -39,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.nuvioTypeScale
+import com.nuvio.app.features.player.seekpreview.SeekPreviewController
+import com.nuvio.app.features.player.seekpreview.SeekPreviewOverlay
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -110,6 +112,7 @@ internal fun PlayerTimeline(
     onScrubFinished: (Long) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    seekPreview: SeekPreviewController? = null,
 ) {
     val durationMs = snapshot.durationMs.coerceAtLeast(0L)
     val rangeEnd = durationMs.coerceAtLeast(1L).toFloat()
@@ -128,57 +131,66 @@ internal fun PlayerTimeline(
     )
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-        Slider(
-            value = displayedPositionMs.coerceIn(0L, durationMs).toFloat(),
-            onValueChange = { value ->
-                val position = value.toLong().coerceIn(0L, durationMs)
-                scrubPosition = position
-                onScrubChange(position)
-            },
-            onValueChangeFinished = {
-                onScrubFinished((scrubPosition ?: displayedPositionMs).coerceIn(0L, durationMs))
-                scrubPosition = null
-            },
-            valueRange = 0f..rangeEnd,
-            enabled = enabled && durationMs > 0L,
-            interactionSource = interactionSource,
-            thumb = {},
-            track = { state ->
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .drawBehind {
-                            val trackHeight = trackThickness.toPx()
-                            val trackOrigin = Offset(0f, 35.dp.toPx() - trackHeight / 2)
-                            val radius = CornerRadius(trackHeight / 2)
-                            drawRoundRect(
-                                color = PlayerBaseTrackColor,
-                                topLeft = trackOrigin,
-                                size = Size(size.width, trackHeight),
-                                cornerRadius = radius,
-                            )
-                            drawRoundRect(
-                                color = PlayerBufferedTrackColor,
-                                topLeft = trackOrigin,
-                                size = Size(size.width * bufferedFraction, trackHeight),
-                                cornerRadius = radius,
-                            )
-                            drawRoundRect(
-                                brush = accentBrush,
-                                topLeft = trackOrigin,
-                                size = Size(size.width * (state.value / rangeEnd).coerceIn(0f, 1f), trackHeight),
-                                cornerRadius = radius,
-                            )
-                        },
-                )
-            },
-            modifier = modifier
-                .fillMaxWidth()
-                .height(24.dp)
-                .wrapContentHeight(Alignment.Bottom, unbounded = true)
-                .requiredHeight(48.dp)
-                .semantics { contentDescription = description },
-        )
+        Box {
+            Slider(
+                value = displayedPositionMs.coerceIn(0L, durationMs).toFloat(),
+                onValueChange = { value ->
+                    val position = value.toLong().coerceIn(0L, durationMs)
+                    scrubPosition = position
+                    onScrubChange(position)
+                },
+                onValueChangeFinished = {
+                    onScrubFinished((scrubPosition ?: displayedPositionMs).coerceIn(0L, durationMs))
+                    scrubPosition = null
+                },
+                valueRange = 0f..rangeEnd,
+                enabled = enabled && durationMs > 0L,
+                interactionSource = interactionSource,
+                thumb = {},
+                track = { state ->
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .drawBehind {
+                                val trackHeight = trackThickness.toPx()
+                                val trackOrigin = Offset(0f, 35.dp.toPx() - trackHeight / 2)
+                                val radius = CornerRadius(trackHeight / 2)
+                                drawRoundRect(
+                                    color = PlayerBaseTrackColor,
+                                    topLeft = trackOrigin,
+                                    size = Size(size.width, trackHeight),
+                                    cornerRadius = radius,
+                                )
+                                drawRoundRect(
+                                    color = PlayerBufferedTrackColor,
+                                    topLeft = trackOrigin,
+                                    size = Size(size.width * bufferedFraction, trackHeight),
+                                    cornerRadius = radius,
+                                )
+                                drawRoundRect(
+                                    brush = accentBrush,
+                                    topLeft = trackOrigin,
+                                    size = Size(size.width * (state.value / rangeEnd).coerceIn(0f, 1f), trackHeight),
+                                    cornerRadius = radius,
+                                )
+                            },
+                    )
+                },
+                modifier = modifier
+                    .fillMaxWidth()
+                    .height(24.dp)
+                    .wrapContentHeight(Alignment.Bottom, unbounded = true)
+                    .requiredHeight(48.dp)
+                    .semantics { contentDescription = description },
+            )
+            SeekPreviewOverlay(
+                controller = seekPreview,
+                active = isInteracting,
+                positionMs = displayedPositionMs.coerceIn(0L, durationMs),
+                durationMs = durationMs,
+                modifier = Modifier.matchParentSize(),
+            )
+        }
     }
 }
