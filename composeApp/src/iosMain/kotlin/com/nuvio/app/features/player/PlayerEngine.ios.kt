@@ -55,6 +55,7 @@ actual fun PlatformPlayerSurface(
     initialPositionMs: Long?,
     initialPositionRequestKey: String?,
     resizeMode: PlayerResizeMode,
+    playbackEngine: AndroidPlaybackEngine?,
     useNativeController: Boolean,
     onInitialPositionHandled: (key: String, handled: Boolean) -> Unit,
     onControllerReady: (PlayerEngineController) -> Unit,
@@ -250,6 +251,9 @@ actual fun PlatformPlayerSurface(
             override fun applyAudioLanguagePreferences(languages: List<String>) {
                 bridge.applyAudioLanguagePreferences(languages)
             }
+
+            override suspend fun getMediaInfo(): PlayerMediaInfo =
+                mpvMediaInfo { name -> bridge.getProperty(name).ifBlank { null } }
 
             override fun selectSubtitleTrack(index: Int) {
                 InAppLogger.info("Player/iOS", "select subtitle track index=$index")

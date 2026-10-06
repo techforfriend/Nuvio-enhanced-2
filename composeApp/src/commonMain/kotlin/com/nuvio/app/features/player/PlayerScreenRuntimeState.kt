@@ -219,6 +219,9 @@ internal class PlayerScreenRuntime(
     var showVideoSettingsModal by mutableStateOf(false)
     var showStreamInfoModal by mutableStateOf(false)
     var showUserRatingSheet by mutableStateOf(false)
+    var showStreamInfo by mutableStateOf(false)
+    var streamMediaInfo by mutableStateOf(PlayerMediaInfo())
+    var playbackEngineOverride by mutableStateOf<AndroidPlaybackEngine?>(null)
     var audioTracks by mutableStateOf<List<AudioTrack>>(emptyList())
     var subtitleTracks by mutableStateOf<List<SubtitleTrack>>(emptyList())
     var selectedAudioIndex by mutableStateOf(-1)
@@ -249,6 +252,7 @@ internal class PlayerScreenRuntime(
             showSubtitleModal ||
             showVideoSettingsModal ||
             showStreamInfoModal ||
+            showStreamInfo ||
             showUserRatingSheet ||
             showSourcesPanel ||
             showQualityPanel ||

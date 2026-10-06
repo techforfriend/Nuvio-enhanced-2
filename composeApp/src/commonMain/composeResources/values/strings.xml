@@ -1505,6 +1505,11 @@
     <string name="settings_tracking_anime_id_tvdb">Prefer TVDB</string>
     <string name="settings_tracking_anime_id_tvdb_description">Use TVDB ID to group seasons. More stable than IMDB for anime with per-season IMDB splits.</string>
     <string name="settings_tracking_anime_section">Simkl features</string>
+    <string name="settings_tracking_mdblist_section">MDBList features</string>
+    <string name="settings_mdblist_library_lists">Library lists</string>
+    <string name="settings_mdblist_library_lists_description">Choose which MDBList lists appear in the Library and in Manage Lists. The Watchlist is always shown.</string>
+    <string name="settings_mdblist_library_lists_summary">%1$d of %2$d shown</string>
+    <string name="settings_mdblist_library_lists_empty">No lists found in your MDBList account yet. Sync to load them.</string>
     <string name="settings_simkl_connect">Connect Simkl</string>
     <string name="settings_simkl_connected_as">Connected as %1$s</string>
     <string name="settings_simkl_default_user">Simkl user</string>
@@ -2720,4 +2725,23 @@
     <string name="whats_new_since_unavailable">Changes since your version can&apos;t be determined from the available release history.</string>
     <string name="whats_new_since_your_version">Since your version</string>
     <string name="whats_new_contributor_credit">Credit: @%1$s</string>
+    <string name="cd_switch_player_engine">Switch player engine</string>
+    <string name="cd_stream_info">Stream info</string>
+    <string name="player_engine_switching_manual_message">Switching to %1$s...</string>
+    <string name="stream_info_section_source">SOURCE</string>
+    <string name="stream_info_section_video">VIDEO</string>
+    <string name="stream_info_section_audio">AUDIO</string>
+    <string name="stream_info_section_subtitle">SUBTITLE</string>
+    <string name="stream_info_codec">Codec</string>
+    <string name="stream_info_resolution">Resolution</string>
+    <string name="stream_info_frame_rate">Frame Rate</string>
+    <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_channels">Channels</string>
+    <string name="stream_info_sample_rate">Sample Rate</string>
+    <string name="stream_info_language">Language</string>
+    <string name="stream_info_name">Name</string>
+    <string name="stream_info_source">Source</string>
+    <string name="stream_info_subtitle_source_addon">Addon</string>
+    <string name="stream_info_subtitle_source_embedded">Embedded</string>
+    <string name="stream_info_player_engine">Player Engine</string>
 </resources>

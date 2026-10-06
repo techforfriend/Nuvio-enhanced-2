@@ -14,6 +14,8 @@ import com.nuvio.app.features.watching.domain.isShortPlaceholderDuration
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.player_engine_switching_manual_message
 import kotlin.math.abs
 
 internal fun PlayerScreenRuntime.finishTimelineScrub(positionMs: Long) {
@@ -58,6 +60,7 @@ internal val PlayerScreenRuntime.activePlaybackKey: PlaybackKey
         videoId = activeVideoId,
         seasonNumber = activeSeasonNumber,
         episodeNumber = activeEpisodeNumber,
+        playbackEngine = playbackEngineOverride,
     )
 
 internal val PlayerScreenRuntime.playbackSession: WatchProgressPlaybackSession
@@ -418,4 +421,30 @@ internal fun PlayerScreenRuntime.persistPlaybackProgressTick() {
         snapshot = playbackSnapshot,
         syncRemote = false,
     )
+}
+
+internal fun PlayerScreenRuntime.switchPlaybackEngine() {
+    val engine = playerController?.playbackEngine ?: return
+    val target = if (engine == AndroidPlaybackEngine.Libmpv) AndroidPlaybackEngine.ExoPlayer else AndroidPlaybackEngine.Libmpv
+    flushWatchProgress()
+    if (initialSeekApplied) {
+        activeInitialPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
+        activeInitialProgressFraction = null
+    }
+    playbackEngineOverride = target
+    showGestureFeedback(
+        GestureFeedbackState(
+            messageRes = Res.string.player_engine_switching_manual_message,
+            messageArgs = listOf(target.label),
+        ),
+    )
+}
+
+internal fun PlayerScreenRuntime.openStreamInfo() {
+    refreshTracks()
+    val controller = playerController
+    scope.launch {
+        streamMediaInfo = controller?.getMediaInfo() ?: PlayerMediaInfo()
+        showStreamInfo = true
+    }
 }
