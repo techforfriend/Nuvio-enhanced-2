@@ -70,6 +70,14 @@ internal object VersionUtils {
 
     fun isPrerelease(raw: String?): Boolean = parse(raw)?.prerelease?.isNotEmpty() == true
 
+    fun isSameBaseVersion(left: String?, right: String?): Boolean {
+        val leftVersion = parse(left) ?: return false
+        val rightVersion = parse(right) ?: return false
+        return leftVersion.major == rightVersion.major &&
+            leftVersion.minor == rightVersion.minor &&
+            leftVersion.patch == rightVersion.patch
+    }
+
     fun isRemoteNewer(remote: String?, local: String?): Boolean {
         val remoteVersion = parse(remote) ?: return false
         val localVersion = parse(local) ?: return false

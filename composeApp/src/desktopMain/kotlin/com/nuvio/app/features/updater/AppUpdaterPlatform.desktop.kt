@@ -19,6 +19,12 @@ actual object AppUpdaterPlatform {
 
     actual fun setUpdateChannel(channel: String) = Unit
 
+    actual fun getWhatsNewCache(): String? = null
+
+    actual fun setWhatsNewCache(payload: String?) = Unit
+
+    actual fun currentTimeMillis(): Long = System.currentTimeMillis()
+
     actual fun deleteDownloadedApk(path: String) = Unit
 
     actual suspend fun downloadApk(

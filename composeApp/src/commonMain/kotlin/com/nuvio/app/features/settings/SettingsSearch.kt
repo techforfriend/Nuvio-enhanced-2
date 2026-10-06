@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -104,6 +105,7 @@ internal fun settingsSearchEntries(
     val notificationsPage = stringResource(Res.string.compose_settings_page_notifications)
     val supportersPage = stringResource(Res.string.compose_settings_page_supporters_contributors)
     val licensesPage = stringResource(Res.string.compose_settings_page_licenses_attributions)
+    val whatsNewPage = stringResource(Res.string.compose_settings_page_whats_new)
     val homeLayoutPage = stringResource(Res.string.compose_settings_page_homescreen)
     val detailPage = stringResource(Res.string.compose_settings_page_meta_screen)
     val continueWatchingPage = stringResource(Res.string.compose_settings_page_continue_watching)
@@ -294,6 +296,14 @@ internal fun settingsSearchEntries(
         description = stringResource(Res.string.about_licenses_attributions_subtitle),
         category = aboutCategory,
         icon = Icons.Rounded.Info,
+    )
+    addPage(
+        page = SettingsPage.WhatsNew,
+        key = "whats-new",
+        title = whatsNewPage,
+        description = stringResource(Res.string.whats_new_root_description),
+        category = aboutCategory,
+        icon = Icons.Rounded.NewReleases,
     )
     listOf(
         PlaybackSearchRow("nuvio-license", stringResource(Res.string.settings_licenses_attributions_nuvio_title), stringResource(Res.string.settings_licenses_attributions_nuvio_license)),

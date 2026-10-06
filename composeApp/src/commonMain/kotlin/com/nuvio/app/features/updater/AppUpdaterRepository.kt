@@ -18,6 +18,7 @@ internal data class GitHubReleaseDto(
     val draft: Boolean = false,
     val prerelease: Boolean = false,
     @SerialName("html_url") val htmlUrl: String? = null,
+    @SerialName("published_at") val publishedAt: String? = null,
     val assets: List<GitHubAssetDto> = emptyList(),
 )
 
@@ -31,9 +32,9 @@ internal data class GitHubAssetDto(
 
 internal class NoChannelReleaseException : IllegalStateException()
 
-private const val GITHUB_API_BASE = "https://api.github.com"
-private const val GITHUB_OWNER = "luqmanfadlli"
-private const val GITHUB_REPO = "NuvioMobile-Enhanced"
+internal const val GITHUB_API_BASE = "https://api.github.com"
+internal const val GITHUB_OWNER = "luqmanfadlli"
+internal const val GITHUB_REPO = "NuvioMobile-Enhanced"
 
 internal object AppUpdaterRepository {
     private val json = Json {

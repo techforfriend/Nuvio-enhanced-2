@@ -20,6 +20,7 @@ import nuvio.composeapp.generated.resources.compose_settings_page_continue_watch
 import nuvio.composeapp.generated.resources.compose_settings_page_homescreen
 import nuvio.composeapp.generated.resources.compose_settings_page_integrations
 import nuvio.composeapp.generated.resources.compose_settings_page_licenses_attributions
+import nuvio.composeapp.generated.resources.compose_settings_page_whats_new
 import nuvio.composeapp.generated.resources.compose_settings_page_live_tv
 import nuvio.composeapp.generated.resources.compose_settings_page_mdblist_ratings
 import nuvio.composeapp.generated.resources.compose_settings_page_meta_screen
@@ -76,6 +77,11 @@ internal enum class SettingsPage(
     ),
     LicensesAttributions(
         titleRes = Res.string.compose_settings_page_licenses_attributions,
+        category = SettingsCategory.About,
+        parentPage = Root,
+    ),
+    WhatsNew(
+        titleRes = Res.string.compose_settings_page_whats_new,
         category = SettingsCategory.About,
         parentPage = Root,
     ),
