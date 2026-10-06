@@ -689,6 +689,7 @@ private fun ProgressControls(
         PlayerSeekBar(
             durationMs = playbackSnapshot.durationMs,
             displayedPositionMs = displayedPositionMs,
+            bufferedPositionMs = playbackSnapshot.bufferedPositionMs,
             metrics = metrics,
             onScrubChange = onScrubChange,
             onScrubFinished = onScrubFinished,
@@ -823,8 +824,10 @@ internal fun PlayerSeekBar(
     onScrubChange: (Long) -> Unit,
     onScrubFinished: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    bufferedPositionMs: Long = 0L,
 ) {
     val seekDurationMs = durationMs.coerceAtLeast(1L)
+    val bufferedFraction = playerBufferedFraction(bufferedPositionMs, durationMs)
     val seekDescription = stringResource(Res.string.player_seek_position)
     Column(modifier = modifier) {
         // Upstream pulled the seek bar out of ProgressControls; the fork's tap-to-seek wrapper
@@ -854,7 +857,7 @@ internal fun PlayerSeekBar(
                 onValueChangeFinished = { onScrubFinished(displayedPositionMs.coerceIn(0L, seekDurationMs)) },
                 enabled = durationMs > 0L,
                 valueRange = 0f..seekDurationMs.toFloat(),
-                track = { sliderState -> PlayerProgressTrack(sliderState) },
+                track = { sliderState -> PlayerProgressTrack(sliderState, bufferedFraction) },
             )
         }
         Row(
@@ -871,12 +874,44 @@ internal fun PlayerSeekBar(
     }
 }
 
+internal fun playerBufferedFraction(bufferedPositionMs: Long, durationMs: Long): Float =
+    if (durationMs > 0L) {
+        (bufferedPositionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+
+internal val PlayerBaseTrackColor = Color.White.copy(alpha = 0.20f)
+
+internal val PlayerBufferedTrackColor = Color.White.copy(alpha = 0.40f)
+
 @Composable
-private fun PlayerProgressTrack(sliderState: SliderState) {
+private fun PlayerBufferedTrack(bufferedFraction: Float, enabled: Boolean = true) {
+    if (bufferedFraction <= 0f) return
+    val bufferedState = remember { SliderState(value = 0f, valueRange = 0f..1f) }
+    bufferedState.value = bufferedFraction
+    SliderDefaults.Track(
+        sliderState = bufferedState,
+        enabled = enabled,
+        colors = SliderDefaults.colors(
+            activeTrackColor = PlayerBufferedTrackColor,
+            inactiveTrackColor = Color.Transparent,
+            disabledActiveTrackColor = PlayerBufferedTrackColor,
+            disabledInactiveTrackColor = Color.Transparent,
+        ),
+        drawStopIndicator = null,
+        thumbTrackGapSize = 0.dp,
+    )
+}
+
+@Composable
+private fun PlayerProgressTrack(sliderState: SliderState, bufferedFraction: Float) {
     val palette = MaterialTheme.themePalette
     val inactiveTrackColors = SliderDefaults.colors(
         activeTrackColor = Color.Transparent,
+        inactiveTrackColor = PlayerBaseTrackColor,
         disabledActiveTrackColor = Color.Transparent,
+        disabledInactiveTrackColor = PlayerBaseTrackColor,
     )
     val activeTrackColors = SliderDefaults.colors(
         activeTrackColor = Color.White,
@@ -890,6 +925,7 @@ private fun PlayerProgressTrack(sliderState: SliderState) {
             sliderState = sliderState,
             colors = inactiveTrackColors,
         )
+        PlayerBufferedTrack(bufferedFraction = bufferedFraction)
         SliderDefaults.Track(
             sliderState = sliderState,
             modifier = Modifier.gradientMask(palette.accentBrush()),
@@ -984,6 +1020,33 @@ internal fun LockedPlayerOverlay(
                     valueRange = 0f..durationMs.toFloat(),
                     enabled = false,
                     colors = sliderColors,
+                    track = { sliderState ->
+                        Box {
+                            SliderDefaults.Track(
+                                sliderState = sliderState,
+                                enabled = false,
+                                colors = SliderDefaults.colors(
+                                    disabledActiveTrackColor = Color.Transparent,
+                                    disabledInactiveTrackColor = PlayerBaseTrackColor,
+                                ),
+                            )
+                            PlayerBufferedTrack(
+                                bufferedFraction = playerBufferedFraction(
+                                    playbackSnapshot.bufferedPositionMs,
+                                    playbackSnapshot.durationMs,
+                                ),
+                                enabled = false,
+                            )
+                            SliderDefaults.Track(
+                                sliderState = sliderState,
+                                enabled = false,
+                                colors = SliderDefaults.colors(
+                                    disabledActiveTrackColor = Color.White,
+                                    disabledInactiveTrackColor = Color.Transparent,
+                                ),
+                            )
+                        }
+                    },
                 )
                 Row(
                     modifier = Modifier
