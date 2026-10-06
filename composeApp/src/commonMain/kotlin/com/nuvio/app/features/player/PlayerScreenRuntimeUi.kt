@@ -643,6 +643,7 @@ private fun BoxScope.RenderPlaybackOverlays(
             emptyList()
         },
         showMovieRecommendationCard = showMovieRecommendationCard,
+        movieRecommendationStage = movieRecommendationStage,
         onOpenMovieRecommendation = { preview ->
             flushWatchProgress()
             args.onOpenMetaDetails?.invoke(preview)

@@ -30,6 +30,12 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,14 +56,33 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun MovieRecommendationCard(
     recommendations: List<MetaPreview>,
-    visible: Boolean,
+    stage: Int,
+    dismissed: Boolean,
+    controlsVisible: Boolean,
     onOpen: (MetaPreview) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (recommendations.isEmpty()) return
 
-    PlatformBackHandler(enabled = visible, onBack = onDismiss)
+    val ended = stage >= PlayerNextEpisodeRules.MOVIE_RECOMMENDATION_STAGE_ENDED
+    val shouldShow = stage > 0 && (!dismissed || controlsVisible)
+    var autoHidden by remember { mutableStateOf(false) }
+
+    LaunchedEffect(stage) {
+        autoHidden = false
+    }
+
+    LaunchedEffect(shouldShow, autoHidden, controlsVisible, ended) {
+        if (shouldShow && !autoHidden && !controlsVisible && !ended) {
+            delay(MOVIE_RECOMMENDATION_AUTO_HIDE_MS)
+            autoHidden = true
+        }
+    }
+
+    val visible = shouldShow && (ended || !autoHidden || controlsVisible)
+
+    PlatformBackHandler(enabled = visible && !dismissed, onBack = onDismiss)
 
     AnimatedVisibility(
         visible = visible,
@@ -140,3 +165,5 @@ fun MovieRecommendationCard(
         }
     }
 }
+
+private const val MOVIE_RECOMMENDATION_AUTO_HIDE_MS = 10_000L

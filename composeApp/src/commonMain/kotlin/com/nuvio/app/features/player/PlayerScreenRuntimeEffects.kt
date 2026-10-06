@@ -728,6 +728,7 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
     ) {
         if (!isMoviePlayback || !playerSettingsUiState.movieRecommendationsEnabled || movieRecommendationCandidates.isEmpty()) {
             showMovieRecommendationCard = false
+            movieRecommendationStage = 0
             return@LaunchedEffect
         }
         val stage = PlayerNextEpisodeRules.movieRecommendationStage(
@@ -738,6 +739,7 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         if (stage == 0 && movieRecommendationDismissedStage != 0) {
             movieRecommendationDismissedStage = 0
         }
+        movieRecommendationStage = stage
         showMovieRecommendationCard = stage > movieRecommendationDismissedStage
     }
 }

@@ -103,9 +103,9 @@ object PlayerNextEpisodeRules {
 
     /**
      * How far a movie is into its ending, for the More Like This card:
-     * 0 = not yet, 1 = last 2 minutes, 2 = last 30 seconds, 3 = playback ended.
+     * 0 = not yet, 1 = last 4 minutes, 2 = last 30 seconds, 3 = playback ended.
      * The card shows while the stage is above the one the user last dismissed it at, so a
-     * dismissal in the 2-minute window brings it back at 30 seconds, and it always returns
+     * dismissal in the 4-minute window brings it back at 30 seconds, and it always returns
      * when playback really ends.
      */
     fun movieRecommendationStage(positionMs: Long, durationMs: Long, isEnded: Boolean): Int {
@@ -120,7 +120,7 @@ object PlayerNextEpisodeRules {
     }
 
     const val MOVIE_RECOMMENDATION_STAGE_ENDED = 3
-    private const val MOVIE_RECOMMENDATION_FIRST_MS = 2L * 60_000L
+    private const val MOVIE_RECOMMENDATION_FIRST_MS = 4L * 60_000L
     private const val MOVIE_RECOMMENDATION_FINAL_MS = 30_000L
 
     fun hasEpisodeAired(raw: String?): Boolean {

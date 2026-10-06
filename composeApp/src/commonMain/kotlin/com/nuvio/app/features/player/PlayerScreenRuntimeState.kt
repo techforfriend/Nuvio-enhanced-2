@@ -201,6 +201,7 @@ internal class PlayerScreenRuntime(
     var nextEpisodeCardDismissed by mutableStateOf(false)
     var showMovieRecommendationCard by mutableStateOf(false)
     var movieRecommendationDismissedStage by mutableStateOf(0)
+    var movieRecommendationStage by mutableStateOf(0)
     val isMoviePlayback: Boolean get() = parentMetaType == "movie" && !isLiveTvPlayback
     var nextEpisodeAutoPlaySearching by mutableStateOf(false)
     var nextEpisodeAutoPlaySourceName by mutableStateOf<String?>(null)
