@@ -60,6 +60,7 @@ internal object WhatsNewSnapshotBuilder {
     fun build(
         releases: List<WhatsNewRelease>,
         currentVersion: String,
+        matchBaseVersion: Boolean = false,
     ): WhatsNewSnapshot {
         val normalizedReleases = releases
             .mapNotNull { release ->
@@ -76,7 +77,14 @@ internal object WhatsNewSnapshotBuilder {
             normalizedReleases.indexOfFirst { release ->
                 VersionUtils.parse(release.version) == target
             }
-        } ?: -1
+        }?.takeIf { it >= 0 || !matchBaseVersion }
+            ?: if (matchBaseVersion) {
+                normalizedReleases.indexOfFirst { release ->
+                    VersionUtils.isSameBaseVersion(release.version, currentVersion)
+                }
+            } else {
+                -1
+            }
 
         return if (currentIndex >= 0) {
             WhatsNewSnapshot(

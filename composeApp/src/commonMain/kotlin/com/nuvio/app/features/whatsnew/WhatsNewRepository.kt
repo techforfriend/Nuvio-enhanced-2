@@ -42,12 +42,14 @@ internal object WhatsNewRepository {
         channel: UpdateChannel = UpdatePreferences.shared.channel.value,
         currentVersion: String = AppVersionConfig.VERSION_NAME,
         forceRefresh: Boolean = false,
+        matchBaseVersion: Boolean = false,
     ): Result<WhatsNewContent> {
         return try {
             Result.success(
                 loadInternal(
                     channel = channel,
                     currentVersion = currentVersion,
+                    matchBaseVersion = matchBaseVersion,
                     forceRefresh = forceRefresh,
                 ),
             )
@@ -62,6 +64,7 @@ internal object WhatsNewRepository {
         channel: UpdateChannel,
         currentVersion: String,
         forceRefresh: Boolean,
+        matchBaseVersion: Boolean,
     ): WhatsNewContent {
         val now = Clock.System.now().toEpochMilliseconds()
         val cached = readCache(channel)
@@ -70,6 +73,7 @@ internal object WhatsNewRepository {
                 body = it.body,
                 channel = channel,
                 currentVersion = currentVersion,
+                matchBaseVersion = matchBaseVersion,
                 fromCache = true,
                 isStale = false,
                 fetchedAtMillis = it.fetchedAtMillis,
@@ -155,6 +159,7 @@ internal object WhatsNewRepository {
                     body = response.body,
                     channel = channel,
                     currentVersion = currentVersion,
+                    matchBaseVersion = matchBaseVersion,
                     fromCache = false,
                     isStale = false,
                     fetchedAtMillis = now,
@@ -193,6 +198,7 @@ internal object WhatsNewRepository {
         body: String,
         channel: UpdateChannel,
         currentVersion: String,
+        matchBaseVersion: Boolean,
         fromCache: Boolean,
         isStale: Boolean,
         fetchedAtMillis: Long,
@@ -216,7 +222,7 @@ internal object WhatsNewRepository {
             )
         }
         return WhatsNewContent(
-            snapshot = WhatsNewSnapshotBuilder.build(mapped, currentVersion),
+            snapshot = WhatsNewSnapshotBuilder.build(mapped, currentVersion, matchBaseVersion),
             fromCache = fromCache,
             isStale = isStale,
             fetchedAtMillis = fetchedAtMillis,

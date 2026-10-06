@@ -59,6 +59,7 @@ import com.nuvio.app.core.ui.NuvioSurfaceCard
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
 import kotlin.time.Clock
+import com.nuvio.app.features.updater.AppUpdaterPlatform
 import com.nuvio.app.features.updater.UpdateChannel
 import com.nuvio.app.features.updater.UpdatePreferences
 import com.nuvio.app.features.updater.VersionUtils
@@ -98,11 +99,13 @@ import nuvio.composeapp.generated.resources.whats_new_refresh
 import nuvio.composeapp.generated.resources.whats_new_release_format
 import nuvio.composeapp.generated.resources.whats_new_show_all_changes
 import nuvio.composeapp.generated.resources.whats_new_status_current_ahead
+import nuvio.composeapp.generated.resources.whats_new_status_current_ahead_all
 import nuvio.composeapp.generated.resources.whats_new_status_newer_releases_available
 import nuvio.composeapp.generated.resources.whats_new_status_update_available
 import nuvio.composeapp.generated.resources.whats_new_status_unknown
 import nuvio.composeapp.generated.resources.whats_new_status_updates_available
 import nuvio.composeapp.generated.resources.whats_new_status_up_to_date
+import nuvio.composeapp.generated.resources.whats_new_status_up_to_date_all
 import nuvio.composeapp.generated.resources.whats_new_unavailable
 import nuvio.composeapp.generated.resources.whats_new_refresh_failed_cached
 import nuvio.composeapp.generated.resources.whats_new_since_one_release
@@ -124,7 +127,9 @@ private val NOTE_CATEGORY_ORDER = listOf(
 
 @Composable
 fun WhatsNewSettingsScreen(onBack: () -> Unit) {
-    val channel by UpdatePreferences.shared.channel.collectAsStateWithLifecycle()
+    val releaseChannelsEnabled = AppUpdaterPlatform.isSupported
+    val selectedChannel by UpdatePreferences.shared.channel.collectAsStateWithLifecycle()
+    val channel = if (releaseChannelsEnabled) selectedChannel else UpdateChannel.BETA
     var state by remember { mutableStateOf<LoadState>(LoadState.Loading) }
     var refreshKey by rememberSaveable { mutableIntStateOf(0) }
     var lastHandledRefreshKey by rememberSaveable { mutableIntStateOf(0) }
@@ -142,6 +147,7 @@ fun WhatsNewSettingsScreen(onBack: () -> Unit) {
                 channel = channel,
                 currentVersion = AppVersionConfig.VERSION_NAME,
                 forceRefresh = forceRefresh,
+                matchBaseVersion = !releaseChannelsEnabled,
             )
             state = result.fold(
                 onSuccess = LoadState::Content,
@@ -159,17 +165,23 @@ fun WhatsNewSettingsScreen(onBack: () -> Unit) {
             UpdateChannel.BETA -> Res.string.updates_channel_beta
         },
     )
-    val buildChannel = if (VersionUtils.isPrerelease(AppVersionConfig.VERSION_NAME)) {
+    val buildChannel = if (
+        !releaseChannelsEnabled || VersionUtils.isPrerelease(AppVersionConfig.VERSION_NAME)
+    ) {
         UpdateChannel.BETA
     } else {
         UpdateChannel.STABLE
     }
-    val buildChannelLabel = stringResource(
-        when (buildChannel) {
-            UpdateChannel.STABLE -> Res.string.updates_channel_stable
-            UpdateChannel.BETA -> Res.string.updates_channel_beta
-        },
-    )
+    val buildChannelLabel = if (releaseChannelsEnabled) {
+        stringResource(
+            when (buildChannel) {
+                UpdateChannel.STABLE -> Res.string.updates_channel_stable
+                UpdateChannel.BETA -> Res.string.updates_channel_beta
+            },
+        )
+    } else {
+        null
+    }
 
     NuvioScreen {
         stickyHeader {
@@ -245,11 +257,11 @@ fun WhatsNewSettingsScreen(onBack: () -> Unit) {
                         version = snapshot.currentVersion,
                         buildChannelLabel = buildChannelLabel,
                         viewingChannelLabel = channelLabel,
-                        showViewingChannel = channel != buildChannel,
+                        showViewingChannel = releaseChannelsEnabled && channel != buildChannel,
                         lastCheckedLabel = lastCheckedLabel(value.content.fetchedAtMillis),
                         status = versionStatus(
                     snapshot = snapshot,
-                    channelLabel = channelLabel,
+                    channelLabel = channelLabel.takeIf { releaseChannelsEnabled },
                     buildChannel = buildChannel,
                 ),
                     )
@@ -372,7 +384,7 @@ private sealed interface LoadState {
 @Composable
 private fun CurrentVersionCard(
     version: String,
-    buildChannelLabel: String,
+    buildChannelLabel: String?,
     viewingChannelLabel: String,
     showViewingChannel: Boolean,
     lastCheckedLabel: String,
@@ -402,11 +414,13 @@ private fun CurrentVersionCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    text = buildChannelLabel,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.nuvio.colors.textSecondary,
-                )
+                if (buildChannelLabel != null) {
+                    Text(
+                        text = buildChannelLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.nuvio.colors.textSecondary,
+                    )
+                }
             }
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -441,7 +455,7 @@ private fun CurrentVersionCard(
 @Composable
 private fun versionStatus(
     snapshot: WhatsNewSnapshot,
-    channelLabel: String,
+    channelLabel: String?,
     buildChannel: UpdateChannel,
 ): String {
     val latest = snapshot.releases.firstOrNull()
@@ -455,10 +469,11 @@ private fun versionStatus(
             VersionUtils.isSameBaseVersion(latest.version, snapshot.currentVersion)
 
     return when {
-        betaBuildMatchesDisplayedRelease -> stringResource(
-            Res.string.whats_new_status_up_to_date,
-            channelLabel,
-        )
+        betaBuildMatchesDisplayedRelease -> if (channelLabel != null) {
+            stringResource(Res.string.whats_new_status_up_to_date, channelLabel)
+        } else {
+            stringResource(Res.string.whats_new_status_up_to_date_all)
+        }
         latestIsNewer && snapshot.hasCompleteSinceVersion -> {
             val count = snapshot.sinceYourVersion.size.coerceAtLeast(1)
             if (count == 1) {
@@ -468,15 +483,17 @@ private fun versionStatus(
             }
         }
         latestIsNewer -> stringResource(Res.string.whats_new_status_newer_releases_available)
-        currentIsNewer -> stringResource(
-            Res.string.whats_new_status_current_ahead,
-            channelLabel,
-        )
+        currentIsNewer -> if (channelLabel != null) {
+            stringResource(Res.string.whats_new_status_current_ahead, channelLabel)
+        } else {
+            stringResource(Res.string.whats_new_status_current_ahead_all)
+        }
         VersionUtils.parse(snapshot.currentVersion) != null &&
-            VersionUtils.parse(latest.version) != null -> stringResource(
-                Res.string.whats_new_status_up_to_date,
-                channelLabel,
-            )
+            VersionUtils.parse(latest.version) != null -> if (channelLabel != null) {
+                stringResource(Res.string.whats_new_status_up_to_date, channelLabel)
+            } else {
+                stringResource(Res.string.whats_new_status_up_to_date_all)
+            }
         else -> stringResource(Res.string.whats_new_status_unknown)
     }
 }

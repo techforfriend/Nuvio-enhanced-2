@@ -2703,10 +2703,12 @@
     <string name="whats_new_last_checked_year">Last checked %1$d year ago</string>
     <string name="whats_new_last_checked_years">Last checked %1$d years ago</string>
     <string name="whats_new_status_up_to_date">You’re up to date with the %1$s channel.</string>
+    <string name="whats_new_status_up_to_date_all">You’re up to date.</string>
     <string name="whats_new_status_newer_releases_available">Newer releases are available.</string>
     <string name="whats_new_status_update_available">1 newer release is available.</string>
     <string name="whats_new_status_updates_available">%1$d newer releases are available.</string>
     <string name="whats_new_status_current_ahead">This build is newer than the latest %1$s release shown.</string>
+    <string name="whats_new_status_current_ahead_all">This build is newer than the latest release shown.</string>
     <string name="whats_new_status_unknown">Release status is unavailable.</string>
     <string name="whats_new_show_all_changes">Show all %1$d changes</string>
     <string name="whats_new_hide_changes">Hide changes</string>

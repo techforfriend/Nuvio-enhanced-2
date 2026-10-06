@@ -100,6 +100,39 @@ class WhatsNewSnapshotBuilderTest {
     }
 
     @Test
+    fun suffixlessBuildMatchesBetaReleaseWithSameBaseVersionWhenRequested() {
+        val releases = listOf(
+            release("0.5.7-beta"),
+            release("0.5.6-beta"),
+            release("0.5.5-beta"),
+        )
+
+        val snapshot = WhatsNewSnapshotBuilder.build(
+            releases = releases,
+            currentVersion = "0.5.6",
+            matchBaseVersion = true,
+        )
+
+        assertTrue(snapshot.hasCompleteSinceVersion)
+        assertEquals(
+            listOf("0.5.7-beta"),
+            snapshot.sinceYourVersion.map(WhatsNewRelease::version),
+        )
+        assertEquals("0.5.6", snapshot.currentVersion)
+    }
+
+    @Test
+    fun suffixlessBuildDoesNotMatchBetaReleaseByDefault() {
+        val snapshot = WhatsNewSnapshotBuilder.build(
+            releases = listOf(release("0.5.7-beta"), release("0.5.6-beta")),
+            currentVersion = "0.5.6",
+        )
+
+        assertFalse(snapshot.hasCompleteSinceVersion)
+        assertTrue(snapshot.sinceYourVersion.isEmpty())
+    }
+
+    @Test
     fun futureStablePromotionAndBetaReleasesAreAllShownAsNewForCurrentBeta() {
         val snapshot = WhatsNewSnapshotBuilder.build(
             releases = listOf(
