@@ -1,7 +1,6 @@
 package com.nuvio.app.features.settings
 
 import com.nuvio.app.features.whatsnew.WhatsNewSettingsScreen
-
 import com.nuvio.app.navigation.LocalUseNativeNavigation
 import com.nuvio.app.core.build.AppFeaturePolicy
 
@@ -772,7 +771,7 @@ private fun MobileSettingsScreen(
                             onTrackingClick = { onPageChange(SettingsPage.TraktAuthentication) },
                             onSupportersContributorsClick = onSupportersContributorsClick,
                             onLicensesAttributionsClick = onLicensesAttributionsClick,
-                             onWhatsNewClick = onWhatsNewClick,
+                            onWhatsNewClick = onWhatsNewClick,
                             onCheckForUpdatesClick = onCheckForUpdatesClick,
                             onTestUpdateBannerClick = onTestUpdateBannerClick,
                             onAccountClick = onAccountClick,
@@ -803,7 +802,7 @@ private fun MobileSettingsScreen(
                 SettingsPage.LicensesAttributions -> licensesAttributionsContent(
                     isTablet = false,
                 )
-                 SettingsPage.WhatsNew -> Unit
+                SettingsPage.WhatsNew -> Unit
                 SettingsPage.Playback -> playbackSettingsContent(
                     isTablet = false,
                     showLoadingOverlay = showLoadingOverlay,
@@ -1250,7 +1249,7 @@ private fun TabletSettingsScreen(
                                 onTrackingClick = { openInlinePage(SettingsPage.TraktAuthentication) },
                                 onSupportersContributorsClick = { openInlinePage(SettingsPage.SupportersContributors) },
                                 onLicensesAttributionsClick = { openInlinePage(SettingsPage.LicensesAttributions) },
-                                 onWhatsNewClick = { openInlinePage(SettingsPage.WhatsNew) },
+                                onWhatsNewClick = { openInlinePage(SettingsPage.WhatsNew) },
                                 onCheckForUpdatesClick = onCheckForUpdatesClick,
                                 onTestUpdateBannerClick = onTestUpdateBannerClick,
                                 onAccountClick = { openInlinePage(SettingsPage.Account) },
@@ -1284,7 +1283,7 @@ private fun TabletSettingsScreen(
                     SettingsPage.LicensesAttributions -> licensesAttributionsContent(
                         isTablet = true,
                     )
-                     SettingsPage.WhatsNew -> Unit
+                    SettingsPage.WhatsNew -> Unit
                     SettingsPage.Playback -> playbackSettingsContent(
                         isTablet = true,
                         showLoadingOverlay = showLoadingOverlay,

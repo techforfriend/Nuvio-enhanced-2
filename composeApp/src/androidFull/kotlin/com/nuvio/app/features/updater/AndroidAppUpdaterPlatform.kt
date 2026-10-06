@@ -73,8 +73,6 @@ object AndroidAppUpdaterPlatform {
         }.apply()
     }
 
-    fun currentTimeMillis(): Long = System.currentTimeMillis()
-
     fun deleteDownloadedApk(path: String) {
         File(path).delete()
     }

@@ -25,8 +25,6 @@ actual object AppUpdaterPlatform {
         AndroidAppUpdaterPlatform.setWhatsNewCache(payload)
     }
 
-    actual fun currentTimeMillis(): Long = AndroidAppUpdaterPlatform.currentTimeMillis()
-
     actual fun deleteDownloadedApk(path: String) = Unit
 
     actual suspend fun downloadApk(

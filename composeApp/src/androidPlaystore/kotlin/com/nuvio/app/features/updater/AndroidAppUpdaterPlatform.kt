@@ -21,6 +21,4 @@ object AndroidAppUpdaterPlatform {
             if (payload == null) remove(whatsNewCacheKey) else putString(whatsNewCacheKey, payload)
         }?.apply()
     }
-
-    fun currentTimeMillis(): Long = System.currentTimeMillis()
 }

@@ -88,11 +88,6 @@ fun HomescreenSettingsScreen(
 
 
 @Composable
-fun WhatsNewSettingsScreen(onBack: () -> Unit) {
-    com.nuvio.app.features.whatsnew.WhatsNewSettingsScreen(onBack = onBack)
-}
-
-@Composable
 fun MetaScreenSettingsScreen(
     onBack: () -> Unit,
 ) {

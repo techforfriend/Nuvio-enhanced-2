@@ -1,7 +1,6 @@
 package com.nuvio.app.features.updater
 
 import kotlinx.coroutines.runBlocking
-import platform.Foundation.NSDate
 import platform.Foundation.NSUserDefaults
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.updates_not_available
@@ -32,9 +31,6 @@ actual object AppUpdaterPlatform {
             defaults.setObject(payload, forKey = "nuvio_whats_new_cache")
         }
     }
-
-    actual fun currentTimeMillis(): Long =
-        (NSDate().timeIntervalSince1970 * 1000.0).toLong()
 
     actual fun deleteDownloadedApk(path: String) = Unit
 

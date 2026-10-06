@@ -27,9 +27,6 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
     abstract val appVersionCode: Property<Int>
 
     @get:Input
-    abstract val buildChannel: Property<String>
-
-    @get:Input
     abstract val supabaseUrl: Property<String>
 
     @get:Input
@@ -188,7 +185,6 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 |object AppVersionConfig {
                 |    const val VERSION_NAME = "${appVersionName.get()}"
                 |    const val VERSION_CODE = ${appVersionCode.get()}
-                |    const val BUILD_CHANNEL = "${buildChannel.get()}"
                 |}
                 """.trimMargin()
             )
@@ -318,28 +314,11 @@ fun runtimeConfigBoolean(key: String, default: Boolean): Boolean =
         else -> default
     }
 
-val resolvedBuildChannel = (
-    providers.gradleProperty("nuvio.build.channel").orNull
-        ?: providers.environmentVariable("NUVIO_BUILD_CHANNEL").orNull
-        ?: if (
-            Regex("""(?:^|[._-])(alpha|beta|rc|preview)(?:[._-]|$)""", RegexOption.IGNORE_CASE)
-                .containsMatchIn(releaseAppVersionName)
-        ) {
-            "beta"
-        } else {
-            "stable"
-        }
-    ).trim().lowercase()
-require(resolvedBuildChannel == "stable" || resolvedBuildChannel == "beta") {
-    "nuvio.build.channel/NUVIO_BUILD_CHANNEL must be 'stable' or 'beta'."
-}
-
 val generateRuntimeConfigs = tasks.register<GenerateRuntimeConfigsTask>("generateRuntimeConfigs") {
     outputDir.set(generatedRuntimeConfigDir)
     localPropertiesFile.set(rootProject.layout.projectDirectory.file("local.properties"))
     appVersionName.set(releaseAppVersionName)
     appVersionCode.set(releaseAppVersionCode)
-    buildChannel.set(resolvedBuildChannel)
     supabaseUrl.set(runtimeConfigValue("NUVIO_SUPABASE_URL"))
     supabaseAnonKey.set(runtimeConfigValue("NUVIO_SUPABASE_ANON_KEY"))
     supabaseFallbackUrl.set(runtimeConfigValue("NUVIO_SUPABASE_FALLBACK_URL"))

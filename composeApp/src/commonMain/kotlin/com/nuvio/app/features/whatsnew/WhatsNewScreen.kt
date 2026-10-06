@@ -58,7 +58,7 @@ import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioSurfaceCard
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
-import com.nuvio.app.features.updater.AppUpdaterPlatform
+import kotlin.time.Clock
 import com.nuvio.app.features.updater.UpdateChannel
 import com.nuvio.app.features.updater.UpdatePreferences
 import com.nuvio.app.features.updater.VersionUtils
@@ -159,9 +159,10 @@ fun WhatsNewSettingsScreen(onBack: () -> Unit) {
             UpdateChannel.BETA -> Res.string.updates_channel_beta
         },
     )
-    val buildChannel = when (AppVersionConfig.BUILD_CHANNEL.trim().lowercase()) {
-        UpdateChannel.BETA.storedValue -> UpdateChannel.BETA
-        else -> UpdateChannel.STABLE
+    val buildChannel = if (VersionUtils.isPrerelease(AppVersionConfig.VERSION_NAME)) {
+        UpdateChannel.BETA
+    } else {
+        UpdateChannel.STABLE
     }
     val buildChannelLabel = stringResource(
         when (buildChannel) {
@@ -484,7 +485,7 @@ private fun versionStatus(
 private fun lastCheckedLabel(fetchedAtMillis: Long): String {
     val age = calculateLastCheckedAge(
         fetchedAtMillis = fetchedAtMillis,
-        nowMillis = AppUpdaterPlatform.currentTimeMillis(),
+        nowMillis = Clock.System.now().toEpochMilliseconds(),
     )
 
     return when (age.unit) {

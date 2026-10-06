@@ -16,6 +16,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.time.Clock
 
 private const val RELEASE_PAGE_SIZE = 100
 private const val CACHE_TTL_MILLIS = 24L * 60L * 60L * 1000L
@@ -62,7 +63,7 @@ internal object WhatsNewRepository {
         currentVersion: String,
         forceRefresh: Boolean,
     ): WhatsNewContent {
-        val now = AppUpdaterPlatform.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         val cached = readCache(channel)
         val cachedContent = cached?.let {
             decodeContent(
@@ -148,7 +149,7 @@ internal object WhatsNewRepository {
                     fetchedAtMillis = now,
                     lastFailedAttemptAtMillis = 0L,
                     etag = etag,
-                    body = response.body,
+                    body = compactReleaseBody(response.body) ?: response.body,
                 )
                 val content = decodeContent(
                     body = response.body,
@@ -171,6 +172,13 @@ internal object WhatsNewRepository {
                 .takeIf { it.channel == channel.name && it.body.isNotBlank() }
         }.getOrNull()
     }
+
+    private fun compactReleaseBody(body: String): String? = runCatching {
+        val releases = json.decodeFromString<List<GitHubReleaseDto>>(body)
+            .filterNot(GitHubReleaseDto::draft)
+            .map { it.copy(assets = emptyList()) }
+        json.encodeToString(releases)
+    }.getOrNull()
 
     private fun encodeCache(cache: WhatsNewCacheEnvelope): String =
         json.encodeToString(cache)

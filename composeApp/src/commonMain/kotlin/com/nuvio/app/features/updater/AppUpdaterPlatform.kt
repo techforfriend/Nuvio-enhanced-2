@@ -18,8 +18,6 @@ expect object AppUpdaterPlatform {
 
     fun setWhatsNewCache(payload: String?)
 
-    fun currentTimeMillis(): Long
-
     fun deleteDownloadedApk(path: String)
 
     suspend fun downloadApk(

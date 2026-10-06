@@ -156,8 +156,8 @@ import com.nuvio.app.features.settings.LicensesAttributionsSettingsScreen
 import com.nuvio.app.features.settings.MetaScreenSettingsScreen
 import com.nuvio.app.features.settings.PluginsSettingsScreen
 import com.nuvio.app.features.settings.SupportersContributorsSettingsScreen
-import com.nuvio.app.features.settings.WhatsNewSettingsScreen
 import com.nuvio.app.features.settings.ThemeSettingsRepository
+import com.nuvio.app.features.whatsnew.WhatsNewSettingsScreen
 import com.nuvio.app.features.streams.BingeGroupCacheRepository
 import com.nuvio.app.features.streams.StreamAutoPlayPolicy
 import com.nuvio.app.features.streams.StreamLaunch

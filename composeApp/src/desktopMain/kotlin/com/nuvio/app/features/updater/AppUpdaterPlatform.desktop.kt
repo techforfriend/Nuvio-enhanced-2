@@ -23,8 +23,6 @@ actual object AppUpdaterPlatform {
 
     actual fun setWhatsNewCache(payload: String?) = Unit
 
-    actual fun currentTimeMillis(): Long = System.currentTimeMillis()
-
     actual fun deleteDownloadedApk(path: String) = Unit
 
     actual suspend fun downloadApk(
