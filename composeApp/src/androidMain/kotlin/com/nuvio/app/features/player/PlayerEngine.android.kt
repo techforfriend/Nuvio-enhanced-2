@@ -150,14 +150,12 @@ actual fun PlatformPlayerSurface(
     val requestedEngine = playbackEngine ?: playerSettings.androidPlaybackEngine
     var activeEngine by remember(playerSourceKey, requestedEngine) {
         mutableStateOf(requestedEngine.initialAndroidEngine())
-    var activeEngine by remember(playerSourceKey, playerSettings.androidPlaybackEngine) {
-        mutableStateOf(playerSettings.androidPlaybackEngine.initialAndroidEngine())
     }
 
-    LaunchedEffect(activeEngine, playerSourceKey, playerSettings.androidPlaybackEngine) {
+    LaunchedEffect(activeEngine, playerSourceKey, requestedEngine) {
         InAppLogger.info(
             "Player/Android",
-            "engine=$activeEngine configured=${playerSettings.androidPlaybackEngine} url=${InAppLogger.redactUrl(sourceUrl)} " +
+            "engine=$activeEngine configured=$requestedEngine url=${InAppLogger.redactUrl(sourceUrl)} " +
                 "audio=${!sourceAudioUrl.isNullOrBlank()} subtitles=${externalSubtitles.size} " +
                 "streamType=${normalizeStreamType(streamType) ?: "unknown"}",
         )
@@ -182,7 +180,7 @@ actual fun PlatformPlayerSurface(
             onControllerReady = onControllerReady,
             onSnapshot = onSnapshot,
             onError = { message ->
-                if (message != null && playerSettings.androidPlaybackEngine == AndroidPlaybackEngine.Auto) {
+                if (message != null && requestedEngine == AndroidPlaybackEngine.Auto) {
                     Log.w(TAG, "ExoPlayer failed; falling back to libmpv: $message")
                     InAppLogger.warn("Player/Android", "ExoPlayer failed; falling back to libmpv: $message")
                     initialPositionRequestKey?.let { key ->
