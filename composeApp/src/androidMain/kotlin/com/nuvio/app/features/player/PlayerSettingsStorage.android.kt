@@ -31,6 +31,7 @@ actual object PlayerSettingsStorage {
     private const val holdToSpeedValueKey = "hold_to_speed_value"
     private const val touchGesturesEnabledKey = "touch_gestures_enabled"
     private const val swipeToSeekEnabledKey = "swipe_to_seek_enabled"
+    private const val seekPreviewEnabledKey = "seek_preview_enabled"
     private const val movieRecommendationsEnabledKey = "movie_recommendations_enabled"
     private const val autoShowSubtitlesOnRewindEnabledKey = "auto_show_subtitles_on_rewind_enabled"
     private const val autoShowSubtitlesOnMuteEnabledKey = "auto_show_subtitles_on_mute_enabled"
@@ -364,6 +365,23 @@ actual object PlayerSettingsStorage {
         preferences
             ?.edit()
             ?.putBoolean(ProfileScopedKey.of(swipeToSeekEnabledKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadSeekPreviewEnabled(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(seekPreviewEnabledKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, true)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveSeekPreviewEnabled(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(seekPreviewEnabledKey), enabled)
             ?.apply()
     }
 

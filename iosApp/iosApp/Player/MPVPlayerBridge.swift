@@ -2497,5 +2497,6 @@ final class MPVPlayerBridgeCreator: NSObject, NuvioPlayerBridgeCreator {
 enum NuvioPlayerRegistration {
     static func register() {
         NuvioPlayerBridgeFactory.shared.registerFactory(creator: MPVPlayerBridgeCreator())
+        NuvioSeekPreviewRegistry.shared.registerCreator(creator: FFmpegSeekPreviewGeneratorCreator())
     }
 }

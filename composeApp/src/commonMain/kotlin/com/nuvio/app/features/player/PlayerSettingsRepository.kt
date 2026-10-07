@@ -43,6 +43,7 @@ data class PlayerSettingsUiState(
     val holdToSpeedValue: Float = 2f,
     val touchGesturesEnabled: Boolean = true,
     val swipeToSeekEnabled: Boolean = true,
+    val seekPreviewEnabled: Boolean = true,
     val movieRecommendationsEnabled: Boolean = true,
     val autoShowSubtitlesOnRewindEnabled: Boolean = true,
     val autoShowSubtitlesOnMuteEnabled: Boolean = true,
@@ -130,6 +131,7 @@ object PlayerSettingsRepository {
     private var holdToSpeedValue = 2f
     private var touchGesturesEnabled = true
     private var swipeToSeekEnabled = true
+    private var seekPreviewEnabled = true
     private var movieRecommendationsEnabled = true
     private var autoShowSubtitlesOnRewindEnabled = true
     private var autoShowSubtitlesOnMuteEnabled = true
@@ -222,6 +224,7 @@ object PlayerSettingsRepository {
         holdToSpeedValue = 2f
         touchGesturesEnabled = true
         swipeToSeekEnabled = true
+        seekPreviewEnabled = true
         movieRecommendationsEnabled = true
         autoShowSubtitlesOnRewindEnabled = true
         autoShowSubtitlesOnMuteEnabled = true
@@ -309,6 +312,7 @@ object PlayerSettingsRepository {
         holdToSpeedValue = PlayerSettingsStorage.loadHoldToSpeedValue() ?: 2f
         touchGesturesEnabled = PlayerSettingsStorage.loadTouchGesturesEnabled() ?: true
         swipeToSeekEnabled = PlayerSettingsStorage.loadSwipeToSeekEnabled() ?: true
+        seekPreviewEnabled = PlayerSettingsStorage.loadSeekPreviewEnabled() ?: true
         movieRecommendationsEnabled = PlayerSettingsStorage.loadMovieRecommendationsEnabled() ?: true
         autoShowSubtitlesOnRewindEnabled = PlayerSettingsStorage.loadAutoShowSubtitlesOnRewindEnabled() ?: true
         autoShowSubtitlesOnMuteEnabled = PlayerSettingsStorage.loadAutoShowSubtitlesOnMuteEnabled() ?: true
@@ -533,6 +537,14 @@ object PlayerSettingsRepository {
         swipeToSeekEnabled = enabled
         publish()
         PlayerSettingsStorage.saveSwipeToSeekEnabled(enabled)
+    }
+
+    fun setSeekPreviewEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (seekPreviewEnabled == enabled) return
+        seekPreviewEnabled = enabled
+        publish()
+        PlayerSettingsStorage.saveSeekPreviewEnabled(enabled)
     }
 
     fun setMovieRecommendationsEnabled(enabled: Boolean) {
@@ -1179,6 +1191,7 @@ object PlayerSettingsRepository {
             holdToSpeedValue = holdToSpeedValue,
             touchGesturesEnabled = touchGesturesEnabled,
             swipeToSeekEnabled = swipeToSeekEnabled,
+            seekPreviewEnabled = seekPreviewEnabled,
             movieRecommendationsEnabled = movieRecommendationsEnabled,
             autoShowSubtitlesOnRewindEnabled = autoShowSubtitlesOnRewindEnabled,
             autoShowSubtitlesOnMuteEnabled = autoShowSubtitlesOnMuteEnabled,

@@ -29,6 +29,7 @@ actual object PlayerSettingsStorage {
     private const val holdToSpeedValueKey = "hold_to_speed_value"
     private const val touchGesturesEnabledKey = "touch_gestures_enabled"
     private const val swipeToSeekEnabledKey = "swipe_to_seek_enabled"
+    private const val seekPreviewEnabledKey = "seek_preview_enabled"
     private const val movieRecommendationsEnabledKey = "movie_recommendations_enabled"
     private const val autoShowSubtitlesOnRewindEnabledKey = "auto_show_subtitles_on_rewind_enabled"
     private const val autoShowSubtitlesOnMuteEnabledKey = "auto_show_subtitles_on_mute_enabled"
@@ -326,6 +327,12 @@ actual object PlayerSettingsStorage {
 
     actual fun saveSwipeToSeekEnabled(enabled: Boolean) {
         saveBoolean(swipeToSeekEnabledKey, enabled)
+    }
+
+    actual fun loadSeekPreviewEnabled(): Boolean? = loadBoolean(seekPreviewEnabledKey)
+
+    actual fun saveSeekPreviewEnabled(enabled: Boolean) {
+        saveBoolean(seekPreviewEnabledKey, enabled)
     }
 
     actual fun loadMovieRecommendationsEnabled(): Boolean? = loadBoolean(movieRecommendationsEnabledKey)
