@@ -57,6 +57,9 @@ internal fun SeekPreviewOverlay(
     LaunchedEffect(controller, visible, positionMs, durationMs) {
         if (visible) controller.request(positionMs, durationMs)
     }
+    LaunchedEffect(controller, active) {
+        if (!active) controller.endScrub()
+    }
 
     Layout(
         modifier = modifier,

@@ -58,6 +58,8 @@ internal class SeekPreviewController(
     private var source: SeekPreviewFrameSource? = null
     private var sourceOpened = false
 
+    private var connectionGeneration = 0
+
     var frame by mutableStateOf<SeekPreviewFrame?>(null)
         private set
 
@@ -77,6 +79,23 @@ internal class SeekPreviewController(
         if (worker == null) worker = scope.launch { decodeRequests() }
     }
 
+    fun endScrub() {
+        requests.value = null
+        releaseConnection()
+    }
+
+    private fun releaseConnection() {
+        connectionGeneration++
+        source?.cancel()
+        CoroutineScope(decodeDispatcher).launch {
+            val activeSource = source ?: return@launch
+            source = null
+            sourceOpened = false
+            runCatching { activeSource.close() }
+            InAppLogger.debug(LogTag, "connection released")
+        }
+    }
+
     fun dispose() {
         scope.cancel()
         source?.cancel()
@@ -90,11 +109,13 @@ internal class SeekPreviewController(
         requests.filterNotNull().collect { bucket ->
             if (cache.containsKey(bucket)) return@collect
             val started = TimeSource.Monotonic.markNow()
+            val generation = connectionGeneration
             val bitmap = try {
                 withContext(decodeDispatcher) { decodeFrame(bucket) }
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: Throwable) {
+                if (generation != connectionGeneration) return@collect
                 onFailure(bucket, started.elapsedNow().inWholeMilliseconds, error)
                 return@collect
             }
@@ -149,6 +170,7 @@ internal class SeekPreviewController(
         if (isUnavailable) {
             frame = null
             worker?.cancel()
+            releaseConnection()
         }
     }
 
