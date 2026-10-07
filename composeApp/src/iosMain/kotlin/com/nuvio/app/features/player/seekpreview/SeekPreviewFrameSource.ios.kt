@@ -13,6 +13,8 @@ import platform.posix.memcpy
 interface NuvioSeekPreviewGenerator {
     fun frameJpeg(positionMs: Long, maxWidth: Int): NSData?
 
+    fun lastError(): String?
+
     fun cancel()
 
     fun close()
@@ -43,8 +45,10 @@ private class BridgedSeekPreviewFrameSource(
     private val generator: NuvioSeekPreviewGenerator,
 ) : SeekPreviewFrameSource {
     override fun frameAt(positionMs: Long, maxWidthPx: Int): ImageBitmap? {
-        val bytes = generator.frameJpeg(positionMs, maxWidthPx)?.toByteArray() ?: return null
-        if (bytes.isEmpty()) return null
+        val bytes = generator.frameJpeg(positionMs, maxWidthPx)?.toByteArray()
+        if (bytes == null || bytes.isEmpty()) {
+            throw IllegalStateException(generator.lastError() ?: "no frame")
+        }
         return Image.makeFromEncoded(bytes).toComposeImageBitmap()
     }
 

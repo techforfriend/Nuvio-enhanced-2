@@ -19,8 +19,11 @@ final class FFmpegSeekPreviewGenerator: NSObject, NuvioSeekPreviewGenerator {
     private var codecContext: UnsafeMutablePointer<AVCodecContext>?
     private var videoStreamIndex: Int32 = -1
     private var didAttemptOpen = false
+    private var openErrorMessage: String?
+    private var lastErrorMessage: String?
 
     private static let maxVideoPacketsPerFrame = 120
+    private static let packetsBeforeIgnoringKeyFlag = 8
     private static let ioTimeoutMicroseconds = "10000000"
     private static let swsBilinear: Int32 = 2
     private static let swsColorspaceItu709: Int32 = 1
@@ -40,8 +43,15 @@ final class FFmpegSeekPreviewGenerator: NSObject, NuvioSeekPreviewGenerator {
     func frameJpeg(positionMs: Int64, maxWidth: Int32) -> Data? {
         lock.lock()
         defer { lock.unlock() }
-        guard !abortFlag.isSet, openIfNeeded(),
-              let formatContext, let codecContext else { return nil }
+        lastErrorMessage = nil
+        guard !abortFlag.isSet else {
+            lastErrorMessage = "cancelled"
+            return nil
+        }
+        guard openIfNeeded(), let formatContext, let codecContext else {
+            lastErrorMessage = openErrorMessage ?? "stream could not be opened"
+            return nil
+        }
         guard let frame = decodeKeyframe(
             formatContext: formatContext,
             codecContext: codecContext,
@@ -49,7 +59,17 @@ final class FFmpegSeekPreviewGenerator: NSObject, NuvioSeekPreviewGenerator {
         ) else { return nil }
         var framePointer: UnsafeMutablePointer<AVFrame>? = frame
         defer { av_frame_free(&framePointer) }
-        return jpegData(from: frame, maxWidth: max(16, Int(maxWidth)))
+        guard let data = jpegData(from: frame, maxWidth: max(16, Int(maxWidth))) else {
+            lastErrorMessage = lastErrorMessage ?? "frame conversion failed"
+            return nil
+        }
+        return data
+    }
+
+    func lastError() -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return lastErrorMessage
     }
 
     func cancel() {
@@ -70,7 +90,10 @@ final class FFmpegSeekPreviewGenerator: NSObject, NuvioSeekPreviewGenerator {
         if didAttemptOpen { return false }
         didAttemptOpen = true
 
-        guard var context = avformat_alloc_context() else { return false }
+        guard var context = avformat_alloc_context() else {
+            openErrorMessage = "out of memory"
+            return false
+        }
         context.pointee.interrupt_callback.callback = { opaque in
             guard let opaque else { return 0 }
             return Unmanaged<SeekPreviewAbortFlag>.fromOpaque(opaque).takeUnretainedValue().isSet ? 1 : 0
@@ -80,8 +103,6 @@ final class FFmpegSeekPreviewGenerator: NSObject, NuvioSeekPreviewGenerator {
         var options: OpaquePointer?
         defer { av_dict_free(&options) }
         _ = av_dict_set(&options, "rw_timeout", Self.ioTimeoutMicroseconds, 0)
-        _ = av_dict_set(&options, "reconnect", "1", 0)
-        _ = av_dict_set(&options, "multiple_requests", "1", 0)
         var headerLines = ""
         for (name, value) in headers {
             if name.caseInsensitiveCompare("User-Agent") == .orderedSame {
@@ -95,8 +116,9 @@ final class FFmpegSeekPreviewGenerator: NSObject, NuvioSeekPreviewGenerator {
         }
 
         var contextPointer: UnsafeMutablePointer<AVFormatContext>? = context
-        guard avformat_open_input(&contextPointer, inputPath(), nil, &options) >= 0,
-              let opened = contextPointer else {
+        let openResult = avformat_open_input(&contextPointer, inputPath(), nil, &options)
+        guard openResult >= 0, let opened = contextPointer else {
+            openErrorMessage = "open failed: \(Self.describe(openResult))"
             return false
         }
         context = opened
@@ -110,6 +132,7 @@ final class FFmpegSeekPreviewGenerator: NSObject, NuvioSeekPreviewGenerator {
               let parameters = stream.pointee.codecpar,
               let decoder = avcodec_find_decoder(parameters.pointee.codec_id),
               let decoderContext = avcodec_alloc_context3(decoder) else {
+            openErrorMessage = "no decodable video stream"
             contextPointer = context
             avformat_close_input(&contextPointer)
             return false
@@ -121,6 +144,7 @@ final class FFmpegSeekPreviewGenerator: NSObject, NuvioSeekPreviewGenerator {
 
         var decoderPointer: UnsafeMutablePointer<AVCodecContext>? = decoderContext
         guard avcodec_parameters_to_context(decoderContext, parameters) >= 0 else {
+            openErrorMessage = "decoder parameters rejected"
             avcodec_free_context(&decoderPointer)
             contextPointer = context
             avformat_close_input(&contextPointer)
@@ -128,8 +152,9 @@ final class FFmpegSeekPreviewGenerator: NSObject, NuvioSeekPreviewGenerator {
         }
         decoderContext.pointee.thread_count = 2
         decoderContext.pointee.thread_type = FF_THREAD_SLICE
-        decoderContext.pointee.skip_frame = AVDISCARD_NONREF
-        guard avcodec_open2(decoderContext, decoder, nil) >= 0 else {
+        let codecOpenResult = avcodec_open2(decoderContext, decoder, nil)
+        guard codecOpenResult >= 0 else {
+            openErrorMessage = "decoder could not be opened: \(Self.describe(codecOpenResult))"
             avcodec_free_context(&decoderPointer)
             contextPointer = context
             avformat_close_input(&contextPointer)
@@ -176,7 +201,9 @@ final class FFmpegSeekPreviewGenerator: NSObject, NuvioSeekPreviewGenerator {
             if formatContext.pointee.start_time != Self.noPtsValue {
                 globalTarget += formatContext.pointee.start_time
             }
-            guard av_seek_frame(formatContext, -1, globalTarget, AVSEEK_FLAG_BACKWARD) >= 0 else {
+            let globalResult = av_seek_frame(formatContext, -1, globalTarget, AVSEEK_FLAG_BACKWARD)
+            guard globalResult >= 0 else {
+                lastErrorMessage = "seek failed: \(Self.describe(globalResult))"
                 return nil
             }
         }
@@ -186,29 +213,46 @@ final class FFmpegSeekPreviewGenerator: NSObject, NuvioSeekPreviewGenerator {
         var packetPointer: UnsafeMutablePointer<AVPacket>? = packet
         defer { av_packet_free(&packetPointer) }
         guard let frame = av_frame_alloc() else { return nil }
+        var framePointer: UnsafeMutablePointer<AVFrame>? = frame
 
         var videoPackets = 0
-        var draining = false
         while videoPackets < Self.maxVideoPacketsPerFrame, !abortFlag.isSet {
-            if !draining {
-                if av_read_frame(formatContext, packet) < 0 {
-                    draining = true
-                    _ = avcodec_send_packet(codecContext, nil)
-                } else {
-                    defer { av_packet_unref(packet) }
-                    guard packet.pointee.stream_index == videoStreamIndex else { continue }
-                    videoPackets += 1
-                    _ = avcodec_send_packet(codecContext, packet)
-                }
+            let readResult = av_read_frame(formatContext, packet)
+            if readResult < 0 {
+                lastErrorMessage = "read failed: \(Self.describe(readResult))"
+                break
             }
+            defer { av_packet_unref(packet) }
+            guard packet.pointee.stream_index == videoStreamIndex else { continue }
+            videoPackets += 1
+            let isKeyframe = packet.pointee.flags & AV_PKT_FLAG_KEY != 0
+            if !isKeyframe, videoPackets < Self.packetsBeforeIgnoringKeyFlag { continue }
+
+            _ = avcodec_send_packet(codecContext, packet)
             if avcodec_receive_frame(codecContext, frame) >= 0 {
                 return frame
             }
-            if draining { break }
+            _ = avcodec_send_packet(codecContext, nil)
+            let drainResult = avcodec_receive_frame(codecContext, frame)
+            if drainResult >= 0 {
+                return frame
+            }
+            lastErrorMessage = "decoder produced no frame: \(Self.describe(drainResult))"
+            break
         }
-        var framePointer: UnsafeMutablePointer<AVFrame>? = frame
+        if abortFlag.isSet {
+            lastErrorMessage = "cancelled"
+        } else if videoPackets >= Self.maxVideoPacketsPerFrame {
+            lastErrorMessage = "no keyframe within \(videoPackets) packets"
+        }
         av_frame_free(&framePointer)
         return nil
+    }
+
+    private static func describe(_ code: Int32) -> String {
+        var buffer = [CChar](repeating: 0, count: 128)
+        _ = av_strerror(code, &buffer, buffer.count)
+        return "\(String(cString: buffer)) (\(code))"
     }
 
     // MARK: Conversion
@@ -238,7 +282,10 @@ final class FFmpegSeekPreviewGenerator: NSObject, NuvioSeekPreviewGenerator {
             nil,
             nil,
             nil
-        ) else { return nil }
+        ) else {
+            lastErrorMessage = "unsupported pixel format \(frame.pointee.format)"
+            return nil
+        }
         defer { sws_freeContext(scaler) }
 
         let colorspace = sourceHeight >= 720 ? Self.swsColorspaceItu709 : Self.swsColorspaceItu601
@@ -253,9 +300,12 @@ final class FFmpegSeekPreviewGenerator: NSObject, NuvioSeekPreviewGenerator {
         output.pointee.width = targetWidth
         output.pointee.height = targetHeight
         output.pointee.format = AV_PIX_FMT_BGRA.rawValue
-        guard av_frame_get_buffer(output, 0) >= 0,
-              sws_scale_frame(scaler, output, frame) >= 0,
-              let pixels = output.pointee.data.0 else { return nil }
+        guard av_frame_get_buffer(output, 0) >= 0 else { return nil }
+        let scaleResult = sws_scale_frame(scaler, output, frame)
+        guard scaleResult >= 0, let pixels = output.pointee.data.0 else {
+            lastErrorMessage = "scaling failed: \(Self.describe(scaleResult))"
+            return nil
+        }
 
         let bitmapInfo = CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.noneSkipFirst.rawValue
         guard let bitmapContext = CGContext(

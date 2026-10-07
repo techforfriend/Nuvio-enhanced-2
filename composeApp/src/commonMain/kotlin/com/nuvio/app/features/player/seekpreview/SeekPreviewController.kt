@@ -23,6 +23,7 @@ import kotlinx.coroutines.withContext
 import kotlin.concurrent.Volatile
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.abs
+import kotlin.time.TimeSource
 
 private const val FrameMaxWidthPx = 320
 
@@ -32,7 +33,9 @@ private const val MinBucketMs = 2_000L
 private const val MaxBucketMs = 10_000L
 private const val BucketsPerTitle = 500L
 
-private const val MaxInitialFailures = 2
+private const val MaxInitialFailures = 3
+
+private const val LogTag = "Player/SeekPreview"
 
 internal class SeekPreviewFrame(val positionMs: Long, val bitmap: ImageBitmap)
 
@@ -86,18 +89,21 @@ internal class SeekPreviewController(
     private suspend fun decodeRequests() {
         requests.filterNotNull().collect { bucket ->
             if (cache.containsKey(bucket)) return@collect
+            val started = TimeSource.Monotonic.markNow()
             val bitmap = try {
                 withContext(decodeDispatcher) { decodeFrame(bucket) }
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: Throwable) {
-                onFailure(error)
+                onFailure(bucket, started.elapsedNow().inWholeMilliseconds, error)
                 return@collect
             }
+            val elapsedMs = started.elapsedNow().inWholeMilliseconds
             if (bitmap == null) {
-                onFailure(null)
+                onFailure(bucket, elapsedMs, null)
                 return@collect
             }
+            InAppLogger.debug(LogTag, "frame at ${bucket}ms ${bitmap.width}x${bitmap.height} in ${elapsedMs}ms")
             hasSucceeded = true
             consecutiveFailures = 0
             cache[bucket] = bitmap
@@ -120,20 +126,24 @@ internal class SeekPreviewController(
         if (!sourceOpened) {
             sourceOpened = true
             source = openSeekPreviewFrameSource(url, headers)
+            InAppLogger.info(
+                LogTag,
+                "source=${source?.let { it::class.simpleName } ?: "none"} headers=${headers.size} " +
+                    "url=${InAppLogger.redactUrl(url)}",
+            )
         }
         val activeSource = source ?: throw UnsupportedSeekPreviewSource
         return activeSource.frameAt(positionMs, FrameMaxWidthPx)
     }
 
-    private fun onFailure(error: Throwable?) {
+    private fun onFailure(positionMs: Long, elapsedMs: Long, error: Throwable?) {
         consecutiveFailures++
+        val reason = error?.let { "${it::class.simpleName}: ${it.message}" } ?: "no frame"
+        InAppLogger.warn(LogTag, "frame at ${positionMs}ms failed after ${elapsedMs}ms: $reason")
         if (error === UnsupportedSeekPreviewSource) {
             isUnavailable = true
         } else if (!hasSucceeded && consecutiveFailures >= MaxInitialFailures) {
-            InAppLogger.info(
-                "Player/SeekPreview",
-                "disabled for this stream after $consecutiveFailures failures: ${error?.message ?: "no frame"}",
-            )
+            InAppLogger.warn(LogTag, "disabled for this stream after $consecutiveFailures failures")
             isUnavailable = true
         }
         if (isUnavailable) {
