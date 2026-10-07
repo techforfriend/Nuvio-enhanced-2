@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.7",
+          "buildVersion": "139",
+          "date": "2026-10-07T02:11:42Z",
+          "localizedDescription": "- fix(buffer): make the java heap large @chrisk325\r\n- feat(player): make the movie recommendation card less intrusive @luqmanfadlli\r\n- feat(player): show buffered range on the seek bar @luqmanfadlli\r\n- fix(whats-new): show all releases on platforms without update channels @luqmanfadlli \r\n- feat: add in-app What's New release history @jeff25steve\r\n- fix(p2p): correct torrent cache path and usage @tapframe\r\n- fix player crash with exo native memory @chrisk325\r\n- feat(details): add letterbox zoom to hero trailer @tapframe\r\n- feat(mdblist): choose which lists appear in the library (#2171) @kernexshadow\r\n- fix(player): follow system brightness when touch gestures are off @tapframe\r\n- feat(player): feat custom buffer and exo native engine @chrisk325\r\n- feat(streams): match tv refresh spin in streams and player panels @tapframe\r\n- feat(player): add switch player and stream info actions @tapframe\r\n- feat(streams): spin refresh button until addons finish loading @tapframe\r\n- fix custom poster pattern URL validation and decoding (#2153) @skoruppa\r\n- feat(details): rework tablet hero actions layout @luqmanfadlli",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.5.7-beta/Nuvio-0.5.7-Enhanced.ipa",
+          "size": 69669767,
+          "sha256": "08b5255dc2c022369f916ccfc330bc87736d7b4dc48ff0f5d61c44199a572202",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.6",
           "buildVersion": "138",
           "date": "2026-10-03T01:19:21Z",
