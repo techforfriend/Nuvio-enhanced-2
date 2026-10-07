@@ -29,7 +29,6 @@ import com.nuvio.app.features.p2p.P2pStreamingState
 import com.nuvio.app.features.p2p.formatP2pMegabytes
 import com.nuvio.app.features.p2p.formatP2pSpeed
 import com.nuvio.app.features.player.skip.internalSkipAction
-import com.nuvio.app.features.streams.streamAddonInstanceId
 import com.nuvio.app.isIos
 import kotlinx.coroutines.launch
 import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
@@ -267,7 +266,6 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
                     initialPositionMs = activeInitialPositionMs.takeIf { it > 0L },
                     initialPositionRequestKey = initialPositionRequestKey,
                     resizeMode = resizeMode,
-                    playbackEngine = playbackEngineOverride,
                     onInitialPositionHandled = { key, handled ->
                         if (active.value && playbackKey == activePlaybackKey && key == currentInitialPositionRequestKey()) {
                             initialSeekApplied = handled
@@ -364,11 +362,6 @@ private fun p2pConnectingPhaseLabel(phase: String): String = when (phase) {
         nuvio.composeapp.generated.resources.Res.string.player_torrent_starting_engine,
     )
 }
-
-private val PlayerScreenRuntime.activeAddonLogo: String?
-    get() = addonsUiState.addons.firstNotNullOfOrNull { addon ->
-        addon.manifest?.takeIf { addon.streamAddonInstanceId(it.id) == activeProviderAddonId }?.logoUrl
-    }
 
 private fun PlayerScreenRuntime.currentInitialPositionRequestKey(): String? {
     val positionMs = activeInitialPositionMs.takeIf { it > 0L } ?: return null
@@ -477,6 +470,11 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                     openEpisodesPanel()
                 }
             } else null,
+            onChaptersClick = if (playbackSnapshot.chapters.isNotEmpty()) {
+                {
+                    openChaptersPanel()
+                }
+            } else null,
             onLiveChannelsClick = if (isLiveTvPlayback) {
                 {
                     showLiveChannelsPanel = true
@@ -534,12 +532,6 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             } else {
                 null
             },
-            onSwitchEngineClick = if (playerController?.playbackEngine != null) {
-                { switchPlaybackEngine() }
-            } else {
-                null
-            },
-            onStreamInfoClick = { openStreamInfo() },
             parentalWarnings = parentalWarnings,
             showParentalGuide = showParentalGuide,
             onParentalGuideAnimationComplete = { showParentalGuide = false },
@@ -676,6 +668,15 @@ private fun BoxScope.RenderPlaybackOverlays(
             },
         )
     }
+}
+
+private fun PlayerScreenRuntime.openChaptersPanel() {
+    showChaptersPanel = true
+    showSourcesPanel = false
+    showQualityPanel = false
+    showEpisodesPanel = false
+    showLiveChannelsPanel = false
+    controlsVisible = false
 }
 
 private fun PlayerScreenRuntime.openQualityPanel() {
@@ -887,6 +888,20 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
             PlayerStreamsRepository.clearEpisodeStreams()
             controlsVisible = true
         },
+        showChaptersPanel = showChaptersPanel,
+        chapters = playbackSnapshot.chapters,
+        onChapterSelected = { chapter ->
+            val targetMs = chapter.startMs.coerceAtLeast(0L)
+            finishTimelineScrub(targetMs)
+            playerController?.seekTo(targetMs)
+            scheduleProgressSyncAfterSeek()
+            showChaptersPanel = false
+            controlsVisible = true
+        },
+        onChaptersPanelDismissed = {
+            showChaptersPanel = false
+            controlsVisible = true
+        },
         showSubmitIntroModal = showSubmitIntroModal,
         activeVideoId = activeVideoId,
         metaUiState = metaUiState,
@@ -935,19 +950,6 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
             )
         }
     }
-    StreamInfoOverlay(
-        visible = showStreamInfo,
-        addonName = activeProviderName,
-        addonLogo = activeAddonLogo,
-        streamName = activeStreamTitle,
-        streamDescription = activeStreamSubtitle,
-        playbackEngine = playerController?.playbackEngine,
-        mediaInfo = streamMediaInfo,
-        audioTrack = audioTracks.firstOrNull { it.index == selectedAudioIndex },
-        subtitleTrack = subtitleTracks.firstOrNull { it.index == selectedSubtitleIndex }.takeIf { !useCustomSubtitles },
-        addonSubtitle = selectedAddonSubtitle.takeIf { useCustomSubtitles },
-        onDismiss = { showStreamInfo = false },
-    )
 }
 
 /** The movie or episode currently playing, for in-player rating. */
