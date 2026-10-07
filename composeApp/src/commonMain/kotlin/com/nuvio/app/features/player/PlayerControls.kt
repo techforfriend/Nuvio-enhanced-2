@@ -945,7 +945,6 @@ private fun PlayerBufferedTrack(bufferedFraction: Float, enabled: Boolean = true
 }
 
 @Composable
-private fun PlayerProgressTrack(sliderState: SliderState, bufferedFraction: Float) {
 private fun PlayerProgressTrack(
     sliderState: SliderState,
     bufferedFraction: Float,
