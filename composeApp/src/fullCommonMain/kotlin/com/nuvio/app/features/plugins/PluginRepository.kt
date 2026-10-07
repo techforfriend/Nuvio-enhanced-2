@@ -78,6 +78,7 @@ actual object PluginRepository {
     private var initialized = false
     private var currentProfileId = 1
     private val activeRefreshJobs = mutableMapOf<String, Job>()
+    private val activeRefreshJobsLock = SynchronizedObject()
     private val persistenceGeneration = atomic(0L)
     private val persistenceRevision = atomic(0L)
     private val persistenceLock = SynchronizedObject()
@@ -237,7 +238,7 @@ actual object PluginRepository {
         if (ensureInitialized) {
             initialize()
         }
-        val existingJob = activeRefreshJobs[manifestUrl]
+        val existingJob = synchronized(activeRefreshJobsLock) { activeRefreshJobs[manifestUrl] }
         if (existingJob?.isActive == true) return
 
         markRefreshing(manifestUrl)
@@ -282,12 +283,14 @@ actual object PluginRepository {
                     pushToServer()
                 }
             } finally {
-                if (activeRefreshJobs[manifestUrl] === refreshJob) {
-                    activeRefreshJobs.remove(manifestUrl)
+                synchronized(activeRefreshJobsLock) {
+                    if (activeRefreshJobs[manifestUrl] === refreshJob) {
+                        activeRefreshJobs.remove(manifestUrl)
+                    }
                 }
             }
         }
-        activeRefreshJobs[manifestUrl] = refreshJob
+        synchronized(activeRefreshJobsLock) { activeRefreshJobs[manifestUrl] = refreshJob }
     }
 
     actual fun toggleScraper(scraperId: String, enabled: Boolean) {
@@ -580,8 +583,10 @@ actual object PluginRepository {
     }
 
     private fun cancelActiveRefreshes() {
-        activeRefreshJobs.values.forEach(Job::cancel)
-        activeRefreshJobs.clear()
+        val jobs = synchronized(activeRefreshJobsLock) {
+            activeRefreshJobs.values.toList().also { activeRefreshJobs.clear() }
+        }
+        jobs.forEach(Job::cancel)
     }
 
     private fun ensureStateLoadedForProfile(profileId: Int) {

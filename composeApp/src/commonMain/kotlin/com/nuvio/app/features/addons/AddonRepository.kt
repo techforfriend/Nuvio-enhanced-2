@@ -8,6 +8,8 @@ import com.nuvio.app.features.profiles.ProfileRepository
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.postgrest.rpc
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -60,6 +62,7 @@ object AddonRepository {
     private var pulledFromServer = false
     private var currentProfileId: Int = 1
     private val activeRefreshJobs = mutableMapOf<String, Job>()
+    private val activeRefreshJobsLock = SynchronizedObject()
     private val pushJobsByProfile = mutableMapOf<Int, Job>()
 
     fun initialize() {
@@ -398,7 +401,7 @@ object AddonRepository {
         manifestUrl: String,
         forceRefresh: Boolean = false,
     ) {
-        val existingJob = activeRefreshJobs[manifestUrl]
+        val existingJob = synchronized(activeRefreshJobsLock) { activeRefreshJobs[manifestUrl] }
         if (existingJob?.isActive == true) {
             InAppLogger.debug("Addons/Manifest", "refresh skipped active url=${InAppLogger.redactUrl(manifestUrl)}")
             return
@@ -449,12 +452,14 @@ object AddonRepository {
                     )
                 }
             } finally {
-                if (activeRefreshJobs[manifestUrl] === refreshJob) {
-                    activeRefreshJobs.remove(manifestUrl)
+                synchronized(activeRefreshJobsLock) {
+                    if (activeRefreshJobs[manifestUrl] === refreshJob) {
+                        activeRefreshJobs.remove(manifestUrl)
+                    }
                 }
             }
         }
-        activeRefreshJobs[manifestUrl] = refreshJob
+        synchronized(activeRefreshJobsLock) { activeRefreshJobs[manifestUrl] = refreshJob }
     }
 
     private fun pushToServer() {
@@ -533,8 +538,10 @@ object AddonRepository {
             .mapKeys { (url, _) -> ensureManifestSuffix(url) }
 
     private fun cancelActiveRefreshes() {
-        activeRefreshJobs.values.forEach(Job::cancel)
-        activeRefreshJobs.clear()
+        val jobs = synchronized(activeRefreshJobsLock) {
+            activeRefreshJobs.values.toList().also { activeRefreshJobs.clear() }
+        }
+        jobs.forEach(Job::cancel)
     }
 
     private fun resolveEffectiveProfileId(profileId: Int): Int {
