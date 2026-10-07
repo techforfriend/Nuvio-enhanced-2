@@ -43,6 +43,26 @@ internal fun List<PlayerChapter>.currentChapterIndex(positionMs: Long): Int {
     return index
 }
 
+private const val MaxMpvChapters = 500
+
+internal fun mpvChapters(property: (String) -> String?): List<PlayerChapter> {
+    val count = property("chapter-list/count")?.trim()?.toIntOrNull() ?: return emptyList()
+    if (count < 2) return emptyList()
+    return (0 until count.coerceAtMost(MaxMpvChapters))
+        .mapNotNull { index ->
+            val seconds = property("chapter-list/$index/time")?.trim()?.toDoubleOrNull()
+                ?: return@mapNotNull null
+            PlayerChapter(
+                title = property("chapter-list/$index/title")?.trim().orEmpty(),
+                startMs = (seconds * 1000.0).toLong().coerceAtLeast(0L),
+            )
+        }
+        .sortedBy { it.startMs }
+        .distinctBy { it.startMs }
+        .takeIf { it.size >= 2 }
+        .orEmpty()
+}
+
 internal fun List<PlayerChapter>.chapterMarkFractions(durationMs: Long): List<Float> {
     if (durationMs <= 0L) return emptyList()
     return asSequence()

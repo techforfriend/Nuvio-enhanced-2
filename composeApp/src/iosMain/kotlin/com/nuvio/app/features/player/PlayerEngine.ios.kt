@@ -421,18 +421,26 @@ actual fun PlatformPlayerSurface(
     // Polling for snapshots
     LaunchedEffect(bridge) {
         var lastReportedError: String? = null
+        var chapters = emptyList<PlayerChapter>()
+        var chaptersDurationMs = 0L
         while (isActive) {
+            val durationMs = bridge.getDurationMs()
+            if (durationMs > 0L && durationMs != chaptersDurationMs) {
+                chaptersDurationMs = durationMs
+                chapters = mpvChapters { name -> bridge.getProperty(name).ifBlank { null } }
+            }
             val snapshot = PlayerPlaybackSnapshot(
                 isLoading = bridge.getIsLoading(),
                 isPlaying = bridge.getIsPlaying(),
                 isEnded = bridge.getIsEnded(),
-                durationMs = bridge.getDurationMs(),
+                durationMs = durationMs,
                 positionMs = bridge.getPositionMs(),
                 bufferedPositionMs = bridge.getBufferedMs(),
                 playbackSpeed = bridge.getPlaybackSpeed(),
                 videoWidth = bridge.getVideoWidth().coerceAtLeast(0),
                 videoHeight = bridge.getVideoHeight().coerceAtLeast(0),
                 mediaInfoJson = bridge.getMediaInfoJson(),
+                chapters = chapters,
             )
             latestOnSnapshot.value(snapshot)
             val errorMessage = bridge.getErrorMessage().ifBlank { null }

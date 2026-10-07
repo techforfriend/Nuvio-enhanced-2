@@ -1705,6 +1705,9 @@ private class NuvioLibmpvView(
         }
     }
 
+    private var cachedChapters: List<PlayerChapter> = emptyList()
+    private var cachedChaptersKey: String? = null
+
     private fun readSnapshotNow(): PlayerPlaybackSnapshot {
         val paused = mpv.getPropertyBoolean("pause") ?: true
         val pausedForCache = mpv.getPropertyBoolean("paused-for-cache") ?: false
@@ -1735,7 +1738,18 @@ private class NuvioLibmpvView(
             videoWidth = videoWidth,
             videoHeight = videoHeight,
             mediaInfoJson = buildLibmpvMediaInfoJson(),
+            chapters = chaptersFor(durationMs),
         )
+    }
+
+    private fun chaptersFor(durationMs: Long): List<PlayerChapter> {
+        if (durationMs <= 0L) return emptyList()
+        val key = "$currentSourceUrl|$durationMs"
+        if (key != cachedChaptersKey) {
+            cachedChaptersKey = key
+            cachedChapters = runCatching { mpvChapters(mpv::getPropertyString) }.getOrDefault(emptyList())
+        }
+        return cachedChapters
     }
 
 
