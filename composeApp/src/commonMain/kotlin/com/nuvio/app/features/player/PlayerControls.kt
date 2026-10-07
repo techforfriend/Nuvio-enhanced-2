@@ -136,6 +136,8 @@ internal fun PlayerControlsShell(
     onQualityClick: (() -> Unit)? = null,
     onOpenInExternalPlayer: (() -> Unit)? = null,
     onSubmitIntroClick: (() -> Unit)? = null,
+    onSwitchEngineClick: (() -> Unit)? = null,
+    onStreamInfoClick: () -> Unit = {},
     parentalWarnings: List<ParentalWarning> = emptyList(),
     showParentalGuide: Boolean = false,
     onParentalGuideAnimationComplete: () -> Unit = {},
@@ -347,10 +349,12 @@ internal fun PlayerControlsShell(
                         onEpisodesClick = onEpisodesClick,
                         onChaptersClick = onChaptersClick,
                         onNextEpisodeClick = onNextEpisodeClick,
+                        onSwitchEngineClick = onSwitchEngineClick,
                         onSpeedClick = { onSpeedClick?.invoke() },
                         onResizeModeClick = onResizeModeClick,
                         onVideoSettingsClick = onVideoSettingsClick,
                         onOpenInExternalPlayer = onOpenInExternalPlayer,
+                        onStreamInfoClick = onStreamInfoClick,
                         onSubmitIntroClick = onSubmitIntroClick,
                         qualityLabel = qualityLabel,
                         onQualityClick = onQualityClick,
@@ -941,6 +945,7 @@ private fun PlayerBufferedTrack(bufferedFraction: Float, enabled: Boolean = true
 }
 
 @Composable
+private fun PlayerProgressTrack(sliderState: SliderState, bufferedFraction: Float) {
 private fun PlayerProgressTrack(
     sliderState: SliderState,
     bufferedFraction: Float,
