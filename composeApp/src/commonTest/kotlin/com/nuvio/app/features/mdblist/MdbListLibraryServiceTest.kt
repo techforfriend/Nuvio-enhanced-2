@@ -133,6 +133,37 @@ class MdbListLibraryServiceTest {
     }
 
     @Test
+    fun `libraries cached with an older item order download their lists once more`() = runTest {
+        val h = MdbListSyncTestHarness(backgroundScope)
+        h.seedLibrary(mdbListLibrarySnapshot(h.http.now).copy(itemsOrder = 0))
+        val service = h.libraryService(backgroundScope)
+        h.http.reply(body = mdbListLibraryListsBody())
+        h.http.reply(body = MDBLIST_EMPTY_LIBRARY_PAGE)
+        h.http.reply(body = MDBLIST_LIBRARY_MOVIE_PAGE)
+        h.http.now += MdbListSyncRepository.AUTOMATIC_INTERVAL_MS
+        service.refresh(TrackingRefreshIntent.AUTOMATIC)
+        h.http.reply(body = mdbListLibraryListsBody())
+        h.http.reply(body = MDBLIST_EMPTY_LIBRARY_PAGE)
+        h.http.now += MdbListSyncRepository.AUTOMATIC_INTERVAL_MS
+        service.refresh(TrackingRefreshIntent.AUTOMATIC)
+        assertEquals(listOf("/lists/user", "/watchlist/items", "/lists/7/items", "/lists/user", "/watchlist/items"),
+            h.http.engine.requests.map { it.path })
+        assertEquals(1, h.repository.currentSnapshot()!!.library!!.itemsByList.getValue(MDBLIST_TEST_LIST_KEY).size)
+    }
+
+    @Test
+    fun `manual refresh downloads unchanged lists again to pick up a new saved sort`() = runTest {
+        val h = MdbListSyncTestHarness(backgroundScope)
+        h.seedLibrary()
+        h.http.reply(body = mdbListLibraryListsBody())
+        h.http.reply(body = MDBLIST_EMPTY_LIBRARY_PAGE)
+        h.http.reply(body = MDBLIST_LIBRARY_MOVIE_PAGE)
+        h.libraryService(backgroundScope).refresh(TrackingRefreshIntent.USER_INITIATED)
+        assertEquals(listOf("/lists/user", "/watchlist/items", "/lists/7/items"), h.http.engine.requests.map { it.path })
+        assertEquals(1, h.repository.currentSnapshot()!!.library!!.itemsByList.getValue(MDBLIST_TEST_LIST_KEY).size)
+    }
+
+    @Test
     fun `changed or missing versions refetch contents even when item counts stay equal`() = runTest {
         for (version in listOf("v2", null)) {
             val h = MdbListSyncTestHarness(backgroundScope)
@@ -170,6 +201,8 @@ class MdbListLibraryServiceTest {
             val queries = h.http.engine.requests.map { it.query }
             assertEquals(if (cursor) "page-two" else "1", queries[1][if (cursor) "cursor" else "offset"])
             assertTrue(queries.all { it["limit"] == "1000" && it["append_to_response"] == "poster,description,genres" })
+            // No sort, so MDBList applies the sort order saved for the list.
+            assertTrue(queries.none { "sort" in it || "order" in it })
         }
     }
 
