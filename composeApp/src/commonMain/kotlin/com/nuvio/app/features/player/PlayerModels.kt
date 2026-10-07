@@ -219,7 +219,6 @@ internal data class PlaybackKey(
     val videoId: String?,
     val seasonNumber: Int?,
     val episodeNumber: Int?,
-    val playbackEngine: AndroidPlaybackEngine? = null,
 )
 
 data class PlayerPlaybackSnapshot(
@@ -233,6 +232,12 @@ data class PlayerPlaybackSnapshot(
     val videoWidth: Int = 0,
     val videoHeight: Int = 0,
     val mediaInfoJson: String = "{}",
+    val chapters: List<PlayerChapter> = emptyList(),
+)
+
+data class PlayerChapter(
+    val title: String,
+    val startMs: Long,
 )
 
 data class PlayerNowPlayingInfo(
