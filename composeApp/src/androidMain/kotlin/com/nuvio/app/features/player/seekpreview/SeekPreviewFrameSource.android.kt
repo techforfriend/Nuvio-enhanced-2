@@ -10,12 +10,14 @@ import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import com.nuvio.app.core.logging.InAppLogger
 import androidx.media3.common.ColorInfo
 import androidx.media3.common.Effect
 import androidx.media3.common.Format
 import androidx.media3.common.GlObjectsProvider
 import androidx.media3.common.GlTextureInfo
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.GlUtil
@@ -82,13 +84,28 @@ private class ExoSeekPreviewFrameSource(
     private var grabber: ExoFrameGrabber? = null
 
     override fun frameAt(positionMs: Long, maxWidthPx: Int): ImageBitmap? {
-        val activeGrabber = grabber ?: onMainThread {
-            ExoFrameGrabber(context, url, headers, targetHeight = (maxWidthPx * 9 / 16).coerceAtLeast(16))
-        }.also { created ->
-            grabber = created
-            created.awaitFirstFrame()
-        }
+        val activeGrabber = grabber ?: openGrabber(targetHeight = (maxWidthPx * 9 / 16).coerceAtLeast(16))
+            .also { grabber = it }
         return activeGrabber.frameAt(positionMs.coerceAtLeast(0L)).asImageBitmap()
+    }
+
+    private fun openGrabber(targetHeight: Int): ExoFrameGrabber = try {
+        openAndAwait(targetHeight, mimeType = null)
+    } catch (error: PlaybackException) {
+        if (error.errorCode != PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED) throw error
+        InAppLogger.info("Player/SeekPreview", "container not recognised, retrying as HLS")
+        openAndAwait(targetHeight, mimeType = MimeTypes.APPLICATION_M3U8)
+    }
+
+    private fun openAndAwait(targetHeight: Int, mimeType: String?): ExoFrameGrabber {
+        val created = onMainThread { ExoFrameGrabber(context, url, headers, targetHeight, mimeType) }
+        try {
+            created.awaitFirstFrame()
+        } catch (error: Throwable) {
+            runCatching { onMainThread { created.release() } }
+            throw error
+        }
+        return created
     }
 
     override fun close() {
@@ -104,6 +121,7 @@ private class ExoFrameGrabber(
     url: String,
     headers: Map<String, String>,
     targetHeight: Int,
+    mimeType: String?,
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val pending = AtomicReference<CompletableFuture<Bitmap>?>(null)
@@ -141,7 +159,7 @@ private class ExoFrameGrabber(
             ),
         )
         pending.set(firstFrame)
-        player.setMediaItem(MediaItem.fromUri(url))
+        player.setMediaItem(MediaItem.Builder().setUri(url).setMimeType(mimeType).build())
         player.playWhenReady = false
         player.prepare()
     }

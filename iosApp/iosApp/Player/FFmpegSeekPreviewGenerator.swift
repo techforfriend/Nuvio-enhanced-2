@@ -90,38 +90,16 @@ final class FFmpegSeekPreviewGenerator: NSObject, NuvioSeekPreviewGenerator {
         if didAttemptOpen { return false }
         didAttemptOpen = true
 
-        guard var context = avformat_alloc_context() else {
-            openErrorMessage = "out of memory"
-            return false
+        var openResult: Int32 = 0
+        var openedContext = openInput(format: nil, result: &openResult)
+        if openedContext == nil, !abortFlag.isSet, let hls = av_find_input_format("hls") {
+            openedContext = openInput(format: hls, result: &openResult)
         }
-        context.pointee.interrupt_callback.callback = { opaque in
-            guard let opaque else { return 0 }
-            return Unmanaged<SeekPreviewAbortFlag>.fromOpaque(opaque).takeUnretainedValue().isSet ? 1 : 0
-        }
-        context.pointee.interrupt_callback.opaque = Unmanaged.passUnretained(abortFlag).toOpaque()
-
-        var options: OpaquePointer?
-        defer { av_dict_free(&options) }
-        _ = av_dict_set(&options, "rw_timeout", Self.ioTimeoutMicroseconds, 0)
-        var headerLines = ""
-        for (name, value) in headers {
-            if name.caseInsensitiveCompare("User-Agent") == .orderedSame {
-                _ = av_dict_set(&options, "user_agent", value, 0)
-            } else {
-                headerLines += "\(name): \(value)\r\n"
-            }
-        }
-        if !headerLines.isEmpty {
-            _ = av_dict_set(&options, "headers", headerLines, 0)
-        }
-
-        var contextPointer: UnsafeMutablePointer<AVFormatContext>? = context
-        let openResult = avformat_open_input(&contextPointer, inputPath(), nil, &options)
-        guard openResult >= 0, let opened = contextPointer else {
+        guard let context = openedContext else {
             openErrorMessage = "open failed: \(Self.describe(openResult))"
             return false
         }
-        context = opened
+        var contextPointer: UnsafeMutablePointer<AVFormatContext>? = context
 
         var streamIndex = av_find_best_stream(context, AVMEDIA_TYPE_VIDEO, -1, -1, nil, 0)
         if streamIndex < 0 || !hasDecodableParameters(context, streamIndex) {
@@ -165,6 +143,43 @@ final class FFmpegSeekPreviewGenerator: NSObject, NuvioSeekPreviewGenerator {
         codecContext = decoderContext
         videoStreamIndex = streamIndex
         return true
+    }
+
+    private func openInput(
+        format: UnsafePointer<AVInputFormat>?,
+        result: inout Int32
+    ) -> UnsafeMutablePointer<AVFormatContext>? {
+        guard let context = avformat_alloc_context() else {
+            result = -12
+            return nil
+        }
+        context.pointee.interrupt_callback.callback = { opaque in
+            guard let opaque else { return 0 }
+            return Unmanaged<SeekPreviewAbortFlag>.fromOpaque(opaque).takeUnretainedValue().isSet ? 1 : 0
+        }
+        context.pointee.interrupt_callback.opaque = Unmanaged.passUnretained(abortFlag).toOpaque()
+
+        var options: OpaquePointer?
+        defer { av_dict_free(&options) }
+        _ = av_dict_set(&options, "rw_timeout", Self.ioTimeoutMicroseconds, 0)
+        _ = av_dict_set(&options, "extension_picky", "0", 0)
+        _ = av_dict_set(&options, "allowed_extensions", "ALL", 0)
+        _ = av_dict_set(&options, "allowed_segment_extensions", "ALL", 0)
+        var headerLines = ""
+        for (name, value) in headers {
+            if name.caseInsensitiveCompare("User-Agent") == .orderedSame {
+                _ = av_dict_set(&options, "user_agent", value, 0)
+            } else {
+                headerLines += "\(name): \(value)\r\n"
+            }
+        }
+        if !headerLines.isEmpty {
+            _ = av_dict_set(&options, "headers", headerLines, 0)
+        }
+
+        var contextPointer: UnsafeMutablePointer<AVFormatContext>? = context
+        result = avformat_open_input(&contextPointer, inputPath(), format, &options)
+        return result >= 0 ? contextPointer : nil
     }
 
     private func inputPath() -> String {
