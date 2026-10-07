@@ -1,7 +1,11 @@
 package com.nuvio.app.features.streams
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -51,6 +55,7 @@ import com.nuvio.app.core.ui.NuvioBottomSheetDivider
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.core.ui.nuvioSafeBottomPadding
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.collections_tab_all
@@ -66,9 +71,13 @@ internal fun ProviderFilterRow(
     selectedFilter: String?,
     onFilterSelected: (String?) -> Unit,
     onRefresh: (() -> Unit)? = null,
+    isRefreshing: Boolean = groups.any { it.isLoading },
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
     spacing: Dp = 8.dp,
+    refreshChip: @Composable (Boolean, () -> Unit) -> Unit = { isLoading, onClick ->
+        RefreshChip(isLoading = isLoading, onClick = onClick)
+    },
     filterChip: (@Composable (AddonStreamGroup?, Boolean, () -> Unit) -> Unit)? = null,
 ) {
     val addonGroups = groups.filter { it.streams.isNotEmpty() || it.isLoading }
@@ -99,12 +108,7 @@ internal fun ProviderFilterRow(
         horizontalArrangement = Arrangement.spacedBy(spacing),
     ) {
         if (onRefresh != null) {
-            FilterChip(
-                icon = Icons.Rounded.Refresh,
-                contentDescription = stringResource(Res.string.streams_refresh),
-                isSelected = false,
-                onClick = onRefresh,
-            )
+            refreshChip(isRefreshing, onRefresh)
         }
         chip(null, selectedFilter == null) { onFilterSelected(null) }
         addonGroups.forEach { group ->
@@ -193,10 +197,52 @@ internal fun StreamSourcePinSheet(
 }
 
 @Composable
+internal fun rememberRefreshRotation(isLoading: Boolean): Animatable<Float, AnimationVector1D> {
+    val rotation = remember { Animatable(0f) }
+    var hasCompletedFullRotation by remember { mutableStateOf(false) }
+    LaunchedEffect(isLoading) {
+        if (isLoading) {
+            delay(100)
+            hasCompletedFullRotation = false
+            rotation.animateTo(360f, remainingTurn(rotation.value))
+            hasCompletedFullRotation = true
+            rotation.snapTo(0f)
+            rotation.animateTo(360f, infiniteRepeatable(tween(durationMillis = 1000, easing = LinearEasing)))
+        } else {
+            if (hasCompletedFullRotation && rotation.value > 0f) {
+                rotation.animateTo(360f, remainingTurn(rotation.value))
+            }
+            rotation.snapTo(0f)
+            hasCompletedFullRotation = false
+        }
+    }
+    return rotation
+}
+
+private fun remainingTurn(rotation: Float) =
+    tween<Float>(durationMillis = ((360f - rotation) / 360f * 1000).toInt(), easing = LinearEasing)
+
+@Composable
+private fun RefreshChip(
+    isLoading: Boolean,
+    onClick: () -> Unit,
+) {
+    val rotation = rememberRefreshRotation(isLoading)
+    FilterChip(
+        icon = Icons.Rounded.Refresh,
+        contentDescription = stringResource(Res.string.streams_refresh),
+        iconModifier = Modifier.graphicsLayer { rotationZ = rotation.value },
+        isSelected = false,
+        onClick = onClick,
+    )
+}
+
+@Composable
 private fun FilterChip(
     label: String? = null,
     icon: ImageVector? = null,
     contentDescription: String? = null,
+    iconModifier: Modifier = Modifier,
     isSelected: Boolean,
     isPinned: Boolean = false,
     onClick: () -> Unit,
@@ -254,7 +300,7 @@ private fun FilterChip(
                     imageVector = icon,
                     contentDescription = contentDescription,
                     tint = contentColor,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(20.dp).then(iconModifier),
                 )
             }
             if (isPinned) {
