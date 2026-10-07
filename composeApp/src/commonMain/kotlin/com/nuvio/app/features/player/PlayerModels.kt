@@ -233,6 +233,12 @@ data class PlayerPlaybackSnapshot(
     val videoWidth: Int = 0,
     val videoHeight: Int = 0,
     val mediaInfoJson: String = "{}",
+    val chapters: List<PlayerChapter> = emptyList(),
+)
+
+data class PlayerChapter(
+    val title: String,
+    val startMs: Long,
 )
 
 data class PlayerNowPlayingInfo(

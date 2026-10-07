@@ -46,6 +46,10 @@ import org.jetbrains.compose.resources.stringResource
 
 internal val PlayerTimelineContentInset = 2.dp
 
+internal val PlayerChapterMarkWidth = 2.dp
+
+internal val PlayerChapterMarkColor = Color.Black.copy(alpha = 0.6f)
+
 @Composable
 internal fun PlayerTimelineDetails(
     title: String,
@@ -117,6 +121,9 @@ internal fun PlayerTimeline(
     val durationMs = snapshot.durationMs.coerceAtLeast(0L)
     val rangeEnd = durationMs.coerceAtLeast(1L).toFloat()
     val bufferedFraction = playerBufferedFraction(snapshot.bufferedPositionMs, durationMs)
+    val chapterMarks = remember(snapshot.chapters, durationMs) {
+        snapshot.chapters.chapterMarkFractions(durationMs)
+    }
     val accentBrush = MaterialTheme.themePalette.accentBrush()
     val description = stringResource(Res.string.player_seek_position)
     var scrubPosition by remember { mutableStateOf<Long?>(null) }
@@ -174,6 +181,14 @@ internal fun PlayerTimeline(
                                     size = Size(size.width * (state.value / rangeEnd).coerceIn(0f, 1f), trackHeight),
                                     cornerRadius = radius,
                                 )
+                                val markWidth = PlayerChapterMarkWidth.toPx()
+                                chapterMarks.forEach { fraction ->
+                                    drawRect(
+                                        color = PlayerChapterMarkColor,
+                                        topLeft = Offset(size.width * fraction - markWidth / 2f, trackOrigin.y),
+                                        size = Size(markWidth, trackHeight),
+                                    )
+                                }
                             },
                     )
                 },

@@ -113,6 +113,7 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
         useCustomSubtitles = false
         showSourcesPanel = false
         showEpisodesPanel = false
+        showChaptersPanel = false
         episodeStreamsPanelState = EpisodeStreamsPanelState()
         PlayerStreamsRepository.clearEpisodeStreams()
         SubtitleRepository.clear()

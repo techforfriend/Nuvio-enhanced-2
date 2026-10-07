@@ -486,6 +486,11 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                     openEpisodesPanel()
                 }
             } else null,
+            onChaptersClick = if (playbackSnapshot.chapters.isNotEmpty()) {
+                {
+                    openChaptersPanel()
+                }
+            } else null,
             onLiveChannelsClick = if (isLiveTvPlayback) {
                 {
                     showLiveChannelsPanel = true
@@ -686,6 +691,15 @@ private fun BoxScope.RenderPlaybackOverlays(
             },
         )
     }
+}
+
+private fun PlayerScreenRuntime.openChaptersPanel() {
+    showChaptersPanel = true
+    showSourcesPanel = false
+    showQualityPanel = false
+    showEpisodesPanel = false
+    showLiveChannelsPanel = false
+    controlsVisible = false
 }
 
 private fun PlayerScreenRuntime.openQualityPanel() {
@@ -895,6 +909,20 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
             showEpisodesPanel = false
             episodeStreamsPanelState = EpisodeStreamsPanelState()
             PlayerStreamsRepository.clearEpisodeStreams()
+            controlsVisible = true
+        },
+        showChaptersPanel = showChaptersPanel,
+        chapters = playbackSnapshot.chapters,
+        onChapterSelected = { chapter ->
+            val targetMs = chapter.startMs.coerceAtLeast(0L)
+            finishTimelineScrub(targetMs)
+            playerController?.seekTo(targetMs)
+            scheduleProgressSyncAfterSeek()
+            showChaptersPanel = false
+            controlsVisible = true
+        },
+        onChaptersPanelDismissed = {
+            showChaptersPanel = false
             controlsVisible = true
         },
         showSubmitIntroModal = showSubmitIntroModal,
