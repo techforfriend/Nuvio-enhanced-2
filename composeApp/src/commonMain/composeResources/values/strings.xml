@@ -1865,6 +1865,8 @@
     <string name="player_loading_starting">Starting stream…</string>
     <string name="player_loading_buffering">Buffering…</string>
     <string name="debrid_resolving_stream">Resolving debrid stream</string>
+    <string name="youtube_resolving_stream">Loading YouTube video</string>
+    <string name="youtube_resolution_failed">Could not load this YouTube video.</string>
     <string name="streams_loading_subtitles">Loading subtitles from addons…</string>
     <string name="streams_loading_skip_segments">Loading intro/outro segments…</string>
     <string name="streams_finding_streams">Finding streams…</string>
@@ -2144,6 +2146,8 @@
     <string name="library_calendar_weekday_wed">Wed</string>
     <string name="library_sort_added_asc">Oldest added</string>
     <string name="library_sort_added_desc">Recently added</string>
+    <string name="library_sort_released_asc">Oldest released</string>
+    <string name="library_sort_released_desc">Recently released</string>
     <string name="library_sort_title_asc">Title A–Z</string>
     <string name="library_error_sort_failed">Couldn\'t load sort order. Showing provider order.</string>
     <string name="library_sort_title_desc">Title Z–A</string>
@@ -2748,4 +2752,5 @@
     <string name="stream_info_subtitle_source_addon">Addon</string>
     <string name="stream_info_subtitle_source_embedded">Embedded</string>
     <string name="stream_info_player_engine">Player Engine</string>
+    <string name="stream_info_server">Server</string>
 </resources>

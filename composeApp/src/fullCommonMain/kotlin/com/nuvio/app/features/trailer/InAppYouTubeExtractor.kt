@@ -65,6 +65,15 @@ private data class ManifestBestVariant(
     val bandwidth: Long,
 )
 
+internal data class ManifestCandidate(
+    val client: String,
+    val priority: Int,
+    val manifestUrl: String,
+    val selectedVariantUrl: String,
+    val height: Int,
+    val bandwidth: Long,
+)
+
 internal data class TrailerRequestResponse(
     val ok: Boolean,
     val status: Int,
@@ -153,19 +162,37 @@ private val CLIENTS = listOf(
 class InAppYouTubeExtractor {
     private val log = Logger.withTag(TRAILER_EXTRACTOR_TAG)
 
-    suspend fun extractPlaybackSource(youtubeUrl: String): TrailerPlaybackSource? = withContext(Dispatchers.Default) {
+    suspend fun extractPlaybackSource(youtubeUrl: String): TrailerPlaybackSource? =
+        extract(youtubeUrl, singleUrl = false)
+
+    /**
+     * Returns one URL that carries both video and audio, for players that take a
+     * single source: the HLS master playlist (every quality, audio as a
+     * rendition), or a progressive file when there is no playlist. The adaptive
+     * formats are skipped because their audio is a separate file.
+     */
+    suspend fun extractSingleUrl(youtubeUrl: String): String? =
+        extract(youtubeUrl, singleUrl = true)?.videoUrl
+
+    private suspend fun extract(
+        youtubeUrl: String,
+        singleUrl: Boolean,
+    ): TrailerPlaybackSource? = withContext(Dispatchers.Default) {
         if (youtubeUrl.isBlank()) return@withContext null
 
         runCatching {
             withTimeout(EXTRACTOR_TIMEOUT_MS) {
-                extractPlaybackSourceInternal(youtubeUrl)
+                extractPlaybackSourceInternal(youtubeUrl, singleUrl)
             }
         }.onFailure {
             log.w { "Trailer extractor failed for $youtubeUrl: ${it.message}" }
         }.getOrNull()
     }
 
-    private suspend fun extractPlaybackSourceInternal(youtubeUrl: String): TrailerPlaybackSource? {
+    private suspend fun extractPlaybackSourceInternal(
+        youtubeUrl: String,
+        singleUrl: Boolean,
+    ): TrailerPlaybackSource? {
         val videoId = extractVideoId(youtubeUrl) ?: return null
 
         val watchUrl = "https://www.youtube.com/watch?v=$videoId&hl=en"
@@ -309,6 +336,15 @@ class InAppYouTubeExtractor {
         }
 
         val rejectedClients = mutableSetOf<String>()
+        if (singleUrl) {
+            // Single-source players (upstream's YouTube stream resolver) need one URL that
+            // carries both video and audio: the HLS master playlist first, then a muxed
+            // progressive file. Adaptive formats are skipped because their audio is separate.
+            resolveHls(manifestUrls, rejectedClients)?.let { return it }
+            resolveProgressive(progressive, rejectedClients)?.let { return it }
+            log.w { "single-url: no playable HLS or progressive candidate" }
+            return null
+        }
         resolveAdaptive(adaptiveVideo, adaptiveAudio, rejectedClients)?.let { return it }
         resolveProgressive(progressive, rejectedClients)?.let { return it }
         resolveHls(manifestUrls, rejectedClients)?.let { return it }
@@ -432,6 +468,14 @@ class InAppYouTubeExtractor {
     private fun clientOrder(present: Collection<String>): List<String> {
         return present.distinct().sortedBy { clientRank(it) }
     }
+
+    /**
+     * The master playlist rather than the best variant: YouTube's variant
+     * playlists carry video only, with audio as a separate rendition that only
+     * the master playlist links.
+     */
+    internal fun selectSingleUrlManifest(bestManifest: ManifestCandidate?): String? =
+        bestManifest?.manifestUrl?.takeIf { it.isNotBlank() }
 
     private suspend fun fetchPlayerResponse(
         apiKey: String,
