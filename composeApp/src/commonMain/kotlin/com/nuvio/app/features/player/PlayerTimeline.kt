@@ -18,9 +18,12 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -107,6 +110,15 @@ internal fun PlayerTimelineDetails(
     }
 }
 
+@Composable
+internal fun ReportTimelineTouch(touching: Boolean, onTouchChange: (Boolean) -> Unit) {
+    val latestOnTouchChange by rememberUpdatedState(onTouchChange)
+    LaunchedEffect(touching) { latestOnTouchChange(touching) }
+    DisposableEffect(Unit) {
+        onDispose { latestOnTouchChange(false) }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PlayerTimeline(
@@ -117,6 +129,7 @@ internal fun PlayerTimeline(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     seekPreview: SeekPreviewController? = null,
+    onTouchChange: (Boolean) -> Unit = {},
 ) {
     val durationMs = snapshot.durationMs.coerceAtLeast(0L)
     val rangeEnd = durationMs.coerceAtLeast(1L).toFloat()
@@ -131,6 +144,7 @@ internal fun PlayerTimeline(
     val isPressed by interactionSource.collectIsPressedAsState()
     val isDragged by interactionSource.collectIsDraggedAsState()
     val isInteracting = enabled && durationMs > 0L && (isPressed || isDragged)
+    ReportTimelineTouch(isInteracting, onTouchChange)
     val trackThickness by animateDpAsState(
         targetValue = if (isInteracting) 10.dp else 6.dp,
         animationSpec = tween(durationMillis = if (isInteracting) 140 else 180),

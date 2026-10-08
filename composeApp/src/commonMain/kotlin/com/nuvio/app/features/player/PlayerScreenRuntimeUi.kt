@@ -580,6 +580,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             horizontalSafePadding = horizontalSafePadding,
             modifier = Modifier.fillMaxSize(),
             seekPreview = seekPreview,
+            onTimelineTouchChange = { touching -> isTouchingTimeline = touching },
         )
     }
 }

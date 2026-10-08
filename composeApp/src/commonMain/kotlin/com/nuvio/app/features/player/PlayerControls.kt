@@ -154,6 +154,7 @@ internal fun PlayerControlsShell(
     horizontalSafePadding: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
     seekPreview: SeekPreviewController? = null,
+    onTimelineTouchChange: (Boolean) -> Unit = {},
 ) {
     val density = LocalDensity.current
     var timelineHeight by remember { mutableStateOf(0.dp) }
@@ -300,6 +301,7 @@ internal fun PlayerControlsShell(
                     qualityLabel = qualityLabel,
                     onQualityClick = onQualityClick,
                     seekPreview = seekPreview,
+                    onTimelineTouchChange = onTimelineTouchChange,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
@@ -349,6 +351,7 @@ internal fun PlayerControlsShell(
                             onScrubFinished(it)
                         },
                         seekPreview = seekPreview,
+                        onTouchChange = onTimelineTouchChange,
                     )
                     PlayerControlActions(
                         playbackSnapshot = playbackSnapshot,
@@ -723,6 +726,7 @@ private fun ProgressControls(
     qualityLabel: String? = null,
     onQualityClick: (() -> Unit)? = null,
     seekPreview: SeekPreviewController? = null,
+    onTimelineTouchChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val aspectRatioPainter = appIconPainter(AppIconResource.PlayerAspectRatio)
@@ -746,6 +750,7 @@ private fun ProgressControls(
             onScrubChange = onScrubChange,
             onScrubFinished = onScrubFinished,
             seekPreview = seekPreview,
+            onTouchChange = onTimelineTouchChange,
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -895,6 +900,7 @@ internal fun PlayerSeekBar(
     bufferedPositionMs: Long = 0L,
     seekPreview: SeekPreviewController? = null,
     chapters: List<PlayerChapter> = emptyList(),
+    onTouchChange: (Boolean) -> Unit = {},
 ) {
     val seekDurationMs = durationMs.coerceAtLeast(1L)
     val bufferedFraction = playerBufferedFraction(bufferedPositionMs, durationMs)
@@ -903,6 +909,7 @@ internal fun PlayerSeekBar(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val isDragged by interactionSource.collectIsDraggedAsState()
+    ReportTimelineTouch(durationMs > 0L && (isPressed || isDragged), onTouchChange)
     Column(modifier = modifier) {
         Box {
             Box(

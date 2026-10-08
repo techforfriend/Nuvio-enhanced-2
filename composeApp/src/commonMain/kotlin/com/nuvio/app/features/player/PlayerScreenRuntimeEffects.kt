@@ -405,6 +405,7 @@ private fun PlayerScreenRuntime.BindPlayerUiVisibilityEffects() {
         controlsVisible,
         controlsActivityTick,
         isScrubbingTimeline,
+        isTouchingTimeline,
         playbackSnapshot.isPlaying,
         playbackSnapshot.isLoading,
         showParentalGuide,
@@ -414,6 +415,7 @@ private fun PlayerScreenRuntime.BindPlayerUiVisibilityEffects() {
         if (
             !controlsVisible ||
             isScrubbingTimeline ||
+            isTouchingTimeline ||
             !playbackSnapshot.isPlaying ||
             playbackSnapshot.isLoading ||
             showParentalGuide ||
