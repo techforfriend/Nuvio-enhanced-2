@@ -86,6 +86,8 @@ internal fun PlayerToolbar(
     }
 }
 
+private const val ShowUpstreamStreamInfoAction = false
+
 @Composable
 internal fun PlayerControlActions(
     playbackSnapshot: PlayerPlaybackSnapshot,
@@ -193,10 +195,12 @@ internal fun PlayerControlActions(
                 icon = Icons.AutoMirrored.Rounded.OpenInNew,
             )
         },
+        onStreamInfoClick.takeIf { ShowUpstreamStreamInfoAction }?.let {
         PlayerControlAction(
             stringResource(Res.string.cd_stream_info), onStreamInfoClick,
             icon = Icons.Rounded.Info,
-        ),
+        )
+        },
         onVideoSettingsClick?.let {
             PlayerControlAction(
                 stringResource(Res.string.player_action_video_settings), it,
