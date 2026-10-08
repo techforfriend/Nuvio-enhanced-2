@@ -15,11 +15,15 @@ import com.nuvio.app.features.servers.ServerPlayback
 import com.nuvio.app.features.servers.serverPlaybackMessage
 import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.features.streams.StreamLinkCacheRepository
+import com.nuvio.app.features.streams.YouTubeStreamResolver
 import com.nuvio.app.features.watchprogress.WatchProgressEntry
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import com.nuvio.app.features.watchprogress.buildPlaybackVideoId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.youtube_resolution_failed
+import org.jetbrains.compose.resources.getString
 
 internal fun PlayerScreenRuntime.resolveDebridForPlayer(
     stream: StreamItem,
@@ -58,6 +62,22 @@ internal fun PlayerScreenRuntime.prepareServerForPlayer(
             .onFailure { if (it is CancellationException) throw it }
             .onSuccess { onPrepared(it) }
             .onFailure { NuvioToastController.show(it.serverPlaybackMessage()) }
+    }
+    return true
+}
+
+internal fun PlayerScreenRuntime.resolveYouTubeForPlayer(
+    stream: StreamItem,
+    onResolved: (StreamItem) -> Unit,
+): Boolean {
+    if (stream.youTubeIdToResolve == null) return false
+    scope.launch {
+        val resolved = YouTubeStreamResolver.Default.resolve(stream)
+        if (resolved == null) {
+            NuvioToastController.show(getString(Res.string.youtube_resolution_failed))
+            return@launch
+        }
+        onResolved(resolved)
     }
     return true
 }
@@ -250,8 +270,13 @@ internal fun PlayerScreenRuntime.switchToP2pEpisodeStream(
     applyEpisodeStreamMetadata(stream, episode, resume)
 }
 
-internal fun PlayerScreenRuntime.switchToSource(stream: StreamItem) {
+internal fun PlayerScreenRuntime.switchToSource(
+    stream: StreamItem,
+    saveForReuse: Boolean = true,
+) {
     if (prepareServerForPlayer(stream) { switchToSource(it) }) return
+    // The resolved URL expires after a few hours, so it isn't kept for reuse.
+    if (resolveYouTubeForPlayer(stream) { switchToSource(it, saveForReuse = false) }) return
     if (
         resolveDebridForPlayer(
             stream = stream,
@@ -287,7 +312,7 @@ internal fun PlayerScreenRuntime.switchToSource(stream: StreamItem) {
     flushWatchProgress()
     stopActiveP2pStream()
     val currentVideoId = activeVideoId
-    if (playerSettingsUiState.streamReuseLastLinkEnabled && currentVideoId != null) {
+    if (saveForReuse && playerSettingsUiState.streamReuseLastLinkEnabled && currentVideoId != null) {
         saveDirectStreamForReuse(stream, url, currentVideoId, activeSeasonNumber, activeEpisodeNumber)
     }
     externalSubtitles = stream.externalSubtitles
@@ -313,8 +338,14 @@ internal fun PlayerScreenRuntime.switchToEpisodeStream(
     stream: StreamItem,
     episode: MetaVideo,
     serverResumeMs: Long? = null,
+    saveForReuse: Boolean = true,
 ) {
-    if (prepareServerForPlayer(stream) { switchToEpisodeStream(it, episode, newerServerResumeMs(it, episode)) }) return
+    if (prepareServerForPlayer(stream) { switchToEpisodeStream(it, episode, serverResumeMs = newerServerResumeMs(it, episode)) }) return
+    if (
+        resolveYouTubeForPlayer(stream) { resolved ->
+            switchToEpisodeStream(resolved, episode, saveForReuse = false)
+        }
+    ) return
     if (
         resolveDebridForPlayer(
             stream = stream,
@@ -343,7 +374,7 @@ internal fun PlayerScreenRuntime.switchToEpisodeStream(
     stopActiveP2pStream()
     val epVideoId = episode.id
     val resume = serverResumeMs?.let { EpisodeResume(positionMs = it, fraction = null) } ?: resolveEpisodeResume(epVideoId, episode)
-    if (playerSettingsUiState.streamReuseLastLinkEnabled) {
+    if (saveForReuse && playerSettingsUiState.streamReuseLastLinkEnabled) {
         saveDirectStreamForReuse(stream, url, epVideoId, episode.season, episode.episode)
     }
     externalSubtitles = stream.externalSubtitles
@@ -407,6 +438,7 @@ internal fun PlayerScreenRuntime.switchToDownloadedEpisode(downloadItem: Downloa
 
 internal fun PlayerScreenRuntime.playNextEpisode(automatic: Boolean = false) {
     if (nextEpisodeAutoPlaySearching || nextEpisodeAutoPlayCountdown != null) return
+    nextEpisodePreloadTriggered = false
     val playbackKey = activePlaybackKey
     val nextVideoId = nextEpisodeInfo?.takeIf { it.hasAired }?.videoId ?: return
     fun isCurrentRequest(): Boolean = playbackKey == activePlaybackKey &&
