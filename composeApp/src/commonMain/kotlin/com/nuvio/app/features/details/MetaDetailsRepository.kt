@@ -518,8 +518,13 @@ object MetaDetailsRepository {
                 settings = settings,
             )
         } ?: meta
-        val enrichedMeta = applyMoreLikeThisSource(
+        val imdbRatedMeta = OmdbEpisodeRatingsService.applyTo(
             meta = mdbListEnrichedMeta,
+            fallbackItemId = fallbackItemId,
+            settings = TmdbSettingsRepository.snapshot(),
+        )
+        val enrichedMeta = applyMoreLikeThisSource(
+            meta = imdbRatedMeta,
             fallbackItemId = fallbackItemId,
             fallbackItemType = fallbackItemType,
         )
@@ -634,6 +639,8 @@ object MetaDetailsRepository {
         settings: com.nuvio.app.features.mdblist.MdbListSettings,
     ): Boolean {
         if (shouldFetchMdbListOnMetaScreen(meta, fallbackItemId, settings)) return true
+        TmdbSettingsRepository.ensureLoaded()
+        if (OmdbEpisodeRatingsService.shouldApply(meta, TmdbSettingsRepository.snapshot())) return true
         return shouldApplyMoreLikeThisSource(meta)
     }
 
@@ -666,6 +673,7 @@ object MetaDetailsRepository {
             append("|mdblist_account=${settings.accountScope.takeUnless { settings.hasApiKey }}")
             append("|more_like=${trackingSettings.moreLikeThisSource}:$traktAuthMode")
             append("|tmdb=${tmdbSettings.enabled}:${tmdbSettings.useMoreLikeThis}:${tmdbSettings.language}")
+            append("|omdb=${OmdbEpisodeRatingsService.hasApiKey}:${tmdbSettings.useEpisodeRatings}")
         }
     }
 

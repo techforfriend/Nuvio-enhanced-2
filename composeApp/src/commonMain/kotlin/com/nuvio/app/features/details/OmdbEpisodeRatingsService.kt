@@ -2,6 +2,7 @@ package com.nuvio.app.features.details
 
 import co.touchlab.kermit.Logger
 import com.nuvio.app.features.addons.httpGetText
+import com.nuvio.app.features.tmdb.TmdbSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -25,6 +26,33 @@ internal object OmdbEpisodeRatingsService {
 
     val hasApiKey: Boolean
         get() = OmdbSettingsRepository.effectiveApiKey().isNotBlank()
+
+    fun shouldApply(meta: MetaDetails, settings: TmdbSettings): Boolean =
+        hasApiKey &&
+            settings.enabled &&
+            settings.useEpisodeRatings &&
+            meta.videos.any { it.season != null && it.episode != null }
+
+    suspend fun applyTo(
+        meta: MetaDetails,
+        fallbackItemId: String,
+        settings: TmdbSettings,
+    ): MetaDetails {
+        if (!shouldApply(meta, settings)) return meta
+        val imdbId = extractImdbId(meta.imdbId, meta.id, fallbackItemId) ?: return meta
+        val ratings = fetchRatings(
+            imdbId = imdbId,
+            seasonNumbers = meta.videos.mapNotNull { it.season }.distinct(),
+        )
+        if (ratings.isEmpty()) return meta
+        return meta.copy(
+            videos = meta.videos.map { video ->
+                val season = video.season ?: return@map video
+                val episode = video.episode ?: return@map video
+                ratings[season to episode]?.let { video.copy(imdbRating = it) } ?: video
+            },
+        )
+    }
 
     fun extractImdbId(vararg candidates: String?): String? =
         candidates.firstNotNullOfOrNull { candidate ->
