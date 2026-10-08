@@ -264,13 +264,9 @@ internal fun PlayerScreenRuntime.cycleResizeMode() {
     controlsVisible = true
 }
 
-internal fun PlayerScreenRuntime.cyclePlaybackSpeed() {
-    val speeds = listOf(1f, 1.25f, 1.5f, 2f)
-    val current = playbackSnapshot.playbackSpeed
-    val next = speeds.firstOrNull { it > current + 0.01f } ?: speeds.first()
-    playerController?.setPlaybackSpeed(next)
-    showGestureMessage(formatPlaybackSpeedLabel(next))
-    controlsVisible = true
+internal fun PlayerScreenRuntime.setPlaybackSpeedFromPicker(speed: Float) {
+    playerController?.setPlaybackSpeed(speed)
+    showGestureMessage(formatPlaybackSpeedLabel(speed))
 }
 
 internal fun PlayerScreenRuntime.activateHoldToSpeed() {

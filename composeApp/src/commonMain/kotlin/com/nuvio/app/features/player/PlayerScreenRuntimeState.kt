@@ -178,6 +178,7 @@ internal class PlayerScreenRuntime(
 
     var showSourcesPanel by mutableStateOf(false)
     var showQualityPanel by mutableStateOf(false)
+    var showSpeedPanel by mutableStateOf(false)
     var showEpisodesPanel by mutableStateOf(false)
     var showChaptersPanel by mutableStateOf(false)
     var showLiveChannelsPanel by mutableStateOf(false)
@@ -257,6 +258,7 @@ internal class PlayerScreenRuntime(
             showUserRatingSheet ||
             showSourcesPanel ||
             showQualityPanel ||
+            showSpeedPanel ||
             showEpisodesPanel ||
             showChaptersPanel ||
             showLiveChannelsPanel ||

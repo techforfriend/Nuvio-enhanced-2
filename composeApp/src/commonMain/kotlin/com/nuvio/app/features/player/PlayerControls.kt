@@ -126,6 +126,9 @@ internal fun PlayerControlsShell(
     onSeekForward: () -> Unit,
     onResizeModeClick: () -> Unit,
     onSpeedClick: (() -> Unit)? = null,
+    speedPickerVisible: Boolean = false,
+    onSpeedSelected: (Float) -> Unit = {},
+    onSpeedPickerDismiss: () -> Unit = {},
     onSubtitleClick: (() -> Unit)? = null,
     onAudioClick: (() -> Unit)? = null,
     onVideoSettingsClick: (() -> Unit)? = null,
@@ -285,6 +288,9 @@ internal fun PlayerControlsShell(
                     onScrubFinished = onScrubFinished,
                     onResizeModeClick = onResizeModeClick,
                     onSpeedClick = onSpeedClick,
+                    speedPickerVisible = speedPickerVisible,
+                    onSpeedSelected = onSpeedSelected,
+                    onSpeedPickerDismiss = onSpeedPickerDismiss,
                     onSubtitleClick = onSubtitleClick,
                     onAudioClick = onAudioClick,
                     onSourcesClick = onSourcesClick,
@@ -359,6 +365,9 @@ internal fun PlayerControlsShell(
                         onNextEpisodeClick = onNextEpisodeClick,
                         onSwitchEngineClick = onSwitchEngineClick,
                         onSpeedClick = { onSpeedClick?.invoke() },
+                        speedPickerVisible = speedPickerVisible,
+                        onSpeedSelected = onSpeedSelected,
+                        onSpeedPickerDismiss = onSpeedPickerDismiss,
                         onResizeModeClick = onResizeModeClick,
                         onVideoSettingsClick = onVideoSettingsClick,
                         onOpenInExternalPlayer = onOpenInExternalPlayer,
@@ -702,6 +711,9 @@ private fun ProgressControls(
     onScrubFinished: (Long) -> Unit,
     onResizeModeClick: () -> Unit,
     onSpeedClick: (() -> Unit)? = null,
+    speedPickerVisible: Boolean = false,
+    onSpeedSelected: (Float) -> Unit = {},
+    onSpeedPickerDismiss: () -> Unit = {},
     onSubtitleClick: (() -> Unit)? = null,
     onAudioClick: (() -> Unit)? = null,
     onSourcesClick: (() -> Unit)? = null,
@@ -759,11 +771,19 @@ private fun ProgressControls(
                         onClick = onResizeModeClick,
                     )
                     if (onSpeedClick != null) {
-                        PlayerActionPillButton(
-                            label = formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed),
-                            icon = Icons.Rounded.Speed,
-                            onClick = onSpeedClick,
-                        )
+                        Box {
+                            PlayerActionPillButton(
+                                label = formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed),
+                                icon = Icons.Rounded.Speed,
+                                onClick = onSpeedClick,
+                            )
+                            PlayerSpeedPopup(
+                                visible = speedPickerVisible,
+                                currentSpeed = playbackSnapshot.playbackSpeed,
+                                onSpeedSelected = onSpeedSelected,
+                                onDismiss = onSpeedPickerDismiss,
+                            )
+                        }
                     }
                     if (onSubtitleClick != null) {
                         PlayerActionPillButton(
