@@ -154,7 +154,9 @@ actual object ProfileBiometricAuth {
         // The legacy alias is global, not account-scoped, so it can be removed even
         // when the current account ID is unavailable. Never guess an account alias.
         deleteLegacyKey()
-        if (userId.isBlank()) return !legacyKeyExists()
+        // We cannot safely resolve or verify an account-scoped alias without its account ID.
+        // Removing the legacy alias alone must not be reported as complete cleanup.
+        if (userId.isBlank()) return false
 
         deleteKey(profileIndex, userId)
         return !keyExists(profileIndex, userId) && !legacyKeyExists()
