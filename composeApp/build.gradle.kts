@@ -421,9 +421,7 @@ kotlin {
             if (iosDistribution == "full") {
                 linkerOpts(
                     "-lc++",
-                    "-framework", "Security",
                     "-framework", "SystemConfiguration",
-                    "-framework", "CoreFoundation",
                 )
             }
         }
