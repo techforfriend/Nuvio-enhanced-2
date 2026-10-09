@@ -57,8 +57,25 @@ actual object ProfilePinCacheStorage {
     }
 
     actual fun savePayload(profileIndex: Int, payload: String) {
+        // Remove a legacy plaintext verifier and verify removal before writing a replacement.
+        val legacyKey = "${LEGACY_PREFIX}${profileIndex}"
+        val defaults = NSUserDefaults.standardUserDefaults
+        defaults.removeObjectForKey(legacyKey)
+        if (defaults.objectForKey(legacyKey) != null) return
+
+        val deleteStatus = try {
+            deleteExisting(profileIndex)
+        } catch (_: Exception) {
+            return
+        }
+        if (deleteStatus != errSecSuccess && deleteStatus != errSecItemNotFound) return
+
         val data = payload.toNSData()
-        val query = createQuery(profileIndex)
+        val query = try {
+            createQuery(profileIndex)
+        } catch (_: Exception) {
+            return
+        }
 
         try {
             CFDictionarySetValue(
@@ -69,11 +86,14 @@ actual object ProfilePinCacheStorage {
             val bridgedData = CFBridgingRetain(data)
             try {
                 CFDictionarySetValue(query, kSecValueData, bridgedData)
-                deleteExisting(profileIndex)
+                // The prior item is gone. A failed add therefore cannot silently retain an
+                // older PIN verifier.
                 SecItemAdd(query, null)
             } finally {
                 bridgedData?.let { CFRelease(it) }
             }
+        } catch (_: Exception) {
+            // Fail closed; do not attempt to restore an older verifier.
         } finally {
             CFRelease(query)
         }
@@ -119,7 +139,10 @@ actual object ProfilePinCacheStorage {
             val bridgedData = CFBridgingRetain(data)
             try {
                 CFDictionarySetValue(query, kSecValueData, bridgedData)
-                deleteExisting(profileIndex)
+                val deleteStatus = deleteExisting(profileIndex)
+                if (deleteStatus != errSecSuccess && deleteStatus != errSecItemNotFound) {
+                    return false
+                }
                 SecItemAdd(query, null) == errSecSuccess
             } finally {
                 bridgedData?.let { CFRelease(it) }
