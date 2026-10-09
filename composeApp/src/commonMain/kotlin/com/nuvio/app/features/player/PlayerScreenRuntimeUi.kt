@@ -458,6 +458,10 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                 refreshTracks()
                 showAudioModal = true
             },
+            onCastClick = if (playbackSnapshot.castAvailable || playbackSnapshot.castDeviceName != null) {
+                { playerController?.showCastDialog() }
+            } else null,
+            isCasting = playbackSnapshot.castDeviceName != null,
             onPictureInPictureClick = if (pipAvailable) {
                 {
                     InAppLogger.info("Player/PiP", "start requested")
