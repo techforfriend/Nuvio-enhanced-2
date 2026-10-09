@@ -62,3 +62,5 @@
 -dontwarn org.conscrypt.**
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
+
+-keep class com.nuvio.app.features.player.PlayerCastOptionsProvider { *; }
