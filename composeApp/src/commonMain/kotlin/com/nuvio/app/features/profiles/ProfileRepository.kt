@@ -310,9 +310,13 @@ object ProfileRepository {
 
         if (AuthRepository.state.value.isAnonymous) {
             val remaining = _state.value.profiles.filter { it.profileIndex != profileIndex }
-            withContext(Dispatchers.IO) {
-                ProfilePinCacheStorage.removePayload(profileIndex)
-                ProfileBiometricAuth.disable(profileIndex, userId)
+            val localLockCleanupSucceeded = withContext(Dispatchers.IO) {
+                val pinCacheRemoved = ProfilePinCacheStorage.removePayload(profileIndex)
+                val biometricRemoved = ProfileBiometricAuth.disable(profileIndex, userId)
+                pinCacheRemoved && biometricRemoved
+            }
+            if (!localLockCleanupSucceeded) {
+                log.w { "Profile $profileIndex was deleted, but local profile-lock cleanup could not be confirmed" }
             }
             ServerRepository.removeProfile(profileIndex)
             _state.value = _state.value.copy(
@@ -338,9 +342,13 @@ object ProfileRepository {
             ServerRepository.removeProfile(profileIndex)
             // Remote deletion succeeded; remove device-local authentication artifacts even if
             // the subsequent profile refresh is interrupted or unavailable.
-            withContext(Dispatchers.IO) {
-                ProfilePinCacheStorage.removePayload(profileIndex)
-                ProfileBiometricAuth.disable(profileIndex, userId)
+            val localLockCleanupSucceeded = withContext(Dispatchers.IO) {
+                val pinCacheRemoved = ProfilePinCacheStorage.removePayload(profileIndex)
+                val biometricRemoved = ProfileBiometricAuth.disable(profileIndex, userId)
+                pinCacheRemoved && biometricRemoved
+            }
+            if (!localLockCleanupSucceeded) {
+                log.w { "Profile $profileIndex was deleted, but local profile-lock cleanup could not be confirmed" }
             }
             pullProfiles()
         } catch (e: CancellationException) {
@@ -490,17 +498,18 @@ object ProfileRepository {
             }
             SupabaseProvider.client.postgrest.rpc("clear_profile_pin_with_account_password", params)
             pullProfiles()
-            val biometricRemoved = withContext(Dispatchers.IO) {
-                ProfilePinCacheStorage.removePayload(profileIndex)
-                // PIN removal must not depend on biometric cleanup succeeding; check and
-                // report the credential result separately after the server confirms PIN removal.
-                ProfileBiometricAuth.disable(
+            val localLockCleanup = withContext(Dispatchers.IO) {
+                val pinCacheRemoved = ProfilePinCacheStorage.removePayload(profileIndex)
+                // PIN removal must not depend on biometric cleanup succeeding; check both local
+                // credential removals separately after the server confirms PIN removal.
+                val biometricRemoved = ProfileBiometricAuth.disable(
                     profileIndex,
                     _state.value.profiles.firstOrNull { it.profileIndex == profileIndex }?.userId.orEmpty(),
                 )
+                pinCacheRemoved to biometricRemoved
             }
-            if (!biometricRemoved) {
-                log.w { "PIN was cleared but biometric credential removal could not be confirmed" }
+            if (!localLockCleanup.first || !localLockCleanup.second) {
+                log.w { "PIN was cleared but local profile-lock cleanup could not be confirmed" }
             }
         }.onFailure { e ->
             if (e is CancellationException) throw e
@@ -645,11 +654,20 @@ object ProfileRepository {
         for (profileIndex in 1..MAX_PROFILES) {
             val profile = profilesByIndex[profileIndex]
             if (profile == null || !profile.pinEnabled) {
-                ProfilePinCacheStorage.removePayload(profileIndex)
+                val pinCacheRemoved = ProfilePinCacheStorage.removePayload(profileIndex)
+                if (!pinCacheRemoved) {
+                    log.w { "Unable to confirm local PIN-cache removal for profile $profileIndex" }
+                }
                 if (profileIndex == 1 && accountUserId.isNotBlank()) {
                     // PIN state can change remotely. A primary profile whose PIN is gone
                     // must not retain a stale biometric credential on this device.
-                    ProfileBiometricAuth.disable(1, profile?.userId.orEmpty().ifBlank { accountUserId })
+                    val biometricRemoved = ProfileBiometricAuth.disable(
+                        1,
+                        profile?.userId.orEmpty().ifBlank { accountUserId },
+                    )
+                    if (!biometricRemoved) {
+                        log.w { "Unable to confirm biometric-credential removal for the primary profile" }
+                    }
                 }
                 continue
             }
