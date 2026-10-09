@@ -64,6 +64,7 @@ import com.nuvio.app.core.ui.NuvioToastHost
 import com.nuvio.app.features.membership.CosmeticEntitlement
 import com.nuvio.app.features.settings.AppBrandWordmark
 import com.nuvio.app.features.settings.SupporterBadgeIfPresent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
@@ -108,12 +109,16 @@ fun ProfileSelectionScreen(
         ) {
             biometricAuthenticating = true
             scope.launch {
-                when (
-                    val result = ProfileBiometricAuth.authenticate(
-                        profile.profileIndex,
-                        profile.userId,
-                    )
-                ) {
+                val result = try {
+                    ProfileBiometricAuth.authenticate(profile.profileIndex, profile.userId)
+                } catch (e: CancellationException) {
+                    biometricAuthenticating = false
+                    throw e
+                } catch (_: Exception) {
+                    // A platform failure is not authentication. Follow the existing PIN fallback.
+                    ProfileBiometricResult.Failed
+                }
+                when (result) {
                     ProfileBiometricResult.Success -> {
                         biometricAuthenticating = false
                         onProfileSelected(profile, tapCenter)
