@@ -47,6 +47,7 @@ import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.profiles.ProfileSelectionScreen
 import com.nuvio.app.features.profiles.profileAvatarImageUrl
 import com.nuvio.app.navigation.AppRoute
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 private enum class AppGateScreen {
@@ -385,7 +386,16 @@ internal fun AppGate(
             ) {
                 startupBiometricInProgress = true
                 try {
-                    when (ProfileBiometricAuth.authenticate(1, rememberedLockedProfile.userId)) {
+                    val biometricResult = try {
+                        ProfileBiometricAuth.authenticate(1, rememberedLockedProfile.userId)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        // A platform/storage exception is an authentication failure, never a bypass.
+                        // Continue to the normal profile/PIN gate rather than leaving startup stuck.
+                        ProfileBiometricResult.Failed
+                    }
+                    when (biometricResult) {
                         ProfileBiometricResult.Success -> {
                             selectProfile(rememberedLockedProfile, sync = syncOnEnter)
                             gateScreen = AppGateScreen.Main.name
