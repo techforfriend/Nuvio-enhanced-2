@@ -497,7 +497,14 @@ fun ProfileEditScreen(
             onVerified = {
                 showBiometricEnablePin = false
                 scope.launch {
-                    when (ProfileBiometricAuth.enable(1, currentProfile.userId)) {
+                    val result = try {
+                        ProfileBiometricAuth.enable(1, currentProfile.userId)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        ProfileBiometricResult.Failed
+                    }
+                    when (result) {
                         ProfileBiometricResult.Success -> biometricConfigured = true
                         ProfileBiometricResult.Cancelled,
                         ProfileBiometricResult.FallbackRequested,
@@ -517,8 +524,14 @@ fun ProfileEditScreen(
             onVerified = {
                 showBiometricDisablePin = false
                 scope.launch {
-                    val removed = withContext(Dispatchers.IO) {
-                        ProfileBiometricAuth.disable(1, currentProfile.userId)
+                    val removed = try {
+                        withContext(Dispatchers.IO) {
+                            ProfileBiometricAuth.disable(1, currentProfile.userId)
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        false
                     }
                     biometricConfigured = !removed
                     biometricDisableFailed = !removed
