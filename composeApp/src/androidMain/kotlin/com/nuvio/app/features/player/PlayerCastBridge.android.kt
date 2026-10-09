@@ -76,6 +76,11 @@ internal class PlayerCastBridge(private val hostContext: Context) {
     }.getOrNull()
 
     private val mediaRouter: MediaRouter? = runCatching { MediaRouter.getInstance(appContext) }.getOrNull()
+    private val routeListener = object : MediaRouter.Callback() {
+        override fun onRouteAdded(router: MediaRouter, route: MediaRouter.RouteInfo) = onRoutesChanged()
+        override fun onRouteRemoved(router: MediaRouter, route: MediaRouter.RouteInfo) = onRoutesChanged()
+        override fun onRouteChanged(router: MediaRouter, route: MediaRouter.RouteInfo) = onRoutesChanged()
+    }
 
     var isCasting by mutableStateOf(false)
         private set
@@ -106,6 +111,15 @@ internal class PlayerCastBridge(private val hostContext: Context) {
         castState = state
         if (!isCasting) emitLocal()
     }
+
+    private fun onRoutesChanged() {
+        if (started && !isCasting) emitLocal()
+    }
+
+    private fun hasCastRoutes(): Boolean = runCatching {
+        val selector = castContext?.mergedSelector ?: return@runCatching false
+        mediaRouter?.routes?.any { it.isEnabled && it.matchesSelector(selector) } == true
+    }.getOrDefault(false)
 
     private val sessionListener = object : SessionManagerListener<CastSession> {
         override fun onSessionStarting(session: CastSession) = Unit
@@ -138,6 +152,7 @@ internal class PlayerCastBridge(private val hostContext: Context) {
         cast.mergedSelector?.let { selector ->
             runCatching {
                 mediaRouter?.addCallback(selector, routeCallback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY)
+                mediaRouter?.addCallback(selector, routeListener, 0)
             }
         }
         cast.addCastStateListener(castStateListener)
@@ -152,6 +167,7 @@ internal class PlayerCastBridge(private val hostContext: Context) {
         val cast = castContext
         if (cast != null && started) {
             cast.removeCastStateListener(castStateListener)
+            runCatching { mediaRouter?.removeCallback(routeListener) }
             cast.sessionManager.removeSessionManagerListener(sessionListener, CastSession::class.java)
         }
         started = false
@@ -410,7 +426,7 @@ internal class PlayerCastBridge(private val hostContext: Context) {
     private fun emitLocal() {
         snapshotSink(
             latestLocal.copy(
-                castAvailable = castContext != null && castState != CastState.NO_DEVICES_AVAILABLE,
+                castAvailable = castContext != null && (castState != CastState.NO_DEVICES_AVAILABLE || hasCastRoutes()),
                 castDeviceName = deviceName,
             ),
         )
