@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.mediarouter.app.MediaRouteChooserDialog
 import androidx.mediarouter.app.MediaRouteControllerDialog
+import androidx.mediarouter.media.MediaRouter
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaLoadRequestData
 import com.google.android.gms.cast.MediaMetadata
@@ -73,6 +74,9 @@ internal class PlayerCastBridge(private val hostContext: Context) {
         val availability = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(appContext)
         if (availability == ConnectionResult.SUCCESS) CastContext.getSharedInstance(appContext) else null
     }.getOrNull()
+
+    private val mediaRouter: MediaRouter? = runCatching { MediaRouter.getInstance(appContext) }.getOrNull()
+    private val routeCallback = object : MediaRouter.Callback() {}
 
     var isCasting by mutableStateOf(false)
         private set
@@ -132,6 +136,11 @@ internal class PlayerCastBridge(private val hostContext: Context) {
         pendingStop?.let { stopHandler.removeCallbacks(it) }
         pendingStop = null
         castState = cast.castState
+        cast.mergedSelector?.let { selector ->
+            runCatching {
+                mediaRouter?.addCallback(selector, routeCallback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY)
+            }
+        }
         cast.addCastStateListener(castStateListener)
         cast.sessionManager.addSessionManagerListener(sessionListener, CastSession::class.java)
         cast.sessionManager.currentCastSession
@@ -144,6 +153,7 @@ internal class PlayerCastBridge(private val hostContext: Context) {
         val cast = castContext
         if (cast != null && started) {
             cast.removeCastStateListener(castStateListener)
+            runCatching { mediaRouter?.removeCallback(routeCallback) }
             cast.sessionManager.removeSessionManagerListener(sessionListener, CastSession::class.java)
         }
         started = false
