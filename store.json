@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.8",
+          "buildVersion": "140",
+          "date": "2026-10-09T02:01:29Z",
+          "localizedDescription": "- fix(player): hide upstream's Stream Info action in the new layout @luqmanfadlli \r\n- fix(player): keep controls visible while a finger rests on the seek bar @luqmanfadlli\r\n- fix(omdb): only call OMDb for episode ratings on the details page @luqmanfadlli\r\n- feat(player): pick playback speed instead of cycling @luqmanfadlli\r\n- fix(player): release the seek-preview connection when a scrub ends @luqmanfadlli\r\n- feat(player): read chapters from mpv on iOS and Android libmpv @luqmanfadlli\r\n- fix(player): restore engine switching and media info on Android @luqmanfadlli\r\n- fix(player): grab seek-bar thumbnails from extension-less HLS streams @luqmanfadlli\r\n- fix(player): send stream headers when grabbing seek-bar thumbnails @luqmanfadlli\r\n- feat(player): 23 commits to add chapter segments if the source has it @chrisk325\r\n- fix(plugins,addons): guard activeRefreshJobs against concurrent modification @luqmanfadlli\r\n- feat(player): show thumbnail previews while dragging the seek bar @luqmanfadlli\r\n- i18n: Add Croatian (hr) translation (#2169) @Anarchydr\r\n- feat(mdblist): sort library lists by release date (#2196) @kernexshadow\r\n- Reset next episode preload flag on episode transition (#2193) @skoruppa\r\n- fix(UI): fix hero content shifting on horizontal and tablet layouts (#2190) @ThEgIGN\r\n- feat(servers): add experimental Jellyfin and Emby support (#2081) @tapframe\r\n- fix(streams): play streams that only have a ytId (#2115) @deejay189393",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.5.8-beta/nuvio-0.5.8-enhanced.ipa",
+          "size": 70490675,
+          "sha256": "534d34126205eaa5eeecbb4c4408ebb4d85b149508222ec85074b668b852f72d",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.7",
           "buildVersion": "139",
           "date": "2026-10-07T02:11:42Z",
@@ -252,7 +262,9 @@
       ],
       "appPermissions": {
         "entitlements": [],
-        "privacy": {}
+        "privacy": {
+          "NSLocalNetworkUsageDescription": "Nuvio connects to media servers on your local network."
+        }
       }
     }
   ],
