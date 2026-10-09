@@ -12,7 +12,7 @@ class PlayerCastOptionsProvider : OptionsProvider {
     override fun getCastOptions(context: Context): CastOptions {
         val mediaOptions = CastMediaOptions.Builder()
             .setNotificationOptions(null)
-            .setExpandedControllerActivityClassName(null)
+            .setExpandedControllerActivityClassName("com.nuvio.app.MainActivity")
             .build()
         return CastOptions.Builder()
             .setReceiverApplicationId(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID)
