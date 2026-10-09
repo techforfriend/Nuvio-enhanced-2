@@ -2,6 +2,7 @@ package com.nuvio.app.core.storage
 
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -52,11 +53,29 @@ internal object LocalAccountDataCleaner {
         val cleanupUserId = accountUserId
             ?.takeIf { it.isNotBlank() }
             ?: (AuthRepository.state.value as? AuthState.Authenticated)?.userId
-        (1..MAX_PROFILES).forEach { ProfilePinCacheStorage.removePayload(it) }
-        if (!cleanupUserId.isNullOrBlank()) {
-            withContext(Dispatchers.IO) {
-                ProfileBiometricAuth.disable(1, cleanupUserId)
+        var profileAuthenticationCleanupFailed = false
+        (1..MAX_PROFILES).forEach { profileIndex ->
+            val removed = try {
+                ProfilePinCacheStorage.removePayload(profileIndex)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                false
             }
+            if (!removed) profileAuthenticationCleanupFailed = true
+        }
+
+        if (!cleanupUserId.isNullOrBlank()) {
+            val biometricRemoved = try {
+                withContext(Dispatchers.IO) {
+                    ProfileBiometricAuth.disable(1, cleanupUserId)
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                false
+            }
+            if (!biometricRemoved) profileAuthenticationCleanupFailed = true
         }
 
         ensureTrackingProvidersRegistered()
@@ -104,6 +123,10 @@ internal object LocalAccountDataCleaner {
         PlayerLaunchStore.clear()
         StreamLaunchStore.clear()
         StreamContextStore.clear()
+
+        if (profileAuthenticationCleanupFailed) {
+            throw IllegalStateException("Local profile authentication cleanup could not be confirmed")
+        }
     }
 
     internal fun wipePlatformStorage(wipeStorage: () -> Unit = PlatformLocalAccountDataCleaner::wipe) {
