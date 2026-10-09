@@ -2766,6 +2766,9 @@
     <string name="profile_biometric_prompt_use_pin">Use PIN</string>
     <string name="profile_biometric_setup_reason">Confirm your fingerprint or face to turn on biometric unlock.</string>
     <string name="profile_biometric_unlock_reason">Use your fingerprint or face to unlock your primary profile.</string>
+    <string name="profile_locked_accessibility">Locked profile. Authentication required.</string>
+    <string name="profile_select_accessibility">Select profile</string>
+    <string name="profile_edit_accessibility">Edit profile</string>
     <string name="profile_biometric_setup_title">Biometric unlock</string>
     <string name="profile_biometric_setup_failed">Biometric unlock couldn't be enabled. Your PIN is unchanged and remains available.</string>
     <string name="profile_biometric_disable_failed">Nuvio couldn't confirm removal of the biometric unlock credential. Biometric unlock may still be enabled; try again.</string>
