@@ -76,7 +76,6 @@ internal class PlayerCastBridge(private val hostContext: Context) {
     }.getOrNull()
 
     private val mediaRouter: MediaRouter? = runCatching { MediaRouter.getInstance(appContext) }.getOrNull()
-    private val routeCallback = object : MediaRouter.Callback() {}
 
     var isCasting by mutableStateOf(false)
         private set
@@ -153,7 +152,6 @@ internal class PlayerCastBridge(private val hostContext: Context) {
         val cast = castContext
         if (cast != null && started) {
             cast.removeCastStateListener(castStateListener)
-            runCatching { mediaRouter?.removeCallback(routeCallback) }
             cast.sessionManager.removeSessionManagerListener(sessionListener, CastSession::class.java)
         }
         started = false
@@ -470,6 +468,7 @@ internal class PlayerCastBridge(private val hostContext: Context) {
 
     private companion object {
         val stopHandler = Handler(Looper.getMainLooper())
+        val routeCallback = object : MediaRouter.Callback() {}
         var pendingStop: Runnable? = null
 
         fun scheduleRemoteStop(context: Context) {
