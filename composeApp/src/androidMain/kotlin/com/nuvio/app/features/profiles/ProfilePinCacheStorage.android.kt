@@ -50,7 +50,13 @@ actual object ProfilePinCacheStorage {
 
     @Synchronized
     actual fun savePayload(profileIndex: Int, payload: String) {
-        saveEncrypted(profileIndex, payload)
+        // Remove the previous verifier before replacing it. If secure persistence fails,
+        // an old PIN hash must not remain usable as an offline fallback.
+        if (!removePayload(profileIndex)) return
+        if (!saveEncrypted(profileIndex, payload)) {
+            // Best-effort cleanup if a failed commit left a payload behind.
+            removePayload(profileIndex)
+        }
     }
 
     @Synchronized
