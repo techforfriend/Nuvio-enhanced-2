@@ -52,6 +52,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -466,8 +469,18 @@ private fun ProfileAvatarCard(
                 enabled = enabled,
                 interactionSource = interactionSource,
                 indication = null,
+                onClickLabel = stringResource(
+                    if (isEditMode) {
+                        Res.string.profile_edit_accessibility
+                    } else {
+                        Res.string.profile_select_accessibility
+                    },
+                ),
                 onClick = { onClick(avatarCenterInWindow) },
             )
+            .semantics {
+                role = Role.Button
+            }
             .padding(8.dp),
     ) {
         Box(
@@ -564,7 +577,7 @@ private fun ProfileAvatarCard(
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Lock,
-                        contentDescription = null,
+                        contentDescription = stringResource(Res.string.profile_locked_accessibility),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp),
                     )
