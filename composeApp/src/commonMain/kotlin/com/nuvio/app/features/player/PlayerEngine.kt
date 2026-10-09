@@ -12,6 +12,7 @@ interface PlayerEngineController {
     fun retry()
     fun isPictureInPictureSupported(): Boolean = false
     fun startPictureInPicture() {}
+    fun showCastDialog() {}
     fun setPlaybackSpeed(speed: Float)
     fun currentPlayerVolume(): PlayerAudioLevel = PlayerAudioLevel(
         fraction = 1f,
