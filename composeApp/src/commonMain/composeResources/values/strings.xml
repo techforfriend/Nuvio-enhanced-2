@@ -2758,8 +2758,6 @@
     <string name="profile_biometric_disabled_description">Use your fingerprint or face recognition to unlock your primary profile instead of entering your PIN.</string>
     <string name="profile_biometric_requires_pin">Turn on PIN lock first to use fingerprint or face unlock.</string>
     <string name="profile_biometric_privacy_note">Your biometric data stays on your device. Biometric unlock can use any biometric enrolled when this feature is enabled. Adding or removing biometrics invalidates biometric unlock and requires your profile PIN to enable it again.</string>
-    <string name="profile_enable_biometric_unlock">Enable biometric unlock</string>
-    <string name="profile_disable_biometric_unlock">Turn off biometric unlock</string>
     <string name="profile_biometric_unavailable">Fingerprint or face unlock isn't available on this device.</string>
     <string name="profile_biometric_prompt_setup_title">Set up biometric unlock</string>
     <string name="profile_biometric_prompt_setup_subtitle">Confirm your fingerprint or face to continue.</string>
