@@ -234,6 +234,8 @@ data class PlayerPlaybackSnapshot(
     val videoHeight: Int = 0,
     val mediaInfoJson: String = "{}",
     val chapters: List<PlayerChapter> = emptyList(),
+    val castAvailable: Boolean = false,
+    val castDeviceName: String? = null,
 )
 
 data class PlayerChapter(
