@@ -100,10 +100,18 @@ fun ProfileEditScreen(
     }
 
     LaunchedEffect(currentProfile?.profileIndex, currentProfile?.userId) {
-        biometricConfigured =
-            currentProfile?.profileIndex == 1 &&
-                !currentProfile.userId.isBlank() &&
-                ProfileBiometricAuth.isConfigured(1, currentProfile.userId)
+        val profile = currentProfile
+        biometricConfigured = when {
+            profile == null || profile.profileIndex != 1 || profile.userId.isBlank() -> false
+            else -> try {
+                ProfileBiometricAuth.isConfigured(1, profile.userId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Do not display biometric unlock as disabled when its state could not be read.
+                true
+            }
+        }
     }
     var biometricSetupFailed by remember { mutableStateOf(false) }
     var biometricDisableFailed by remember { mutableStateOf(false) }
@@ -348,8 +356,12 @@ fun ProfileEditScreen(
                     currentProfile?.userId,
                     biometricConfigured,
                 ) {
-                    currentProfile?.profileIndex == 1 &&
-                        (ProfileBiometricAuth.isAvailable() || biometricConfigured)
+                    val platformAvailable = try {
+                        ProfileBiometricAuth.isAvailable()
+                    } catch (_: Exception) {
+                        false
+                    }
+                    currentProfile?.profileIndex == 1 && (platformAvailable || biometricConfigured)
                 }
 
                 NuvioSurfaceCard {
