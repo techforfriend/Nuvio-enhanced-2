@@ -1,5 +1,10 @@
 package com.nuvio.app.core.storage
 
+import com.nuvio.app.core.auth.AuthRepository
+import com.nuvio.app.core.auth.AuthState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.sync.SyncManager
 import com.nuvio.app.core.sync.ProfileSettingsSync
@@ -21,6 +26,8 @@ import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.features.plugins.PluginRepository
 import com.nuvio.app.features.player.SubtitleRepository
+import com.nuvio.app.features.profiles.ProfileBiometricAuth
+import com.nuvio.app.features.profiles.ProfilePinCacheStorage
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.profiles.MAX_PROFILES
 import com.nuvio.app.features.search.SearchRepository
@@ -41,7 +48,17 @@ import com.nuvio.app.features.watchprogress.WatchProgressSourceCoordinator
 import com.nuvio.app.features.watched.WatchedRepository
 
 internal object LocalAccountDataCleaner {
-    fun wipe() {
+    suspend fun wipe(accountUserId: String? = null) {
+        val cleanupUserId = accountUserId
+            ?.takeIf { it.isNotBlank() }
+            ?: (AuthRepository.state.value as? AuthState.Authenticated)?.userId
+        (1..MAX_PROFILES).forEach { ProfilePinCacheStorage.removePayload(it) }
+        if (!cleanupUserId.isNullOrBlank()) {
+            withContext(Dispatchers.IO) {
+                ProfileBiometricAuth.disable(1, cleanupUserId)
+            }
+        }
+
         ensureTrackingProvidersRegistered()
         TrackingProviderRegistry.removeStoredProfiles(1..MAX_PROFILES)
         SyncManager.cancelAccountSync()

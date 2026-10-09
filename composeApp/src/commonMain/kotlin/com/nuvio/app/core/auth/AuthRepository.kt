@@ -94,6 +94,7 @@ object AuthRepository {
             validatedRemoteUserId = userId
             true
         }.getOrElse { e ->
+            if (e is CancellationException) throw e
             if (isInvalidRemoteSessionError(e)) {
                 log.w(e) { "Stored Supabase session no longer belongs to an active account; clearing local auth" }
                 clearLocalSessionAfterRemoteInvalidation()
@@ -126,6 +127,7 @@ object AuthRepository {
         trustNextSessionWithoutValidation = true
         Unit
     }.onFailure { e ->
+        if (e is CancellationException) throw e
         log.e(e) { "Email sign-up failed" }
         _error.value = e.safeAuthErrorDescription()
             ?: getString(Res.string.auth_sign_up_failed)
@@ -139,6 +141,7 @@ object AuthRepository {
         }
         trustNextSessionWithoutValidation = true
     }.onFailure { e ->
+        if (e is CancellationException) throw e
         log.e(e) { "Email sign-in failed" }
         _error.value = e.safeAuthErrorDescription()
             ?: getString(Res.string.auth_sign_in_failed)
@@ -146,9 +149,13 @@ object AuthRepository {
 
     suspend fun signOut(): Result<Unit> {
         _error.value = null
+        val accountUserId = (state.value as? AuthState.Authenticated)?.userId
         val anonymousRead = runCatching { AuthStorage.loadAnonymousUserId() }
         val wasAnonymous = anonymousRead.getOrNull() != null
         val anonymousClear = runCatching { AuthStorage.clearAnonymousUserId() }
+        val preflightCancellation = anonymousRead.exceptionOrNull() as? CancellationException
+            ?: anonymousClear.exceptionOrNull() as? CancellationException
+        if (preflightCancellation != null) throw preflightCancellation
         validatedRemoteUserId = null
         val remoteSignOut = if (wasAnonymous) {
             Result.success(Unit)
@@ -156,13 +163,14 @@ object AuthRepository {
             runCatching { SupabaseProvider.client.auth.signOut() }
         }
 
+        val remoteCancellation = remoteSignOut.exceptionOrNull() as? CancellationException
         val fallbackSessionClear = if (remoteSignOut.isFailure) {
             runCatching { SupabaseProvider.client.auth.clearSession() }
                 .onFailure { error -> log.w(error) { "Failed to clear Supabase session after sign-out failure" } }
         } else {
             Result.success(Unit)
         }
-        val localCleanup = runCatching { LocalAccountDataCleaner.wipe() }
+        val localCleanup = runCatching { LocalAccountDataCleaner.wipe(accountUserId) }
         _state.value = AuthState.Unauthenticated
 
         val failure = anonymousRead.exceptionOrNull()
@@ -170,8 +178,9 @@ object AuthRepository {
             ?: remoteSignOut.exceptionOrNull()
             ?: fallbackSessionClear.exceptionOrNull()
             ?: localCleanup.exceptionOrNull()
-        val cancellation = remoteSignOut.exceptionOrNull() as? CancellationException
+        val cancellation = remoteCancellation
             ?: fallbackSessionClear.exceptionOrNull() as? CancellationException
+            ?: localCleanup.exceptionOrNull() as? CancellationException
         if (cancellation != null) throw cancellation
         return if (failure == null) {
             Result.success(Unit)
@@ -191,7 +200,8 @@ object AuthRepository {
         val sessionClear = runCatching { SupabaseProvider.client.auth.clearSession() }
         _state.value = AuthState.Unauthenticated
         val failure = anonymousClear.exceptionOrNull() ?: sessionClear.exceptionOrNull()
-        val cancellation = sessionClear.exceptionOrNull() as? CancellationException
+        val cancellation = anonymousClear.exceptionOrNull() as? CancellationException
+            ?: sessionClear.exceptionOrNull() as? CancellationException
         if (cancellation != null) throw cancellation
         return if (failure == null) Result.success(Unit) else Result.failure(failure)
     }
@@ -215,31 +225,36 @@ object AuthRepository {
 
     private suspend fun clearLocalSessionAfterRemoteInvalidation() {
         _error.value = null
+        val accountUserId = (state.value as? AuthState.Authenticated)?.userId
         AuthStorage.clearAnonymousUserId()
         validatedRemoteUserId = null
         runCatching {
             SupabaseProvider.client.auth.clearSession()
         }.onFailure { e ->
+            if (e is CancellationException) throw e
             log.w(e) { "Failed to clear Supabase session after remote invalidation; continuing local reset" }
         }
-        val localCleanup = runCatching { LocalAccountDataCleaner.wipe() }
+        val localCleanup = runCatching { LocalAccountDataCleaner.wipe(accountUserId) }
         _state.value = AuthState.Unauthenticated
         localCleanup.onFailure { error ->
+            if (error is CancellationException) throw error
             log.e(error) { "Local account cleanup failed after remote session invalidation" }
         }
     }
 
     suspend fun deleteAccount(): Result<Unit> = runCatching {
         _error.value = null
+        val accountUserId = (state.value as? AuthState.Authenticated)?.userId
         SupabaseProvider.client.functions.invoke("delete-account")
         SupabaseProvider.client.auth.signOut()
         validatedRemoteUserId = null
         try {
-            LocalAccountDataCleaner.wipe()
+            LocalAccountDataCleaner.wipe(accountUserId)
         } finally {
             _state.value = AuthState.Unauthenticated
         }
     }.onFailure { e ->
+        if (e is CancellationException) throw e
         log.e(e) { "Account deletion failed" }
         _error.value = e.message ?: getString(Res.string.auth_account_deletion_failed)
     }

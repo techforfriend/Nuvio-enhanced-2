@@ -47,8 +47,10 @@ import com.nuvio.app.features.p2p.P2pSettingsStorage
 import com.nuvio.app.features.p2p.P2pStreamingEngine
 import com.nuvio.app.features.plugins.PluginStorage
 import com.nuvio.app.features.profiles.AvatarStorage
+import com.nuvio.app.features.profiles.ProfileBiometricAuth
 import com.nuvio.app.features.profiles.ProfilePinCacheStorage
 import com.nuvio.app.features.profiles.ProfileStorage
+import com.nuvio.app.features.servers.ServerStorage
 import com.nuvio.app.features.details.SeasonViewModeStorage
 import com.nuvio.app.features.search.DiscoverSelectionStorage
 import com.nuvio.app.features.search.SearchHistoryStorage
@@ -62,7 +64,6 @@ import com.nuvio.app.features.trakt.TraktLibraryStorage
 import com.nuvio.app.features.trakt.TraktSettingsStorage
 import com.nuvio.app.features.mdblist.PlatformMdbListAuthPersistence
 import com.nuvio.app.features.mdblist.PlatformMdbListSyncStorage
-import com.nuvio.app.features.servers.ServerStorage
 import com.nuvio.app.features.simkl.SimklAuthStorage
 import com.nuvio.app.features.simkl.SimklSyncStorage
 import com.nuvio.app.features.tmdb.TmdbSettingsStorage
@@ -96,6 +97,7 @@ open class MainActivity : AppCompatActivity() {
         SentrySettingsStorage.initialize(applicationContext)
         SentryInitializer.start(application)
         super.onCreate(savedInstanceState)
+        ProfileBiometricAuth.initialize(this)
         window.setBackgroundDrawableResource(R.color.nuvio_background)
         SyncClientIdentityStorage.initialize(applicationContext)
         AddonHttpClientProvider.initialize(applicationContext)

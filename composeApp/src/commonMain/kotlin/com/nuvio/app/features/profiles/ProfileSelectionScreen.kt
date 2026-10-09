@@ -87,6 +87,7 @@ fun ProfileSelectionScreen(
     // is verified the caller can still glide the transition emblem out from that exact spot.
     var pendingPinSelection by remember { mutableStateOf<Pair<NuvioProfile, Offset>?>(null) }
     var isEditMode by remember { mutableStateOf(false) }
+    var biometricAuthenticating by remember { mutableStateOf(false) }
 
     val titleAlpha = remember { Animatable(0f) }
     val titleOffset = remember { Animatable(20f) }
@@ -96,8 +97,54 @@ fun ProfileSelectionScreen(
     // built-in enter/exit so the supporter badge next to the wordmark — rendered as a sibling, not
     // a descendant, of whatever this is applied to — can sit outside it and stay fully visible.
     val contentFadeAlpha = remember { Animatable(1f) }
-    val onProfileClick: (NuvioProfile, Offset) -> Unit = { profile, tapCenter ->
-        if (interactionEnabled) {
+    val onProfileClick: (NuvioProfile, Offset) -> Unit = onProfileClick@{ profile, tapCenter ->
+        if (!interactionEnabled || biometricAuthenticating) return@onProfileClick
+
+        if (
+            !isEditMode &&
+            profile.profileIndex != activeProfileIndex &&
+            profile.profileIndex == 1 &&
+            profile.pinEnabled
+        ) {
+            biometricAuthenticating = true
+            scope.launch {
+                when (
+                    val result = ProfileBiometricAuth.authenticate(
+                        profile.profileIndex,
+                        profile.userId,
+                    )
+                ) {
+                    ProfileBiometricResult.Success -> {
+                        biometricAuthenticating = false
+                        onProfileSelected(profile, tapCenter)
+                    }
+                    ProfileBiometricResult.FallbackRequested -> {
+                        biometricAuthenticating = false
+                        pendingPinSelection = profile to tapCenter
+                    }
+                    ProfileBiometricResult.Invalidated,
+                    -> {
+                        biometricAuthenticating = false
+                        pendingPinSelection = profile to tapCenter
+                    }
+                    ProfileBiometricResult.Unavailable,
+                    ProfileBiometricResult.NotConfigured,
+                    -> {
+                        biometricAuthenticating = false
+                        pendingPinSelection = profile to tapCenter
+                    }
+
+                    ProfileBiometricResult.Failed,
+                    -> {
+                        biometricAuthenticating = false
+                        pendingPinSelection = profile to tapCenter
+                    }
+                    ProfileBiometricResult.Cancelled -> {
+                        biometricAuthenticating = false
+                    }
+                }
+            }
+        } else {
             routeProfileSelection(
                 profile = profile,
                 isEditMode = isEditMode,
