@@ -2753,6 +2753,10 @@
     <string name="stream_info_subtitle_source_embedded">Embedded</string>
     <string name="stream_info_player_engine">Player Engine</string>
     <string name="stream_info_server">Server</string>
+    <string name="player_cast">Cast</string>
+    <string name="player_cast_casting_to">Casting to %1$s</string>
+    <string name="player_cast_stream_unsupported">This stream can't be cast, so it keeps playing on this device.</string>
+    <string name="player_cast_playback_failed">The Cast device couldn't play this stream. Playback continues on this device.</string>
     <string name="profile_biometric_unlock">Biometric unlock</string>
     <string name="profile_biometric_enabled_description">Fingerprint or face unlock is on for your primary profile. Your PIN is still available as a fallback.</string>
     <string name="profile_biometric_disabled_description">Use your fingerprint or face recognition to unlock your primary profile instead of entering your PIN.</string>
