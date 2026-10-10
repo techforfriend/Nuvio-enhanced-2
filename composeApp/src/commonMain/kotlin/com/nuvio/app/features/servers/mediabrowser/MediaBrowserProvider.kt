@@ -49,6 +49,7 @@ internal abstract class MediaBrowserProvider(
     private val client = MediaBrowserClient(authorizationHeader, http)
     private val lock = SynchronizedObject()
     private val aioStreamsServers = mutableMapOf<String, Boolean>()
+    private val libraryGenres = mutableMapOf<String, String>()
 
     protected abstract fun viewsEndpoint(userId: String): Endpoint
 
@@ -120,21 +121,45 @@ internal abstract class MediaBrowserProvider(
         start: Int,
         limit: Int,
     ): ServerPage<ServerTitle> {
-        val result = get(
-            session,
-            itemsEndpoint(session.userId),
-            ItemsResult.serializer(),
-            itemQuery(library) + mapOf(
-                "sortBy" to if (library.kind == ServerMediaKind.COLLECTION) "SortName" else "DateCreated,SortName",
-                "sortOrder" to if (library.kind == ServerMediaKind.COLLECTION) "Ascending" else "Descending",
-                "startIndex" to start.toString(),
-                "limit" to limit.toString(),
-                "enableTotalRecordCount" to "true",
-            ),
-        )
+        val key = "${session.connection.id}:${library.id}"
+        val known = synchronized(lock) { libraryGenres[key] }
+        var result = libraryItems(session, library, start, limit, known)
+        if (result.items.isEmpty() && start == 0 && known == null && library.kind != ServerMediaKind.COLLECTION) {
+            val genre = firstGenre(session, library).orEmpty()
+            synchronized(lock) { libraryGenres[key] = genre }
+            if (genre.isNotEmpty()) result = libraryItems(session, library, start, limit, genre)
+        }
         val mapper = mapper(session)
         return ServerPage(result.items.mapNotNull(mapper::title), result.totalRecordCount)
     }
+
+    private suspend fun libraryItems(
+        session: ServerSession,
+        library: ServerLibrary,
+        start: Int,
+        limit: Int,
+        genreId: String?,
+    ): ItemsResult = get(
+        session,
+        itemsEndpoint(session.userId),
+        ItemsResult.serializer(),
+        itemQuery(library) + mapOf(
+            "genreIds" to genreId?.takeIf { it.isNotEmpty() },
+            "sortBy" to if (library.kind == ServerMediaKind.COLLECTION) "SortName" else "DateCreated,SortName",
+            "sortOrder" to if (library.kind == ServerMediaKind.COLLECTION) "Ascending" else "Descending",
+            "startIndex" to start.toString(),
+            "limit" to limit.toString(),
+            "enableTotalRecordCount" to "true",
+        ),
+    )
+
+    private suspend fun firstGenre(session: ServerSession, library: ServerLibrary): String? =
+        get(
+            session,
+            Endpoint("/Genres"),
+            ItemsResult.serializer(),
+            mapOf("parentId" to library.id, "userId" to session.userId, "limit" to "1"),
+        ).items.firstOrNull()?.id
 
     override suspend fun collectionPage(
         session: ServerSession,

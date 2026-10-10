@@ -66,6 +66,30 @@ class MediaBrowserRequestTest {
     }
 
     @Test
+    fun opensLibrariesThatNeedAGenreOnTheirFirstOne() = runTest {
+        val http = TestHttp { request ->
+            when {
+                request.url.encodedPath.endsWith("/Genres") -> """{"Items": [{"Id": "g1", "Name": "Action"}]}"""
+                request.url.parameters["genreIds"] == "g1" ->
+                    """{"Items": [{"Id": "m1", "Name": "Heat", "Type": "Movie"}], "TotalRecordCount": 60}"""
+                else -> """{"Items": [], "TotalRecordCount": 0}"""
+            }
+        }
+        val jellyfin = JellyfinProvider(http.client)
+        val session = session("jellyfin", "https://media.example.com/jellyfin")
+        val library = ServerLibrary("lib1", "By genre", ServerMediaKind.MOVIE)
+
+        val first = jellyfin.libraryPage(session, library, start = 0, limit = 50)
+        jellyfin.libraryPage(session, library, start = 50, limit = 50)
+
+        assertEquals(listOf("Heat"), first.items.map { it.preview.name })
+        assertEquals(60, first.totalCount)
+        assertEquals(1, http.requests.count { it.url.encodedPath.endsWith("/Genres") })
+        assertEquals("lib1", http.requests.single { it.url.encodedPath.endsWith("/Genres") }.url.parameters["parentId"])
+        assertEquals("g1", http.requests.last().url.parameters["genreIds"])
+    }
+
+    @Test
     fun searchesEachSelectedLibraryOnJellyfin() = runTest {
         val http = TestHttp { request ->
             when (request.url.encodedPath) {
