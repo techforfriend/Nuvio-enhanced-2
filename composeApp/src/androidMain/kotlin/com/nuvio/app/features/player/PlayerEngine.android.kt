@@ -21,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.Modifier
@@ -148,6 +149,30 @@ actual fun PlatformPlayerSurface(
         initialPositionRequestKey.orEmpty(),
     )
 
+    val castBridge = rememberPlayerCastBridge(enabled = !useYoutubeChunkedPlayback)
+    if (castBridge != null) {
+        SideEffect {
+            castBridge.bind(
+                source = PlayerCastSource(
+                    url = sourceUrl,
+                    audioUrl = sourceAudioUrl,
+                    responseHeaders = sanitizePlaybackResponseHeaders(sourceResponseHeaders),
+                    streamType = streamType,
+                    initialPositionMs = initialPositionMs,
+                ),
+                snapshotSink = onSnapshot,
+                controllerSink = onControllerReady,
+            )
+        }
+    }
+    val surfaceOnControllerReady: (PlayerEngineController) -> Unit =
+        if (castBridge != null) castBridge::onLocalControllerReady else onControllerReady
+    val surfaceOnSnapshot: (PlayerPlaybackSnapshot) -> Unit =
+        if (castBridge != null) castBridge::onLocalSnapshot else onSnapshot
+    val surfaceOnError: (String?) -> Unit = { message ->
+        if (message == null || castBridge?.isCasting != true) onError(message)
+    }
+
     val requestedEngine = playbackEngine ?: playerSettings.androidPlaybackEngine
     var activeEngine by remember(playerSourceKey, requestedEngine) {
         mutableStateOf(requestedEngine.initialAndroidEngine())
@@ -172,14 +197,14 @@ actual fun PlatformPlayerSurface(
             streamType = streamType,
             useYoutubeChunkedPlayback = useYoutubeChunkedPlayback,
             modifier = modifier,
-            playWhenReady = playWhenReady,
+            playWhenReady = playWhenReady && castBridge?.isCasting != true,
             initialPositionMs = initialPositionMs,
             initialPositionRequestKey = initialPositionRequestKey,
             resizeMode = resizeMode,
             useNativeController = useNativeController,
             onInitialPositionHandled = onInitialPositionHandled,
-            onControllerReady = onControllerReady,
-            onSnapshot = onSnapshot,
+            onControllerReady = surfaceOnControllerReady,
+            onSnapshot = surfaceOnSnapshot,
             onError = { message ->
                 if (message != null && requestedEngine == AndroidPlaybackEngine.Auto) {
                     Log.w(TAG, "ExoPlayer failed; falling back to libmpv: $message")
@@ -190,7 +215,7 @@ actual fun PlatformPlayerSurface(
                     activeEngine = ResolvedAndroidPlaybackEngine.Libmpv
                     onError(null)
                 } else {
-                    onError(message)
+                    surfaceOnError(message)
                 }
             },
         )
@@ -206,16 +231,19 @@ actual fun PlatformPlayerSurface(
                 sourceHeaders = sourceHeaders,
                 externalSubtitles = externalSubtitles,
                 modifier = modifier,
-                playWhenReady = playWhenReady,
+                playWhenReady = playWhenReady && castBridge?.isCasting != true,
                 resizeMode = resizeMode,
                 videoOutput = playerSettings.androidLibmpvVideoOutput,
                 hardwareDecodingEnabled = playerSettings.androidLibmpvHardwareDecodingEnabled,
                 yuv420pEnabled = playerSettings.androidLibmpvYuv420pEnabled,
-                onControllerReady = onControllerReady,
-                onSnapshot = onSnapshot,
-                onError = onError,
+                onControllerReady = surfaceOnControllerReady,
+                onSnapshot = surfaceOnSnapshot,
+                onError = surfaceOnError,
             )
         }
+    }
+    if (castBridge != null) {
+        PlayerCastOverlay(bridge = castBridge, modifier = modifier)
     }
 }
 

@@ -19,6 +19,8 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.ListAlt
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.icons.rounded.CastConnected
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.HighQuality
 import androidx.compose.material.icons.rounded.Info
@@ -64,10 +66,19 @@ internal fun PlayerToolbar(
     isLocked: Boolean,
     onLockToggle: () -> Unit,
     onBack: () -> Unit,
+    onCastClick: (() -> Unit)? = null,
+    isCasting: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
+        onCastClick?.let {
+            PlayerAction(
+                description = stringResource(Res.string.player_cast),
+                icon = if (isCasting) Icons.Rounded.CastConnected else Icons.Rounded.Cast,
+                onClick = it,
+            )
+        }
         PlayerAction(
             description = stringResource(
                 if (isLocked) Res.string.compose_player_unlock_controls else Res.string.compose_player_lock_controls,
