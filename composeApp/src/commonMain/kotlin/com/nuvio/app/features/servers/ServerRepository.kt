@@ -246,7 +246,9 @@ object ServerRepository {
                 local?.let { setFailure(it.id, null) }
                 changed = true
             }
-            server.toConnection(id, credentialRef)
+            server.toConnection(id, credentialRef).let { synced ->
+                synced.copy(libraries = synced.libraries + local?.libraries.orEmpty().filter { it.kind == ServerMediaKind.MIXED })
+            }
         }
         current.filter { it.id !in usedIds }.forEach { removed ->
             deleteCredential(removed.credentialRef)

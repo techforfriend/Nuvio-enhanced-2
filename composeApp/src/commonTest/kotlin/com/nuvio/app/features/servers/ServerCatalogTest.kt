@@ -60,6 +60,18 @@ class ServerCatalogTest {
     }
 
     @Test
+    fun mixedLibrariesServeBothSearches() = runTest {
+        val provider = FakeServerProvider()
+        val mixed = ServerLibrary("90", "Everything", ServerMediaKind.MIXED)
+        installFakeServer(provider, libraries = listOf(mixed))
+
+        val targets = ServerCatalog.searchTargets()
+        assertEquals(listOf(ServerMediaKind.MOVIE, ServerMediaKind.SERIES), targets.map { it.kind })
+        ServerCatalog.search(targets.first(), "item")
+        assertEquals(listOf(ServerMediaKind.MOVIE to listOf("90")), provider.searches)
+    }
+
+    @Test
     fun buildsAttributedHomeRowsForSelectedLibraries() {
         val connection = installFakeServer()
         ServerRepository.setLibrarySelected(connection.id, FakeServerProvider.SERIES_LIBRARY.id, false)

@@ -101,6 +101,9 @@ class MediaBrowserMapperTest {
         assertEquals("collection", mapper.preview(movie.copy(type = "Folder"))!!.type)
         assertEquals(com.nuvio.app.features.servers.ServerMediaKind.COLLECTION, libraryKind("boxsets"))
         assertNull(libraryKind("music"))
+        assertEquals(com.nuvio.app.features.servers.ServerMediaKind.MIXED, libraryKind(null, "CollectionFolder"))
+        assertEquals(com.nuvio.app.features.servers.ServerMediaKind.MIXED, libraryKind("mixed", "CollectionFolder"))
+        assertNull(libraryKind(null, "UserView"))
     }
 
     @Test

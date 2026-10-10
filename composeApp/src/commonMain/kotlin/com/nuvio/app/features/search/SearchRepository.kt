@@ -9,6 +9,7 @@ import com.nuvio.app.features.addons.enabledAddons
 import com.nuvio.app.features.addons.firstEnabledManifestError
 import com.nuvio.app.features.addons.hasPendingEnabledManifests
 import com.nuvio.app.features.servers.ServerCatalog
+import com.nuvio.app.features.servers.ServerMediaKind
 import com.nuvio.app.features.servers.serverMessage
 import com.nuvio.app.features.servers.ServerRepository
 import com.nuvio.app.features.catalog.CATALOG_PAGE_SIZE
@@ -262,7 +263,7 @@ object SearchRepository {
             return
         }
 
-        val sources = buildDiscoverSources(activeAddons) + serverLibraries.map { ref ->
+        val sources = buildDiscoverSources(activeAddons) + serverLibraries.filter { it.library.kind != ServerMediaKind.MIXED }.map { ref ->
             DiscoverCatalogOption(
                 key = ref.target.let { "server:${it.connectionId}:${it.libraryId}" },
                 addonName = ServerRepository.sourceLabel(ref.connection),

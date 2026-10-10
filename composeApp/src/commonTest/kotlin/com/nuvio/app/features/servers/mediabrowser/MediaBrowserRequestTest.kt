@@ -90,6 +90,27 @@ class MediaBrowserRequestTest {
     }
 
     @Test
+    fun listsMixedLibrariesWithMoviesAndShows() = runTest {
+        val http = TestHttp { request ->
+            if (request.url.encodedPath.endsWith("/UserViews")) {
+                """{"Items": [{"Id": "lib1", "Name": "Movies", "Type": "CollectionFolder", "CollectionType": "movies"},
+                              {"Id": "lib2", "Name": "Everything", "Type": "CollectionFolder"},
+                              {"Id": "lib3", "Name": "Music", "Type": "CollectionFolder", "CollectionType": "music"}]}"""
+            } else {
+                """{"Items": [{"Id": "m1", "Name": "Heat", "Type": "Movie"}], "TotalRecordCount": 1}"""
+            }
+        }
+        val jellyfin = JellyfinProvider(http.client)
+        val session = session("jellyfin", "https://media.example.com/jellyfin")
+
+        val libraries = jellyfin.libraries(session)
+        jellyfin.libraryPage(session, libraries.last(), start = 0, limit = 50)
+
+        assertEquals(listOf(ServerMediaKind.MOVIE, ServerMediaKind.MIXED), libraries.map { it.kind })
+        assertEquals("Movie,Series", http.requests.last().url.parameters["includeItemTypes"])
+    }
+
+    @Test
     fun searchesEachSelectedLibraryOnJellyfin() = runTest {
         val http = TestHttp { request ->
             when (request.url.encodedPath) {

@@ -201,10 +201,11 @@ private fun providerNamespace(key: String): String = when (val name = key.trim()
     else -> name
 }
 
-internal fun libraryKind(collectionType: String?): ServerMediaKind? = when (collectionType?.lowercase()) {
+internal fun libraryKind(collectionType: String?, type: String? = null): ServerMediaKind? = when (collectionType?.lowercase()) {
     "movies" -> ServerMediaKind.MOVIE
     "tvshows" -> ServerMediaKind.SERIES
     "boxsets" -> ServerMediaKind.COLLECTION
+    null, "", "mixed" -> ServerMediaKind.MIXED.takeIf { type.equals("CollectionFolder", ignoreCase = true) }
     else -> null
 }
 

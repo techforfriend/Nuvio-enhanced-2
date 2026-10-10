@@ -81,7 +81,9 @@ internal fun ServerConnection.toSynced(token: String) = SyncedServer(
     remoteUserId = remoteUserId,
     userName = userName,
     token = token,
-    libraries = libraries.map { SyncedLibrary(it.id, it.name, it.kind.contentType, it.selected) },
+    libraries = libraries
+        .filter { it.kind != ServerMediaKind.MIXED }
+        .map { SyncedLibrary(it.id, it.name, it.kind.contentType, it.selected) },
     enabled = enabled,
     useCatalogMetadata = useCatalogMetadata,
     importWatchState = importWatchState,

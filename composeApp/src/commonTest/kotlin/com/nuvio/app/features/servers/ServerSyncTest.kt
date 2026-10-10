@@ -89,6 +89,24 @@ class ServerSyncTest {
     }
 
     @Test
+    fun keepsMixedLibrariesOnThisDevice() {
+        val provider = FakeServerProvider()
+        val mixed = ServerLibrary("90", "Everything", ServerMediaKind.MIXED)
+        val connection = installFakeServer(provider, libraries = listOf(provider.movies, mixed))
+
+        val snapshot = assertNotNull(ServerRepository.syncSnapshot(ProfileRepository.activeProfileId))
+        assertEquals(listOf("10"), snapshot.servers.single().libraries.map { it.id })
+
+        val remote = snapshot.servers.single().copy(libraries = listOf(SyncedLibrary("10", "Movies", "movie", selected = false)))
+        assertTrue(ServerRepository.applySync(snapshot, listOf(remote), setOf(remote.key)))
+
+        assertEquals(
+            listOf("10" to false, "90" to true),
+            assertNotNull(ServerRepository.connection(connection.id)).libraries.map { it.id to it.selected },
+        )
+    }
+
+    @Test
     fun appliesRemoteServersWithoutQueueingAPush() {
         val connection = installFakeServer()
         val snapshot = assertNotNull(ServerRepository.syncSnapshot(ProfileRepository.activeProfileId))
