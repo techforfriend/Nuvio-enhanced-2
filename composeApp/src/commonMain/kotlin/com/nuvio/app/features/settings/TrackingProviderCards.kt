@@ -87,6 +87,8 @@ import com.nuvio.app.features.trakt.traktBrandPainter
 import com.nuvio.app.features.watchprogress.WatchProgressSourceCoordinator
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.settings_mdblist_disconnect_description
+import nuvio.composeapp.generated.resources.settings_anilist_disconnect_description
+import nuvio.composeapp.generated.resources.anilist_logo
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
 import nuvio.composeapp.generated.resources.settings_tracking_connect_with_code
@@ -125,6 +127,7 @@ import nuvio.composeapp.generated.resources.settings_trakt_missing_credentials
 import nuvio.composeapp.generated.resources.settings_trakt_open_login
 import nuvio.composeapp.generated.resources.settings_trakt_save_actions_description
 import nuvio.composeapp.generated.resources.settings_trakt_sign_in_description
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 internal enum class TrackingBrand(val displayName: String) {
@@ -133,6 +136,7 @@ internal enum class TrackingBrand(val displayName: String) {
     SIMKL("Simkl"),
     MDBLIST("MDBList"),
     TMDB("TMDB"),
+    ANILIST("AniList"),
 }
 
 internal enum class TrackingConnectionCardMode {
@@ -146,6 +150,7 @@ internal fun isTrackingBrandAvailable(
     traktConnected: Boolean,
     simklConnected: Boolean,
     mdblistConnected: Boolean = false,
+    anilistConnected: Boolean = false,
 ): Boolean = when (brand) {
     TrackingBrand.NUVIO,
     TrackingBrand.TMDB,
@@ -153,6 +158,7 @@ internal fun isTrackingBrandAvailable(
     TrackingBrand.TRAKT -> traktConnected
     TrackingBrand.SIMKL -> simklConnected
     TrackingBrand.MDBLIST -> mdblistConnected
+    TrackingBrand.ANILIST -> anilistConnected
 }
 
 internal fun TraktConnectionMode.toTrackingConnectionCardMode(): TrackingConnectionCardMode = when (this) {
@@ -222,6 +228,7 @@ internal fun TrackingProviderCards(
             modifier = Modifier.fillMaxWidth(),
         )
         MdbListProviderCard(Modifier.fillMaxWidth())
+        AniListProviderCard(Modifier.fillMaxWidth())
     }
 
     deviceCodeBrand?.let { brand ->
@@ -746,6 +753,7 @@ private fun TrackingDisconnectDialog(
                 TrackingBrand.SIMKL ->
                     stringResource(Res.string.settings_simkl_disconnect_description)
                 TrackingBrand.MDBLIST -> stringResource(Res.string.settings_mdblist_disconnect_description)
+                TrackingBrand.ANILIST -> stringResource(Res.string.settings_anilist_disconnect_description)
                 TrackingBrand.NUVIO,
                 TrackingBrand.TMDB,
                 -> stringResource(
@@ -801,6 +809,12 @@ internal fun TrackingBrandGlyph(
             modifier = modifier,
             contentScale = ContentScale.Fit,
         )
+        TrackingBrand.ANILIST -> Image(
+            painter = painterResource(Res.drawable.anilist_logo),
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = ContentScale.Fit,
+        )
         TrackingBrand.NUVIO -> Icon(
             imageVector = Icons.Rounded.Sync,
             contentDescription = contentDescription,
@@ -819,11 +833,12 @@ private fun TrackingBrandWordmark(
         TrackingBrand.TRAKT -> traktBrandPainter(TraktBrandAsset.Wordmark)
         TrackingBrand.SIMKL -> simklBrandPainter(SimklBrandAsset.Wordmark)
         TrackingBrand.MDBLIST -> integrationLogoPainter(IntegrationLogo.MdbList)
+        TrackingBrand.ANILIST -> painterResource(Res.drawable.anilist_logo)
         TrackingBrand.NUVIO,
         TrackingBrand.TMDB,
         -> return
     }
-    if (brand == TrackingBrand.MDBLIST) {
+    if (brand == TrackingBrand.MDBLIST || brand == TrackingBrand.ANILIST) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Image(painter, contentDescription = null, modifier = Modifier.size(32.dp))
             Text(contentDescription, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Bold)
@@ -840,7 +855,9 @@ private fun TrackingBrandWordmark(
             TrackingBrand.SIMKL -> Modifier
                 .width(124.dp)
                 .height(30.dp)
-            TrackingBrand.MDBLIST -> Modifier.width(130.dp).height(32.dp)
+            TrackingBrand.MDBLIST,
+            TrackingBrand.ANILIST,
+            -> Modifier.width(130.dp).height(32.dp)
             TrackingBrand.NUVIO,
             TrackingBrand.TMDB,
             -> Modifier
@@ -859,6 +876,9 @@ private fun TrackingBrand.cardBrush(): Brush = when (this) {
     )
     TrackingBrand.SIMKL -> Brush.linearGradient(
         colors = listOf(Color(0xFF050505), Color(0xFF292929), Color(0xFF111111)),
+    )
+    TrackingBrand.ANILIST -> Brush.linearGradient(
+        colors = listOf(Color(0xFF0B1622), Color(0xFF152232), Color(0xFF0B1622)),
     )
     TrackingBrand.NUVIO,
     TrackingBrand.TMDB,

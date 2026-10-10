@@ -1,0 +1,30 @@
+<resources>
+    <string name="tracking_source_anilist">AniList</string>
+    <string name="settings_anilist_anime_section">Anime</string>
+    <string name="settings_anilist_library_description">Your AniList anime lists: Watching, Planning, Completed, Paused, Dropped and Rewatching.</string>
+    <string name="settings_anilist_progress_description">Continue Watching and Up Next from your AniList Watching list.</string>
+    <string name="library_anilist_title">AniList Library</string>
+    <string name="library_anilist_load_failed">Could not load your AniList library</string>
+    <string name="library_anilist_empty_title">Your AniList library is empty</string>
+    <string name="library_anilist_empty_message">Add anime to your AniList lists to see them here.</string>
+    <string name="settings_anilist_connect">Connect AniList</string>
+    <string name="settings_anilist_connected_as">Connected as %1$s</string>
+    <string name="settings_anilist_connected_description">Sync your anime lists, episode progress, scores and Continue Watching with AniList.</string>
+    <string name="settings_anilist_sign_in_description">Connect AniList to sync your anime lists, episode progress, scores and Continue Watching.</string>
+    <string name="settings_anilist_finish_sign_in">Finish sign-in</string>
+    <string name="settings_anilist_approval_description">Approve Nuvio in your browser. You will be sent back to the app automatically.</string>
+    <string name="settings_anilist_open_login">Open sign-in page</string>
+    <string name="settings_anilist_disconnect">Disconnect AniList</string>
+    <string name="settings_anilist_missing_credentials">AniList connection is unavailable in this build.</string>
+    <string name="settings_anilist_sync_now">Sync now</string>
+    <string name="settings_anilist_visit">Visit AniList</string>
+    <string name="settings_anilist_disconnect_description">Stop sending watch updates from this profile. Your AniList lists are kept.</string>
+    <string name="settings_anilist_account_fallback">AniList user</string>
+    <string name="settings_anilist_syncing">Syncing your AniList lists…</string>
+    <string name="settings_anilist_last_synced">Last synced %1$s</string>
+    <string name="settings_anilist_auth_denied">Connection was declined. Try again to connect your account.</string>
+    <string name="settings_anilist_auth_invalid">AniList returned an invalid sign-in response. Please try again.</string>
+    <string name="settings_anilist_auth_revoked">Your AniList connection has expired or been revoked. Connect again to resume syncing.</string>
+    <string name="settings_anilist_unavailable">Could not sync with AniList. Please try again.</string>
+    <string name="settings_anilist_rate_limited">AniList’s request limit has been reached. Syncing will resume shortly.</string>
+</resources>

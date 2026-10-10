@@ -1,5 +1,6 @@
 package com.nuvio.app.core.tracking
 
+import com.nuvio.app.features.anilist.AniListTracker
 import com.nuvio.app.features.simkl.SimklAuthRepository
 import com.nuvio.app.features.simkl.SimklMutationRepository
 import com.nuvio.app.features.simkl.SimklLibraryRepository
@@ -20,6 +21,7 @@ import com.nuvio.app.features.watching.sync.TraktWatchedSyncAdapter
 
 fun ensureTrackingProvidersRegistered() {
     MdbListTracker.register()
+    AniListTracker.register()
     TraktAuthRepository.descriptor
     TraktScrobbleRepository.ensureRegistered()
     SimklAuthRepository.descriptor
