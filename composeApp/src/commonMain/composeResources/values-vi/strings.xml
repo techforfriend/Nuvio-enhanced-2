@@ -1673,8 +1673,6 @@
     <string name="streams_episode_title_with_name">M%1$d T%2$d - %3$s</string>
     <string name="streams_fetching">Đang truy xuất…</string>
     <string name="streams_finding_source">Đang tìm nguồn phát…</string>
-    <string name="streams_loading_subtitles">Đang tải phụ đề từ tiện ích…</string>
-    <string name="streams_loading_skip_segments">Đang tải các đoạn bỏ qua…</string>
     <string name="streams_finding_streams">Đang tìm luồng…</string>
     <string name="playback_show_loading_status">Hiển thị trạng thái tải</string>
     <string name="playback_show_loading_status_sub">Hiển thị tiến trình từng bước trong khi trình phát đang khởi tạo.</string>
@@ -1687,6 +1685,10 @@
     <string name="player_loading_starting">Bắt đầu phát…</string>
     <string name="player_loading_buffering">Đang tải bộ đệm…</string>
     <string name="debrid_resolving_stream">Đang phân giải luồng debrid</string>
+    <string name="youtube_resolving_stream">Đang tải video YouTube</string>
+    <string name="youtube_resolution_failed">Không thể tải video YouTube này.</string>
+    <string name="streams_loading_subtitles">Đang tải phụ đề từ tiện ích…</string>
+    <string name="streams_loading_skip_segments">Đang tải các phân đoạn giới thiệu/đoạn kết…</string>
     <string name="streams_link_copied">Đã sao chép liên kết luồng</string>
     <string name="streams_no_direct_link">Không có sẵn liên kết phát trực tiếp nào</string>
     <string name="streams_no_metadata">Không có thông tin</string>
@@ -1922,6 +1924,8 @@
     <string name="library_other">Khác</string>
     <string name="library_sort_added_asc">Đã thêm đầu tiên</string>
     <string name="library_sort_added_desc">Đã thêm gần đây</string>
+    <string name="library_sort_released_asc">Đã phát hành đầu tiên</string>
+    <string name="library_sort_released_desc">Đã phát hành gần đây</string>
     <string name="library_sort_title_asc">Tên A–Z</string>
     <string name="library_error_sort_failed">Không thể tải thứ tự sắp xếp. Đang hiển thị theo thứ tự của nhà cung cấp.</string>
     <string name="library_sort_title_desc">Tên Z–A</string>
@@ -2454,4 +2458,5 @@
     <string name="stream_info_subtitle_source_addon">Tiện ích</string>
     <string name="stream_info_subtitle_source_embedded">Nhúng</string>
     <string name="stream_info_player_engine">Lõi trình phát</string>
+    <string name="stream_info_server">Máy chủ</string>
 </resources>
