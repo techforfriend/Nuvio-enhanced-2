@@ -143,6 +143,7 @@ internal data class PlaybackInfoRequest(
     @SerialName("AllowVideoStreamCopy") val allowVideoStreamCopy: Boolean = true,
     @SerialName("AllowAudioStreamCopy") val allowAudioStreamCopy: Boolean = true,
     @SerialName("AutoOpenLiveStream") val autoOpenLiveStream: Boolean = false,
+    @SerialName("IsPlayback") val isPlayback: Boolean = true,
     @SerialName("DeviceProfile") val deviceProfile: DeviceProfile,
 )
 
