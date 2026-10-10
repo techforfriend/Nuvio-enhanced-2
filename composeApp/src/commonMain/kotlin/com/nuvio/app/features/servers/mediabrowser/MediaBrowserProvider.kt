@@ -26,6 +26,12 @@ import io.ktor.client.HttpClient
 import io.ktor.http.HttpMethod
 import io.ktor.http.Url
 import io.ktor.http.decodeURLQueryComponent
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.DeserializationStrategy
 
 internal data class Endpoint(
@@ -41,6 +47,8 @@ internal abstract class MediaBrowserProvider(
     override val capabilities: Set<ServerCapability> = ServerCapability.entries.toSet()
 
     private val client = MediaBrowserClient(authorizationHeader, http)
+    private val lock = SynchronizedObject()
+    private val aioStreamsServers = mutableMapOf<String, Boolean>()
 
     protected abstract fun viewsEndpoint(userId: String): Endpoint
 
@@ -153,20 +161,47 @@ internal abstract class MediaBrowserProvider(
 
     override suspend fun search(
         session: ServerSession,
-        library: ServerLibrary,
+        kind: ServerMediaKind,
+        libraries: List<ServerLibrary>,
         query: String,
         limit: Int,
     ): List<ServerTitle> {
-        val result = get(
-            session,
-            itemsEndpoint(session.userId),
-            ItemsResult.serializer(),
-            itemQuery(library) + mapOf(
-                "searchTerm" to query,
-                "limit" to limit.toString(),
-            ),
-        )
-        return result.items.mapNotNull(mapper(session)::title)
+        val scopes = if (isAioStreams(session)) listOf(null) else libraries
+        val items = coroutineScope {
+            scopes.map { library ->
+                async {
+                    get(
+                        session,
+                        itemsEndpoint(session.userId),
+                        ItemsResult.serializer(),
+                        mapOf(
+                            "parentId" to library?.id,
+                            "recursive" to "true",
+                            "includeItemTypes" to kind.itemType(),
+                            "searchTerm" to query,
+                            "limit" to limit.toString(),
+                            "fields" to LIST_FIELDS,
+                            "imageTypeLimit" to "1",
+                            "enableImageTypes" to "Primary,Backdrop,Logo",
+                        ),
+                    ).items
+                }
+            }.awaitAll().flatten()
+        }
+        return items.mapNotNull(mapper(session)::title).distinctBy { it.preview.id }.take(limit)
+    }
+
+    private suspend fun isAioStreams(session: ServerSession): Boolean {
+        synchronized(lock) { aioStreamsServers[session.apiRoot] }?.let { return it }
+        val detected = try {
+            publicInfo(session.connection.address).second.aioStreams != null
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            return false
+        }
+        synchronized(lock) { aioStreamsServers[session.apiRoot] = detected }
+        return detected
     }
 
     override suspend fun resumeItems(session: ServerSession, limit: Int): List<ServerTitle> {
@@ -240,7 +275,7 @@ internal abstract class MediaBrowserProvider(
             mapOf(
                 "parentId" to library.id,
                 "recursive" to "true",
-                "includeItemTypes" to library.itemType(),
+                "includeItemTypes" to library.kind.itemType(),
                 "fields" to "ProviderIds",
                 "enableImages" to "false",
                 "enableUserData" to "false",
@@ -462,7 +497,7 @@ internal abstract class MediaBrowserProvider(
     private fun itemQuery(library: ServerLibrary): Map<String, String?> = mapOf(
         "parentId" to library.id,
         "recursive" to (library.kind != ServerMediaKind.COLLECTION).toString(),
-        "includeItemTypes" to library.itemType().takeUnless { library.kind == ServerMediaKind.COLLECTION },
+        "includeItemTypes" to library.kind.itemType().takeUnless { library.kind == ServerMediaKind.COLLECTION },
         "fields" to LIST_FIELDS,
         "imageTypeLimit" to "1",
         "enableImageTypes" to "Primary,Backdrop,Logo",
@@ -481,7 +516,7 @@ internal abstract class MediaBrowserProvider(
             apiRoot + serverUrl
         }
 
-    private fun ServerLibrary.itemType(): String = when (kind) {
+    private fun ServerMediaKind.itemType(): String = when (this) {
         ServerMediaKind.MOVIE -> "Movie"
         ServerMediaKind.SERIES -> "Series"
         ServerMediaKind.COLLECTION -> "BoxSet"

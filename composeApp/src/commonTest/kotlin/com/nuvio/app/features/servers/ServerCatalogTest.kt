@@ -47,6 +47,19 @@ class ServerCatalogTest {
     }
 
     @Test
+    fun searchesEachTypeOnce() = runTest {
+        val provider = FakeServerProvider()
+        val connection = installFakeServer(provider)
+
+        val targets = ServerCatalog.searchTargets()
+        assertEquals(listOf(ServerMediaKind.MOVIE, ServerMediaKind.SERIES), targets.map { it.kind })
+
+        val items = ServerCatalog.search(targets.last(), "item")
+        assertEquals(listOf(ServerItemRef(connection.id, "7").encode()), items.map { it.id })
+        assertEquals(listOf(ServerMediaKind.SERIES to listOf(FakeServerProvider.SERIES_LIBRARY.id)), provider.searches)
+    }
+
+    @Test
     fun buildsAttributedHomeRowsForSelectedLibraries() {
         val connection = installFakeServer()
         ServerRepository.setLibrarySelected(connection.id, FakeServerProvider.SERIES_LIBRARY.id, false)

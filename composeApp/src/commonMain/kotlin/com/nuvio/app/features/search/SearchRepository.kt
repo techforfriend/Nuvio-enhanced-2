@@ -89,8 +89,8 @@ object SearchRepository {
         val hasPendingAddonManifests = enabledAddons.hasPendingEnabledManifests()
         val addonManifestErrorMessage = enabledAddons.firstEnabledManifestError()
         val activeAddons = enabledAddons.filter { it.manifest != null }
-        val serverLibraries = ServerCatalog.titleLibraries()
-        if (activeAddons.isEmpty() && serverLibraries.isEmpty()) {
+        val serverSearches = ServerCatalog.searchTargets()
+        if (activeAddons.isEmpty() && serverSearches.isEmpty()) {
             activeJob?.cancel()
             lastRequestKey = null
             _uiState.value = SearchUiState(
@@ -109,7 +109,7 @@ object SearchRepository {
             addons = activeAddons,
             query = normalizedQuery,
         )
-        if (requests.isEmpty() && serverLibraries.isEmpty()) {
+        if (requests.isEmpty() && serverSearches.isEmpty()) {
             activeJob?.cancel()
             lastRequestKey = null
             _uiState.value = SearchUiState(
@@ -131,11 +131,14 @@ object SearchRepository {
                     "${request.addon.manifestUrl}:${request.type}:${request.catalogId}"
                 },
             )
-            serverLibraries.forEach { ref -> append("|server:${ref.connection.id}:${ref.library.id}") }
+            serverSearches.forEach { ref ->
+                append("|server:${ref.connection.id}:${ref.kind.contentType}:")
+                append(ref.connection.selectedLibraries(ref.kind).joinToString(",") { it.id })
+            }
         }
         val loaders: List<suspend () -> HomeCatalogSection> =
             requests.map { request -> suspend { request.toSection(forceRefresh = forceRefresh) } } +
-                serverLibraries.map { ref ->
+                serverSearches.map { ref ->
                     suspend {
                         ServerCatalog.searchSection(ref, normalizedQuery).also { section ->
                             require(section.items.isNotEmpty()) {
