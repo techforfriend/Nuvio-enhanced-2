@@ -362,7 +362,7 @@ internal abstract class MediaBrowserProvider(
             else -> throw ServerException(ServerFailure.UNSUPPORTED, info.errorCode)
         }
         val source = info.mediaSources.firstOrNull { it.id == request.target.mediaSourceId }
-            ?: info.mediaSources.firstOrNull()
+            ?: info.mediaSources.firstOrNull { !it.isPlaceholder }
             ?: throw ServerException(ServerFailure.NOT_FOUND)
         val (url, method) = when {
             source.supportsDirectPlay && request.capabilities.allowDirectPlay -> buildUrl(

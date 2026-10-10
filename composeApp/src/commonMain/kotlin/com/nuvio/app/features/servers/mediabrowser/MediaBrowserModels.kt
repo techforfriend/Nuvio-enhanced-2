@@ -100,6 +100,7 @@ internal data class UserItemData(
 @Serializable
 internal data class MediaSource(
     @SerialName("Id") val id: String,
+    @SerialName("Type") val type: String? = null,
     @SerialName("Name") val name: String? = null,
     @SerialName("Path") val path: String? = null,
     @SerialName("Container") val container: String? = null,
@@ -110,7 +111,10 @@ internal data class MediaSource(
     @SerialName("TranscodingUrl") val transcodingUrl: String? = null,
     @SerialName("DefaultAudioStreamIndex") val defaultAudioStreamIndex: Int? = null,
     @SerialName("MediaStreams") val mediaStreams: List<MediaStream> = emptyList(),
-)
+) {
+    val isPlaceholder: Boolean
+        get() = type.equals("Placeholder", ignoreCase = true)
+}
 
 @Serializable
 internal data class MediaStream(
