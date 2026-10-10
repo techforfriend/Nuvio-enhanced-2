@@ -460,6 +460,8 @@ kotlin {
                 implementation("io.github.peerless2012:ass-media:0.5.1")
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.sentry.android)
+                implementation(libs.play.services.cast.framework)
+                implementation(libs.androidx.mediarouter)
                 implementation(libs.androidx.media3.exoplayer.hls)
                 implementation(libs.androidx.media3.exoplayer.dash)
                 implementation(libs.androidx.media3.exoplayer.smoothstreaming)
