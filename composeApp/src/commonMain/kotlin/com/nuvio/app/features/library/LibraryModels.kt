@@ -55,6 +55,7 @@ enum class LibrarySourceMode {
     SIMKL,
     MDBLIST,
     ANILIST,
+    WETRAKR,
 }
 
 data class LibraryUiState(

@@ -89,6 +89,8 @@ import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.settings_mdblist_disconnect_description
 import nuvio.composeapp.generated.resources.settings_anilist_disconnect_description
 import nuvio.composeapp.generated.resources.anilist_logo
+import nuvio.composeapp.generated.resources.settings_wetrakr_disconnect_description
+import nuvio.composeapp.generated.resources.wetrakr_logo
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
 import nuvio.composeapp.generated.resources.settings_tracking_connect_with_code
@@ -137,6 +139,7 @@ internal enum class TrackingBrand(val displayName: String) {
     MDBLIST("MDBList"),
     TMDB("TMDB"),
     ANILIST("AniList"),
+    WETRAKR("WeTrakr"),
 }
 
 internal enum class TrackingConnectionCardMode {
@@ -151,6 +154,7 @@ internal fun isTrackingBrandAvailable(
     simklConnected: Boolean,
     mdblistConnected: Boolean = false,
     anilistConnected: Boolean = false,
+    wetrakrConnected: Boolean = false,
 ): Boolean = when (brand) {
     TrackingBrand.NUVIO,
     TrackingBrand.TMDB,
@@ -159,6 +163,7 @@ internal fun isTrackingBrandAvailable(
     TrackingBrand.SIMKL -> simklConnected
     TrackingBrand.MDBLIST -> mdblistConnected
     TrackingBrand.ANILIST -> anilistConnected
+    TrackingBrand.WETRAKR -> wetrakrConnected
 }
 
 internal fun TraktConnectionMode.toTrackingConnectionCardMode(): TrackingConnectionCardMode = when (this) {
@@ -229,6 +234,7 @@ internal fun TrackingProviderCards(
         )
         MdbListProviderCard(Modifier.fillMaxWidth())
         AniListProviderCard(Modifier.fillMaxWidth())
+        WeTrakrProviderCard(Modifier.fillMaxWidth())
     }
 
     deviceCodeBrand?.let { brand ->
@@ -754,6 +760,7 @@ private fun TrackingDisconnectDialog(
                     stringResource(Res.string.settings_simkl_disconnect_description)
                 TrackingBrand.MDBLIST -> stringResource(Res.string.settings_mdblist_disconnect_description)
                 TrackingBrand.ANILIST -> stringResource(Res.string.settings_anilist_disconnect_description)
+                TrackingBrand.WETRAKR -> stringResource(Res.string.settings_wetrakr_disconnect_description)
                 TrackingBrand.NUVIO,
                 TrackingBrand.TMDB,
                 -> stringResource(
@@ -815,6 +822,12 @@ internal fun TrackingBrandGlyph(
             modifier = modifier,
             contentScale = ContentScale.Fit,
         )
+        TrackingBrand.WETRAKR -> Image(
+            painter = painterResource(Res.drawable.wetrakr_logo),
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = ContentScale.Fit,
+        )
         TrackingBrand.NUVIO -> Icon(
             imageVector = Icons.Rounded.Sync,
             contentDescription = contentDescription,
@@ -834,11 +847,12 @@ private fun TrackingBrandWordmark(
         TrackingBrand.SIMKL -> simklBrandPainter(SimklBrandAsset.Wordmark)
         TrackingBrand.MDBLIST -> integrationLogoPainter(IntegrationLogo.MdbList)
         TrackingBrand.ANILIST -> painterResource(Res.drawable.anilist_logo)
+        TrackingBrand.WETRAKR -> painterResource(Res.drawable.wetrakr_logo)
         TrackingBrand.NUVIO,
         TrackingBrand.TMDB,
         -> return
     }
-    if (brand == TrackingBrand.MDBLIST || brand == TrackingBrand.ANILIST) {
+    if (brand == TrackingBrand.MDBLIST || brand == TrackingBrand.ANILIST || brand == TrackingBrand.WETRAKR) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Image(painter, contentDescription = null, modifier = Modifier.size(32.dp))
             Text(contentDescription, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Bold)
@@ -857,6 +871,7 @@ private fun TrackingBrandWordmark(
                 .height(30.dp)
             TrackingBrand.MDBLIST,
             TrackingBrand.ANILIST,
+            TrackingBrand.WETRAKR,
             -> Modifier.width(130.dp).height(32.dp)
             TrackingBrand.NUVIO,
             TrackingBrand.TMDB,
@@ -879,6 +894,9 @@ private fun TrackingBrand.cardBrush(): Brush = when (this) {
     )
     TrackingBrand.ANILIST -> Brush.linearGradient(
         colors = listOf(Color(0xFF0B1622), Color(0xFF152232), Color(0xFF0B1622)),
+    )
+    TrackingBrand.WETRAKR -> Brush.linearGradient(
+        colors = listOf(Color(0xFF0A0A0C), Color(0xFF1F1C0A), Color(0xFF0A0A0C)),
     )
     TrackingBrand.NUVIO,
     TrackingBrand.TMDB,
