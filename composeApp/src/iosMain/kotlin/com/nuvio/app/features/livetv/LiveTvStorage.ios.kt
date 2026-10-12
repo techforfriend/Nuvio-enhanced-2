@@ -12,6 +12,8 @@ actual object LiveTvStorage {
     private const val navigationEnabledKey = "navigation_enabled"
     private const val stalkerSettingsKey = "stalker_settings"
     private const val xtreamSettingsKey = "xtream_settings"
+    private const val epgSourcesBlobKey = "epg_sources_blob"
+    private const val epgAutoDetectEnabledKey = "epg_auto_detect_enabled"
     private const val nativeNavigationVisibleKey = "NuvioLiveTvNavigationVisible"
     private const val nativeNavigationDidChangeNotification = "NuvioLiveTvNavigationVisibilityDidChange"
 
@@ -81,6 +83,26 @@ actual object LiveTvStorage {
         NSNotificationCenter.defaultCenter.postNotificationName(
             nativeNavigationDidChangeNotification,
             null,
+        )
+    }
+
+    actual fun loadEpgSourcesBlob(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(epgSourcesBlobKey))
+
+    actual fun saveEpgSourcesBlob(blob: String) {
+        NSUserDefaults.standardUserDefaults.setObject(blob, forKey = ProfileScopedKey.of(epgSourcesBlobKey))
+    }
+
+    actual fun loadEpgAutoDetectEnabled(): Boolean? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(epgAutoDetectEnabledKey)
+        return if (defaults.objectForKey(key) == null) null else defaults.boolForKey(key)
+    }
+
+    actual fun saveEpgAutoDetectEnabled(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(
+            enabled,
+            forKey = ProfileScopedKey.of(epgAutoDetectEnabledKey),
         )
     }
 }

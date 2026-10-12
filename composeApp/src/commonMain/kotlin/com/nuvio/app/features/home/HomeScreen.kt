@@ -248,6 +248,7 @@ fun HomeScreen(
                 contentId in watchProgressUiState.hiddenContentIds ||
                     WatchProgressRepository.isDroppedShow(contentId)
             },
+            canonicalSeedContentId = WatchProgressRepository::nextUpSeedContentId,
         )
     }
 
@@ -1306,6 +1307,7 @@ internal fun buildHomeNextUpSeedCandidates(
         entry.shouldUseAsCompletedSeedForContinueWatching()
     },
     isContentHidden: (String) -> Boolean = { false },
+    canonicalSeedContentId: (String) -> String = { it },
 ): List<CompletedSeriesCandidate> {
     val progressSeeds = progressEntries
         .asSequence()
@@ -1346,7 +1348,27 @@ internal fun buildHomeNextUpSeedCandidates(
         compareByDescending<CompletedSeriesCandidate> { candidate -> candidate.markedAtEpochMs }
             .thenByDescending { candidate -> candidate.seasonNumber }
             .thenByDescending { candidate -> candidate.episodeNumber },
-    )
+    ).distinctBySeedContentIdentity(canonicalSeedContentId)
+}
+
+private fun List<CompletedSeriesCandidate>.distinctBySeedContentIdentity(
+    canonicalSeedContentId: (String) -> String,
+): List<CompletedSeriesCandidate> {
+    if (size < 2) return this
+    val canonicalIds = map { candidate -> canonicalSeedContentId(candidate.content.id) }
+    if (indices.none { index -> this[index].content.id != canonicalIds[index] }) return this
+    val groupsWithCanonicalMember = indices
+        .filter { index -> this[index].content.id == canonicalIds[index] }
+        .mapTo(mutableSetOf()) { index -> canonicalIds[index] }
+    val keptAliasGroups = mutableSetOf<String>()
+    return filterIndexed { index, candidate ->
+        val canonical = canonicalIds[index]
+        when {
+            candidate.content.id == canonical -> true
+            canonical in groupsWithCanonicalMember -> false
+            else -> keptAliasGroups.add(canonical)
+        }
+    }
 }
 
 internal fun filterNextUpItemsByCurrentSeeds(

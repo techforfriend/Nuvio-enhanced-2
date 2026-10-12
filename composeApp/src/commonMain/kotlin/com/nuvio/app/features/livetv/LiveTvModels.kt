@@ -11,6 +11,30 @@ data class LiveTvChannel(
     val headers: Map<String, String> = emptyMap(),
     val streamType: String? = null,
     val stalkerCommand: String? = null,
+    val epgId: String? = null,
+)
+
+data class LiveTvEpgProgram(
+    val title: String,
+    val startMillis: Long,
+    val endMillis: Long,
+    val description: String? = null,
+    val category: String? = null,
+) {
+    fun isAiringAt(timeMillis: Long): Boolean = timeMillis in startMillis until endMillis
+
+    fun progressAt(timeMillis: Long): Float {
+        val duration = endMillis - startMillis
+        if (duration <= 0L) return 0f
+        return ((timeMillis - startMillis).toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+    }
+}
+
+data class LiveTvEpgSource(
+    val id: String,
+    val name: String,
+    val url: String,
+    val isEnabled: Boolean = true,
 )
 
 data class LiveTvStalkerSettings(
@@ -56,6 +80,11 @@ data class LiveTvUiState(
     val isNavigationEnabled: Boolean = true,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val epgSources: List<LiveTvEpgSource> = emptyList(),
+    val isEpgAutoDetectEnabled: Boolean = true,
+    val epgPrograms: Map<String, List<LiveTvEpgProgram>> = emptyMap(),
+    val isEpgLoading: Boolean = false,
+    val epgErrorMessage: String? = null,
 ) {
     val hasPlaylist: Boolean
         get() = playlists.isNotEmpty() || playlistUrl.isNotBlank() ||

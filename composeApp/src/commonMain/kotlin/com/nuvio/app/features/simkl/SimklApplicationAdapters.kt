@@ -287,6 +287,9 @@ object SimklTrackingProgressProvider : TrackingProgressProvider {
         val resolvedId = snapshot.resolveCanonicalContentId(parentContentId)
         return resolvedId ?: parentContentId
     }
+
+    override fun nextUpSeedContentId(contentId: String): String =
+        SimklSyncRepository.state.value.snapshot.canonicalSeriesContentId(contentId) ?: contentId
 }
 
 private const val SIMKL_PLAYBACK_PROGRESS_KEY_PREFIX = "simkl-playback:"

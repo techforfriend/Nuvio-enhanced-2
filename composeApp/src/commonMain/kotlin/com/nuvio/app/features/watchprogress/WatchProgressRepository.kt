@@ -1724,6 +1724,9 @@ object WatchProgressRepository {
         activeProgressProvider()?.shouldUseAsNextUpSeed(entry, nowEpochMs)
             ?: entry.shouldUseAsCompletedSeedForContinueWatching()
 
+    fun nextUpSeedContentId(contentId: String): String =
+        activeProgressProvider()?.nextUpSeedContentId(contentId) ?: contentId
+
     suspend fun prepareNextUpProgressEntries(
         entries: List<WatchProgressEntry>,
         contentId: String,

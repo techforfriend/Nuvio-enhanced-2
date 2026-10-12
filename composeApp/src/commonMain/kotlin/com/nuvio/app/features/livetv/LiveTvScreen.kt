@@ -123,6 +123,8 @@ fun LiveTvScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var filterMode by rememberSaveable { mutableStateOf(LiveTvChannelFilterMode.All) }
     var selectedCategoryName by rememberSaveable { mutableStateOf<String?>(null) }
+    var guideChannelId by rememberSaveable { mutableStateOf<String?>(null) }
+    val epgNowMillis = rememberLiveTvEpgNowMillis()
 
     val allChannelsLabel = stringResource(Res.string.live_tv_group_all_channels)
     val favoritesLabel = stringResource(Res.string.live_tv_filter_favorites)
@@ -292,6 +294,9 @@ fun LiveTvScreen(
                                 channel = lastWatchedChannel,
                                 categoryName = categoryNameForChannel(lastWatchedChannel, uncategorizedLabel),
                                 onContinueClick = { playChannel(lastWatchedChannel) },
+                                programs = uiState.epgPrograms[lastWatchedChannel.id].orEmpty(),
+                                nowMillis = epgNowMillis,
+                                onGuideClick = { guideChannelId = lastWatchedChannel.id },
                             )
                         }
                     }
@@ -338,6 +343,9 @@ fun LiveTvScreen(
                             uncategorizedGroupName = uncategorizedLabel,
                             onFavoriteClick = { channel -> LiveTvRepository.toggleFavoriteChannel(channel.id) },
                             onPlayClick = playChannel,
+                            epgPrograms = uiState.epgPrograms,
+                            nowMillis = epgNowMillis,
+                            onGuideClick = { channel -> guideChannelId = channel.id },
                         )
                     }
                 }
@@ -366,6 +374,20 @@ fun LiveTvScreen(
                         listState.animateScrollToItem(0)
                     }
                 },
+            )
+        }
+
+        val guideChannel = guideChannelId?.let { channelId -> uiState.channels.firstOrNull { it.id == channelId } }
+        if (guideChannel != null) {
+            LiveTvEpgGuideSheet(
+                channel = guideChannel,
+                programs = uiState.epgPrograms[guideChannel.id].orEmpty(),
+                nowMillis = epgNowMillis,
+                onPlayClick = {
+                    guideChannelId = null
+                    playChannel(guideChannel)
+                },
+                onDismiss = { guideChannelId = null },
             )
         }
     }
@@ -630,6 +652,9 @@ private fun LiveTvRecentChannelCard(
     channel: LiveTvChannel,
     categoryName: String,
     onContinueClick: () -> Unit,
+    programs: List<LiveTvEpgProgram> = emptyList(),
+    nowMillis: Long = 0L,
+    onGuideClick: () -> Unit = {},
 ) {
     val tokens = MaterialTheme.nuvio
     Surface(
@@ -672,6 +697,13 @@ private fun LiveTvRecentChannelCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 LiveTvCategoryLine(categoryName = categoryName)
+                if (programs.isNotEmpty()) {
+                    LiveTvEpgNowNext(
+                        programs = programs,
+                        nowMillis = nowMillis,
+                        onClick = onGuideClick,
+                    )
+                }
             }
 
             Surface(
@@ -706,6 +738,9 @@ private fun LazyListScope.liveTvChannelList(
     uncategorizedGroupName: String,
     onFavoriteClick: (LiveTvChannel) -> Unit,
     onPlayClick: (LiveTvChannel) -> Unit,
+    epgPrograms: Map<String, List<LiveTvEpgProgram>> = emptyMap(),
+    nowMillis: Long = 0L,
+    onGuideClick: (LiveTvChannel) -> Unit = {},
 ) {
     items(
         items = channels,
@@ -717,6 +752,9 @@ private fun LazyListScope.liveTvChannelList(
             isFavorite = channel.id in favoriteChannelIds,
             onFavoriteClick = { onFavoriteClick(channel) },
             onPlayClick = { onPlayClick(channel) },
+            programs = epgPrograms[channel.id].orEmpty(),
+            nowMillis = nowMillis,
+            onGuideClick = { onGuideClick(channel) },
         )
     }
 }
@@ -729,6 +767,9 @@ private fun LiveTvChannelCard(
     onFavoriteClick: () -> Unit,
     onPlayClick: () -> Unit,
     modifier: Modifier = Modifier,
+    programs: List<LiveTvEpgProgram> = emptyList(),
+    nowMillis: Long = 0L,
+    onGuideClick: () -> Unit = {},
 ) {
     val tokens = MaterialTheme.nuvio
     Surface(
@@ -756,6 +797,13 @@ private fun LiveTvChannelCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 LiveTvCategoryLine(categoryName = categoryName)
+                if (programs.isNotEmpty()) {
+                    LiveTvEpgNowNext(
+                        programs = programs,
+                        nowMillis = nowMillis,
+                        onClick = onGuideClick,
+                    )
+                }
             }
             IconButton(onClick = onFavoriteClick) {
                 Icon(

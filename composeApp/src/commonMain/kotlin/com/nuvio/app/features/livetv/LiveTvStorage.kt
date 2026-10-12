@@ -16,4 +16,8 @@ internal expect object LiveTvStorage {
     fun loadXtreamSettings(): LiveTvXtreamSettings
     fun saveXtreamSettings(settings: LiveTvXtreamSettings)
     fun publishNavigationVisibility(visible: Boolean)
+    fun loadEpgSourcesBlob(): String?
+    fun saveEpgSourcesBlob(blob: String)
+    fun loadEpgAutoDetectEnabled(): Boolean?
+    fun saveEpgAutoDetectEnabled(enabled: Boolean)
 }

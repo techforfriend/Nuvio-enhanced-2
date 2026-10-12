@@ -5,6 +5,7 @@ import com.nuvio.app.features.addons.httpGetText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
+import kotlin.time.Clock
 
 object LiveTvRepository {
     private val log = Logger.withTag("LiveTvRepository")
@@ -20,6 +22,9 @@ object LiveTvRepository {
     val uiState: StateFlow<LiveTvUiState> = _uiState.asStateFlow()
 
     private var hasLoaded = false
+    private var epgJob: Job? = null
+    private var detectedEpgUrls: List<String> = emptyList()
+    private val epgGuideCache = mutableMapOf<String, LiveTvCachedEpgGuide>()
 
     fun ensureLoaded() {
         if (hasLoaded) return
@@ -33,6 +38,8 @@ object LiveTvRepository {
             favoriteChannelIds = loadFavoriteChannelIds(),
             lastWatchedChannelId = LiveTvStorage.loadLastWatchedChannelId(),
             isNavigationEnabled = LiveTvStorage.loadNavigationEnabled() ?: true,
+            epgSources = decodeEpgSources(LiveTvStorage.loadEpgSourcesBlob().orEmpty()),
+            isEpgAutoDetectEnabled = LiveTvStorage.loadEpgAutoDetectEnabled() ?: true,
         )
         publishNavigationVisibility()
         if (_uiState.value.hasPlaylist) {
@@ -276,6 +283,7 @@ object LiveTvRepository {
         scope.launch {
             val loadedChannels = mutableListOf<LiveTvChannel>()
             val failedPlaylistNames = mutableListOf<String>()
+            val playlistEpgUrls = mutableListOf<String>()
 
             enabledPlaylists.forEach { playlist ->
                 val result = runCatching {
@@ -283,6 +291,7 @@ object LiveTvRepository {
                         LiveTvPlaylistType.Url -> withContext(Dispatchers.Default) { httpGetText(playlist.source) }
                         LiveTvPlaylistType.LocalFile -> playlist.source
                     }
+                    playlistEpgUrls += parseM3uEpgUrls(payload)
                     parseM3uPlaylist(payload, playlist)
                 }
 
@@ -330,7 +339,133 @@ object LiveTvRepository {
                     else -> null
                 },
             )
+            detectedEpgUrls = playlistEpgUrls.distinct()
+            refreshEpg(force = false)
         }
+    }
+
+    fun addEpgSource(name: String?, url: String) {
+        ensureLoaded()
+        val normalized = url.trim()
+        if (normalized.isBlank()) return
+        val current = _uiState.value.epgSources
+        if (current.any { it.url.equals(normalized, ignoreCase = true) }) return
+        val source = LiveTvEpgSource(
+            id = stableEpgSourceId(normalized, current.size),
+            name = name?.trim()?.takeIf(String::isNotBlank) ?: epgSourceNameFromUrl(normalized),
+            url = normalized,
+        )
+        updateEpgSources(current + source)
+    }
+
+    fun removeEpgSource(sourceId: String) {
+        ensureLoaded()
+        updateEpgSources(_uiState.value.epgSources.filterNot { it.id == sourceId })
+    }
+
+    fun setEpgSourceEnabled(sourceId: String, isEnabled: Boolean) {
+        ensureLoaded()
+        val current = _uiState.value.epgSources
+        if (current.none { it.id == sourceId }) return
+        updateEpgSources(current.map { source -> if (source.id == sourceId) source.copy(isEnabled = isEnabled) else source })
+    }
+
+    fun setEpgAutoDetectEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (_uiState.value.isEpgAutoDetectEnabled == enabled) return
+        LiveTvStorage.saveEpgAutoDetectEnabled(enabled)
+        _uiState.value = _uiState.value.copy(isEpgAutoDetectEnabled = enabled)
+        refreshEpg(force = false)
+    }
+
+    fun refreshEpg(force: Boolean = true) {
+        ensureLoaded()
+        val state = _uiState.value
+        val requests = buildEpgRequests(state)
+        epgJob?.cancel()
+        epgGuideCache.keys.retainAll(requests.map { it.cacheKey }.toSet())
+        if (state.channels.isEmpty() || requests.isEmpty()) {
+            _uiState.value = state.copy(
+                epgPrograms = emptyMap(),
+                isEpgLoading = false,
+                epgErrorMessage = null,
+            )
+            return
+        }
+
+        _uiState.value = state.copy(isEpgLoading = true, epgErrorMessage = null)
+        epgJob = scope.launch {
+            val nowMillis = Clock.System.now().toEpochMilliseconds()
+            val guides = mutableListOf<LiveTvEpgGuide>()
+            val failedGuideNames = mutableListOf<String>()
+            requests.forEach { request ->
+                val cached = epgGuideCache[request.cacheKey]
+                    ?.takeIf { !force && nowMillis - it.loadedAtMillis < LIVE_TV_EPG_CACHE_TTL_MILLIS }
+                if (cached != null) {
+                    guides += cached.guide
+                    return@forEach
+                }
+                runCatching { withContext(Dispatchers.Default) { request.load(nowMillis) } }.fold(
+                    onSuccess = { guide ->
+                        epgGuideCache[request.cacheKey] = LiveTvCachedEpgGuide(guide, nowMillis)
+                        guides += guide
+                    },
+                    onFailure = { error ->
+                        if (error is CancellationException) throw error
+                        failedGuideNames += request.label
+                        log.w(error) { "Failed to load live TV guide ${request.label}" }
+                    },
+                )
+            }
+            val channels = _uiState.value.channels
+            val programs = withContext(Dispatchers.Default) { matchEpgToChannels(channels, guides) }
+            _uiState.value = _uiState.value.copy(
+                epgPrograms = programs,
+                isEpgLoading = false,
+                epgErrorMessage = if (failedGuideNames.isNotEmpty()) {
+                    "Some guides could not be loaded: ${failedGuideNames.joinToString()}"
+                } else {
+                    null
+                },
+            )
+        }
+    }
+
+    private fun buildEpgRequests(state: LiveTvUiState): List<LiveTvEpgRequest> {
+        val urls = linkedMapOf<String, String>()
+        state.epgSources.filter { it.isEnabled }.forEach { source -> urls.getOrPut(source.url) { source.name } }
+        if (state.isEpgAutoDetectEnabled) {
+            detectedEpgUrls.forEach { url -> urls.getOrPut(url) { epgSourceNameFromUrl(url) } }
+            if (state.xtreamSettings.isConfigured && state.xtreamSettings.isEnabled) {
+                urls.getOrPut(xtreamEpgUrl(state.xtreamSettings)) { "Xtream" }
+            }
+        }
+        return buildList {
+            urls.forEach { (url, label) ->
+                add(LiveTvEpgRequest(cacheKey = "xmltv:$url", label = label) { nowMillis -> fetchXmltvGuide(url, nowMillis) })
+            }
+            val stalkerSettings = state.stalkerSettings
+            if (state.isEpgAutoDetectEnabled && stalkerSettings.isConfigured && stalkerSettings.isEnabled) {
+                add(
+                    LiveTvEpgRequest(
+                        cacheKey = "stalker:${stalkerSettings.portalUrl}:${stalkerSettings.macAddress}",
+                        label = "Stalker Portal",
+                    ) { nowMillis ->
+                        fetchStalkerEpgGuide(
+                            settings = stalkerSettings,
+                            windowStartMillis = nowMillis - LIVE_TV_EPG_PAST_WINDOW_MILLIS,
+                            windowEndMillis = nowMillis + LIVE_TV_EPG_FUTURE_WINDOW_MILLIS,
+                        )
+                    },
+                )
+            }
+        }
+    }
+
+    private fun updateEpgSources(sources: List<LiveTvEpgSource>) {
+        LiveTvStorage.saveEpgSourcesBlob(encodeEpgSources(sources))
+        _uiState.value = _uiState.value.copy(epgSources = sources)
+        refreshEpg(force = false)
     }
 
     fun toggleFavoriteChannel(channelId: String) {
@@ -383,6 +518,33 @@ object LiveTvRepository {
     }
 }
 
+private const val LIVE_TV_EPG_CACHE_TTL_MILLIS = 6L * 60L * 60L * 1000L
+
+internal data class LiveTvCachedEpgGuide(
+    val guide: LiveTvEpgGuide,
+    val loadedAtMillis: Long,
+)
+
+internal class LiveTvEpgRequest(
+    val cacheKey: String,
+    val label: String,
+    val load: suspend (Long) -> LiveTvEpgGuide,
+)
+
+internal fun parseM3uEpgUrls(payload: String): List<String> {
+    val header = payload.lineSequence()
+        .map(String::trim)
+        .firstOrNull(String::isNotBlank)
+        ?: return emptyList()
+    if (!header.startsWith("#EXTM3U", ignoreCase = true)) return emptyList()
+    return listOf("url-tvg", "x-tvg-url", "tvg-url")
+        .mapNotNull { key -> readM3uAttribute(header, key) }
+        .flatMap { value -> value.split(',') }
+        .map(String::trim)
+        .filter { it.startsWith("http://", ignoreCase = true) || it.startsWith("https://", ignoreCase = true) }
+        .distinct()
+}
+
 internal fun parseM3uPlaylist(
     payload: String,
     playlist: LiveTvPlaylist? = null,
@@ -412,6 +574,7 @@ internal fun parseM3uPlaylist(
                         group = info?.group?.takeIf(String::isNotBlank),
                         playlistId = playlist?.id,
                         playlistName = playlist?.name,
+                        epgId = info?.epgId?.takeIf(String::isNotBlank),
                     )
                     pendingInfo = null
                 }
@@ -425,6 +588,7 @@ private data class M3uInfo(
     val name: String,
     val logoUrl: String?,
     val group: String?,
+    val epgId: String? = null,
 )
 
 private fun parseExtInf(line: String): M3uInfo {
@@ -437,6 +601,7 @@ private fun parseExtInf(line: String): M3uInfo {
         name = name,
         logoUrl = readM3uAttribute(line, "tvg-logo"),
         group = readM3uAttribute(line, "group-title"),
+        epgId = readM3uAttribute(line, "tvg-id"),
     )
 }
 
@@ -525,6 +690,52 @@ private fun unescapePlaylistField(value: String): String =
         .replace("%1F", playlistFieldSeparator)
         .replace("%1E", playlistRecordSeparator)
         .replace("%25", "%")
+
+private fun encodeEpgSources(sources: List<LiveTvEpgSource>): String =
+    sources.joinToString(playlistRecordSeparator) { source ->
+        listOf(
+            source.id,
+            source.name,
+            source.url,
+            source.isEnabled.toString(),
+        ).joinToString(playlistFieldSeparator) { escapePlaylistField(it) }
+    }
+
+private fun decodeEpgSources(blob: String): List<LiveTvEpgSource> =
+    blob
+        .split(playlistRecordSeparator)
+        .mapNotNull { record ->
+            if (record.isBlank()) return@mapNotNull null
+            val fields = record.split(playlistFieldSeparator).map(::unescapePlaylistField)
+            val url = fields.getOrNull(2)?.takeIf(String::isNotBlank) ?: return@mapNotNull null
+            LiveTvEpgSource(
+                id = fields.getOrNull(0)?.takeIf(String::isNotBlank) ?: return@mapNotNull null,
+                name = fields.getOrNull(1)?.takeIf(String::isNotBlank) ?: epgSourceNameFromUrl(url),
+                url = url,
+                isEnabled = decodePlaylistEnabled(fields.getOrNull(3)),
+            )
+        }
+
+private fun epgSourceNameFromUrl(url: String): String {
+    val trimmed = url.trim()
+    val fileName = trimmed
+        .substringBefore('?')
+        .substringAfterLast('/')
+        .removeSuffix(".gz")
+        .removeSuffix(".GZ")
+        .substringBeforeLast('.', missingDelimiterValue = "")
+        .trim()
+    if (fileName.isNotBlank() && !fileName.equals("xmltv", ignoreCase = true)) return fileName
+
+    return trimmed
+        .substringAfter("://", missingDelimiterValue = trimmed)
+        .substringBefore('/')
+        .trim()
+        .ifBlank { "EPG" }
+}
+
+private fun stableEpgSourceId(source: String, index: Int): String =
+    "epg:${source.hashCode().toUInt().toString(16)}:$index"
 
 private fun stableChannelId(streamUrl: String, index: Int): String =
     "live:${streamUrl.hashCode().toUInt().toString(16)}:$index"

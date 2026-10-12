@@ -15,6 +15,7 @@ import com.nuvio.app.features.watched.watchedItemKey
 import com.nuvio.app.features.watchprogress.WatchProgressEntry
 import com.nuvio.app.features.watchprogress.WatchProgressSourceSimklPlayback
 import com.nuvio.app.features.watchprogress.buildPlaybackVideoId
+import kotlinx.atomicfu.atomic
 
 internal data class SimklWatchedProjection(
     val items: List<WatchedItem>,
@@ -402,7 +403,9 @@ internal fun SimklPlaybackSession.toWatchProgressEntry(
     libraryEntries: List<SimklLibraryEntry> = emptyList()
 ): WatchProgressEntry? {
     val media = media ?: return null
-    val parentId = media.canonicalContentId() ?: return null
+    val parentId = libraryEntries.sameSimklItem(mediaType, media)?.media?.canonicalContentId()
+        ?: media.canonicalContentId()
+        ?: return null
     val isAnimeMovie = mediaType == SimklMediaType.ANIME && (
         type == "movie" ||
         libraryEntries.any { entry ->
@@ -462,6 +465,82 @@ internal fun SimklPlaybackSession.toWatchProgressEntry(
         progressKey = id?.let { "simkl-playback:$it" }
             ?: "simkl-playback:$parentId:${season ?: -1}:${episodeNumber ?: -1}",
     )
+}
+
+private fun List<SimklLibraryEntry>.sameSimklItem(
+    mediaType: SimklMediaType,
+    media: SimklMedia,
+): SimklLibraryEntry? {
+    val simklId = media.ids.simklIdValue() ?: return null
+    return firstOrNull { entry -> entry.mediaType == mediaType && entry.media?.ids?.simklIdValue() == simklId }
+        ?: firstOrNull { entry -> entry.media?.ids?.simklIdValue() == simklId }
+}
+
+internal fun SimklSyncSnapshot.canonicalSeriesContentId(contentId: String): String? =
+    seriesContentIdIndex().resolve(contentId)
+
+private val seriesContentIdIndexCache = atomic<SimklSeriesContentIdIndex?>(null)
+
+private fun SimklSyncSnapshot.seriesContentIdIndex(): SimklSeriesContentIdIndex {
+    val animeIdPreference = TrackingSettingsRepository.uiState.value.simklAnimeIdPreference
+    seriesContentIdIndexCache.value?.let { cached ->
+        if (cached.snapshot === this && cached.animeIdPreference == animeIdPreference) return cached
+    }
+    val canonicalByIdentity = mutableMapOf<String, String>()
+    val canonicalByExternalKey = mutableMapOf<String, String?>()
+    entries.forEach { entry ->
+        if (entry.isMovieEntry()) return@forEach
+        val media = entry.media ?: return@forEach
+        val canonical = media.canonicalContentId(animeIdPreference) ?: return@forEach
+        canonicalByIdentity[canonical.lowercase()] = canonical
+        media.toTrackingExternalIds().seriesIdentityKeys().forEach { key ->
+            if (key !in canonicalByExternalKey) {
+                canonicalByExternalKey[key] = canonical
+            } else if (canonicalByExternalKey[key] != canonical) {
+                canonicalByExternalKey[key] = null
+            }
+        }
+    }
+    return SimklSeriesContentIdIndex(
+        snapshot = this,
+        animeIdPreference = animeIdPreference,
+        canonicalByIdentity = canonicalByIdentity,
+        canonicalByExternalKey = canonicalByExternalKey,
+    ).also { seriesContentIdIndexCache.value = it }
+}
+
+private class SimklSeriesContentIdIndex(
+    val snapshot: SimklSyncSnapshot,
+    val animeIdPreference: SimklAnimeIdPreference,
+    private val canonicalByIdentity: Map<String, String>,
+    private val canonicalByExternalKey: Map<String, String?>,
+) {
+    fun resolve(contentId: String): String? {
+        val trimmed = contentId.trim()
+        if (trimmed.isEmpty()) return null
+        canonicalByIdentity[trimmed.lowercase()]?.let { return it }
+        val segments = trimmed.split('+').map(String::trim).filter(String::isNotEmpty)
+        segments.forEach { segment ->
+            canonicalByIdentity[segment.lowercase()]?.let { return it }
+        }
+        segments.forEach { segment ->
+            parseTrackingExternalIds(segment).seriesIdentityKeys().forEach { key ->
+                canonicalByExternalKey[key]?.let { return it }
+            }
+        }
+        return null
+    }
+}
+
+private fun TrackingExternalIds.seriesIdentityKeys(): List<String> = buildList {
+    simkl?.let { add("simkl:$it") }
+    imdb?.takeIf(String::isNotBlank)?.let { add("imdb:${it.lowercase()}") }
+    tmdb?.let { add("tmdb:$it") }
+    tvdb?.takeIf(String::isNotBlank)?.let { add("tvdb:${it.lowercase()}") }
+    mal?.let { add("mal:$it") }
+    anidb?.let { add("anidb:$it") }
+    anilist?.let { add("anilist:$it") }
+    kitsu?.let { add("kitsu:$it") }
 }
 
 internal fun SimklMedia.simklTrackingProviderItemId(): String? =

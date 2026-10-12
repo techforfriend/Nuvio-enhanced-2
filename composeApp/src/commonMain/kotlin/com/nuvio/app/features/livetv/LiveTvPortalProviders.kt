@@ -40,8 +40,14 @@ internal suspend fun fetchXtreamChannels(settings: LiveTvXtreamSettings): List<L
             playlistName = "Xtream",
             headers = streamRequestHeaders,
             streamType = extension,
+            epgId = item.string("epg_channel_id"),
         )
     }.distinctBy { it.streamUrl }
+}
+
+internal fun xtreamEpgUrl(settings: LiveTvXtreamSettings): String {
+    val normalized = settings.normalized()
+    return "${normalized.serverUrl}/xmltv.php?username=${normalized.username.encodeURLParameter()}&password=${normalized.password.encodeURLParameter()}"
 }
 
 private suspend fun xtreamRequest(settings: LiveTvXtreamSettings, action: String): JsonElement {
@@ -80,10 +86,40 @@ internal suspend fun fetchStalkerChannels(settings: LiveTvStalkerSettings): List
                 playlistName = "Stalker Portal",
                 headers = stalkerHeaders(session.settings, session.token),
                 stalkerCommand = command,
+                epgId = item.string("xmltv_id"),
             ).also(channels::add)
         }
     }
     return channels.distinctBy { it.id }
+}
+
+internal suspend fun fetchStalkerEpgGuide(
+    settings: LiveTvStalkerSettings,
+    windowStartMillis: Long,
+    windowEndMillis: Long,
+): LiveTvEpgGuide {
+    val session = stalkerSession(settings.normalized())
+    val data = stalkerRequest(session.settings, session.token, "itv", "get_epg_info", mapOf("period" to "48"))
+        .js()["data"] as? JsonObject ?: return LiveTvEpgGuide()
+    val programs = data.mapNotNull { (channelId, element) ->
+        val items = (element as? JsonArray)?.mapNotNull { entry ->
+            val item = entry as? JsonObject ?: return@mapNotNull null
+            val title = item.string("name") ?: return@mapNotNull null
+            val start = item.string("start_timestamp")?.toLongOrNull()?.times(1000L) ?: return@mapNotNull null
+            val stop = item.string("stop_timestamp")?.toLongOrNull()?.times(1000L) ?: return@mapNotNull null
+            LiveTvEpgProgram(
+                title = title,
+                startMillis = start,
+                endMillis = stop,
+                description = item.string("descr"),
+                category = item.string("category"),
+            )
+        }.orEmpty()
+            .filter { it.endMillis >= windowStartMillis && it.startMillis <= windowEndMillis }
+            .sortedBy { it.startMillis }
+        if (items.isEmpty()) null else "stalker:$channelId" to items
+    }.toMap()
+    return LiveTvEpgGuide(programsByChannelId = programs)
 }
 
 internal suspend fun preparePortalChannelForPlayback(channel: LiveTvChannel, settings: LiveTvStalkerSettings): LiveTvChannel {
