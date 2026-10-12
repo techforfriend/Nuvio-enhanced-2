@@ -224,7 +224,7 @@ jobs:
     if: inputs.mode != 'dry-run' && (inputs.target == 'all' || inputs.target == 'ios-only')
     needs: prepare
     runs-on: macos-26
-    timeout-minutes: 120
+    timeout-minutes: 180
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       GRADLE_OPTS: -Dfile.encoding=UTF-8
@@ -268,6 +268,17 @@ jobs:
             printf 'CONTRIBUTIONS_URL=%s\n' "${CONTRIBUTIONS_URL}" >> local.properties
           fi
 
+      - name: Constrain Gradle memory for the hosted runner
+        run: |
+          gradle_user_home="${GRADLE_USER_HOME:-${HOME}/.gradle}"
+          mkdir -p "${gradle_user_home}"
+          {
+            echo "org.gradle.jvmargs=${NUVIO_GRADLE_JVMARGS}"
+            echo "kotlin.daemon.jvmargs=${KOTLIN_DAEMON_JVMARGS}"
+            echo "kotlin.native.jvmArgs=${NUVIO_KOTLIN_NATIVE_JVMARGS}"
+          } >> "${gradle_user_home}/gradle.properties"
+          cat "${gradle_user_home}/gradle.properties"
+
       - name: Prepare iOS dependencies
         run: ./scripts/prepare-ios-dependencies.sh
 
@@ -290,7 +301,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: nuvio-${{ needs.prepare.outputs.version }}-ios-full-release
-          path: build/ios-ipa/*-full-release.ipa
+          path: build/ios-ipa/*.ipa
           if-no-files-found: error
 
   release:

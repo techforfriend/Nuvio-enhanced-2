@@ -35,9 +35,6 @@ build_environment=(
     CLANG_MODULE_CACHE_PATH="${clang_module_cache}"
     SWIFTPM_MODULECACHE_OVERRIDE="${swiftpm_module_cache}"
 )
-if [[ -n "${NUVIO_GRADLE_JVMARGS:-}" ]]; then
-    build_environment+=("ORG_GRADLE_PROJECT_org.gradle.jvmargs=${NUVIO_GRADLE_JVMARGS}")
-fi
 if [[ -n "${NUVIO_KOTLIN_NATIVE_JVMARGS:-}" ]]; then
     build_environment+=("ORG_GRADLE_PROJECT_kotlin.native.jvmArgs=${NUVIO_KOTLIN_NATIVE_JVMARGS}")
 fi
@@ -110,8 +107,8 @@ trap 'rm -rf "${package_root}"' EXIT
 mkdir -p "${package_root}/Payload"
 ditto "${app_path}" "${package_root}/Payload/${app_bundle_name}"
 
-ipa_path="${output_directory}/nuvio-${version}-full-${configuration_slug}.ipa"
-temporary_ipa="${package_root}/nuvio-${version}-full-${configuration_slug}.ipa"
+ipa_path="${output_directory}/nuvio-${version}-enhanced-${configuration_slug}.ipa"
+temporary_ipa="${package_root}/nuvio-${version}-enhanced-${configuration_slug}.ipa"
 (
     cd "${package_root}"
     /usr/bin/zip -qry "${temporary_ipa}" Payload
