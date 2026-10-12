@@ -65,7 +65,6 @@ object PartyRepository {
     private var waitStartedAt: TimeMark? = null
     private var resumedAt: TimeMark? = null
     private val ignoredWaiting = mutableSetOf<String>()
-    private val presenceRefs = mutableMapOf<String, MutableSet<String>>()
     private var rejoining = false
 
     init {
@@ -197,7 +196,6 @@ object PartyRepository {
         channel = partyChannel
         localPresence = null
         ignoredWaiting.clear()
-        presenceRefs.clear()
         waitStartedAt = null
         resumedAt = null
         _playback.value = playback?.takeIf { it.mediaKey == null || it.mediaKey == party.media.key }
@@ -227,7 +225,6 @@ object PartyRepository {
         channel?.close()
         channel = null
         localPresence = null
-        presenceRefs.clear()
         _playback.value = null
         _state.value = PartyUiState()
     }
@@ -244,7 +241,6 @@ object PartyRepository {
 
     private suspend fun onConnection(connected: Boolean) {
         if (!connected) {
-            presenceRefs.clear()
             updateParty { current -> current.copy(connected = false, presence = current.presence.filterKeys { it == current.memberId }) }
             return
         }
@@ -254,7 +250,7 @@ object PartyRepository {
         runCatching { channel?.track(presence) }
         runCatching { channel?.send("status", presence) }
         _playback.value?.let { current -> runCatching { channel?.send("state", encodePlayback(current)) } }
-        runCatching { channel?.send("state_request", buildJsonObject { put("member_id", party.memberId) }) }
+        requestState(party)
     }
 
     private suspend fun onMessage(event: String, payload: JsonObject) {
@@ -286,23 +282,20 @@ object PartyRepository {
     private fun onPresence(joins: Map<String, Presence>, leaves: Map<String, Presence>) {
         val party = _state.value.party ?: return
         val presence = party.presence.toMutableMap()
+        val left = leaves.keys.filter { it != party.memberId && it !in joins }
+        presence -= left.toSet()
         joins.forEach { (key, value) ->
-            if (key == party.memberId) return@forEach
-            presenceRefs.getOrPut(key) { mutableSetOf() } += value.presenceRef
-            if (key in presence) return@forEach
+            if (key == party.memberId || key in presence) return@forEach
             val decoded = decode(value.state, PartyPresence.serializer()) ?: PartyPresence(memberId = key)
             presence[key] = decoded.copy(memberId = key)
             if (decoded.status == PartyMemberStatus.Ready) ignoredWaiting.remove(key)
         }
-        leaves.forEach { (key, value) ->
-            if (key == party.memberId) return@forEach
-            val refs = presenceRefs[key]
-            refs?.remove(value.presenceRef)
-            if (!refs.isNullOrEmpty()) return@forEach
-            presenceRefs -= key
-            presence -= key
-        }
         updateParty { it.copy(presence = presence) }
+        if (left.isNotEmpty()) sessionScope?.launch { requestState(party) }
+    }
+
+    private suspend fun requestState(party: ActiveParty) {
+        runCatching { channel?.send("state_request", buildJsonObject { put("member_id", party.memberId) }) }
     }
 
     private fun applyStatus(status: PartyPresence) {
