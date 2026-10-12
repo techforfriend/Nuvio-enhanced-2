@@ -6,9 +6,10 @@ import io.github.jan.supabase.realtime.broadcastFlow
 import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.realtime
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import kotlinx.serialization.json.JsonObject
 
 internal class PartyChannel(
@@ -39,19 +40,20 @@ internal class PartyChannel(
         }
         channel = created
         jobs = EVENTS.map { event ->
-            created.broadcastFlow<JsonObject>(event)
-                .onEach { payload -> onMessage(event, payload) }
-                .launchIn(scope)
-        } + created.presenceChangeFlow()
-            .onEach { action ->
+            scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                created.broadcastFlow<JsonObject>(event).collect { payload -> onMessage(event, payload) }
+            }
+        } + scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            created.presenceChangeFlow().collect { action ->
                 onPresence(
                     action.joins.mapValues { it.value.state },
                     action.leaves.mapValues { it.value.state },
                 )
             }
-            .launchIn(scope) + created.status
-            .onEach { status -> onConnected(status == RealtimeChannel.Status.SUBSCRIBED) }
-            .launchIn(scope)
+        } + scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            created.status.collect { status -> onConnected(status == RealtimeChannel.Status.SUBSCRIBED) }
+        }
+        yield()
         created.subscribe(blockUntilSubscribed = false)
     }
 
