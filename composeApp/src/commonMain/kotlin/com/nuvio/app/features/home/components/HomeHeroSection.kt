@@ -53,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -67,7 +68,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
 import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.build.TrailerPlaybackMode
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
@@ -304,40 +308,45 @@ internal fun HomeHeroSection(
                     }
                 }
             }
-            val heroScrollScale = heroBackgroundScrollScale(scrollOffsetPx)
-            val heroScrollTranslationY = heroBackgroundScrollTranslationY(scrollOffsetPx)
-            val currentPage = pagerState.currentPage
-            val visiblePages = listOf(
-                currentPage,
-                (currentPage - 1).coerceAtLeast(0),
-                (currentPage + 1).coerceAtMost(pagerState.pageCount - 1),
-            ).distinct()
-                .mapNotNull { index ->
-                    val pageOffset = heroPageOffset(pagerState, index)
-                    val visibility = (1f - abs(pageOffset)).coerceIn(0f, 1f)
-                    if (visibility <= 0f) {
-                        null
-                    } else {
-                        HeroPageLayer(
-                            itemIndex = index % items.size,
-                            visibility = visibility,
-                            offset = pageOffset,
-                        )
-                    }
-                }
-                .sortedBy(HeroPageLayer::visibility)
-            val currentItem = visiblePages
-                .lastOrNull()
-                ?.itemIndex
-                ?.let(items::get)
-                ?: items[currentPage % items.size]
-
-            val activeArtworkUrl = when (effectiveArtworkSource) {
-                HomeHeroArtworkSource.POSTER -> currentItem.poster ?: currentItem.banner
-                HomeHeroArtworkSource.BACKDROP -> currentItem.banner ?: currentItem.poster
+            val isHeroScrolledAway by remember(listState, heroHeightPx) {
+                derivedStateOf { scrollOffsetPx >= heroHeightPx * 0.6f }
             }
+            val currentPage = pagerState.currentPage
+            val visiblePages = remember(currentPage, pagerState.pageCount, items.size) {
+                listOf(
+                    (currentPage - 1).coerceAtLeast(0),
+                    (currentPage + 1).coerceAtMost(pagerState.pageCount - 1),
+                    currentPage,
+                ).distinct()
+                    .map { page -> HeroPageLayer(page = page, itemIndex = page % items.size) }
+            }
+            val currentItem = items[currentPage % items.size]
+            val settledItem = items[pagerState.settledPage % items.size]
+
+            val activeArtworkUrl = heroArtworkUrl(settledItem, effectiveArtworkSource)
             LaunchedEffect(onActiveArtworkChange, activeArtworkUrl) {
                 onActiveArtworkChange?.invoke(activeArtworkUrl)
+            }
+
+            val platformContext = LocalPlatformContext.current
+            LaunchedEffect(pagerState.settledPage, items, effectiveArtworkSource) {
+                val settled = pagerState.settledPage
+                val neighbours = listOf(settled + 1, settled - 1)
+                    .filter { page -> page >= 0 && items.size > 1 }
+                    .map { page -> items[page % items.size] }
+                    .distinct()
+                val imageLoader = SingletonImageLoader.get(platformContext)
+                neighbours.forEach { item ->
+                    listOfNotNull(heroArtworkUrl(item, effectiveArtworkSource), item.logo?.takeIf { it.isNotBlank() })
+                        .forEach { url ->
+                            imageLoader.enqueue(ImageRequest.Builder(platformContext).data(url).build())
+                        }
+                }
+                neighbours.forEach { item ->
+                    if (MetaDetailsRepository.peek(item.type, item.id) == null) {
+                        runCatching { MetaDetailsRepository.fetch(item.type, item.id) }
+                    }
+                }
             }
 
             val heroTrailerItemKey = "${currentItem.type}:${currentItem.id}"
@@ -423,10 +432,8 @@ internal fun HomeHeroSection(
                     ) {
                         visiblePages.forEach { layer ->
                             val item = items[layer.itemIndex]
-                            val artworkUrl = when (effectiveArtworkSource) {
-                                HomeHeroArtworkSource.POSTER -> item.poster ?: item.banner
-                                HomeHeroArtworkSource.BACKDROP -> item.banner ?: item.poster
-                            }
+                            val artworkUrl = heroArtworkUrl(item, effectiveArtworkSource)
+                            val isCurrentLayer = layer.page == currentPage
                             key(effectiveArtworkSource, item.type, item.id, artworkUrl) {
                                 AsyncImage(
                                     model = artworkUrl,
@@ -434,13 +441,19 @@ internal fun HomeHeroSection(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .graphicsLayer {
-                                            alpha = layer.visibility
-                                            translationX = -layer.offset * heroWidthPx * artworkParallax
-                                            translationY = if (isCardStyle) 0f else heroScrollTranslationY
+                                            val offset = heroPageOffset(pagerState, layer.page)
+                                            val visibility = (1f - abs(offset)).coerceIn(0f, 1f)
+                                            alpha = when {
+                                                isCurrentLayer -> visibility
+                                                visibility > 0f -> 1f
+                                                else -> 0f
+                                            }
+                                            translationX = -offset * heroWidthPx * artworkParallax
+                                            translationY = if (isCardStyle) 0f else heroBackgroundScrollTranslationY(scrollOffsetPx)
                                             scaleX = artworkBaseScale *
-                                                if (isCardStyle) 1f else heroScrollScale
+                                                if (isCardStyle) 1f else heroBackgroundScrollScale(scrollOffsetPx)
                                             scaleY = artworkBaseScale *
-                                                if (isCardStyle) 1f else heroScrollScale
+                                                if (isCardStyle) 1f else heroBackgroundScrollScale(scrollOffsetPx)
                                         },
                                     alignment = if (layout.isTablet) Alignment.TopCenter else Alignment.Center,
                                     contentScale = ContentScale.Crop,
@@ -457,9 +470,6 @@ internal fun HomeHeroSection(
                                 animationSpec = tween(durationMillis = 300),
                                 label = "home_hero_trailer_alpha",
                             )
-                            val currentPageOffset = pagerState.currentPageOffsetFraction
-                            val currentPageVisibility = (1f - abs(currentPageOffset)).coerceIn(0f, 1f)
-                            val isHeroScrolledAway = scrollOffsetPx >= heroHeightPx * 0.6f
                             HeroTrailerPlayerSurface(
                                 sourceUrl = heroTrailerSourceUrl,
                                 sourceAudioUrl = heroTrailerPlaybackSource?.audioUrl,
@@ -471,11 +481,13 @@ internal fun HomeHeroSection(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .graphicsLayer {
+                                        val currentPageOffset = pagerState.currentPageOffsetFraction
+                                        val currentPageVisibility = (1f - abs(currentPageOffset)).coerceIn(0f, 1f)
                                         alpha = trailerReadyAlpha * currentPageVisibility
                                         translationX = -currentPageOffset * heroWidthPx * artworkParallax
-                                        translationY = if (isCardStyle) 0f else heroScrollTranslationY
-                                        scaleX = artworkBaseScale * if (isCardStyle) 1f else heroScrollScale
-                                        scaleY = artworkBaseScale * if (isCardStyle) 1f else heroScrollScale
+                                        translationY = if (isCardStyle) 0f else heroBackgroundScrollTranslationY(scrollOffsetPx)
+                                        scaleX = artworkBaseScale * if (isCardStyle) 1f else heroBackgroundScrollScale(scrollOffsetPx)
+                                        scaleY = artworkBaseScale * if (isCardStyle) 1f else heroBackgroundScrollScale(scrollOffsetPx)
                                     },
                                 onReady = {
                                     if (!heroTrailerFinished) heroTrailerReady = true
@@ -498,21 +510,24 @@ internal fun HomeHeroSection(
                     }
 
                     if (!isCardStyle) {
-                        val heroFadeColor = LocalDynamicArtworkBackgroundColor.current
-                            ?: MaterialTheme.colorScheme.background
+                        val heroFadeColorState = LocalDynamicArtworkBackgroundColor.current
+                        val themeBackground = MaterialTheme.colorScheme.background
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(
-                                            heroFadeColor.copy(alpha = 0.02f),
-                                            heroFadeColor.copy(alpha = 0.12f),
-                                            heroFadeColor.copy(alpha = 0.34f),
-                                            heroFadeColor.copy(alpha = 0.78f),
+                                .drawBehind {
+                                    val fade = heroFadeColorState?.value ?: themeBackground
+                                    drawRect(
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                fade.copy(alpha = 0.02f),
+                                                fade.copy(alpha = 0.12f),
+                                                fade.copy(alpha = 0.34f),
+                                                fade.copy(alpha = 0.78f),
+                                            ),
                                         ),
-                                    ),
-                                ),
+                                    )
+                                },
                         )
 
                         Box(
@@ -520,14 +535,10 @@ internal fun HomeHeroSection(
                                 .fillMaxWidth()
                                 .height(layout.bottomFadeHeight)
                                 .align(Alignment.BottomCenter)
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(
-                                            heroFadeColor.copy(alpha = 0f),
-                                            heroFadeColor,
-                                        ),
-                                    ),
-                                ),
+                                .drawBehind {
+                                    val fade = heroFadeColorState?.value ?: themeBackground
+                                    drawRect(Brush.verticalGradient(colors = listOf(fade.copy(alpha = 0f), fade)))
+                                },
                         )
                     }
 
@@ -568,8 +579,10 @@ internal fun HomeHeroSection(
                                     key(layerItem.type, layerItem.id) {
                                     Box(
                                         modifier = Modifier.graphicsLayer {
-                                            alpha = layer.visibility
-                                            translationX = -layer.offset * heroWidthPx * HERO_CONTENT_PARALLAX
+                                            val offset = heroPageOffset(pagerState, layer.page)
+                                            val visibility = (1f - abs(offset)).coerceIn(0f, 1f)
+                                            alpha = ((visibility - 0.5f) * 2f).coerceIn(0f, 1f)
+                                            translationX = -offset * heroWidthPx * HERO_CONTENT_PARALLAX
                                         },
                                     ) {
                                         HeroContentBlock(
@@ -669,10 +682,14 @@ private fun HeroPageIndicator(
 }
 
 private data class HeroPageLayer(
+    val page: Int,
     val itemIndex: Int,
-    val visibility: Float,
-    val offset: Float,
 )
+
+private fun heroArtworkUrl(item: MetaPreview, source: HomeHeroArtworkSource): String? = when (source) {
+    HomeHeroArtworkSource.POSTER -> item.poster ?: item.banner
+    HomeHeroArtworkSource.BACKDROP -> item.banner ?: item.poster
+}
 
 private fun heroPageOffset(
     pagerState: PagerState,
@@ -851,7 +868,7 @@ private fun HeroContentBlock(
             }
             genre?.let {
                 if (needsDot) HeroMetaDot()
-                HeroMetaText(text = it)
+                HeroMetaText(text = it, modifier = Modifier.weight(1f, fill = false))
                 needsDot = true
             }
             ageRating?.let {
@@ -899,9 +916,10 @@ private fun HeroTypePill(text: String) {
 private val HeroRatingStar = Color(0xFFF5C518)
 
 @Composable
-private fun HeroMetaText(text: String) {
+private fun HeroMetaText(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
+        modifier = modifier,
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onBackground,
         fontWeight = FontWeight.SemiBold,
