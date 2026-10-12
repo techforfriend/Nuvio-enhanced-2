@@ -15,6 +15,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.takeFrom
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
+import kotlin.time.Duration.Companion.seconds
 
 object SupabaseProvider {
     private val clientLock = SynchronizedObject()
@@ -107,6 +108,7 @@ object SupabaseProvider {
             install(Storage)
             install(Realtime) {
                 customUrl = SupabaseEndpointConfig.realtimeUrl(configuration.backendUrl)
+                reconnectDelay = 3.seconds
             }
         }
     }
