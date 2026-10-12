@@ -45,6 +45,6 @@
     <string name="party_error_rate_limited">Too many attempts. Try again in a few minutes.</string>
     <string name="party_error_network">Couldn't reach the watch party. Check your connection.</string>
     <string name="party_settings_description">Join friends with a party code</string>
-    <string name="party_host_source">Host's source</string>
+    <string name="party_source">Party's source</string>
     <string name="party_episode_format">S%1$d E%2$d</string>
 </resources>

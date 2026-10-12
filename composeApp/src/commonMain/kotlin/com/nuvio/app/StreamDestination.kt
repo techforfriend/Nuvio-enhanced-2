@@ -742,7 +742,7 @@ internal fun StreamDestination(
     }
 
     val partyState by PartyRepository.state.collectAsStateWithLifecycle()
-    val hostSource = partyState.party?.media?.takeIf { media ->
+    val partySource = partyState.party?.media?.takeIf { media ->
         media.key == partyMediaKey(
             metaType = launch.parentMetaType ?: launch.type,
             metaId = launch.parentMetaId ?: effectiveVideoId,
@@ -750,9 +750,9 @@ internal fun StreamDestination(
             episode = launch.episodeNumber,
         )
     }?.source
-    val hostSourceLabel = stringResource(Res.string.party_host_source)
-    val streamHighlight: (StreamItem) -> String? = remember(hostSource, hostSourceLabel) {
-        { stream -> if (hostSource?.matches(stream) == true) hostSourceLabel else null }
+    val partySourceLabel = stringResource(Res.string.party_source)
+    val streamHighlight: (StreamItem) -> String? = remember(partySource, partySourceLabel) {
+        { stream -> if (partySource?.matches(stream) == true) partySourceLabel else null }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
