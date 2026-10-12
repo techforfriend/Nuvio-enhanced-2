@@ -850,8 +850,8 @@ private fun EpisodeHorizontalCard(
     val formattedDate = remember(video.released) { video.released?.let { formatReleaseDateForDisplay(it) } }
     val runtimeLabel = remember(video.runtime) { video.runtime?.takeIf { it > 0 }?.let(::formatEpisodeRuntime) }
     val imageUrl = video.thumbnail ?: fallbackImage
-    val visibleProgressEntry = progressEntry?.takeIf { it.durationMs > 0L && !it.isCompleted }
-    val progressBarHeight = 4.dp
+    val visibleProgressEntry = progressEntry?.takeIf { it.progressFraction > 0f && !it.isEffectivelyCompleted }
+    val progressBarHeight = 3.dp
     val progressBarContentSpacing = 6.dp
     val progressBarBottomSpacing = 8.dp
     val contentBottomPadding = if (visibleProgressEntry != null) {
@@ -1005,7 +1005,7 @@ private fun EpisodeHorizontalCard(
                         bottom = progressBarBottomSpacing,
                     ),
                 height = progressBarHeight,
-                trackColor = Color.White.copy(alpha = 0.22f),
+                trackColor = Color.Black.copy(alpha = 0.30f),
                 fillColor = MaterialTheme.colorScheme.primary,
             )
         }
@@ -1437,7 +1437,7 @@ private fun EpisodeListCard(
         }
 
         progressEntry
-            ?.takeIf { it.durationMs > 0L && !it.isCompleted }
+            ?.takeIf { it.progressFraction > 0f && !it.isEffectivelyCompleted }
             ?.let { entry ->
                 NuvioProgressBar(
                     progress = entry.progressFraction,
