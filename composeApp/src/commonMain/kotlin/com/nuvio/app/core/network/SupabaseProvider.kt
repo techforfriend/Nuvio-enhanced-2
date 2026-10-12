@@ -8,11 +8,15 @@ import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.functions.Functions
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.realtime.Realtime
+import io.github.jan.supabase.realtime.websocket.KtorRealtimeWebsocketFactory
 import io.github.jan.supabase.storage.Storage
+import io.github.jan.supabase.supabaseJson
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.http.HttpHeaders
 import io.ktor.http.takeFrom
+import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import kotlin.time.Duration.Companion.seconds
@@ -32,7 +36,8 @@ object SupabaseProvider {
     private fun createClient(): SupabaseClient {
         val configuration = ServerConfigurationRepository.active.value
         val userAgent = "NuvioMobile/${AppVersionConfig.VERSION_NAME.ifBlank { "dev" }}"
-        return createSupabaseClient(
+        lateinit var client: SupabaseClient
+        client = createSupabaseClient(
             supabaseUrl = configuration.backendUrl,
             supabaseKey = configuration.publishableKey,
         ) {
@@ -101,6 +106,9 @@ object SupabaseProvider {
                 defaultRequest {
                     headers.append(HttpHeaders.UserAgent, userAgent)
                 }
+                install(WebSockets) {
+                    contentConverter = KotlinxWebsocketSerializationConverter(supabaseJson)
+                }
             }
             install(Auth)
             install(Postgrest)
@@ -109,8 +117,12 @@ object SupabaseProvider {
             install(Realtime) {
                 customUrl = SupabaseEndpointConfig.realtimeUrl(configuration.backendUrl)
                 reconnectDelay = 3.seconds
+                websocketFactory = RealtimeSocketFactory { url ->
+                    KtorRealtimeWebsocketFactory(client.httpClient.httpClient).create(url)
+                }
             }
         }
+        return client
     }
 
     suspend fun reset() {
