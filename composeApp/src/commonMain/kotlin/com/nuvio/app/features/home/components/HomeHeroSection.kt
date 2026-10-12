@@ -46,7 +46,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -565,6 +564,8 @@ internal fun HomeHeroSection(
                                 contentAlignment = Alignment.BottomStart,
                             ) {
                                 visiblePages.forEach { layer ->
+                                    val layerItem = items[layer.itemIndex]
+                                    key(layerItem.type, layerItem.id) {
                                     Box(
                                         modifier = Modifier.graphicsLayer {
                                             alpha = layer.visibility
@@ -572,10 +573,11 @@ internal fun HomeHeroSection(
                                         },
                                     ) {
                                         HeroContentBlock(
-                                            item = items[layer.itemIndex],
+                                            item = layerItem,
                                             layout = layout,
                                             onItemClick = onItemClick,
                                         )
+                                    }
                                     }
                                 }
                             }
@@ -795,15 +797,17 @@ private fun HeroContentBlock(
             )
         }
 
-        val details by produceState(
-            initialValue = MetaDetailsRepository.peek(item.type, item.id),
-            item.type,
-            item.id,
-        ) {
-            if (value == null) {
-                value = runCatching { MetaDetailsRepository.fetch(item.type, item.id) }.getOrNull()
+        val detailsState = remember(item.type, item.id) {
+            mutableStateOf(MetaDetailsRepository.peek(item.type, item.id))
+        }
+        LaunchedEffect(item.type, item.id) {
+            if (detailsState.value == null) {
+                detailsState.value = runCatching {
+                    MetaDetailsRepository.fetch(item.type, item.id)
+                }.getOrNull()
             }
         }
+        val details = detailsState.value
         val rating = (item.imdbRating ?: details?.imdbRating)
             ?.takeIf { raw -> raw.toDoubleOrNull()?.let { it > 0.0 } == true }
         val year = (item.releaseInfo ?: details?.releaseInfo)
