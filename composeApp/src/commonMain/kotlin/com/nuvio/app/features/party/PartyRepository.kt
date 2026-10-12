@@ -165,11 +165,12 @@ object PartyRepository {
             mutex.withLock {
                 _state.update { it.copy(busy = true) }
                 try {
-                    stopSession()
                     val sentAt = clock.mark()
                     val snapshot = request(identity())
                     partyErrorOf(snapshot.error)?.let { error -> return@withLock error }
                     val party = snapshot.toActiveParty() ?: return@withLock PartyError.Network
+                    stopSession()
+                    clock.reset()
                     snapshot.serverTimeMs?.let { clock.addSample(it, sentAt) }
                     startSession(party, snapshot.party?.playback)
                     null
