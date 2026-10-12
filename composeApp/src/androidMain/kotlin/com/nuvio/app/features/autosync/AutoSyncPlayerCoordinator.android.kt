@@ -99,6 +99,8 @@ internal class AutoSyncPlayerCoordinator(
 
         val useLibass = getUseLibass()
         val subtitleHeaders = getSubtitleHeaders(url)
+        val subtitleLanguage = candidates.firstOrNull { it.url == url }?.language
+            ?.takeIf { it.isNotBlank() } ?: getPreferredLanguage()
         if (!sidecar.canAttachAddonSubtitleViaSidecar(url, useLibass)) {
             fallbackAttach(url)
             showFailure(token, Res.string.autosync_toast_failed_unsupported)
@@ -125,7 +127,7 @@ internal class AutoSyncPlayerCoordinator(
 
         selectedBodyJob = scope.launch {
             val body = try {
-                AutomaticSubtitleSync.downloadSubtitleBody(url, subtitleHeaders)
+                AutomaticSubtitleSync.downloadSubtitleBody(url, subtitleHeaders, subtitleLanguage)
             } catch (cancel: CancellationException) {
                 throw cancel
             } catch (_: Exception) {
@@ -149,8 +151,7 @@ internal class AutoSyncPlayerCoordinator(
                     selectedSubtitleUrl = url,
                     selectedSubtitleHeaders = subtitleHeaders,
                     selectedSubtitleBodyDeferred = bodyDeferred,
-                    preferredLanguage = candidates.firstOrNull { it.url == url }?.language
-                        ?.takeIf { it.isNotBlank() } ?: getPreferredLanguage(),
+                    preferredLanguage = subtitleLanguage,
                     alternativeSubtitles = candidateScope.alternativeCandidates(candidates),
                     alternativeSubtitlesProvider = if (candidateScope.usesAlternativeProvider) {
                         { candidates }
