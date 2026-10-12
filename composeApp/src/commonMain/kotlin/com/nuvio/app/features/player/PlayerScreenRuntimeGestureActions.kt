@@ -11,6 +11,8 @@ import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeSource
 
 internal data class PlayerSurfaceGestureCallbacks(
     val onSurfaceTap: State<(Offset) -> Unit>,
@@ -164,15 +166,19 @@ internal fun PlayerScreenRuntime.togglePlayback() {
         playerController?.play()
     }
     controlsVisible = true
-    publishPartyPlayback(positionMs = if (playbackSnapshot.isEnded) 0L else playbackSnapshot.positionMs)
+    publishPartyPlayback(positionMs = if (playbackSnapshot.isEnded) 0L else currentPlaybackPositionMs())
 }
 
 internal fun PlayerScreenRuntime.seekBy(offsetMs: Long) {
-    val fromMs = playbackSnapshot.positionMs
+    val fromMs = pendingSeekTarget
+        ?.takeIf { (_, mark) -> mark.elapsedNow() < PendingSeekWindow }
+        ?.first
+        ?: currentPlaybackPositionMs()
     val targetMs = (fromMs + offsetMs).coerceAtLeast(0L)
         .let { if (playbackSnapshot.durationMs > 0L) it.coerceAtMost(playbackSnapshot.durationMs) else it }
     lastManualSkipSeekPositions = fromMs to targetMs
-    playerController?.seekBy(offsetMs)
+    pendingSeekTarget = targetMs to TimeSource.Monotonic.markNow()
+    if (isPartySynced) playerController?.seekTo(targetMs) else playerController?.seekBy(offsetMs)
     scheduleProgressSyncAfterSeek()
     publishPartyPlayback(positionMs = targetMs)
     controlsVisible = true
@@ -330,3 +336,5 @@ internal fun PlayerScreenRuntime.rememberSurfaceGestureCallbacks(): PlayerSurfac
         },
     )
 }
+
+private val PendingSeekWindow = 1_500.milliseconds

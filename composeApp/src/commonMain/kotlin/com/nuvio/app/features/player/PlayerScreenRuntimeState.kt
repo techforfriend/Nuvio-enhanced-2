@@ -22,6 +22,7 @@ import com.nuvio.app.features.watched.WatchedUiState
 import com.nuvio.app.features.watchprogress.WatchProgressUiState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlin.time.TimeMark
 
 internal class PlayerScreenRuntime(
     args: PlayerScreenArgs,
@@ -199,6 +200,8 @@ internal class PlayerScreenRuntime(
     var partyRateNudge: Float? = null
     var partyPreviousKey: String? = null
     var partyAppInBackground = false
+    var playbackSnapshotMark: TimeMark? = null
+    var pendingSeekTarget: Pair<Long, TimeMark>? = null
     var streamMediaInfo by mutableStateOf(PlayerMediaInfo())
     var playbackEngineOverride by mutableStateOf<AndroidPlaybackEngine?>(null)
     var audioTracks by mutableStateOf<List<AudioTrack>>(emptyList())

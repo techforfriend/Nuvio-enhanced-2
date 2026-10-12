@@ -120,7 +120,8 @@ object PartyRepository {
     }
 
     fun publishPlayback(paused: Boolean, positionMs: Long, rate: Float) {
-        scope.launch { publish(paused = paused, positionMs = positionMs, rate = rate, waiting = false) }
+        val at = clock.nowMs()
+        scope.launch { publish(paused = paused, positionMs = positionMs, rate = rate, waiting = false, at = at) }
     }
 
     fun publishMedia(media: PartyMedia, positionMs: Long) {
@@ -132,7 +133,7 @@ object PartyRepository {
             val next = if (sameContent) {
                 _playback.value
             } else {
-                nextPlayback(party, paused = false, positionMs = positionMs, rate = 1f, waiting = false, mediaKey = media.key)
+                nextPlayback(party, paused = false, positionMs = positionMs, rate = 1f, waiting = false, mediaKey = media.key, at = clock.nowMs())
                     .also { _playback.value = it }
             }
             persistJob?.cancel()
@@ -364,10 +365,16 @@ object PartyRepository {
         _playback.value = candidate
     }
 
-    private suspend fun publish(paused: Boolean, positionMs: Long, rate: Float, waiting: Boolean) {
+    private suspend fun publish(
+        paused: Boolean,
+        positionMs: Long,
+        rate: Float,
+        waiting: Boolean,
+        at: Long = clock.nowMs(),
+    ) {
         val party = _state.value.party ?: return
         val current = _playback.value
-        val next = nextPlayback(party, paused, positionMs, rate, waiting, party.media.key)
+        val next = nextPlayback(party, paused, positionMs, rate, waiting, party.media.key, at)
         if (current != null && current.paused && !paused) {
             resumedAt = clock.mark()
             if (current.waiting && !waiting) ignoredWaiting += PartySync.waitingMemberIds(party, emptySet())
@@ -385,13 +392,14 @@ object PartyRepository {
         rate: Float,
         waiting: Boolean,
         mediaKey: String,
+        at: Long,
     ) = PartyPlayback(
         seq = (_playback.value?.seq ?: 0L) + 1L,
         memberId = party.memberId,
         paused = paused,
         positionMs = positionMs.coerceAtLeast(0L),
         rate = rate.coerceIn(0.25f, 4f),
-        at = clock.nowMs(),
+        at = at,
         mediaKey = mediaKey,
         waiting = waiting,
     )

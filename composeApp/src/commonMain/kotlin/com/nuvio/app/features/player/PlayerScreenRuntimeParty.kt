@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import co.touchlab.kermit.Logger
 import com.nuvio.app.features.party.ActiveParty
 import com.nuvio.app.core.sync.AppForegroundMonitor
 import com.nuvio.app.core.sync.AppVisibility
@@ -94,8 +95,15 @@ internal fun PlayerScreenRuntime.currentPartyMedia(): PartyMedia = PartyMedia(
 internal fun PlayerScreenRuntime.partyBaseRate(): Float =
     PartyRepository.playback.value?.rate ?: playbackSnapshot.playbackSpeed
 
+internal fun PlayerScreenRuntime.currentPlaybackPositionMs(): Long {
+    val snapshot = playbackSnapshot
+    if (!snapshot.isPlaying || snapshot.isLoading) return snapshot.positionMs
+    val elapsedMs = playbackSnapshotMark?.elapsedNow()?.inWholeMilliseconds?.coerceIn(0L, 1_000L) ?: 0L
+    return snapshot.positionMs + (elapsedMs * snapshot.playbackSpeed).toLong()
+}
+
 internal fun PlayerScreenRuntime.publishPartyPlayback(
-    positionMs: Long = playbackSnapshot.positionMs,
+    positionMs: Long = currentPlaybackPositionMs(),
     rate: Float = partyBaseRate(),
 ) {
     if (!isPartySynced) return
@@ -177,6 +185,8 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
         var lastStatus: Pair<PartyMemberStatus, String>? = null
         var wasInBackground = false
         var publishedInitial = false
+        var seekLeadMs = 0L
+        var measureSeekLead = false
         while (isActive) {
             delay(PARTY_TICK)
             val party = PartyRepository.state.value.party ?: break
@@ -227,8 +237,9 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
                 lastSeq = identity
                 applyPartyPaused(playback.paused, force = forced)
                 val own = playback.memberId == party.memberId && !forced
-                if (!own && abs(snapshot.positionMs - expected) > PartySync.PAUSED_TOLERANCE_MS) {
-                    controller.seekTo(expected)
+                if ((!own || playback.paused) && abs(snapshot.positionMs - expected) > PartySync.PAUSED_TOLERANCE_MS) {
+                    controller.seekTo(if (playback.paused) expected else expected + seekLeadMs)
+                    measureSeekLead = !playback.paused
                 }
                 lastSeek = clock.markNow()
                 if (partyRateNudge == null && abs(snapshot.playbackSpeed - playback.rate) > 0.01f) {
@@ -262,14 +273,23 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
             val due = lastCorrection?.let { it.elapsedNow() >= CORRECTION_INTERVAL } ?: true
             if (!settled || !due) continue
             lastCorrection = clock.markNow()
+            val drift = snapshot.positionMs - expected
+            if (measureSeekLead && !playback.paused) {
+                measureSeekLead = false
+                seekLeadMs = (seekLeadMs - drift).coerceIn(0L, MAX_SEEK_LEAD_MS)
+            }
             when (val correction = PartySync.correction(snapshot.positionMs, expected, playback, partyRateNudge != null)) {
                 is PartyCorrection.Seek -> {
+                    partyLog.i { "Seeking $drift ms back into sync with ${seekLeadMs} ms lead" }
                     clearPartyNudge(playback)
-                    controller.seekTo(correction.positionMs)
+                    val target = if (playback.paused) correction.positionMs else correction.positionMs + seekLeadMs
+                    controller.seekTo(if (snapshot.durationMs > 0L) target.coerceAtMost(snapshot.durationMs) else target)
                     lastSeek = clock.markNow()
+                    measureSeekLead = !playback.paused
                 }
                 is PartyCorrection.Nudge -> {
                     if (partyRateNudge != correction.rate) {
+                        partyLog.i { "Nudging speed to ${correction.rate} for ${snapshot.positionMs - expected} ms drift" }
                         partyRateNudge = correction.rate
                         controller.setPlaybackSpeed(correction.rate)
                     }
@@ -413,8 +433,10 @@ private fun PartyStatusPill(
     }
 }
 
+private val partyLog = Logger.withTag("Party")
 private val PARTY_TICK = 250.milliseconds
 private val BUFFERING_REPORT_DELAY = 1_000.milliseconds
 private val OUTSIDE_TOGGLE_DELAY = 1_200.milliseconds
 private val SEEK_SETTLE = 2_500.milliseconds
 private val CORRECTION_INTERVAL = 500.milliseconds
+private const val MAX_SEEK_LEAD_MS = 3_000L

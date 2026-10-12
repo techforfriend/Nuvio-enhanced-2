@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.player_engine_switching_manual_message
 import kotlin.math.abs
+import kotlin.time.TimeSource
 
 internal fun PlayerScreenRuntime.finishTimelineScrub(positionMs: Long) {
     lastManualSkipSeekPositions = playbackSnapshot.positionMs to positionMs
@@ -38,6 +39,7 @@ internal fun PlayerScreenRuntime.updatePlaybackSnapshot(
         reported
     }
     playbackSnapshotKey = playbackKey
+    playbackSnapshotMark = TimeSource.Monotonic.markNow()
     val targetPositionMs = scrubbingPositionMs ?: return true
     if (!isScrubbingTimeline && (
             !snapshot.isLoading || snapshot.isEnded ||
