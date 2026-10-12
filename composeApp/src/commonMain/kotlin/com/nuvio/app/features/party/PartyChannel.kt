@@ -1,6 +1,7 @@
 package com.nuvio.app.features.party
 
 import com.nuvio.app.core.network.SupabaseProvider
+import io.github.jan.supabase.realtime.Presence
 import io.github.jan.supabase.realtime.RealtimeChannel
 import io.github.jan.supabase.realtime.broadcastFlow
 import io.github.jan.supabase.realtime.channel
@@ -25,7 +26,7 @@ internal class PartyChannel(
     suspend fun open(
         scope: CoroutineScope,
         onMessage: (String, JsonObject) -> Unit,
-        onPresence: (joins: Map<String, JsonObject>, leaves: Map<String, JsonObject>) -> Unit,
+        onPresence: (joins: Map<String, Presence>, leaves: Map<String, Presence>) -> Unit,
         onConnected: (Boolean) -> Unit,
     ) {
         val created = SupabaseProvider.client.channel("watch-party:$partyId") {
@@ -44,12 +45,7 @@ internal class PartyChannel(
                 created.broadcastFlow<JsonObject>(event).collect { payload -> onMessage(event, payload) }
             }
         } + scope.launch(start = CoroutineStart.UNDISPATCHED) {
-            created.presenceChangeFlow().collect { action ->
-                onPresence(
-                    action.joins.mapValues { it.value.state },
-                    action.leaves.mapValues { it.value.state },
-                )
-            }
+            created.presenceChangeFlow().collect { action -> onPresence(action.joins, action.leaves) }
         } + scope.launch(start = CoroutineStart.UNDISPATCHED) {
             created.status.collect { status -> onConnected(status == RealtimeChannel.Status.SUBSCRIBED) }
         }
@@ -78,6 +74,6 @@ internal class PartyChannel(
     }
 
     private companion object {
-        val EVENTS = listOf("state", "state_request", "member_joined", "member_left", "ended", "media")
+        val EVENTS = listOf("state", "state_request", "status", "member_joined", "member_left", "ended", "media")
     }
 }

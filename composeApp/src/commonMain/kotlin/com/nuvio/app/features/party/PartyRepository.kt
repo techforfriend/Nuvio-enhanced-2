@@ -6,6 +6,7 @@ import com.nuvio.app.core.auth.AuthState
 import com.nuvio.app.core.network.ServerConfigurationRepository
 import com.nuvio.app.core.sync.SyncClientIdentity
 import com.nuvio.app.features.profiles.ProfileRepository
+import io.github.jan.supabase.realtime.Presence
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,6 +65,7 @@ object PartyRepository {
     private var waitStartedAt: TimeMark? = null
     private var resumedAt: TimeMark? = null
     private val ignoredWaiting = mutableSetOf<String>()
+    private val presenceRefs = mutableMapOf<String, MutableSet<String>>()
     private var rejoining = false
 
     init {
@@ -153,7 +155,7 @@ object PartyRepository {
             presenceJob?.cancel()
             presenceJob = sessionScope?.launch {
                 delay(250)
-                runCatching { channel?.track(PartyApi.json.encodeToJsonElement(PartyPresence.serializer(), next).jsonObject) }
+                runCatching { channel?.send("status", encodePresence(next)) }
             }
         }
     }
@@ -195,6 +197,7 @@ object PartyRepository {
         channel = partyChannel
         localPresence = null
         ignoredWaiting.clear()
+        presenceRefs.clear()
         waitStartedAt = null
         resumedAt = null
         _playback.value = playback?.takeIf { it.mediaKey == null || it.mediaKey == party.media.key }
@@ -224,6 +227,7 @@ object PartyRepository {
         channel?.close()
         channel = null
         localPresence = null
+        presenceRefs.clear()
         _playback.value = null
         _state.value = PartyUiState()
     }
@@ -239,12 +243,17 @@ object PartyRepository {
     }
 
     private suspend fun onConnection(connected: Boolean) {
-        updateParty { it.copy(connected = connected) }
-        if (!connected) return
-        val party = _state.value.party ?: return
-        localPresence?.let { presence ->
-            runCatching { channel?.track(PartyApi.json.encodeToJsonElement(PartyPresence.serializer(), presence).jsonObject) }
+        if (!connected) {
+            presenceRefs.clear()
+            updateParty { current -> current.copy(connected = false, presence = current.presence.filterKeys { it == current.memberId }) }
+            return
         }
+        updateParty { it.copy(connected = true) }
+        val party = _state.value.party ?: return
+        val presence = encodePresence(ownPresence(party))
+        runCatching { channel?.track(presence) }
+        runCatching { channel?.send("status", presence) }
+        _playback.value?.let { current -> runCatching { channel?.send("state", encodePlayback(current)) } }
         runCatching { channel?.send("state_request", buildJsonObject { put("member_id", party.memberId) }) }
     }
 
@@ -254,9 +263,11 @@ object PartyRepository {
             "state" -> decode(payload, PartyPlayback.serializer())?.let(::accept)
             "state_request" -> {
                 if (payload.string("member_id") == party.memberId) return
+                runCatching { channel?.send("status", encodePresence(ownPresence(party))) }
                 val current = _playback.value ?: return
                 runCatching { channel?.send("state", encodePlayback(current)) }
             }
+            "status" -> decode(payload, PartyPresence.serializer())?.let(::applyStatus)
             "member_joined" -> refreshMembers(announceMemberId = payload.string("member_id"))
             "member_left" -> onMemberLeft(
                 memberId = payload.string("member_id"),
@@ -272,18 +283,37 @@ object PartyRepository {
         }
     }
 
-    private fun onPresence(joins: Map<String, JsonObject>, leaves: Map<String, JsonObject>) {
+    private fun onPresence(joins: Map<String, Presence>, leaves: Map<String, Presence>) {
         val party = _state.value.party ?: return
         val presence = party.presence.toMutableMap()
-        leaves.keys.filter { it != party.memberId }.forEach(presence::remove)
         joins.forEach { (key, value) ->
             if (key == party.memberId) return@forEach
-            val decoded = decode(value, PartyPresence.serializer()) ?: PartyPresence(memberId = key)
+            presenceRefs.getOrPut(key) { mutableSetOf() } += value.presenceRef
+            if (key in presence) return@forEach
+            val decoded = decode(value.state, PartyPresence.serializer()) ?: PartyPresence(memberId = key)
             presence[key] = decoded.copy(memberId = key)
             if (decoded.status == PartyMemberStatus.Ready) ignoredWaiting.remove(key)
         }
+        leaves.forEach { (key, value) ->
+            if (key == party.memberId) return@forEach
+            val refs = presenceRefs[key]
+            refs?.remove(value.presenceRef)
+            if (!refs.isNullOrEmpty()) return@forEach
+            presenceRefs -= key
+            presence -= key
+        }
         updateParty { it.copy(presence = presence) }
     }
+
+    private fun applyStatus(status: PartyPresence) {
+        val party = _state.value.party ?: return
+        if (status.memberId == party.memberId) return
+        if (status.status == PartyMemberStatus.Ready) ignoredWaiting.remove(status.memberId)
+        updateParty { it.copy(presence = it.presence + (status.memberId to status)) }
+    }
+
+    private fun ownPresence(party: ActiveParty): PartyPresence =
+        localPresence ?: PartyPresence(memberId = party.memberId)
 
     private fun onMemberLeft(memberId: String?, reason: String?, hostMemberId: String?) {
         val party = _state.value.party ?: return
@@ -520,6 +550,9 @@ object PartyRepository {
 
     private fun encodePlayback(playback: PartyPlayback): JsonObject =
         PartyApi.json.encodeToJsonElement(PartyPlayback.serializer(), playback).jsonObject
+
+    private fun encodePresence(presence: PartyPresence): JsonObject =
+        PartyApi.json.encodeToJsonElement(PartyPresence.serializer(), presence).jsonObject
 
     private fun <T> decode(element: JsonElement, serializer: KSerializer<T>): T? =
         runCatching { PartyApi.json.decodeFromJsonElement(serializer, element) }.getOrNull()
