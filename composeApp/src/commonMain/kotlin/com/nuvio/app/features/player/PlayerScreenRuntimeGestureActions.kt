@@ -164,6 +164,7 @@ internal fun PlayerScreenRuntime.togglePlayback() {
         playerController?.play()
     }
     controlsVisible = true
+    publishPartyPlayback(positionMs = if (playbackSnapshot.isEnded) 0L else playbackSnapshot.positionMs)
 }
 
 internal fun PlayerScreenRuntime.seekBy(offsetMs: Long) {
@@ -173,6 +174,7 @@ internal fun PlayerScreenRuntime.seekBy(offsetMs: Long) {
     lastManualSkipSeekPositions = fromMs to targetMs
     playerController?.seekBy(offsetMs)
     scheduleProgressSyncAfterSeek()
+    publishPartyPlayback(positionMs = targetMs)
     controlsVisible = true
     when {
         offsetMs > 0L -> showSeekFeedback(PlayerSeekDirection.Forward, offsetMs)
@@ -207,6 +209,7 @@ internal fun PlayerScreenRuntime.handleDoubleTapSeek(direction: PlayerSeekDirect
     lastManualSkipSeekPositions = currentPositionMs to targetPositionMs
     playerController?.seekTo(targetPositionMs)
     scheduleProgressSyncAfterSeek()
+    publishPartyPlayback(positionMs = targetPositionMs)
     showSeekFeedback(direction, nextState.amountMs)
 
     accumulatedSeekResetJob?.cancel()
@@ -235,13 +238,16 @@ internal fun PlayerScreenRuntime.cyclePlaybackSpeed() {
     val speeds = listOf(1f, 1.25f, 1.5f, 2f)
     val current = playbackSnapshot.playbackSpeed
     val next = speeds.firstOrNull { it > current + 0.01f } ?: speeds.first()
+    partyRateNudge = null
     playerController?.setPlaybackSpeed(next)
+    publishPartyPlayback(rate = next)
     showGestureMessage(formatPlaybackSpeedLabel(next))
     controlsVisible = true
 }
 
 internal fun PlayerScreenRuntime.activateHoldToSpeed() {
     if (!playerSettingsUiState.holdToSpeedEnabled) return
+    if (isPartySynced) return
     val controller = playerController ?: return
     if (speedBoostRestoreSpeed != null) return
 
@@ -320,6 +326,7 @@ internal fun PlayerScreenRuntime.rememberSurfaceGestureCallbacks(): PlayerSurfac
             lastManualSkipSeekPositions = playbackSnapshot.positionMs to targetPositionMs
             playerController?.seekTo(targetPositionMs)
             scheduleProgressSyncAfterSeek()
+            publishPartyPlayback(positionMs = targetPositionMs)
         },
     )
 }

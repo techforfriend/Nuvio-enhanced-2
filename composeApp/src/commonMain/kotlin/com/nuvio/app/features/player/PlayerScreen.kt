@@ -42,6 +42,7 @@ fun PlayerScreen(
     initialProgressFraction: Float? = null,
     contentLanguage: String? = null,
     launchId: Long? = null,
+    sourceFilename: String? = null,
 ) {
     PlayerScreenContent(
         PlayerScreenArgs(
@@ -82,6 +83,7 @@ fun PlayerScreen(
             initialProgressFraction = initialProgressFraction,
             contentLanguage = contentLanguage,
             launchId = launchId,
+            sourceFilename = sourceFilename,
         )
     )
 }
