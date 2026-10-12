@@ -186,19 +186,22 @@ internal fun HomeSkeletonHero(
                         SkeletonDot(brush = brush)
                         SkeletonBlock(brush = brush, width = 40.dp, height = 14.dp, cornerRadius = 999.dp)
                     }
-                }
-                if (!layout.isTablet) {
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                     SkeletonBlock(
                         brush = brush,
-                        width = 160.dp,
-                        height = 48.dp,
-                        cornerRadius = 40.dp,
+                        width = logoWidth * 1.45f,
+                        height = 12.dp,
+                        cornerRadius = 999.dp,
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                } else {
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SkeletonBlock(
+                        brush = brush,
+                        width = logoWidth * 1.1f,
+                        height = 12.dp,
+                        cornerRadius = 999.dp,
+                    )
                 }
+                Spacer(modifier = Modifier.height(if (layout.isTablet) 16.dp else 18.dp))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -235,7 +238,6 @@ fun HomeSkeletonRow(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        // Title placeholder
         Box(
             modifier = Modifier
                 .width(140.dp)
@@ -243,7 +245,6 @@ fun HomeSkeletonRow(
                 .clip(RoundedCornerShape(6.dp))
                 .background(brush),
         )
-        // Poster row
         Row(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
