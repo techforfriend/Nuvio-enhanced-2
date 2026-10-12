@@ -1,0 +1,144 @@
+package com.nuvio.app.features.party
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class PartySource(
+    @SerialName("info_hash") val infoHash: String? = null,
+    @SerialName("file_idx") val fileIdx: Int? = null,
+    val filename: String? = null,
+    @SerialName("video_size") val videoSize: Long? = null,
+    @SerialName("binge_group") val bingeGroup: String? = null,
+    @SerialName("addon_id") val addonId: String? = null,
+    val name: String? = null,
+)
+
+@Serializable
+data class PartyMedia(
+    val type: String,
+    @SerialName("meta_id") val metaId: String,
+    @SerialName("meta_type") val metaType: String,
+    @SerialName("video_id") val videoId: String? = null,
+    val season: Int? = null,
+    val episode: Int? = null,
+    val title: String = "",
+    @SerialName("episode_title") val episodeTitle: String? = null,
+    val poster: String? = null,
+    val background: String? = null,
+    val logo: String? = null,
+    val source: PartySource? = null,
+) {
+    val key: String
+        get() = partyMediaKey(metaType, metaId, season, episode)
+}
+
+internal fun partyMediaKey(metaType: String, metaId: String, season: Int?, episode: Int?): String =
+    listOf(metaType.lowercase(), metaId, season?.toString().orEmpty(), episode?.toString().orEmpty())
+        .joinToString("|")
+
+@Serializable
+data class PartyPlayback(
+    val seq: Long,
+    @SerialName("member_id") val memberId: String? = null,
+    val paused: Boolean,
+    @SerialName("position_ms") val positionMs: Long,
+    val rate: Float = 1f,
+    val at: Long,
+    @SerialName("media_key") val mediaKey: String? = null,
+    val waiting: Boolean = false,
+)
+
+@Serializable
+data class PartyMember(
+    val id: String,
+    @SerialName("display_name") val displayName: String,
+    @SerialName("avatar_url") val avatarUrl: String? = null,
+    @SerialName("avatar_color") val avatarColor: String? = null,
+)
+
+@Serializable
+enum class PartyMemberStatus {
+    @SerialName("browsing") Browsing,
+    @SerialName("loading") Loading,
+    @SerialName("buffering") Buffering,
+    @SerialName("ready") Ready,
+}
+
+@Serializable
+data class PartyPresence(
+    @SerialName("member_id") val memberId: String,
+    val status: PartyMemberStatus = PartyMemberStatus.Browsing,
+    @SerialName("media_key") val mediaKey: String? = null,
+)
+
+@Serializable
+internal data class PartyInfo(
+    val id: String,
+    val code: String,
+    @SerialName("host_member_id") val hostMemberId: String? = null,
+    val media: PartyMedia,
+    val playback: PartyPlayback? = null,
+    @SerialName("max_members") val maxMembers: Int = 3,
+)
+
+@Serializable
+internal data class PartySnapshot(
+    val party: PartyInfo? = null,
+    val members: List<PartyMember> = emptyList(),
+    @SerialName("member_id") val memberId: String? = null,
+    @SerialName("server_time_ms") val serverTimeMs: Long? = null,
+    val error: String? = null,
+    val ok: Boolean? = null,
+)
+
+enum class PartyError {
+    NotFound,
+    Full,
+    Removed,
+    Ended,
+    RateLimited,
+    SignInRequired,
+    Unavailable,
+    Network,
+}
+
+internal fun partyErrorOf(code: String?): PartyError? = when (code) {
+    null -> null
+    "party_not_found" -> PartyError.NotFound
+    "party_full" -> PartyError.Full
+    "removed", "not_member" -> PartyError.Removed
+    "party_ended" -> PartyError.Ended
+    "rate_limited" -> PartyError.RateLimited
+    else -> PartyError.Network
+}
+
+data class ActiveParty(
+    val id: String,
+    val code: String,
+    val memberId: String,
+    val hostMemberId: String?,
+    val members: List<PartyMember>,
+    val presence: Map<String, PartyPresence>,
+    val media: PartyMedia,
+    val maxMembers: Int,
+    val connected: Boolean,
+) {
+    val isHost: Boolean
+        get() = memberId == hostMemberId
+
+    fun member(id: String?): PartyMember? = members.firstOrNull { it.id == id }
+}
+
+data class PartyUiState(
+    val party: ActiveParty? = null,
+    val busy: Boolean = false,
+)
+
+sealed interface PartyEvent {
+    data class MemberJoined(val name: String) : PartyEvent
+    data class MemberLeft(val name: String) : PartyEvent
+    data object Removed : PartyEvent
+    data object Ended : PartyEvent
+    data class MediaChanged(val media: PartyMedia) : PartyEvent
+}

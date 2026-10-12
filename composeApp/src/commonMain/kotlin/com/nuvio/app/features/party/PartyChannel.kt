@@ -1,0 +1,81 @@
+package com.nuvio.app.features.party
+
+import com.nuvio.app.core.network.SupabaseProvider
+import io.github.jan.supabase.realtime.RealtimeChannel
+import io.github.jan.supabase.realtime.broadcastFlow
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.realtime
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.serialization.json.JsonObject
+
+internal class PartyChannel(
+    private val partyId: String,
+    private val memberId: String,
+) {
+    private var channel: RealtimeChannel? = null
+    private var jobs: List<Job> = emptyList()
+
+    val isConnected: Boolean
+        get() = channel?.status?.value == RealtimeChannel.Status.SUBSCRIBED
+
+    suspend fun open(
+        scope: CoroutineScope,
+        onMessage: (String, JsonObject) -> Unit,
+        onPresence: (joins: Map<String, JsonObject>, leaves: Map<String, JsonObject>) -> Unit,
+        onConnected: (Boolean) -> Unit,
+    ) {
+        val created = SupabaseProvider.client.channel("watch-party:$partyId") {
+            isPrivate = true
+            broadcast {
+                receiveOwnBroadcasts = false
+                acknowledgeBroadcasts = false
+            }
+            presence {
+                key = memberId
+            }
+        }
+        channel = created
+        jobs = EVENTS.map { event ->
+            created.broadcastFlow<JsonObject>(event)
+                .onEach { payload -> onMessage(event, payload) }
+                .launchIn(scope)
+        } + created.presenceChangeFlow()
+            .onEach { action ->
+                onPresence(
+                    action.joins.mapValues { it.value.state },
+                    action.leaves.mapValues { it.value.state },
+                )
+            }
+            .launchIn(scope) + created.status
+            .onEach { status -> onConnected(status == RealtimeChannel.Status.SUBSCRIBED) }
+            .launchIn(scope)
+        created.subscribe(blockUntilSubscribed = false)
+    }
+
+    suspend fun send(event: String, payload: JsonObject) {
+        val current = channel ?: return
+        if (current.status.value != RealtimeChannel.Status.SUBSCRIBED) return
+        current.broadcast(event, payload)
+    }
+
+    suspend fun track(payload: JsonObject) {
+        val current = channel ?: return
+        if (current.status.value != RealtimeChannel.Status.SUBSCRIBED) return
+        current.track(payload)
+    }
+
+    suspend fun close() {
+        jobs.forEach { it.cancel() }
+        jobs = emptyList()
+        val current = channel ?: return
+        channel = null
+        runCatching { SupabaseProvider.client.realtime.removeChannel(current) }
+    }
+
+    private companion object {
+        val EVENTS = listOf("state", "state_request", "member_joined", "member_left", "ended", "media")
+    }
+}
