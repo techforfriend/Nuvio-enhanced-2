@@ -183,6 +183,7 @@ import com.nuvio.app.features.servers.ServerMatcher
 import com.nuvio.app.features.servers.ServerRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
@@ -762,6 +763,7 @@ internal fun MainAppContent(
                     }
 
                     is AppDeepLink.Party -> {
+                        appGateController?.appReady?.first { it }
                         PartyPrompt.showJoin(deepLink.code)
                         AppDeepLinkRepository.markConsumed(deepLink)
                     }
