@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <string name="theme_gold">Dourado</string>
     <string name="theme_jade">Jade</string>
     <string name="theme_rose_gold">Ouro Rosa</string>
