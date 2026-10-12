@@ -230,6 +230,7 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
                 continue
             }
             publishedInitial = true
+            if (!initialLoadCompleted) continue
             val expected = PartySync.expectedPositionMs(playback, PartyRepository.nowMs(), snapshot.durationMs)
             val identity = playback.seq to playback.memberId
             if (identity != lastSeq) {
@@ -249,7 +250,7 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
                 continue
             }
 
-            if (!initialLoadCompleted || snapshot.isLoading || isScrubbingTimeline || snapshot.isEnded) {
+            if (snapshot.isLoading || isScrubbingTimeline || snapshot.isEnded) {
                 mismatchSince = null
                 continue
             }
@@ -276,7 +277,7 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
             val drift = snapshot.positionMs - expected
             if (measureSeekLead && !playback.paused) {
                 measureSeekLead = false
-                seekLeadMs = (seekLeadMs - drift).coerceIn(0L, MAX_SEEK_LEAD_MS)
+                if (abs(drift) < MAX_SEEK_LEAD_MS) seekLeadMs = (seekLeadMs - drift).coerceIn(0L, MAX_SEEK_LEAD_MS)
             }
             when (val correction = PartySync.correction(snapshot.positionMs, expected, playback, partyRateNudge != null)) {
                 is PartyCorrection.Seek -> {
