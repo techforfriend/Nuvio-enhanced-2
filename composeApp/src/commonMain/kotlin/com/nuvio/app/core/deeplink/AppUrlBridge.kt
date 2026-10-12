@@ -1,6 +1,8 @@
 package com.nuvio.app.core.deeplink
 
 import com.nuvio.app.core.tracking.ensureTrackingProvidersRegistered
+import com.nuvio.app.features.party.PARTY_CODE_LENGTH
+import com.nuvio.app.features.party.normalizePartyCode
 import com.nuvio.app.features.player.infusePlaybackCallbacks
 import com.nuvio.app.features.tracking.TrackingProviderRegistry
 import io.ktor.http.Url
@@ -20,6 +22,10 @@ internal sealed interface AppDeepLink {
     ) : AppDeepLink
 
     data object Downloads : AppDeepLink
+
+    data class Party(
+        val code: String,
+    ) : AppDeepLink
 }
 
 internal object AppDeepLinkRepository {
@@ -92,6 +98,11 @@ internal fun parseAppDeepLink(url: String): AppDeepLink? {
         "imdb", "tmdb" -> parseProviderMetaDeepLink(host, pathSegments, parsedUrl)
 
         "downloads" -> AppDeepLink.Downloads
+
+        "party" -> (pathSegments.firstOrNull() ?: firstParameter(parsedUrl, "code"))
+            ?.let(::normalizePartyCode)
+            ?.takeIf { it.length == PARTY_CODE_LENGTH }
+            ?.let(AppDeepLink::Party)
 
         "auth" -> null
 

@@ -123,6 +123,11 @@ import com.nuvio.app.features.library.toMetaPreview
 import com.nuvio.app.features.membership.MemberAccessRepository
 import com.nuvio.app.features.notifications.EpisodeReleaseNotificationsRepository
 import com.nuvio.app.features.p2p.P2pSettingsRepository
+import com.nuvio.app.features.party.JoinPartyDialog
+import com.nuvio.app.features.party.PartyEvent
+import com.nuvio.app.features.party.PartyPrompt
+import com.nuvio.app.features.party.PartyRepository
+import com.nuvio.app.features.party.PartySync
 import com.nuvio.app.features.player.ExternalPlayerIntentResult
 import com.nuvio.app.features.player.externalPlaybackSession
 import com.nuvio.app.features.player.infusePlaybackCallbacks
@@ -307,6 +312,7 @@ internal fun MainAppContent(
         PlayerSettingsRepository.ensureLoaded()
         PlayerSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
+    val partyJoinCode by PartyPrompt.joinCode.collectAsStateWithLifecycle()
     var visiblePlayerEntries by remember { mutableIntStateOf(0) }
     var streamLandscapeLoadingVisible by remember(currentRoute) { mutableStateOf(false) }
     if (currentRoute is PlayerRoute || visiblePlayerEntries > 0 || streamLandscapeLoadingVisible) {
@@ -755,6 +761,11 @@ internal fun MainAppContent(
                         AppDeepLinkRepository.markConsumed(deepLink)
                     }
 
+                    is AppDeepLink.Party -> {
+                        PartyPrompt.showJoin(deepLink.code)
+                        AppDeepLinkRepository.markConsumed(deepLink)
+                    }
+
                     null -> Unit
                 }
             }
@@ -1055,6 +1066,49 @@ internal fun MainAppContent(
                     startFromBeginning = false,
                 )
             }
+
+        LaunchedEffect(navController) {
+            if (!ownsAppRuntime) return@LaunchedEffect
+            PartyPrompt.openMedia.collect { media ->
+                if (navController.currentRoute is PlayerRoute) navController.popBackStack()
+                val resumePositionMs = PartyRepository.playback.value
+                    ?.takeIf { it.mediaKey == null || it.mediaKey == media.key }
+                    ?.let { PartySync.expectedPositionMs(it, PartyRepository.nowMs()) }
+                launchPlaybackWithDownloadPreference(
+                    type = media.type,
+                    videoId = media.videoId ?: media.metaId,
+                    parentMetaId = media.metaId,
+                    parentMetaType = media.metaType,
+                    title = media.title,
+                    logo = media.logo,
+                    poster = media.poster,
+                    background = media.background,
+                    seasonNumber = media.season,
+                    episodeNumber = media.episode,
+                    episodeTitle = media.episodeTitle,
+                    episodeThumbnail = null,
+                    pauseDescription = null,
+                    resumePositionMs = resumePositionMs,
+                    resumeProgressFraction = null,
+                    manualSelection = true,
+                    startFromBeginning = resumePositionMs == null,
+                )
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            if (!ownsAppRuntime) return@LaunchedEffect
+            PartyRepository.events.collect { event ->
+                val message = when (event) {
+                    is PartyEvent.MemberJoined -> getString(Res.string.party_member_joined, event.name)
+                    is PartyEvent.MemberLeft -> getString(Res.string.party_member_left, event.name)
+                    PartyEvent.Removed -> getString(Res.string.party_removed)
+                    PartyEvent.Ended -> getString(Res.string.party_ended)
+                    is PartyEvent.MediaChanged -> getString(Res.string.party_media_changed, event.media.title)
+                }
+                NuvioToastController.show(message)
+            }
+        }
 
         val onCatalogClick: (HomeCatalogSection) -> Unit = { section ->
             val launchId = CatalogLaunchStore.put(
@@ -2012,6 +2066,13 @@ internal fun MainAppContent(
                     .align(Alignment.BottomCenter)
                     .zIndex(15f),
             )
+
+            partyJoinCode?.let { code ->
+                JoinPartyDialog(
+                    initialCode = code,
+                    onDismiss = PartyPrompt::dismissJoin,
+                )
+            }
 
             NuvioToastHost(
                 modifier = Modifier
