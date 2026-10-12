@@ -50,6 +50,11 @@ import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.getString
+import androidx.compose.runtime.CompositionLocalProvider
+import com.nuvio.app.features.party.PartyRepository
+import com.nuvio.app.features.party.matches
+import com.nuvio.app.features.party.partyMediaKey
+import com.nuvio.app.features.streams.LocalStreamHighlight
 
 private data class PendingP2pStreamOpen(
     val stream: StreamItem,
@@ -736,46 +741,62 @@ internal fun StreamDestination(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        StreamsScreen(
-            showLoadingScreen = showLoadingScreen,
-            type = launch.type,
-            videoId = effectiveVideoId,
-            parentMetaId = launch.parentMetaId ?: effectiveVideoId,
-            parentMetaType = launch.parentMetaType ?: launch.type,
-            title = launch.title,
-            logo = launch.logo,
-            poster = launch.poster,
-            background = launch.background,
-            seasonNumber = launch.seasonNumber,
-            episodeNumber = launch.episodeNumber,
-            episodeTitle = launch.episodeTitle,
-            episodeThumbnail = launch.episodeThumbnail,
-            resumePositionMs = launch.resumePositionMs,
-            resumeProgressFraction = launch.resumeProgressFraction,
-            manualSelection = launch.manualSelection,
-            startFromBeginning = launch.startFromBeginning,
-            onStreamSelected = { stream, resolvedResumePositionMs, resolvedResumeProgressFraction ->
-                openSelectedStream(
-                    stream = stream,
-                    resolvedResumePositionMs = resolvedResumePositionMs,
-                    resolvedResumeProgressFraction = resolvedResumeProgressFraction,
-                    forceExternal = false,
-                    forceInternal = false,
-                )
-            },
-            onStreamActionOpen = { stream, openExternally, resolvedResumePositionMs, resolvedResumeProgressFraction ->
-                openSelectedStream(
-                    stream = stream,
-                    resolvedResumePositionMs = resolvedResumePositionMs,
-                    resolvedResumeProgressFraction = resolvedResumeProgressFraction,
-                    forceExternal = openExternally,
-                    forceInternal = !openExternally,
-                )
-            },
-            onBack = onBack,
-            modifier = Modifier.fillMaxSize(),
+    val partyState by PartyRepository.state.collectAsStateWithLifecycle()
+    val hostSource = partyState.party?.media?.takeIf { media ->
+        media.key == partyMediaKey(
+            metaType = launch.parentMetaType ?: launch.type,
+            metaId = launch.parentMetaId ?: effectiveVideoId,
+            season = launch.seasonNumber,
+            episode = launch.episodeNumber,
         )
+    }?.source
+    val hostSourceLabel = stringResource(Res.string.party_host_source)
+    val streamHighlight: (StreamItem) -> String? = remember(hostSource, hostSourceLabel) {
+        { stream -> if (hostSource?.matches(stream) == true) hostSourceLabel else null }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        CompositionLocalProvider(LocalStreamHighlight provides streamHighlight) {
+            StreamsScreen(
+                showLoadingScreen = showLoadingScreen,
+                type = launch.type,
+                videoId = effectiveVideoId,
+                parentMetaId = launch.parentMetaId ?: effectiveVideoId,
+                parentMetaType = launch.parentMetaType ?: launch.type,
+                title = launch.title,
+                logo = launch.logo,
+                poster = launch.poster,
+                background = launch.background,
+                seasonNumber = launch.seasonNumber,
+                episodeNumber = launch.episodeNumber,
+                episodeTitle = launch.episodeTitle,
+                episodeThumbnail = launch.episodeThumbnail,
+                resumePositionMs = launch.resumePositionMs,
+                resumeProgressFraction = launch.resumeProgressFraction,
+                manualSelection = launch.manualSelection,
+                startFromBeginning = launch.startFromBeginning,
+                onStreamSelected = { stream, resolvedResumePositionMs, resolvedResumeProgressFraction ->
+                    openSelectedStream(
+                        stream = stream,
+                        resolvedResumePositionMs = resolvedResumePositionMs,
+                        resolvedResumeProgressFraction = resolvedResumeProgressFraction,
+                        forceExternal = false,
+                        forceInternal = false,
+                    )
+                },
+                onStreamActionOpen = { stream, openExternally, resolvedResumePositionMs, resolvedResumeProgressFraction ->
+                    openSelectedStream(
+                        stream = stream,
+                        resolvedResumePositionMs = resolvedResumePositionMs,
+                        resolvedResumeProgressFraction = resolvedResumeProgressFraction,
+                        forceExternal = openExternally,
+                        forceInternal = !openExternally,
+                    )
+                },
+                onBack = onBack,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         pendingP2pStreamOpen?.let { pending ->
             P2pConsentDialog(
                 onEnableP2p = {
