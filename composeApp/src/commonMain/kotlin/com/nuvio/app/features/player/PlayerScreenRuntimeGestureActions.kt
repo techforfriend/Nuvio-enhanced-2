@@ -2,6 +2,8 @@ package com.nuvio.app.features.player
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -344,8 +346,8 @@ internal fun PlayerScreenRuntime.rememberSurfaceGestureCallbacks(): PlayerSurfac
         touchGesturesEnabled = rememberUpdatedState(playerSettingsUiState.touchGesturesEnabled),
         swipeToSeekEnabled = rememberUpdatedState(playerSettingsUiState.swipeToSeekEnabled),
         playerControlsLocked = rememberUpdatedState(playerControlsLocked),
-        currentPositionMs = rememberUpdatedState(playbackSnapshot.positionMs.coerceAtLeast(0L)),
-        currentDurationMs = rememberUpdatedState(playbackSnapshot.durationMs),
+        currentPositionMs = remember(this) { derivedStateOf { playbackSnapshot.positionMs.coerceAtLeast(0L) } },
+        currentDurationMs = remember(this) { derivedStateOf { playbackSnapshot.durationMs } },
         commitHorizontalSeek = rememberUpdatedState { targetPositionMs: Long ->
             val fromPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
             lastManualSkipSeekPositions = playbackSnapshot.positionMs to targetPositionMs

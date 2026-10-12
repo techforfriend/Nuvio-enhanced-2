@@ -111,10 +111,24 @@ internal class AndroidDownloadScheduler(val context: Context) {
             } else item
         if (transfer.item.status == DownloadStatus.Downloading && Build.VERSION.SDK_INT >= 34 &&
             jobScheduler().getPendingJob(transfer.jobId) == null) {
-            pause(item.fileName)
+            reschedule(item.fileName)
             transfer = store.get(item.fileName) ?: transfer
         }
         return transfer.item
+    }
+
+    fun reschedule(fileName: String) {
+        val transfer = store.get(fileName) ?: return
+        if (transfer.item.status != DownloadStatus.Downloading) return
+        val scheduled = if (Build.VERSION.SDK_INT >= 34) {
+            try {
+                jobScheduler().schedule(buildJob(transfer)) == JobScheduler.RESULT_SUCCESS
+            } catch (error: Exception) {
+                Log.w(TAG, "Could not reschedule download $fileName", error)
+                false
+            }
+        } else false
+        if (!scheduled) pause(fileName)
     }
 
     fun pause(fileName: String) {
@@ -182,7 +196,10 @@ internal class AndroidDownloadScheduler(val context: Context) {
                 if (now - lastProgressAt >= 1_000L || bytes == total) {
                     lastProgressAt = now
                     updateActive(transfer) {
-                        it.copy(item = it.item.copy(downloadedBytes = bytes, totalBytes = total))
+                        it.copy(
+                            retryCount = if (bytes > it.item.downloadedBytes) 0 else it.retryCount,
+                            item = it.item.copy(downloadedBytes = bytes, totalBytes = total),
+                        )
                     }?.let(onProgress)
                 }
             }

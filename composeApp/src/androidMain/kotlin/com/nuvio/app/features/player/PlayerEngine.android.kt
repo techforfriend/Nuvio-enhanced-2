@@ -489,6 +489,7 @@ private fun ExoPlayerSurface(
                 .buildWithAssSupportCompat(
                     context = context,
                     renderType = libassRenderType.toAssRenderType(),
+                    config = createLibassHandlerConfig(context),
                     dataSourceFactory = dataSourceFactory,
                     extractorsFactory = extractorsFactory,
                     renderersFactory = renderersFactory
@@ -939,6 +940,9 @@ private fun ExoPlayerSurface(
             object : PlayerEngineController {
                 override val playbackEngine = AndroidPlaybackEngine.ExoPlayer
 
+                private var cachedAudioTracksSource: androidx.media3.common.Tracks? = null
+                private var cachedAudioTracks: List<AudioTrack> = emptyList()
+
                 override fun play() {
                     InAppLogger.debug("ExoPlayer/Android", "control play positionMs=${exoPlayer.currentPosition.coerceAtLeast(0L)}")
                     exoPlayer.playWhenReady = true
@@ -1008,7 +1012,13 @@ private fun ExoPlayerSurface(
                 }
 
                 override fun getAudioTracks(): List<AudioTrack> {
+                    val currentTracks = exoPlayer.currentTracks
+                    if (currentTracks === cachedAudioTracksSource) {
+                        return cachedAudioTracks
+                    }
                     val tracks = exoPlayer.extractAudioTracks(context)
+                    cachedAudioTracksSource = currentTracks
+                    cachedAudioTracks = tracks
                     InAppLogger.debug(
                         "ExoPlayer/Android",
                         "getAudioTracks count=${tracks.size} selected=${tracks.firstOrNull { it.isSelected }?.index ?: -1}",
@@ -1254,6 +1264,7 @@ private fun ExoPlayerSurface(
                     player = exoPlayer,
                     enabled = useLibass,
                     renderType = libassRenderType,
+                    subtitleDelayUsProvider = { latestSubtitleDelayMs.value.toLong() * 1_000L },
                 )
                 applySubtitleStyle(currentSubtitleStyle, pipSubtitleScale)
             }
@@ -1269,6 +1280,7 @@ private fun ExoPlayerSurface(
                 player = exoPlayer,
                 enabled = useLibass,
                 renderType = libassRenderType,
+                subtitleDelayUsProvider = { latestSubtitleDelayMs.value.toLong() * 1_000L },
             )
             playerView.applySubtitleStyle(currentSubtitleStyle, pipSubtitleScale)
         },
@@ -2747,6 +2759,7 @@ private fun PlayerView.syncLibassOverlay(
     player: ExoPlayer,
     enabled: Boolean,
     renderType: LibassRenderType,
+    subtitleDelayUsProvider: () -> Long,
 ) {
     val containerId = if (renderType == LibassRenderType.OVERLAY_OPEN_GL) {
         R.id.libass_overlay_container_gl
@@ -2775,6 +2788,11 @@ private fun PlayerView.syncLibassOverlay(
 
     overlayContainer.removeAssOverlayChildren()
     val assSubtitleView = AssSubtitleView(overlayContainer.context, assHandler)
+    assSubtitleView.attachVsyncRenderDriver(
+        player = player,
+        assHandler = assHandler,
+        subtitleDelayUsProvider = subtitleDelayUsProvider,
+    )
     overlayContainer.addView(
         assSubtitleView,
         android.widget.FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)

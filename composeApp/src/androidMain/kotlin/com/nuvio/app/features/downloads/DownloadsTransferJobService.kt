@@ -58,7 +58,7 @@ class DownloadsTransferJobService : JobService() {
         runs.remove(generation)?.cancel()
         val transfer = scheduler.store.get(fileName)?.takeIf { it.generation == generation } ?: return false
         if (params.stopReason == JobParameters.STOP_REASON_USER) {
-            scheduler.pause(fileName)
+            scheduler.reschedule(fileName)
             return false
         }
         return scheduler.isActive(transfer)
