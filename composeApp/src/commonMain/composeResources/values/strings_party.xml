@@ -4,7 +4,7 @@
     <string name="party_start_description">Invite up to two friends. Everyone plays from their own sources and stays in sync.</string>
     <string name="party_start_action">Start watch party</string>
     <string name="party_sign_in_required">Sign in to your Nuvio account to use watch parties.</string>
-    <string name="party_unavailable">Watch parties aren\'t available on this server.</string>
+    <string name="party_unavailable">Watch parties aren't available on this server.</string>
     <string name="party_code_label">Party code</string>
     <string name="party_copy_invite">Copy invite</string>
     <string name="party_invite_copied">Invite copied</string>
@@ -19,7 +19,7 @@
     <string name="party_status_elsewhere">Watching something else</string>
     <string name="party_status_offline">Offline</string>
     <string name="party_remove_title">Remove %1$s?</string>
-    <string name="party_remove_message">They won\'t be able to join this party again.</string>
+    <string name="party_remove_message">They won't be able to join this party again.</string>
     <string name="party_leave">Leave party</string>
     <string name="party_end">End for everyone</string>
     <string name="party_end_title">End the watch party?</string>
@@ -40,11 +40,11 @@
     <string name="party_join_action">Join</string>
     <string name="party_error_not_found">No watch party found with that code.</string>
     <string name="party_error_full">This watch party is full.</string>
-    <string name="party_error_removed">You can\'t join this watch party.</string>
+    <string name="party_error_removed">You can't join this watch party.</string>
     <string name="party_error_ended">This watch party has ended.</string>
     <string name="party_error_rate_limited">Too many attempts. Try again in a few minutes.</string>
-    <string name="party_error_network">Couldn\'t reach the watch party. Check your connection.</string>
+    <string name="party_error_network">Couldn't reach the watch party. Check your connection.</string>
     <string name="party_settings_description">Join friends with a party code</string>
-    <string name="party_host_source">Host\'s source</string>
+    <string name="party_host_source">Host's source</string>
     <string name="party_episode_format">S%1$d E%2$d</string>
 </resources>
