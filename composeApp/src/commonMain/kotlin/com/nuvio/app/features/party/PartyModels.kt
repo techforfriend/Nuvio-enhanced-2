@@ -110,6 +110,7 @@ internal fun partyErrorOf(code: String?): PartyError? = when (code) {
     "removed", "not_member" -> PartyError.Removed
     "party_ended" -> PartyError.Ended
     "rate_limited" -> PartyError.RateLimited
+    "unavailable" -> PartyError.Unavailable
     else -> PartyError.Network
 }
 

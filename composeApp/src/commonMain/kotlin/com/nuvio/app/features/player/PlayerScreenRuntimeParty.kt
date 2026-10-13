@@ -355,7 +355,7 @@ internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
             visible = showPartyPanel,
             state = partyState,
             playerMediaKey = partyKey,
-            isSupported = PartyRepository.isSupported,
+            isSupported = PartyRepository.available.collectAsStateWithLifecycle().value,
             canStart = PartyRepository.canUse,
             onStart = { startParty() },
             onPlayForEveryone = {

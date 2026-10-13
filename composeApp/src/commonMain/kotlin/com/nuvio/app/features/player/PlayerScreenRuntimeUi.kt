@@ -308,7 +308,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                 flushWatchProgress()
                 args.onBack()
             },
-            onPartyClick = if (PartyRepository.isSupported) {
+            onPartyClick = if (PartyRepository.available.collectAsStateWithLifecycle().value) {
                 {
                     showPartyPanel = true
                     controlsVisible = false

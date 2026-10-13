@@ -107,7 +107,10 @@ private const val SettingsSearchRevealAnimationMillis = 240L
 private const val SettingsSearchRevealHapticDelayMillis = 90L
 
 private val watchPartyClick: (() -> Unit)?
-    get() = if (PartyRepository.isSupported) ({ PartyPrompt.showJoin() }) else null
+    @Composable get() {
+        val available by PartyRepository.available.collectAsStateWithLifecycle()
+        return if (available) ({ PartyPrompt.showJoin() }) else null
+    }
 
 private fun SettingsPage.isEnabledByPolicy(): Boolean =
     when (this) {
@@ -663,6 +666,7 @@ private fun MobileSettingsScreen(
             }
         }
 
+        val onWatchPartyClick = watchPartyClick
         NuvioScreen(
             modifier = Modifier.nestedScroll(rootSearchRevealConnection),
             listState = listState,
@@ -717,7 +721,7 @@ private fun MobileSettingsScreen(
                             onTestUpdateBannerClick = onTestUpdateBannerClick,
                             onAccountClick = onAccountClick,
                             onSwitchProfileClick = onSwitchProfile,
-                            onWatchPartyClick = watchPartyClick,
+                            onWatchPartyClick = onWatchPartyClick,
                             showSupportersContributorsPage = AppFeaturePolicy.supportersContributorsPageEnabled,
                         )
                     }
@@ -1081,6 +1085,7 @@ private fun TabletSettingsScreen(
                     listState.animateScrollToItem(0)
                 }
             }
+            val onWatchPartyClick = watchPartyClick
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -1150,7 +1155,7 @@ private fun TabletSettingsScreen(
                                 onTestUpdateBannerClick = onTestUpdateBannerClick,
                                 onAccountClick = { openInlinePage(SettingsPage.Account) },
                                 onSwitchProfileClick = onSwitchProfile,
-                                onWatchPartyClick = watchPartyClick,
+                                onWatchPartyClick = onWatchPartyClick,
                                 showAccountSection = activeCategory == SettingsCategory.Account,
                                 showGeneralSection = activeCategory == SettingsCategory.General,
                                 showAboutSection = activeCategory == SettingsCategory.About,

@@ -4,6 +4,8 @@ import co.touchlab.kermit.Logger
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
 import com.nuvio.app.core.network.ServerConfigurationRepository
+import com.nuvio.app.core.sync.AppForegroundMonitor
+import com.nuvio.app.core.sync.AppVisibility
 import com.nuvio.app.core.sync.SyncClientIdentity
 import com.nuvio.app.features.profiles.ProfileRepository
 import io.github.jan.supabase.realtime.Presence
@@ -17,9 +19,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -56,6 +63,11 @@ object PartyRepository {
     private val _events = MutableSharedFlow<PartyEvent>(extraBufferCapacity = 16)
     val events: SharedFlow<PartyEvent> = _events.asSharedFlow()
 
+    private val _enabled = MutableStateFlow(true)
+    val available: StateFlow<Boolean> = combine(ServerConfigurationRepository.active, _enabled) { server, enabled ->
+        server.capabilities.watchParty && enabled
+    }.stateIn(scope, SharingStarted.Eagerly, ServerConfigurationRepository.active.value.capabilities.watchParty)
+
     private var channel: PartyChannel? = null
     private var sessionScope: CoroutineScope? = null
     private var sessionJob: Job? = null
@@ -76,10 +88,17 @@ object PartyRepository {
                 }
             }
         }
+        scope.launch {
+            refreshEnabled()
+            AppForegroundMonitor.events()
+                .flowOn(Dispatchers.Main)
+                .filter { it == AppVisibility.Foreground }
+                .collect { refreshEnabled() }
+        }
     }
 
     val isSupported: Boolean
-        get() = ServerConfigurationRepository.active.value.capabilities.watchParty
+        get() = available.value
 
     val canUse: Boolean
         get() = isSupported && (AuthRepository.state.value as? AuthState.Authenticated)?.isAnonymous == false
@@ -168,7 +187,10 @@ object PartyRepository {
                 try {
                     val sentAt = clock.mark()
                     val snapshot = request(identity())
-                    partyErrorOf(snapshot.error)?.let { error -> return@withLock error }
+                    partyErrorOf(snapshot.error)?.let { error ->
+                        if (error == PartyError.Unavailable) _enabled.value = false
+                        return@withLock error
+                    }
                     val party = snapshot.toActiveParty() ?: return@withLock PartyError.Network
                     stopSession()
                     clock.reset()
@@ -270,7 +292,10 @@ object PartyRepository {
                 reason = payload.string("reason"),
                 hostMemberId = payload.string("host_member_id"),
             )
-            "ended" -> finish(PartyEvent.Ended)
+            "ended" -> {
+                if (payload.string("reason") == "disabled") _enabled.value = false
+                finish(PartyEvent.Ended)
+            }
             "media" -> {
                 val media = payload["media"]?.let { decode(it, PartyMedia.serializer()) } ?: return
                 val playback = payload["playback"]?.takeIf { it !is JsonNull }?.let { decode(it, PartyPlayback.serializer()) }
@@ -445,6 +470,13 @@ object PartyRepository {
             val snapshot = runRemote { PartyApi.heartbeat(party.id, deviceId()) } ?: continue
             applySnapshot(snapshot)
         }
+    }
+
+    private suspend fun refreshEnabled() {
+        if (!ServerConfigurationRepository.active.value.capabilities.watchParty) return
+        val enabled = runRemote { PartyApi.enabled() } ?: return
+        _enabled.value = enabled
+        if (!enabled) finish(PartyEvent.Ended)
     }
 
     private suspend fun refineClock() {
