@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -110,6 +111,9 @@ import com.nuvio.app.features.details.components.DetailMetaInfo
 import com.nuvio.app.features.details.components.DetailPosterRailSection
 import com.nuvio.app.features.details.components.DetailProductionSection
 import com.nuvio.app.features.details.components.DetailSeriesContent
+import com.nuvio.app.features.details.components.EpisodeNavigatorState
+import com.nuvio.app.features.details.components.detailEpisodeListItems
+import com.nuvio.app.features.details.components.rememberEpisodeNavigatorState
 import com.nuvio.app.features.details.components.DetailTrailersSection
 import com.nuvio.app.features.details.components.EpisodeWatchedActionSheet
 import com.nuvio.app.features.details.components.SeasonWatchedActionSheet
@@ -921,7 +925,6 @@ fun MetaDetailsScreen(
                 val onDownloadClick: (() -> Unit)? = if (showDownloadButton && downloadHandler != null) {
                     {
                         stopHeroTrailerForNavigation()
-                        // Same target as Play, but the stream list opens in download mode.
                         if ((meta.type == "series" || hasEpisodes) && seriesAction != null) {
                             downloadHandler(
                                 meta.type,
@@ -1098,6 +1101,7 @@ fun MetaDetailsScreen(
                     )
                 }
                 val listState = rememberLazyListState()
+                val episodeNavigator = rememberEpisodeNavigatorState(meta.id)
                 val heroStretchState = rememberHeroStretchState(listState)
                 val density = LocalDensity.current
                 val safeAreaTopPx = with(density) {
@@ -1423,6 +1427,10 @@ fun MetaDetailsScreen(
                                     onCompanyClick = onCompanyClick,
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
+                                    episodeNavigator = episodeNavigator,
+                                    listState = listState,
+                                    leadingItemCount = 1,
+                                    stickyBackground = heroGradientColor ?: colorScheme.background,
                                 )
 
                                 item(key = "detail-bottom-spacer") {
@@ -2023,7 +2031,6 @@ private fun DetailHeaderOverlay(
     )
 }
 
-/** Lets the previous bottom sheet finish dismissing before the rating sheet is presented. */
 private const val RATING_SHEET_OPEN_DELAY_MS = 350L
 
 @Composable
@@ -2139,8 +2146,13 @@ private fun LazyListScope.configuredMetaSectionItems(
     onCompanyClick: ((MetaCompany, String) -> Unit)?,
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
+    episodeNavigator: EpisodeNavigatorState? = null,
+    listState: LazyListState? = null,
+    leadingItemCount: Int = 0,
+    stickyBackground: Color = Color.Unspecified,
 ) {
     val enabledItems = settings.items.filter { it.enabled }
+    var emittedItemCount = 0
     fun sectionHasContent(key: MetaScreenSectionKey): Boolean =
         metaSectionHasContent(
             key = key,
@@ -2162,6 +2174,7 @@ private fun LazyListScope.configuredMetaSectionItems(
         sectionItems: List<MetaScreenSectionItem>,
         forceTabLayout: Boolean = settings.tabLayout,
     ) {
+        emittedItemCount += 1
         item(key = key) {
             DetailSectionContainer(
                 horizontalPadding = contentHorizontalPadding,
@@ -2230,10 +2243,36 @@ private fun LazyListScope.configuredMetaSectionItems(
         }
     }
 
+    fun addLazyEpisodeItems(): Boolean {
+        if (!hasEpisodes || settings.episodeCardStyle != MetaEpisodeCardStyle.List) return false
+        val navigator = episodeNavigator ?: return false
+        val state = listState ?: return false
+        val emitted = detailEpisodeListItems(
+            meta = meta,
+            navigator = navigator,
+            listState = state,
+            firstItemIndex = leadingItemCount + emittedItemCount,
+            horizontalPadding = contentHorizontalPadding,
+            contentMaxWidth = contentMaxWidth,
+            stickyBackground = stickyBackground,
+            preferredSeasonNumber = preferredEpisodeSeasonNumber,
+            progressByVideoId = progressByVideoId,
+            watchedKeys = watchedKeys,
+            episodeRatingsVisibility = settings.episodeRatingsVisibility,
+            blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+            onEpisodeClick = onEpisodeClick,
+            onEpisodeLongPress = onEpisodeLongPress,
+            onSeasonLongPress = onSeasonLongPress,
+        )
+        emittedItemCount += emitted
+        return emitted > 0
+    }
+
     if (!settings.tabLayout) {
         enabledItems
             .filter { sectionHasContent(it.key) }
             .forEach { section ->
+                if (section.key == MetaScreenSectionKey.EPISODES && addLazyEpisodeItems()) return@forEach
                 addSectionItem(
                     key = "detail-section-${section.key.name}",
                     sectionItems = listOf(section),
@@ -2245,9 +2284,10 @@ private fun LazyListScope.configuredMetaSectionItems(
 
     val processedGroups = mutableSetOf<Int>()
     enabledItems.forEach { section ->
-        val groupId = section.tabGroup
+        val groupId = section.tabGroupForRendering(settings.episodeCardStyle)
         if (groupId == null) {
-            if (sectionHasContent(section.key)) {
+            if (section.key == MetaScreenSectionKey.EPISODES && sectionHasContent(section.key) && addLazyEpisodeItems()) {
+            } else if (sectionHasContent(section.key)) {
                 addSectionItem(
                     key = "detail-section-${section.key.name}",
                     sectionItems = listOf(section),
@@ -2257,7 +2297,7 @@ private fun LazyListScope.configuredMetaSectionItems(
         } else if (groupId !in processedGroups) {
             processedGroups.add(groupId)
             val groupMembers = enabledItems.filter { item ->
-                item.tabGroup == groupId && sectionHasContent(item.key)
+                item.tabGroupForRendering(settings.episodeCardStyle) == groupId && sectionHasContent(item.key)
             }
             if (groupMembers.isNotEmpty()) {
                 addSectionItem(
@@ -2541,25 +2581,20 @@ private fun ConfiguredMetaSections(
     }
 
     if (!settings.tabLayout) {
-        // Standard mode: render sections individually in order
         enabledItems.forEach { section -> RenderSection(section.key) }
     } else {
-        // Tab layout mode: group sections by tabGroup, render grouped ones as tabs
         val processedGroups = mutableSetOf<Int>()
 
         enabledItems.forEach { section ->
             val groupId = section.tabGroup
             if (groupId == null) {
-                // Standalone section
                 RenderSection(section.key)
             } else if (groupId !in processedGroups) {
-                // First encounter of this group — render the whole tabbed group
                 processedGroups.add(groupId)
                 val groupMembers = enabledItems
                     .filter { it.tabGroup == groupId && sectionHasContent(it.key) }
                 if (groupMembers.isEmpty()) return@forEach
                 if (groupMembers.size == 1) {
-                    // Only one member with content — render standalone
                     RenderSection(groupMembers.first().key)
                 } else {
                     TabbedSectionGroup(
@@ -2569,7 +2604,6 @@ private fun ConfiguredMetaSections(
                     }
                 }
             }
-            // else: already processed as part of group, skip
         }
     }
 }
@@ -2591,7 +2625,6 @@ private fun TabbedSectionGroup(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        // Tab row using the same style as DetailSectionTitle
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val titleSize = if (maxWidth >= 720.dp) 22.sp else 20.sp
             val headerStyle = MaterialTheme.typography.titleLarge.copy(
@@ -2629,7 +2662,6 @@ private fun TabbedSectionGroup(
             }
         }
 
-        // Content with crossfade
         Crossfade(
             targetState = tabs[selectedIndex].first,
             animationSpec = tween(durationMillis = 200),

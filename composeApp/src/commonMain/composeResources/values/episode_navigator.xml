@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="episode_navigator_search_hint">Search title, plot or number</string>
+    <string name="episode_navigator_clear_search">Clear search</string>
+    <string name="episode_navigator_go_to">Go to</string>
+    <string name="episode_navigator_sort">Sort</string>
+    <string name="episode_navigator_count">%1$d of %2$d episodes</string>
+    <string name="episode_navigator_no_match">No episodes match ‘%1$s’</string>
+    <string name="episode_navigator_go_to_title">Jump to episode</string>
+    <string name="episode_navigator_episode_number">Episode number</string>
+    <string name="episode_navigator_go">Go</string>
+    <string name="episode_navigator_go_to_help">Type a number, or pick one below. Underlined = watched, outlined = up next.</string>
+    <string name="episode_navigator_out_of_range">%1$s has episodes %2$d–%3$d</string>
+    <string name="episode_navigator_sort_title">Sort episodes</string>
+    <string name="episode_navigator_sort_first_to_last">Episode: first to last</string>
+    <string name="episode_navigator_sort_last_to_first">Episode: last to first</string>
+    <string name="episode_navigator_sort_highest_rated">Highest rated</string>
+    <string name="episode_navigator_sort_newest_aired">Newest aired</string>
+    <string name="episode_navigator_sort_unwatched_first">Unwatched first</string>
+</resources>

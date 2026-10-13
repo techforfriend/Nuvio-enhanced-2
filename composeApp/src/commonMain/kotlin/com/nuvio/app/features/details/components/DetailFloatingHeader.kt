@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import coil3.compose.AsyncImage
@@ -45,6 +46,16 @@ import com.nuvio.app.navigation.LocalUseNativeNavigation
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+
+@Composable
+internal fun detailFloatingHeaderHeight(): Dp {
+    val safeAreaTop = if (LocalUseNativeNavigation.current) {
+        platformPhysicalTopInset()
+    } else {
+        WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    }
+    return (safeAreaTop - 6.dp).coerceAtLeast(safeAreaTop * 0.8f) + 56.dp
+}
 
 @Composable
 fun DetailFloatingHeader(
@@ -110,9 +121,6 @@ fun DetailFloatingHeader(
                         iconSize = 24.dp,
                     )
                 } else {
-                    // Native iOS navigation owns the back button, but retaining
-                    // this slot keeps the Compose logo centered as the floating
-                    // header replaces the hero while scrolling.
                     Box(modifier = Modifier.size(40.dp))
                 }
 
