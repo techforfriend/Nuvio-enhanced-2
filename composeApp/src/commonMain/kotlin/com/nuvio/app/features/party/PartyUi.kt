@@ -204,31 +204,65 @@ internal fun AvatarStack(
     animateIn: Boolean = false,
 ) {
     val shown = members.take(3)
+    val extra = members.size - shown.size
+    val slots = shown.size + if (extra > 0) 1 else 0
     val step = size * 0.7f
-    Box(modifier = modifier.width(size + step * (shown.size - 1).coerceAtLeast(0))) {
+    Box(modifier = modifier.width(size + step * (slots - 1).coerceAtLeast(0))) {
         shown.forEachIndexed { index, member ->
             key(member.id) {
-                val scale = remember { Animatable(if (animateIn) 0f else 1f) }
-                if (animateIn) {
-                    LaunchedEffect(Unit) {
-                        delay(index * 90L)
-                        scale.animateTo(1f, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow))
-                    }
+                StackSlot(index = index, slots = slots, step = step, ringColor = ringColor, animateIn = animateIn) {
+                    PartyAvatar(member = member, size = size)
                 }
-                PartyAvatar(
-                    member = member,
-                    size = size,
-                    modifier = Modifier
-                        .offset(x = step * index)
-                        .zIndex((shown.size - index).toFloat())
-                        .graphicsLayer {
-                            scaleX = scale.value
-                            scaleY = scale.value
-                        }
-                        .border(2.dp, ringColor, CircleShape),
-                )
             }
         }
+        if (extra > 0) {
+            StackSlot(index = shown.size, slots = slots, step = step, ringColor = ringColor, animateIn = animateIn) {
+                Box(
+                    modifier = Modifier
+                        .size(size)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.nuvio.colors.surfaceCard),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "+$extra",
+                        color = MaterialTheme.nuvio.colors.textPrimary,
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = (size.value * 0.36f).sp),
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StackSlot(
+    index: Int,
+    slots: Int,
+    step: Dp,
+    ringColor: Color,
+    animateIn: Boolean,
+    content: @Composable () -> Unit,
+) {
+    val scale = remember { Animatable(if (animateIn) 0f else 1f) }
+    if (animateIn) {
+        LaunchedEffect(Unit) {
+            delay(index * 90L)
+            scale.animateTo(1f, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow))
+        }
+    }
+    Box(
+        modifier = Modifier
+            .offset(x = step * index)
+            .zIndex((slots - index).toFloat())
+            .graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+            }
+            .border(2.dp, ringColor, CircleShape),
+    ) {
+        content()
     }
 }
 
