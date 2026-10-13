@@ -53,7 +53,6 @@ import com.nuvio.app.features.party.PartyMemberStatus
 import com.nuvio.app.features.party.PartyNotice
 import com.nuvio.app.features.party.PartyPanel
 import com.nuvio.app.features.party.PartyPlayback
-import com.nuvio.app.features.party.PartyPrompt
 import com.nuvio.app.features.party.PartyRepository
 import com.nuvio.app.features.party.PartySource
 import com.nuvio.app.features.party.PartySync
@@ -446,7 +445,7 @@ internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
                 party?.media?.let { media ->
                     showPartyPanel = false
                     flushWatchProgress()
-                    PartyPrompt.openPartyMedia(media)
+                    args.onOpenPartyMedia(media)
                 }
             },
             onLeave = {

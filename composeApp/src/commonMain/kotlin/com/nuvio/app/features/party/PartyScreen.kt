@@ -47,9 +47,6 @@ import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.nuvio
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.party_host_hint
@@ -62,15 +59,6 @@ import nuvio.composeapp.generated.resources.party_title
 import nuvio.composeapp.generated.resources.party_watch_with_party
 import org.jetbrains.compose.resources.stringResource
 
-object PartyPrompt {
-    private val _openMedia = MutableSharedFlow<PartyMedia>(extraBufferCapacity = 1)
-    val openMedia: SharedFlow<PartyMedia> = _openMedia.asSharedFlow()
-
-    fun openPartyMedia(media: PartyMedia) {
-        _openMedia.tryEmit(media)
-    }
-}
-
 private enum class PartyScreenMode {
     Join,
     Joined,
@@ -81,6 +69,7 @@ private enum class PartyScreenMode {
 fun PartyScreen(
     initialCode: String,
     onBack: () -> Unit,
+    onWatch: (PartyMedia) -> Unit,
 ) {
     val state by PartyRepository.state.collectAsStateWithLifecycle()
     val party = state.party
@@ -97,7 +86,7 @@ fun PartyScreen(
     LaunchedEffect(joined) {
         val current = joined ?: return@LaunchedEffect
         delay(1600)
-        PartyPrompt.openPartyMedia(current.media)
+        onWatch(current.media)
         joined = null
     }
 
@@ -132,7 +121,7 @@ fun PartyScreen(
                             },
                         )
                         PartyScreenMode.Joined -> (joined ?: party)?.let { JoinedContent(it) }
-                        PartyScreenMode.Party -> party?.let { PartyContent(it) }
+                        PartyScreenMode.Party -> party?.let { PartyContent(it, onWatch) }
                     }
                 }
             }
@@ -324,7 +313,10 @@ private fun JoinedContent(party: ActiveParty) {
 }
 
 @Composable
-private fun PartyContent(party: ActiveParty) {
+private fun PartyContent(
+    party: ActiveParty,
+    onWatch: (PartyMedia) -> Unit,
+) {
     val tokens = MaterialTheme.nuvio
     Column(
         modifier = Modifier
@@ -368,7 +360,7 @@ private fun PartyContent(party: ActiveParty) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             DialogButton(
                 text = stringResource(Res.string.party_watch_with_party),
-                onClick = { PartyPrompt.openPartyMedia(party.media) },
+                onClick = { onWatch(party.media) },
                 style = DialogButtonStyle.Primary,
                 modifier = Modifier
                     .fillMaxWidth()
