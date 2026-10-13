@@ -1373,6 +1373,7 @@ struct NativeNavContentView: View {
 }
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var systemUI = SystemUI.shared
 
     var body: some View {
@@ -1386,6 +1387,13 @@ struct ContentView: View {
         }
         .persistentSystemOverlays(systemUI.isPlayerImmersive ? .hidden : .automatic)
         .statusBarHidden(systemUI.isPlayerImmersive)
+        .onChange(of: scenePhase) { phase in
+            if phase == .active {
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: playerSceneDidActivateNotification, object: nil)
+                }
+            }
+        }
     }
 }
 
