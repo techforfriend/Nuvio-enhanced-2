@@ -104,7 +104,7 @@ jobs:
       - name: Summarize IPA
         run: |
           configuration_slug="$(printf '%s' "${IOS_CONFIGURATION}" | tr '[:upper:]' '[:lower:]')"
-          ipa_path="$(find build/ios-ipa -maxdepth 1 -type f -name "*-full-${configuration_slug}.ipa" -print -quit)"
+          ipa_path="$(find build/ios-ipa -maxdepth 1 -type f -name "*-${configuration_slug}.ipa" -print -quit)"
           if [[ -z "${ipa_path}" ]]; then
             echo "No IPA was produced." >&2
             exit 1
