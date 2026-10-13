@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import ComposeApp
 
 enum NuvioTabBarBehavior: String, CaseIterable {
     case off
@@ -98,33 +99,73 @@ struct NuvioGlassTabBar: View {
         return items
     }
 
+    private static let tapFeedback: UIImpactFeedbackGenerator = {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        return generator
+    }()
+
+    private static var tapHapticsEnabled: Bool {
+        let defaults = UserDefaults.standard
+        let key = "NuvioTabBarHapticsEnabled"
+        return defaults.object(forKey: key) == nil ? true : defaults.bool(forKey: key)
+    }
+
+    private var isCompactHeight: Bool { verticalSizeClass == .compact }
+
     var body: some View {
-        GlassEffectContainer(spacing: 0) {
-            Group {
-                if let mirroredItems, let expandedMetrics {
-                    mirroredContent(items: mirroredItems, metrics: expandedMetrics)
-                } else {
-                    HStack(spacing: 0) {
-                        ForEach(visibleTabs, id: \.self) { tab in
-                            item(for: tab)
-                                .transition(.opacity)
-                        }
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, expandedHeight != nil ? 0 : (isExpanded ? 3 : 5))
-                    .frame(height: expandedHeight)
-                }
-            }
-            .glassEffect(.clear.interactive(), in: Capsule())
-            .glassEffectID(Self.barGlassID, in: glassNamespace)
+        segmentedBar
+            .padding(.horizontal, 16)
+            .padding(.bottom, bottomInset)
+            .ignoresSafeArea(.container, edges: .bottom)
+    }
+
+    private var segmentedBar: some View {
+        let tabs = appCoordinator.availableTabs
+        let singleAccent = iconStore.accentColors.count <= 1
+        let items = tabs.map { tab in
+            NuvioSegmentedTabBarItem(
+                title: appCoordinator.title(for: tab),
+                baseImage: iconStore.image(for: tab, selected: false),
+                accentImage: iconStore.image(for: tab, selected: true),
+                tintsBaseImage: tab != .settings,
+                tintsAccentImage: tab != .settings && singleAccent
+            )
         }
-        .frame(maxWidth: .infinity, alignment: isExpanded ? .center : .leading)
-        .padding(.bottom, bottomInset)
-        .ignoresSafeArea(.container, edges: .bottom)
-        .allowsHitTesting(!isExpanded)
-        .accessibilityHidden(isExpanded)
-        .animation(.smooth(duration: 0.38), value: isExpanded)
-        .animation(.smooth(duration: 0.26), value: selectedTab)
+        let contentKey = tabs.map { "\($0.rawValue):\(appCoordinator.title(for: $0))" }.joined(separator: "|")
+            + "#\(iconStore.revision)#\(isCompactHeight)"
+        return NuvioSegmentedTabBar(
+            items: items,
+            contentKey: contentKey,
+            selectedIndex: tabs.firstIndex(of: selectedTab) ?? 0,
+            isExpanded: isExpanded,
+            isCompact: isCompactHeight,
+            accentColor: iconStore.accentColor,
+            indicatorColor: iconStore.accentColors.isEmpty
+                ? iconStore.accentColor
+                : iconStore.accentColors[iconStore.accentColors.count / 2],
+            hapticsEnabled: { Self.tapHapticsEnabled },
+            onSelect: { index in
+                guard tabs.indices.contains(index) else { return }
+                appCoordinator.selectedTab = tabs[index]
+            },
+            onReselect: { index in
+                guard tabs.indices.contains(index) else { return }
+                NativeTabBridgeKt.nativeTabSelect(tabName: tabs[index].rawValue)
+            },
+            onLongPress: { index in
+                guard tabs.indices.contains(index), tabs[index] == .settings, appCoordinator.isAppReady else { return }
+                appCoordinator.isProfileSwitcherPresented = true
+            },
+            onCollapsedTap: {
+                if Self.tapHapticsEnabled {
+                    Self.tapFeedback.impactOccurred()
+                    Self.tapFeedback.prepare()
+                }
+                appCoordinator.requestTabBarVisible(true)
+            }
+        )
+        .frame(height: NuvioSegmentedTabBar.height(compact: isCompactHeight))
     }
 
     private func item(for tab: NuvioAppTab) -> some View {
