@@ -108,8 +108,6 @@ private val log = Logger.withTag("SeriesContent")
 
 private const val VerticalEpisodesInitialVisibleCount = 15
 
-internal const val EpisodeNavigatorMinimumEpisodes = 10
-
 @Composable
 fun DetailSeriesContent(
     meta: MetaDetails,
@@ -257,16 +255,14 @@ fun DetailSeriesContent(
                                 }
                             }
                         }
-                        if (seasonEpisodes.size >= EpisodeNavigatorMinimumEpisodes) {
-                            EpisodeNavigatorBar(
-                                state = navigator,
-                                shownCount = shownEpisodes.size,
-                                totalCount = seasonEpisodes.size,
-                                onSubmitNumber = { number ->
-                                    seasonEpisodes.firstOrNull { it.episode == number }?.let(jumpTo)
-                                },
-                            )
-                        }
+                        EpisodeNavigatorBar(
+                            state = navigator,
+                            shownCount = shownEpisodes.size,
+                            totalCount = seasonEpisodes.size,
+                            onSubmitNumber = { number ->
+                                seasonEpisodes.firstOrNull { it.episode == number }?.let(jumpTo)
+                            },
+                        )
                         if (navigator.goToSheetVisible) {
                             EpisodeGoToSheet(
                                 seasonLabel = seasonDisplayLabel(meta, seasonForContent),

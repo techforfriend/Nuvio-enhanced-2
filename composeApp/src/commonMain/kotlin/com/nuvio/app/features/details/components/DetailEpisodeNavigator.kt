@@ -563,7 +563,6 @@ internal fun LazyListScope.detailEpisodeListItems(
     }
     val query = navigator.query
     val shown = seasonEpisodes.filteredAndSortedForNavigator(query, navigator.sort, isWatched)
-    val showBar = seasonEpisodes.size >= EpisodeNavigatorMinimumEpisodes
     var emitted = 0
 
     item(key = "detail-episodes-header") {
@@ -581,8 +580,8 @@ internal fun LazyListScope.detailEpisodeListItems(
     }
     emitted += 1
 
-    val firstEpisodeIndex = firstItemIndex + emitted + if (showBar) 1 else 0
-    if (showBar) {
+    val firstEpisodeIndex = firstItemIndex + emitted + 1
+    run {
         stickyHeader(key = STICKY_BAR_KEY) {
             EpisodeNavigatorStickyBar(
                 meta = meta,
