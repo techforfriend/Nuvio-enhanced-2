@@ -268,10 +268,11 @@ object PartyRepository {
 
     private fun finish(event: PartyEvent) {
         val partyId = _state.value.party?.id ?: return
-        _events.tryEmit(event)
         scope.launch {
             mutex.withLock {
-                if (_state.value.party?.id == partyId) stopSession()
+                if (_state.value.party?.id != partyId) return@withLock
+                stopSession()
+                _events.tryEmit(event)
             }
         }
     }
