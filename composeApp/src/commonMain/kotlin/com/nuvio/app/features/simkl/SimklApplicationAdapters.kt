@@ -285,6 +285,7 @@ object SimklTrackingProgressProvider : TrackingProgressProvider {
     override fun normalizeParentContentId(parentContentId: String, videoId: String?): String {
         val snapshot = SimklSyncRepository.state.value.snapshot
         val resolvedId = snapshot.resolveCanonicalContentId(parentContentId)
+            ?: videoId?.let(snapshot::resolveAnimeVideoCanonicalContentId)
         return resolvedId ?: parentContentId
     }
 

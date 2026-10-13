@@ -8,6 +8,7 @@ data class MetaDetails(
     val type: String,
     val name: String,
     val imdbId: String? = null,
+    val tvdbId: String? = null,
     val poster: String? = null,
     val background: String? = null,
     val logo: String? = null,

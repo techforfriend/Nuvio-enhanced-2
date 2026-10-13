@@ -35,6 +35,9 @@ internal object MetaDetailsParser {
             type = meta.requiredString("type"),
             name = meta.requiredString("name"),
             imdbId = meta.string("imdb_id"),
+            tvdbId = listOf("_tvdbId", "tvdb_id").firstNotNullOfOrNull { key ->
+                (meta[key] as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf(String::isNotBlank)
+            },
             poster = meta.string("poster"),
             background = meta.string("background") ?: meta.string("landscapePoster")?.takeIf(String::isNotBlank),
             logo = meta.string("logo"),
