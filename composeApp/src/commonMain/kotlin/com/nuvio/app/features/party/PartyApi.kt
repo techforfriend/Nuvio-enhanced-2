@@ -64,6 +64,13 @@ internal object PartyApi {
             put("p_device_id", deviceId)
         })
 
+    suspend fun setHostOnly(partyId: String, deviceId: String, hostOnly: Boolean): PartySnapshot =
+        call("watch_party_set_host_only", buildJsonObject {
+            put("p_party_id", partyId)
+            put("p_device_id", deviceId)
+            put("p_host_only", hostOnly)
+        })
+
     suspend fun removeMember(partyId: String, deviceId: String, memberId: String): PartySnapshot =
         call("watch_party_remove_member", buildJsonObject {
             put("p_party_id", partyId)

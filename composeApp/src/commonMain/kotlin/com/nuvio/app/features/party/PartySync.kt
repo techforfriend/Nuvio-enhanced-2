@@ -59,6 +59,7 @@ internal object PartySync {
         val online = party.presence.keys + party.memberId
         val host = party.hostMemberId
         if (host != null && host in online) return host
+        if (party.hostOnly) return host
         return party.members.firstOrNull { it.id in online }?.id ?: party.memberId
     }
 

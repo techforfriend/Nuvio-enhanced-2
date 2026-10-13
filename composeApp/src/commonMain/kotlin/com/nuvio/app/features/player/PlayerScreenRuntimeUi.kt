@@ -296,7 +296,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             hideDetails = activeSkipInterval != null && !skipIntervalDismissed,
             onNextEpisodeClick = if (nextEpisodeInfo?.hasAired == true && !nextEpisodeAutoPlaySearching && nextEpisodeAutoPlayCountdown == null) {
                 {
-                    playNextEpisode()
+                    if (!partyBlocksControl()) playNextEpisode()
                 }
             } else null,
             onInteraction = { controlsActivityTick += 1 },
@@ -393,14 +393,20 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             showParentalGuide = showParentalGuide,
             onParentalGuideAnimationComplete = { showParentalGuide = false },
             onScrubChange = { positionMs ->
-                isScrubbingTimeline = true
-                scrubbingPositionMs = positionMs
+                if (!isPartyControlLocked) {
+                    isScrubbingTimeline = true
+                    scrubbingPositionMs = positionMs
+                }
             },
             onScrubFinished = { positionMs ->
-                finishTimelineScrub(positionMs)
-                playerController?.seekTo(positionMs)
-                scheduleProgressSyncAfterSeek()
-                publishPartyPlayback(positionMs = positionMs)
+                if (partyBlocksControl()) {
+                    isScrubbingTimeline = false
+                } else {
+                    finishTimelineScrub(positionMs)
+                    playerController?.seekTo(positionMs)
+                    scheduleProgressSyncAfterSeek()
+                    publishPartyPlayback(positionMs = positionMs)
+                }
             },
             horizontalSafePadding = horizontalSafePadding,
             modifier = Modifier.fillMaxSize(),
@@ -458,13 +464,15 @@ private fun BoxScope.RenderPlaybackOverlays(
         skipIntervalDismissed = skipIntervalDismissed,
         controlsVisible = controlsVisible,
         onSkipInterval = { interval ->
-            interval.internalSkipAction(skipIntervals, playbackSnapshot.durationMs)?.let { action ->
-                val durationMs = playbackSnapshot.durationMs
-                val seekMs = if (durationMs > 0L) action.targetMs.coerceAtMost(durationMs - 1) else action.targetMs
-                playerController?.seekTo(seekMs)
-                scheduleProgressSyncAfterSeek()
-                publishPartyPlayback(positionMs = seekMs)
-                skipIntervalDismissed = true
+            if (!partyBlocksControl()) {
+                interval.internalSkipAction(skipIntervals, playbackSnapshot.durationMs)?.let { action ->
+                    val durationMs = playbackSnapshot.durationMs
+                    val seekMs = if (durationMs > 0L) action.targetMs.coerceAtMost(durationMs - 1) else action.targetMs
+                    playerController?.seekTo(seekMs)
+                    scheduleProgressSyncAfterSeek()
+                    publishPartyPlayback(positionMs = seekMs)
+                    skipIntervalDismissed = true
+                }
             }
         },
         onDismissSkipInterval = { skipIntervalDismissed = true },
@@ -478,7 +486,7 @@ private fun BoxScope.RenderPlaybackOverlays(
         nextEpisodeAutoPlayCountdown = nextEpisodeAutoPlayCountdown,
         blurUnwatchedEpisodes = metaScreenSettingsUiState.blurUnwatchedEpisodes,
         onPlayNextEpisode = {
-            playNextEpisode()
+            if (!partyBlocksControl()) playNextEpisode()
         },
         onDismissNextEpisode = {
             cancelNextEpisodeAutoPlay()

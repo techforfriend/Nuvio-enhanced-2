@@ -47,6 +47,12 @@
     <string name="party_settings_description">Join friends with a party code</string>
     <string name="party_source">Party's source</string>
     <string name="party_episode_format">S%1$d E%2$d</string>
+    <string name="party_host_only_title">Only I can control playback</string>
+    <string name="party_host_only_description">Others can still pause for themselves.</string>
+    <string name="party_host_only_note">Only the host can control playback</string>
+    <string name="party_control_host_only">Only the host can control playback now</string>
+    <string name="party_control_everyone">Everyone can control playback now</string>
+    <string name="party_paused_for_you">Paused for you</string>
     <string name="party_action_paused">%1$s paused</string>
     <string name="party_action_resumed">%1$s resumed</string>
     <string name="party_action_seeked">%1$s skipped to %2$s</string>

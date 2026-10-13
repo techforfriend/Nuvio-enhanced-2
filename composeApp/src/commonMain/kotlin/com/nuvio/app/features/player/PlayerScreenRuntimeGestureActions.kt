@@ -155,6 +155,10 @@ internal fun PlayerScreenRuntime.showVolumeFeedback(level: PlayerAudioLevel) {
 }
 
 internal fun PlayerScreenRuntime.togglePlayback() {
+    if (isPartyControlLocked) {
+        togglePartySelfPause()
+        return
+    }
     if (playbackSnapshot.isPlaying) {
         shouldPlay = false
         playerController?.pause()
@@ -170,6 +174,7 @@ internal fun PlayerScreenRuntime.togglePlayback() {
 }
 
 internal fun PlayerScreenRuntime.seekBy(offsetMs: Long) {
+    if (partyBlocksControl()) return
     val fromMs = pendingSeekTarget
         ?.takeIf { (_, mark) -> mark.elapsedNow() < PendingSeekWindow }
         ?.first
@@ -189,6 +194,7 @@ internal fun PlayerScreenRuntime.seekBy(offsetMs: Long) {
 }
 
 internal fun PlayerScreenRuntime.handleDoubleTapSeek(direction: PlayerSeekDirection) {
+    if (partyBlocksControl()) return
     val currentPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
     val currentSeekState = accumulatedSeekState
     val nextState = if (currentSeekState?.direction == direction) {
@@ -241,6 +247,7 @@ internal fun PlayerScreenRuntime.cycleResizeMode() {
 }
 
 internal fun PlayerScreenRuntime.cyclePlaybackSpeed() {
+    if (partyBlocksControl()) return
     val speeds = listOf(1f, 1.25f, 1.5f, 2f)
     val current = playbackSnapshot.playbackSpeed
     val next = speeds.firstOrNull { it > current + 0.01f } ?: speeds.first()
@@ -329,6 +336,7 @@ internal fun PlayerScreenRuntime.rememberSurfaceGestureCallbacks(): PlayerSurfac
         currentPositionMs = rememberUpdatedState(playbackSnapshot.positionMs.coerceAtLeast(0L)),
         currentDurationMs = rememberUpdatedState(playbackSnapshot.durationMs),
         commitHorizontalSeek = rememberUpdatedState { targetPositionMs: Long ->
+            if (partyBlocksControl()) return@rememberUpdatedState
             lastManualSkipSeekPositions = playbackSnapshot.positionMs to targetPositionMs
             playerController?.seekTo(targetPositionMs)
             scheduleProgressSyncAfterSeek()

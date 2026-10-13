@@ -77,6 +77,7 @@ internal data class PartyInfo(
     val id: String,
     val code: String,
     @SerialName("host_member_id") val hostMemberId: String? = null,
+    @SerialName("host_only") val hostOnly: Boolean = false,
     val media: PartyMedia,
     val playback: PartyPlayback? = null,
     @SerialName("max_members") val maxMembers: Int = 3,
@@ -124,9 +125,13 @@ data class ActiveParty(
     val media: PartyMedia,
     val maxMembers: Int,
     val connected: Boolean,
+    val hostOnly: Boolean = false,
 ) {
     val isHost: Boolean
         get() = memberId == hostMemberId
+
+    val canControl: Boolean
+        get() = !hostOnly || isHost
 
     fun member(id: String?): PartyMember? = members.firstOrNull { it.id == id }
 }
@@ -142,6 +147,7 @@ sealed interface PartyEvent {
     data object Removed : PartyEvent
     data object Ended : PartyEvent
     data class MediaChanged(val media: PartyMedia) : PartyEvent
+    data class ControlChanged(val hostOnly: Boolean) : PartyEvent
 }
 
 enum class PartyAction {

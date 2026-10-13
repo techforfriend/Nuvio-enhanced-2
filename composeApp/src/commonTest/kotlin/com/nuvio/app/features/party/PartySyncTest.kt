@@ -119,6 +119,20 @@ class PartySyncTest {
     }
 
     @Test
+    fun hostOnlyKeepsCoordinationWithHostWhenHostIsAway() {
+        val party = party(memberId = "c", hostMemberId = "a", online = listOf("b", "c")).copy(hostOnly = true)
+        assertEquals("a", PartySync.coordinatorId(party))
+    }
+
+    @Test
+    fun onlyHostControlsInHostOnlyParty() {
+        val party = party(memberId = "b", hostMemberId = "a", online = listOf("a", "b"))
+        assertTrue(party.canControl)
+        assertFalse(party.copy(hostOnly = true).canControl)
+        assertTrue(party.copy(hostOnly = true, memberId = "a").canControl)
+    }
+
+    @Test
     fun actionDetectsPauseAndResume() {
         val playing = playback(seq = 1, at = 1_000_000)
         val paused = playback(seq = 2, paused = true, positionMs = 12_000, at = 1_002_000)

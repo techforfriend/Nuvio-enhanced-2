@@ -63,6 +63,8 @@ import nuvio.composeapp.generated.resources.party_action_paused
 import nuvio.composeapp.generated.resources.party_action_resumed
 import nuvio.composeapp.generated.resources.party_action_seeked
 import nuvio.composeapp.generated.resources.party_action_speed
+import nuvio.composeapp.generated.resources.party_host_only_note
+import nuvio.composeapp.generated.resources.party_paused_for_you
 import nuvio.composeapp.generated.resources.party_reconnecting
 import nuvio.composeapp.generated.resources.party_title
 import nuvio.composeapp.generated.resources.party_waiting
@@ -79,6 +81,28 @@ internal val PlayerScreenRuntime.partyKey: String
 
 internal val PlayerScreenRuntime.isPartySynced: Boolean
     get() = PartyRepository.state.value.party?.media?.key == partyKey
+
+internal val PlayerScreenRuntime.isPartyControlLocked: Boolean
+    get() = PartyRepository.state.value.party?.let { party -> !party.canControl && party.media.key == partyKey } == true
+
+internal fun PlayerScreenRuntime.partyBlocksControl(): Boolean {
+    if (!isPartyControlLocked) return false
+    scope.launch { showGestureMessage(getString(Res.string.party_host_only_note)) }
+    return true
+}
+
+internal fun PlayerScreenRuntime.togglePartySelfPause() {
+    controlsVisible = true
+    when {
+        partySelfPaused -> partySelfPaused = false
+        shouldPlay -> {
+            partySelfPaused = true
+            shouldPlay = false
+            playerController?.pause()
+        }
+        else -> partyBlocksControl()
+    }
+}
 
 internal fun PlayerScreenRuntime.currentPartyMedia(): PartyMedia = PartyMedia(
     type = contentType ?: parentMetaType,
@@ -161,6 +185,7 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
     val key = partyKey
 
     LaunchedEffect(key) {
+        partySelfPaused = false
         val previous = partyPreviousKey
         partyPreviousKey = key
         val party = PartyRepository.state.value.party ?: return@LaunchedEffect
@@ -197,6 +222,7 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
         var publishedInitial = false
         var seekLeadMs = 0L
         var measureSeekLead = false
+        var wasSelfPaused = false
         while (isActive) {
             delay(PARTY_TICK)
             val party = PartyRepository.state.value.party ?: break
@@ -241,6 +267,27 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
             }
             publishedInitial = true
             if (!initialLoadCompleted) continue
+            if (partySelfPaused && party.canControl) partySelfPaused = false
+            if (partySelfPaused) {
+                clearPartyNudge(playback)
+                if (snapshot.isPlaying && !snapshot.isLoading) {
+                    val since = mismatchSince ?: clock.markNow().also { mismatchSince = it }
+                    if (since.elapsedNow() > OUTSIDE_TOGGLE_DELAY) {
+                        mismatchSince = null
+                        partySelfPaused = false
+                    }
+                } else {
+                    mismatchSince = null
+                }
+            }
+            if (partySelfPaused) {
+                wasSelfPaused = true
+                continue
+            }
+            if (wasSelfPaused) {
+                wasSelfPaused = false
+                lastSeq = null
+            }
             val expected = PartySync.expectedPositionMs(playback, PartyRepository.nowMs(), snapshot.durationMs)
             val identity = playback.seq to playback.memberId
             if (identity != lastSeq) {
@@ -269,12 +316,21 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
                 val since = mismatchSince ?: clock.markNow().also { mismatchSince = it }
                 if (since.elapsedNow() > OUTSIDE_TOGGLE_DELAY) {
                     mismatchSince = null
-                    shouldPlay = snapshot.isPlaying
-                    PartyRepository.publishPlayback(
-                        paused = !snapshot.isPlaying,
-                        positionMs = snapshot.positionMs,
-                        rate = playback.rate,
-                    )
+                    when {
+                        party.canControl -> {
+                            shouldPlay = snapshot.isPlaying
+                            PartyRepository.publishPlayback(
+                                paused = !snapshot.isPlaying,
+                                positionMs = snapshot.positionMs,
+                                rate = playback.rate,
+                            )
+                        }
+                        snapshot.isPlaying -> applyPartyPaused(playback.paused, force = true)
+                        else -> {
+                            partySelfPaused = true
+                            shouldPlay = false
+                        }
+                    }
                 }
                 continue
             }
@@ -354,7 +410,7 @@ internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
             }
             val noticeText = notice?.text()
             PartyStatusPill(
-                visible = (controlsVisible || waitingNames.isNotEmpty() || !party.connected || noticeText != null) &&
+                visible = (controlsVisible || waitingNames.isNotEmpty() || !party.connected || noticeText != null || partySelfPaused) &&
                     !playerControlsLocked && !showPartyPanel,
                 memberCount = party.members.size,
                 message = when {
@@ -362,6 +418,7 @@ internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
                     waitingNames.isNotEmpty() -> stringResource(Res.string.party_waiting_for, waitingNames.joinToString())
                     playback?.waiting == true -> stringResource(Res.string.party_waiting)
                     noticeText != null -> noticeText
+                    partySelfPaused -> stringResource(Res.string.party_paused_for_you)
                     else -> null
                 },
                 onClick = { showPartyPanel = true },
@@ -397,6 +454,7 @@ internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
                 PartyRepository.end()
             },
             onRemove = { member -> PartyRepository.removeMember(member.id) },
+            onHostOnlyChange = { enabled -> PartyRepository.setHostOnly(enabled) },
             onDismiss = { showPartyPanel = false },
         )
     }

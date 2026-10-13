@@ -47,6 +47,7 @@ import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.player.PlayerDialogButton
 import com.nuvio.app.features.player.PlayerPanelHeader
 import com.nuvio.app.features.player.PlayerSidePanel
+import com.nuvio.app.features.settings.SettingsSwitchRow
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
 import nuvio.composeapp.generated.resources.action_close
@@ -57,6 +58,9 @@ import nuvio.composeapp.generated.resources.party_end
 import nuvio.composeapp.generated.resources.party_end_message
 import nuvio.composeapp.generated.resources.party_end_title
 import nuvio.composeapp.generated.resources.party_host
+import nuvio.composeapp.generated.resources.party_host_only_description
+import nuvio.composeapp.generated.resources.party_host_only_note
+import nuvio.composeapp.generated.resources.party_host_only_title
 import nuvio.composeapp.generated.resources.party_invite_copied
 import nuvio.composeapp.generated.resources.party_invite_message
 import nuvio.composeapp.generated.resources.party_leave
@@ -89,6 +93,7 @@ internal fun PartyPanel(
     onLeave: () -> Unit,
     onEnd: () -> Unit,
     onRemove: (PartyMember) -> Unit,
+    onHostOnlyChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     PlayerSidePanel(
@@ -125,6 +130,7 @@ internal fun PartyPanel(
                     onLeave = onLeave,
                     onEnd = onEnd,
                     onRemove = onRemove,
+                    onHostOnlyChange = onHostOnlyChange,
                 )
             }
         }
@@ -190,6 +196,7 @@ private fun PartyContent(
     onLeave: () -> Unit,
     onEnd: () -> Unit,
     onRemove: (PartyMember) -> Unit,
+    onHostOnlyChange: (Boolean) -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
     var memberToRemove by remember { mutableStateOf<PartyMember?>(null) }
@@ -223,11 +230,32 @@ private fun PartyContent(
             }
         }
 
+        if (party.isHost) {
+            val shape = RoundedCornerShape(16.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(shape)
+                    .background(tokens.colors.surfaceCard)
+                    .border(1.dp, tokens.colors.borderDefault, shape),
+            ) {
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.party_host_only_title),
+                    description = stringResource(Res.string.party_host_only_description),
+                    checked = party.hostOnly,
+                    isTablet = false,
+                    onCheckedChange = onHostOnlyChange,
+                )
+            }
+        } else if (party.hostOnly) {
+            PartyNote(stringResource(Res.string.party_host_only_note))
+        }
+
         if (playerMediaKey != party.media.key) {
             PartyMediaCard(
                 media = party.media,
                 onWatchWithParty = onWatchWithParty,
-                onPlayForEveryone = onPlayForEveryone,
+                onPlayForEveryone = onPlayForEveryone.takeIf { party.canControl },
             )
         }
 
@@ -374,7 +402,7 @@ private fun PartyMemberRow(
 private fun PartyMediaCard(
     media: PartyMedia,
     onWatchWithParty: () -> Unit,
-    onPlayForEveryone: () -> Unit,
+    onPlayForEveryone: (() -> Unit)?,
 ) {
     val tokens = MaterialTheme.nuvio
     val shape = RoundedCornerShape(16.dp)
@@ -398,10 +426,12 @@ private fun PartyMediaCard(
                 onClick = onWatchWithParty,
                 style = DialogButtonStyle.Primary,
             )
-            DialogButton(
-                text = stringResource(Res.string.party_play_for_everyone),
-                onClick = onPlayForEveryone,
-            )
+            if (onPlayForEveryone != null) {
+                DialogButton(
+                    text = stringResource(Res.string.party_play_for_everyone),
+                    onClick = onPlayForEveryone,
+                )
+            }
         }
     }
 }

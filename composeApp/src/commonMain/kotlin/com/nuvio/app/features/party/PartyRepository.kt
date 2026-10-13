@@ -38,6 +38,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -142,6 +143,17 @@ object PartyRepository {
         }
     }
 
+    fun setHostOnly(enabled: Boolean) {
+        scope.launch {
+            val party = _state.value.party ?: return@launch
+            if (!party.isHost || party.hostOnly == enabled) return@launch
+            updateParty { it.copy(hostOnly = enabled) }
+            val snapshot = runRemote { PartyApi.setHostOnly(party.id, deviceId(), enabled) }
+            if (snapshot?.party == null) updateParty { it.copy(hostOnly = party.hostOnly) }
+            snapshot?.let(::applySnapshot)
+        }
+    }
+
     fun publishPlayback(paused: Boolean, positionMs: Long, rate: Float) {
         val at = clock.nowMs()
         scope.launch { publish(paused = paused, positionMs = positionMs, rate = rate, waiting = false, at = at) }
@@ -150,7 +162,7 @@ object PartyRepository {
     fun publishMedia(media: PartyMedia, positionMs: Long) {
         scope.launch {
             val party = _state.value.party ?: return@launch
-            if (media == party.media) return@launch
+            if (media == party.media || !party.canControl) return@launch
             val sameContent = media.key == party.media.key
             updateParty { it.copy(media = media) }
             val next = if (sameContent) {
@@ -289,6 +301,12 @@ object PartyRepository {
                 runCatching { channel?.send("state", encodePlayback(current)) }
             }
             "status" -> decode(payload, PartyPresence.serializer())?.let(::applyStatus)
+            "control" -> {
+                val hostOnly = (payload["host_only"] as? JsonPrimitive)?.booleanOrNull ?: return
+                if (party.hostOnly == hostOnly) return
+                updateParty { it.copy(hostOnly = hostOnly) }
+                if (!party.isHost) _events.tryEmit(PartyEvent.ControlChanged(hostOnly))
+            }
             "member_joined" -> refreshMembers(announceMemberId = payload.string("member_id"))
             "member_left" -> onMemberLeft(
                 memberId = payload.string("member_id"),
@@ -384,6 +402,7 @@ object PartyRepository {
                 members = snapshot.members,
                 hostMemberId = info.hostMemberId,
                 maxMembers = info.maxMembers,
+                hostOnly = info.hostOnly,
                 presence = current.presence.filterKeys { key -> snapshot.members.any { it.id == key } },
             )
         }
@@ -408,6 +427,7 @@ object PartyRepository {
     private fun accept(candidate: PartyPlayback) {
         val party = _state.value.party ?: return
         if (candidate.mediaKey != null && candidate.mediaKey != party.media.key) return
+        if (party.hostOnly && candidate.memberId != party.hostMemberId) return
         val current = _playback.value
         if (!PartySync.isNewer(candidate, current)) return
         if (current != null && current.paused && !candidate.paused) {
@@ -429,6 +449,7 @@ object PartyRepository {
         at: Long = clock.nowMs(),
     ) {
         val party = _state.value.party ?: return
+        if (!party.canControl) return
         val current = _playback.value
         val next = nextPlayback(party, paused, positionMs, rate, waiting, party.media.key, at)
         if (current != null && current.paused && !paused) {
@@ -605,6 +626,7 @@ object PartyRepository {
             media = info.media,
             maxMembers = info.maxMembers,
             connected = false,
+            hostOnly = info.hostOnly,
         )
     }
 
