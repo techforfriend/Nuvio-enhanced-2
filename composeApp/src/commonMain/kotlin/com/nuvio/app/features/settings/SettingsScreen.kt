@@ -832,9 +832,7 @@ private fun MobileSettingsScreen(
                     tunnelingEnabled = tunnelingEnabled,
                     useLibass = useLibass,
                     libassRenderType = libassRenderType,
-                ).also {
-                    experimentalPictureInPictureSettingsContent()
-                }
+                )
                 SettingsPage.Streams -> streamsSettingsContent(
                     isTablet = false,
                 )
@@ -1324,9 +1322,7 @@ private fun TabletSettingsScreen(
                         tunnelingEnabled = tunnelingEnabled,
                         useLibass = useLibass,
                         libassRenderType = libassRenderType,
-                    ).also {
-                        experimentalPictureInPictureSettingsContent()
-                    }
+                    )
                     SettingsPage.Streams -> streamsSettingsContent(
                         isTablet = true,
                     )
