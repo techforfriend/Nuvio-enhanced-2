@@ -1,6 +1,7 @@
 package com.nuvio.app.features.player
 
 import androidx.compose.animation.AnimatedVisibility
+import com.nuvio.app.features.party.OwnSeek
 import com.nuvio.app.features.party.PartyMember
 import com.nuvio.app.features.party.AvatarStack
 import androidx.compose.foundation.shape.CircleShape
@@ -69,6 +70,8 @@ import nuvio.composeapp.generated.resources.party_action_paused
 import nuvio.composeapp.generated.resources.party_action_resumed
 import nuvio.composeapp.generated.resources.party_action_seeked
 import nuvio.composeapp.generated.resources.party_action_speed
+import nuvio.composeapp.generated.resources.party_behind
+import nuvio.composeapp.generated.resources.party_caught_up
 import nuvio.composeapp.generated.resources.party_host_only_note
 import nuvio.composeapp.generated.resources.party_paused_for_you
 import nuvio.composeapp.generated.resources.party_reconnecting
@@ -96,16 +99,38 @@ internal fun PlayerScreenRuntime.partyBlocksControl(): Boolean {
     return true
 }
 
-internal fun PlayerScreenRuntime.togglePartySelfPause() {
+internal fun PlayerScreenRuntime.toggleOwnPlayback() {
     controlsVisible = true
     when {
-        partySelfPaused -> partySelfPaused = false
         shouldPlay -> {
-            partySelfPaused = true
+            partyBehind = true
             shouldPlay = false
             playerController?.pause()
         }
+        partyBehind -> {
+            shouldPlay = true
+            playerController?.play()
+        }
         else -> partyBlocksControl()
+    }
+}
+
+internal fun PlayerScreenRuntime.ownSeekTarget(targetMs: Long): Long? {
+    val playback = PartyRepository.playback.value ?: return targetMs
+    val partyPositionMs = PartySync.expectedPositionMs(playback, PartyRepository.nowMs(), playbackSnapshot.durationMs)
+    return when (val seek = PartySync.ownSeek(targetMs, partyPositionMs, partyBehind)) {
+        is OwnSeek.Behind -> {
+            partyBehind = true
+            seek.positionMs
+        }
+        OwnSeek.CatchUp -> {
+            partyBehind = false
+            null
+        }
+        OwnSeek.Blocked -> {
+            partyBlocksControl()
+            null
+        }
     }
 }
 
@@ -217,7 +242,7 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
     }
 
     LaunchedEffect(key) {
-        partySelfPaused = false
+        partyBehind = false
         val previous = partyPreviousKey
         partyPreviousKey = key
         val party = PartyRepository.state.value.party ?: return@LaunchedEffect
@@ -249,12 +274,12 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
         var lastSeek: TimeMark? = null
         var lastCorrection: TimeMark? = null
         var lastSeq: Pair<Long, String?>? = null
-        var lastStatus: Pair<PartyMemberStatus, String>? = null
+        var lastStatus: Triple<PartyMemberStatus, String, Long?>? = null
         var wasInBackground = false
         var publishedInitial = false
         var seekLeadMs = 0L
         var measureSeekLead = false
-        var wasSelfPaused = false
+        var wasBehind = false
         while (isActive) {
             delay(PARTY_TICK)
             val party = PartyRepository.state.value.party ?: break
@@ -262,8 +287,12 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
             val resumedFromBackground = wasInBackground && !partyAppInBackground
             wasInBackground = partyAppInBackground
             if (resumedFromBackground) lastSeq = null
+            val behindGap = PartyRepository.playback.value
+                ?.takeIf { partyBehind && party.media.key == partyKey }
+                ?.let { PartySync.expectedPositionMs(it, PartyRepository.nowMs(), snapshot.durationMs) - currentPlaybackPositionMs() }
             val status = when {
                 errorMessage != null || partyAppInBackground -> PartyMemberStatus.Browsing
+                behindGap != null -> PartyMemberStatus.Behind
                 !initialLoadCompleted -> PartyMemberStatus.Loading
                 snapshot.isLoading && !snapshot.isEnded -> {
                     val since = bufferingSince ?: clock.markNow().also { bufferingSince = it }
@@ -274,10 +303,14 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
                     PartyMemberStatus.Ready
                 }
             }
-            val reportedStatus = status to partyKey
+            val reportedStatus = Triple(
+                status,
+                partyKey,
+                behindGap?.takeIf { status == PartyMemberStatus.Behind }?.let(PartySync::reportedGapMs),
+            )
             if (reportedStatus != lastStatus) {
                 lastStatus = reportedStatus
-                PartyRepository.setLocalStatus(status, partyKey)
+                PartyRepository.setLocalStatus(status, partyKey, reportedStatus.third)
             }
 
             val controller = playerController
@@ -299,26 +332,25 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
             }
             publishedInitial = true
             if (!initialLoadCompleted) continue
-            if (partySelfPaused && party.canControl) partySelfPaused = false
-            if (partySelfPaused) {
+            if (partyBehind && party.canControl) partyBehind = false
+            if (partyBehind) {
                 clearPartyNudge(playback)
-                if (snapshot.isPlaying && !snapshot.isLoading) {
-                    val since = mismatchSince ?: clock.markNow().also { mismatchSince = it }
-                    if (since.elapsedNow() > OUTSIDE_TOGGLE_DELAY) {
-                        mismatchSince = null
-                        partySelfPaused = false
-                    }
+                mismatchSince = null
+                val gap = PartySync.expectedPositionMs(playback, PartyRepository.nowMs(), snapshot.durationMs) - currentPlaybackPositionMs()
+                if (PartySync.shouldRejoin(gap, playing = shouldPlay && !snapshot.isLoading)) {
+                    partyBehind = false
                 } else {
-                    mismatchSince = null
+                    val shown = partyBehindMs
+                    if (shown == null || abs(gap - shown) >= BEHIND_DISPLAY_STEP_MS) partyBehindMs = gap.coerceAtLeast(0L)
+                    wasBehind = true
+                    continue
                 }
             }
-            if (partySelfPaused) {
-                wasSelfPaused = true
-                continue
-            }
-            if (wasSelfPaused) {
-                wasSelfPaused = false
+            if (wasBehind) {
+                wasBehind = false
                 lastSeq = null
+                partyBehindMs = null
+                if (!party.canControl) showGestureMessage(getString(Res.string.party_caught_up))
             }
             val expected = PartySync.expectedPositionMs(playback, PartyRepository.nowMs(), snapshot.durationMs)
             val identity = playback.seq to playback.memberId
@@ -359,7 +391,7 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
                         }
                         snapshot.isPlaying -> applyPartyPaused(playback.paused, force = true)
                         else -> {
-                            partySelfPaused = true
+                            partyBehind = true
                             shouldPlay = false
                         }
                     }
@@ -442,7 +474,7 @@ internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
             }
             val noticeText = notice?.text()
             PartyStatusPill(
-                visible = (controlsVisible || waitingNames.isNotEmpty() || !party.connected || noticeText != null || partySelfPaused) &&
+                visible = (controlsVisible || waitingNames.isNotEmpty() || !party.connected || noticeText != null || (partyBehind && !shouldPlay)) &&
                     !playerControlsLocked && !showPartyPanel,
                 members = party.members,
                 message = when {
@@ -450,7 +482,8 @@ internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
                     waitingNames.isNotEmpty() -> stringResource(Res.string.party_waiting_for, waitingNames.joinToString())
                     playback?.waiting == true -> stringResource(Res.string.party_waiting)
                     noticeText != null -> noticeText
-                    partySelfPaused -> stringResource(Res.string.party_paused_for_you)
+                    partyBehind && !shouldPlay -> stringResource(Res.string.party_paused_for_you)
+                    partyBehind -> partyBehindMs?.let { stringResource(Res.string.party_behind, formatPlaybackTime(it)) }
                     else -> null
                 },
                 onClick = { showPartyPanel = true },
@@ -489,6 +522,11 @@ internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
             onHostOnlyChange = { enabled -> PartyRepository.setHostOnly(enabled) },
             canShareStream = currentPartyStream() != null,
             onSharingChange = { enabled -> PartyRepository.setSharing(enabled) },
+            behindMs = if (partyBehind) partyBehindMs ?: 0L else null,
+            onCatchUp = {
+                partyBehind = false
+                showPartyPanel = false
+            },
             onDismiss = { showPartyPanel = false },
         )
     }
@@ -567,3 +605,4 @@ private val OUTSIDE_TOGGLE_DELAY = 1_200.milliseconds
 private val SEEK_SETTLE = 2_500.milliseconds
 private val CORRECTION_INTERVAL = 500.milliseconds
 private const val MAX_SEEK_LEAD_MS = 3_000L
+private const val BEHIND_DISPLAY_STEP_MS = 1_000L

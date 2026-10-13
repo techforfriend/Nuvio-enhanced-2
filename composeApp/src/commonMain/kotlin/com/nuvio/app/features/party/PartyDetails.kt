@@ -64,11 +64,13 @@ import com.nuvio.app.core.ui.DialogSurface
 import com.nuvio.app.core.ui.NuvioIconActionButton
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.features.player.formatPlaybackTime
 import com.nuvio.app.features.settings.SettingsSwitchRow
 import kotlinx.coroutines.delay
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
 import nuvio.composeapp.generated.resources.action_remove
+import nuvio.composeapp.generated.resources.party_behind
 import nuvio.composeapp.generated.resources.party_code_label
 import nuvio.composeapp.generated.resources.party_copy_invite
 import nuvio.composeapp.generated.resources.party_end
@@ -96,6 +98,7 @@ internal fun PartyOverview(
     party: ActiveParty,
     ringColor: Color,
     onRemove: (PartyMember) -> Unit,
+    selfBehindMs: Long? = null,
 ) {
     val haptic = LocalHapticFeedback.current
     val clipboard = LocalClipboardManager.current
@@ -128,6 +131,7 @@ internal fun PartyOverview(
             ringColor = ringColor,
             onRemove = { memberToRemove = it },
             onInvite = copyInvite,
+            selfBehindMs = selfBehindMs,
         )
     }
 
@@ -205,6 +209,7 @@ private fun MembersSection(
     ringColor: Color,
     onRemove: (PartyMember) -> Unit,
     onInvite: () -> Unit,
+    selfBehindMs: Long?,
 ) {
     val tokens = MaterialTheme.nuvio
     val initialIds = remember { party.members.map { it.id }.toSet() }
@@ -239,6 +244,7 @@ private fun MembersSection(
                         } else {
                             null
                         },
+                        selfBehindMs = selfBehindMs,
                     )
                 }
             }
@@ -255,10 +261,16 @@ private fun MemberRow(
     member: PartyMember,
     ringColor: Color,
     onRemove: (() -> Unit)?,
+    selfBehindMs: Long?,
 ) {
     val tokens = MaterialTheme.nuvio
     val isSelf = member.id == party.memberId
-    val status = stringResource(party.statusRes(member))
+    val behindMs = if (isSelf) selfBehindMs else party.behindMs(member)
+    val status = if (behindMs != null) {
+        stringResource(Res.string.party_behind, formatPlaybackTime(behindMs))
+    } else {
+        stringResource(party.statusRes(member))
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()

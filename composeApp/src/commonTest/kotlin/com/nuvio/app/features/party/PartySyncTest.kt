@@ -223,6 +223,58 @@ class PartySyncTest {
         assertFalse(first.key == first.copy(episode = 3).key)
     }
 
+    @Test
+    fun rewindingFallsBehindTheParty() {
+        assertEquals(OwnSeek.Behind(50_000), PartySync.ownSeek(50_000, partyPositionMs = 60_000, behind = false))
+        assertEquals(OwnSeek.Behind(55_000), PartySync.ownSeek(55_000, partyPositionMs = 60_000, behind = true))
+    }
+
+    @Test
+    fun reachingThePartyCatchesUp() {
+        assertEquals(OwnSeek.CatchUp, PartySync.ownSeek(59_000, partyPositionMs = 60_000, behind = true))
+        assertEquals(OwnSeek.CatchUp, PartySync.ownSeek(90_000, partyPositionMs = 60_000, behind = true))
+    }
+
+    @Test
+    fun skippingAheadWhileInSyncIsBlocked() {
+        assertEquals(OwnSeek.Blocked, PartySync.ownSeek(70_000, partyPositionMs = 60_000, behind = false))
+    }
+
+    @Test
+    fun rejoinsOnlyWhilePlayingAndClose() {
+        assertTrue(PartySync.shouldRejoin(1_500, playing = true))
+        assertTrue(PartySync.shouldRejoin(-4_000, playing = true))
+        assertFalse(PartySync.shouldRejoin(1_500, playing = false))
+        assertFalse(PartySync.shouldRejoin(10_000, playing = true))
+    }
+
+    @Test
+    fun reportedGapRoundsToSteps() {
+        assertEquals(5_000L, PartySync.reportedGapMs(1_200))
+        assertEquals(10_000L, PartySync.reportedGapMs(8_000))
+        assertEquals(80_000L, PartySync.reportedGapMs(81_900))
+    }
+
+    @Test
+    fun membersBehindNeverHoldUpTheParty() {
+        val media = PartyMedia(type = "movie", metaId = "tt1", metaType = "movie")
+        val party = party(memberId = "a", hostMemberId = "a", online = emptyList()).copy(
+            media = media,
+            presence = mapOf(
+                "b" to PartyPresence("b", PartyMemberStatus.Behind, media.key, behindMs = 30_000),
+                "c" to PartyPresence("c", PartyMemberStatus.Buffering, media.key),
+            ),
+        )
+        assertEquals(listOf("c"), PartySync.waitingMemberIds(party, ignored = emptySet()))
+    }
+
+    @Test
+    fun behindPresenceSurvivesTheWire() {
+        val presence = PartyPresence("b", PartyMemberStatus.Behind, "movie|tt1||", behindMs = 15_000)
+        val encoded = PartyApi.json.encodeToString(PartyPresence.serializer(), presence)
+        assertEquals(presence, PartyApi.json.decodeFromString(PartyPresence.serializer(), encoded))
+    }
+
     private fun party(memberId: String, hostMemberId: String, online: List<String>) = ActiveParty(
         id = "p",
         code = "ABC234",

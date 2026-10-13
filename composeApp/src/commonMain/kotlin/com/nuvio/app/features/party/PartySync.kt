@@ -8,6 +8,12 @@ internal sealed interface PartyCorrection {
     data class Nudge(val rate: Float) : PartyCorrection
 }
 
+internal sealed interface OwnSeek {
+    data class Behind(val positionMs: Long) : OwnSeek
+    data object CatchUp : OwnSeek
+    data object Blocked : OwnSeek
+}
+
 internal object PartySync {
     const val NUDGE_START_MS = 250L
     const val NUDGE_STOP_MS = 80L
@@ -15,6 +21,8 @@ internal object PartySync {
     const val PAUSED_TOLERANCE_MS = 500L
     const val NUDGE_FACTOR = 0.05f
     const val SEEK_NOTICE_MS = 2_000L
+    const val REJOIN_GAP_MS = 2_000L
+    const val BEHIND_STEP_MS = 5_000L
 
     fun expectedPositionMs(playback: PartyPlayback, nowMs: Long, durationMs: Long = 0L): Long {
         val position = if (playback.paused) {
@@ -73,6 +81,17 @@ internal object PartySync {
             else -> null
         }
     }
+
+    fun ownSeek(targetMs: Long, partyPositionMs: Long, behind: Boolean): OwnSeek = when {
+        targetMs < partyPositionMs - REJOIN_GAP_MS -> OwnSeek.Behind(targetMs)
+        behind -> OwnSeek.CatchUp
+        else -> OwnSeek.Blocked
+    }
+
+    fun shouldRejoin(gapMs: Long, playing: Boolean): Boolean = playing && gapMs <= REJOIN_GAP_MS
+
+    fun reportedGapMs(gapMs: Long): Long =
+        ((gapMs.coerceAtLeast(0L) + BEHIND_STEP_MS / 2) / BEHIND_STEP_MS * BEHIND_STEP_MS).coerceAtLeast(BEHIND_STEP_MS)
 
     fun waitingMemberIds(party: ActiveParty, ignored: Set<String>): List<String> =
         party.presence.values

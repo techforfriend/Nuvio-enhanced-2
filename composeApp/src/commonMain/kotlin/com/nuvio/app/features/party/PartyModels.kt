@@ -106,6 +106,7 @@ enum class PartyMemberStatus {
     @SerialName("loading") Loading,
     @SerialName("buffering") Buffering,
     @SerialName("ready") Ready,
+    @SerialName("behind") Behind,
 }
 
 @Serializable
@@ -113,6 +114,7 @@ data class PartyPresence(
     @SerialName("member_id") val memberId: String,
     val status: PartyMemberStatus = PartyMemberStatus.Browsing,
     @SerialName("media_key") val mediaKey: String? = null,
+    @SerialName("behind_ms") val behindMs: Long? = null,
 )
 
 @Serializable

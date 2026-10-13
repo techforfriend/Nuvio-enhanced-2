@@ -44,8 +44,11 @@ import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.player.PlayerDialogButton
 import com.nuvio.app.features.player.PlayerPanelHeader
 import com.nuvio.app.features.player.PlayerSidePanel
+import com.nuvio.app.features.player.formatPlaybackTime
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_close
+import nuvio.composeapp.generated.resources.party_behind_title
+import nuvio.composeapp.generated.resources.party_catch_up
 import nuvio.composeapp.generated.resources.party_now_watching
 import nuvio.composeapp.generated.resources.party_play_for_everyone
 import nuvio.composeapp.generated.resources.party_share_unavailable
@@ -74,6 +77,8 @@ internal fun PartyPanel(
     onHostOnlyChange: (Boolean) -> Unit,
     canShareStream: Boolean,
     onSharingChange: (Boolean) -> Unit,
+    behindMs: Long?,
+    onCatchUp: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
@@ -118,6 +123,8 @@ internal fun PartyPanel(
                     PartyContent(
                         party = party,
                         playerMediaKey = playerMediaKey,
+                        behindMs = behindMs,
+                        onCatchUp = onCatchUp,
                         onPlayForEveryone = onPlayForEveryone,
                         onWatchWithParty = onWatchWithParty,
                         onLeave = onLeave,
@@ -184,6 +191,8 @@ private fun StartContent(
 private fun PartyContent(
     party: ActiveParty,
     playerMediaKey: String,
+    behindMs: Long?,
+    onCatchUp: () -> Unit,
     onPlayForEveryone: () -> Unit,
     onWatchWithParty: () -> Unit,
     onLeave: () -> Unit,
@@ -201,10 +210,32 @@ private fun PartyContent(
             .padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
+        var lastBehindMs by remember { mutableStateOf(0L) }
+        if (behindMs != null) lastBehindMs = behindMs
+        AnimatedVisibility(
+            visible = behindMs != null,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = stringResource(Res.string.party_behind_title, formatPlaybackTime(lastBehindMs)),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = tokens.colors.textPrimary,
+                )
+                DialogButton(
+                    text = stringResource(Res.string.party_catch_up),
+                    onClick = onCatchUp,
+                    style = DialogButtonStyle.Primary,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
         PartyOverview(
             party = party,
             ringColor = tokens.colors.surfaceElevated,
             onRemove = onRemove,
+            selfBehindMs = behindMs,
         )
         if (party.isHost) {
             HostSettings(

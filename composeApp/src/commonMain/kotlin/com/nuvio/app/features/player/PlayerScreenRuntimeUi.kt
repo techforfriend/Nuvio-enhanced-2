@@ -393,19 +393,19 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             showParentalGuide = showParentalGuide,
             onParentalGuideAnimationComplete = { showParentalGuide = false },
             onScrubChange = { positionMs ->
-                if (!isPartyControlLocked) {
-                    isScrubbingTimeline = true
-                    scrubbingPositionMs = positionMs
-                }
+                isScrubbingTimeline = true
+                scrubbingPositionMs = positionMs
             },
             onScrubFinished = { positionMs ->
-                if (partyBlocksControl()) {
+                val targetMs = if (isPartyControlLocked) ownSeekTarget(positionMs) else positionMs
+                if (targetMs == null) {
                     isScrubbingTimeline = false
+                    scrubbingPositionMs = null
                 } else {
-                    finishTimelineScrub(positionMs)
-                    playerController?.seekTo(positionMs)
+                    finishTimelineScrub(targetMs)
+                    playerController?.seekTo(targetMs)
                     scheduleProgressSyncAfterSeek()
-                    publishPartyPlayback(positionMs = positionMs)
+                    publishPartyPlayback(positionMs = targetMs)
                 }
             },
             horizontalSafePadding = horizontalSafePadding,
@@ -464,10 +464,11 @@ private fun BoxScope.RenderPlaybackOverlays(
         skipIntervalDismissed = skipIntervalDismissed,
         controlsVisible = controlsVisible,
         onSkipInterval = { interval ->
-            if (!partyBlocksControl()) {
-                interval.internalSkipAction(skipIntervals, playbackSnapshot.durationMs)?.let { action ->
-                    val durationMs = playbackSnapshot.durationMs
-                    val seekMs = if (durationMs > 0L) action.targetMs.coerceAtMost(durationMs - 1) else action.targetMs
+            interval.internalSkipAction(skipIntervals, playbackSnapshot.durationMs)?.let { action ->
+                val durationMs = playbackSnapshot.durationMs
+                val requestedMs = if (durationMs > 0L) action.targetMs.coerceAtMost(durationMs - 1) else action.targetMs
+                val seekMs = if (isPartyControlLocked) ownSeekTarget(requestedMs) else requestedMs
+                if (seekMs != null) {
                     playerController?.seekTo(seekMs)
                     scheduleProgressSyncAfterSeek()
                     publishPartyPlayback(positionMs = seekMs)

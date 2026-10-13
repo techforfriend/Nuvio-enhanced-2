@@ -156,7 +156,7 @@ internal fun PlayerScreenRuntime.showVolumeFeedback(level: PlayerAudioLevel) {
 
 internal fun PlayerScreenRuntime.togglePlayback() {
     if (isPartyControlLocked) {
-        togglePartySelfPause()
+        toggleOwnPlayback()
         return
     }
     if (playbackSnapshot.isPlaying) {
@@ -174,13 +174,13 @@ internal fun PlayerScreenRuntime.togglePlayback() {
 }
 
 internal fun PlayerScreenRuntime.seekBy(offsetMs: Long) {
-    if (partyBlocksControl()) return
     val fromMs = pendingSeekTarget
         ?.takeIf { (_, mark) -> mark.elapsedNow() < PendingSeekWindow }
         ?.first
         ?: currentPlaybackPositionMs()
-    val targetMs = (fromMs + offsetMs).coerceAtLeast(0L)
+    val requestedMs = (fromMs + offsetMs).coerceAtLeast(0L)
         .let { if (playbackSnapshot.durationMs > 0L) it.coerceAtMost(playbackSnapshot.durationMs) else it }
+    val targetMs = if (isPartyControlLocked) ownSeekTarget(requestedMs) ?: return else requestedMs
     lastManualSkipSeekPositions = fromMs to targetMs
     pendingSeekTarget = targetMs to TimeSource.Monotonic.markNow()
     if (isPartySynced) playerController?.seekTo(targetMs) else playerController?.seekBy(offsetMs)
@@ -194,7 +194,6 @@ internal fun PlayerScreenRuntime.seekBy(offsetMs: Long) {
 }
 
 internal fun PlayerScreenRuntime.handleDoubleTapSeek(direction: PlayerSeekDirection) {
-    if (partyBlocksControl()) return
     val currentPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
     val currentSeekState = accumulatedSeekState
     val nextState = if (currentSeekState?.direction == direction) {
@@ -206,10 +205,8 @@ internal fun PlayerScreenRuntime.handleDoubleTapSeek(direction: PlayerSeekDirect
             amountMs = PlayerDoubleTapSeekStepMs,
         )
     }
-    accumulatedSeekState = nextState
-
     val maxDurationMs = playbackSnapshot.durationMs.takeIf { it > 0L }
-    val targetPositionMs = when (direction) {
+    val requestedPositionMs = when (direction) {
         PlayerSeekDirection.Backward -> {
             (nextState.baselinePositionMs - nextState.amountMs).coerceAtLeast(0L)
         }
@@ -218,6 +215,8 @@ internal fun PlayerScreenRuntime.handleDoubleTapSeek(direction: PlayerSeekDirect
             maxDurationMs?.let { unclamped.coerceAtMost(it) } ?: unclamped
         }
     }
+    val targetPositionMs = if (isPartyControlLocked) ownSeekTarget(requestedPositionMs) ?: return else requestedPositionMs
+    accumulatedSeekState = nextState
     lastManualSkipSeekPositions = currentPositionMs to targetPositionMs
     playerController?.seekTo(targetPositionMs)
     scheduleProgressSyncAfterSeek()
@@ -335,8 +334,12 @@ internal fun PlayerScreenRuntime.rememberSurfaceGestureCallbacks(): PlayerSurfac
         playerControlsLocked = rememberUpdatedState(playerControlsLocked),
         currentPositionMs = rememberUpdatedState(playbackSnapshot.positionMs.coerceAtLeast(0L)),
         currentDurationMs = rememberUpdatedState(playbackSnapshot.durationMs),
-        commitHorizontalSeek = rememberUpdatedState { targetPositionMs: Long ->
-            if (partyBlocksControl()) return@rememberUpdatedState
+        commitHorizontalSeek = rememberUpdatedState { requestedPositionMs: Long ->
+            val targetPositionMs = if (isPartyControlLocked) {
+                ownSeekTarget(requestedPositionMs) ?: return@rememberUpdatedState
+            } else {
+                requestedPositionMs
+            }
             lastManualSkipSeekPositions = playbackSnapshot.positionMs to targetPositionMs
             playerController?.seekTo(targetPositionMs)
             scheduleProgressSyncAfterSeek()
