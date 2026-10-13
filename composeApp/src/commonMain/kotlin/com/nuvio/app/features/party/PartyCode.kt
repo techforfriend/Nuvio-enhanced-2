@@ -65,7 +65,10 @@ internal fun CodeField(
     var focused by remember { mutableStateOf(false) }
     BasicTextField(
         value = TextFieldValue(code, selection = TextRange(code.length)),
-        onValueChange = { value -> onCodeChange(normalizePartyCode(value.text).take(PARTY_CODE_LENGTH)) },
+        onValueChange = { value ->
+            val next = normalizePartyCode(value.text).take(PARTY_CODE_LENGTH)
+            if (next != code) onCodeChange(next)
+        },
         enabled = enabled,
         singleLine = true,
         textStyle = TextStyle(color = Color.Transparent),
