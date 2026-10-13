@@ -123,10 +123,10 @@ import com.nuvio.app.features.library.toMetaPreview
 import com.nuvio.app.features.membership.MemberAccessRepository
 import com.nuvio.app.features.notifications.EpisodeReleaseNotificationsRepository
 import com.nuvio.app.features.p2p.P2pSettingsRepository
-import com.nuvio.app.features.party.JoinPartyDialog
 import com.nuvio.app.features.party.PartyEvent
 import com.nuvio.app.features.party.PartyPrompt
 import com.nuvio.app.features.party.PartyRepository
+import com.nuvio.app.features.party.PartyScreen
 import com.nuvio.app.features.party.PartySync
 import com.nuvio.app.features.player.ExternalPlayerIntentResult
 import com.nuvio.app.features.player.externalPlaybackSession
@@ -313,7 +313,6 @@ internal fun MainAppContent(
         PlayerSettingsRepository.ensureLoaded()
         PlayerSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
-    val partyJoinCode by PartyPrompt.joinCode.collectAsStateWithLifecycle()
     var visiblePlayerEntries by remember { mutableIntStateOf(0) }
     var streamLandscapeLoadingVisible by remember(currentRoute) { mutableStateOf(false) }
     if (currentRoute is PlayerRoute || visiblePlayerEntries > 0 || streamLandscapeLoadingVisible) {
@@ -365,6 +364,7 @@ internal fun MainAppContent(
     val collectionsTitle = stringResource(Res.string.collections_header)
     val newCollectionTitle = stringResource(Res.string.collections_new)
     val detailsFallbackTitle = stringResource(Res.string.meta_section_details_title)
+    val watchPartyTitle = stringResource(Res.string.party_title)
     val isRemoteLibrarySource = libraryUiState.sourceMode != LibrarySourceMode.LOCAL
     val appContentGeneration = if (ownsAppRuntime && appGateController != null) {
         val generation by appGateController.contentGeneration.collectAsStateWithLifecycle()
@@ -765,7 +765,9 @@ internal fun MainAppContent(
 
                     is AppDeepLink.Party -> {
                         appGateController?.appReady?.first { it }
-                        PartyPrompt.showJoin(deepLink.code)
+                        navController.navigate(PartyRoute(code = deepLink.code, title = watchPartyTitle)) {
+                            launchSingleTop = true
+                        }
                         AppDeepLinkRepository.markConsumed(deepLink)
                     }
 
@@ -1459,6 +1461,7 @@ internal fun MainAppContent(
                                     null
                                 },
                                 onCollectionsSettingsClick = { navController.navigate(CollectionsRoute(collectionsTitle)) },
+                                onWatchPartySettingsClick = { navController.navigate(PartyRoute(title = watchPartyTitle)) },
                                 onFolderClick = { collectionId, folderId ->
                                     val folderTitle = CollectionRepository.collections.value
                                         .firstOrNull { it.id == collectionId }
@@ -1624,6 +1627,11 @@ internal fun MainAppContent(
                         SettingsDestination(route, navController) { onBack ->
                             PluginsSettingsScreen(onBack = onBack)
                         }
+                    }
+                }
+                entry<PartyRoute> { route ->
+                    SettingsDestination(route, navController) { onBack ->
+                        PartyScreen(initialCode = route.code, onBack = onBack)
                     }
                 }
                 entry<AccountSettingsRoute> { route ->
@@ -2072,13 +2080,6 @@ internal fun MainAppContent(
                     .align(Alignment.BottomCenter)
                     .zIndex(15f),
             )
-
-            partyJoinCode?.let { code ->
-                JoinPartyDialog(
-                    initialCode = code,
-                    onDismiss = PartyPrompt::dismissJoin,
-                )
-            }
 
             NuvioToastHost(
                 modifier = Modifier

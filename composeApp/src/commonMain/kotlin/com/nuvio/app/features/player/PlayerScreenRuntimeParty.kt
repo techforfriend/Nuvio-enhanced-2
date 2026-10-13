@@ -1,9 +1,17 @@
 package com.nuvio.app.features.player
 
 import androidx.compose.animation.AnimatedVisibility
+import com.nuvio.app.features.party.PartyMember
+import com.nuvio.app.features.party.AvatarStack
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
@@ -13,12 +21,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContent
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Groups
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,6 +35,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -66,7 +71,6 @@ import nuvio.composeapp.generated.resources.party_action_speed
 import nuvio.composeapp.generated.resources.party_host_only_note
 import nuvio.composeapp.generated.resources.party_paused_for_you
 import nuvio.composeapp.generated.resources.party_reconnecting
-import nuvio.composeapp.generated.resources.party_title
 import nuvio.composeapp.generated.resources.party_waiting
 import nuvio.composeapp.generated.resources.party_waiting_for
 import org.jetbrains.compose.resources.getString
@@ -412,7 +416,7 @@ internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
             PartyStatusPill(
                 visible = (controlsVisible || waitingNames.isNotEmpty() || !party.connected || noticeText != null || partySelfPaused) &&
                     !playerControlsLocked && !showPartyPanel,
-                memberCount = party.members.size,
+                members = party.members,
                 message = when {
                     !party.connected -> stringResource(Res.string.party_reconnecting)
                     waitingNames.isNotEmpty() -> stringResource(Res.string.party_waiting_for, waitingNames.joinToString())
@@ -476,7 +480,7 @@ private fun ActiveParty.waitingNames(): List<String> =
 @Composable
 private fun PartyStatusPill(
     visible: Boolean,
-    memberCount: Int,
+    members: List<PartyMember>,
     message: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -489,32 +493,37 @@ private fun PartyStatusPill(
     ) {
         Row(
             modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color.Black.copy(alpha = 0.55f))
+                .clip(CircleShape)
                 .clickable(onClick = onClick)
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .animateContentSize()
+                .padding(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = Icons.Rounded.Groups,
-                contentDescription = stringResource(Res.string.party_title),
-                tint = Color.White,
-                modifier = Modifier.size(18.dp),
+            AvatarStack(
+                members = members,
+                size = 28.dp,
+                ringColor = Color.Black.copy(alpha = 0.5f),
             )
-            Text(
-                text = memberCount.toString(),
-                style = MaterialTheme.typography.labelLarge,
-                color = Color.White,
-            )
-            if (message != null) {
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Color.White.copy(alpha = 0.85f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            AnimatedContent(
+                targetState = message,
+                transitionSpec = {
+                    (fadeIn(tween(200)) + slideInVertically(tween(240)) { it / 2 }) togetherWith
+                        (fadeOut(tween(120)) + slideOutVertically(tween(160)) { -it / 2 })
+                },
+            ) { text ->
+                if (text != null) {
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            shadow = Shadow(color = Color.Black.copy(alpha = 0.8f), blurRadius = 12f),
+                        ),
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }

@@ -57,4 +57,8 @@
     <string name="party_action_resumed">%1$s resumed</string>
     <string name="party_action_seeked">%1$s skipped to %2$s</string>
     <string name="party_action_speed">%1$s changed the speed to %2$s</string>
+    <string name="party_joined_title">You're in</string>
+    <string name="party_hosted_by">Hosted by %1$s</string>
+    <string name="party_open_seat">Invite a friend</string>
+    <string name="party_host_hint">To host, start a party from the player.</string>
 </resources>

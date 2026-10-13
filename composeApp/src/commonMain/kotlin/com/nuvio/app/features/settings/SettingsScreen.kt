@@ -92,7 +92,6 @@ import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesRepositor
 import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesUiState
 import com.nuvio.app.navigation.LocalUseNativeNavigation
 import com.nuvio.app.features.party.PartyRepository
-import com.nuvio.app.features.party.PartyPrompt
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_settings_page_root
 import kotlinx.coroutines.delay
@@ -106,11 +105,11 @@ private val SettingsSearchRevealThreshold = 28.dp
 private const val SettingsSearchRevealAnimationMillis = 240L
 private const val SettingsSearchRevealHapticDelayMillis = 90L
 
-private val watchPartyClick: (() -> Unit)?
-    @Composable get() {
-        val available by PartyRepository.available.collectAsStateWithLifecycle()
-        return if (available) ({ PartyPrompt.showJoin() }) else null
-    }
+@Composable
+private fun watchPartyRow(onClick: () -> Unit): (() -> Unit)? {
+    val available by PartyRepository.available.collectAsStateWithLifecycle()
+    return onClick.takeIf { available }
+}
 
 private fun SettingsPage.isEnabledByPolicy(): Boolean =
     when (this) {
@@ -151,6 +150,7 @@ fun SettingsScreen(
     onCheckForUpdatesClick: (() -> Unit)? = null,
     onTestUpdateBannerClick: (() -> Unit)? = null,
     onCollectionsClick: () -> Unit = {},
+    onWatchPartyClick: () -> Unit = {},
 ) {
     BoxWithConstraints(
         modifier = modifier.fillMaxSize(),
@@ -451,6 +451,7 @@ fun SettingsScreen(
                         onCheckForUpdatesClick = onCheckForUpdatesClick,
                         onTestUpdateBannerClick = onTestUpdateBannerClick,
                         onCollectionsClick = onCollectionsClick,
+                        onWatchPartyClick = onWatchPartyClick,
                     )
                 } else {
                     MobileSettingsScreen(
@@ -523,6 +524,7 @@ fun SettingsScreen(
                         onCheckForUpdatesClick = onCheckForUpdatesClick,
                         onTestUpdateBannerClick = onTestUpdateBannerClick,
                         onCollectionsClick = onCollectionsClick,
+                        onWatchPartyClick = onWatchPartyClick,
                     )
                 }
             }
@@ -601,6 +603,7 @@ private fun MobileSettingsScreen(
     onCheckForUpdatesClick: (() -> Unit)? = null,
     onTestUpdateBannerClick: (() -> Unit)? = null,
     onCollectionsClick: () -> Unit = {},
+    onWatchPartyClick: () -> Unit = {},
 ) {
     val saveableStateHolder = rememberSaveableStateHolder()
     saveableStateHolder.SaveableStateProvider(page.name) {
@@ -666,7 +669,7 @@ private fun MobileSettingsScreen(
             }
         }
 
-        val onWatchPartyClick = watchPartyClick
+        val watchPartyRowClick = watchPartyRow(onWatchPartyClick)
         NuvioScreen(
             modifier = Modifier.nestedScroll(rootSearchRevealConnection),
             listState = listState,
@@ -721,7 +724,7 @@ private fun MobileSettingsScreen(
                             onTestUpdateBannerClick = onTestUpdateBannerClick,
                             onAccountClick = onAccountClick,
                             onSwitchProfileClick = onSwitchProfile,
-                            onWatchPartyClick = onWatchPartyClick,
+                            onWatchPartyClick = watchPartyRowClick,
                             showSupportersContributorsPage = AppFeaturePolicy.supportersContributorsPageEnabled,
                         )
                     }
@@ -977,6 +980,7 @@ private fun TabletSettingsScreen(
     onCheckForUpdatesClick: (() -> Unit)? = null,
     onTestUpdateBannerClick: (() -> Unit)? = null,
     onCollectionsClick: () -> Unit = {},
+    onWatchPartyClick: () -> Unit = {},
 ) {
     var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.General.name) }
     val activeCategory = SettingsCategory.valueOf(selectedCategory)
@@ -1085,7 +1089,7 @@ private fun TabletSettingsScreen(
                     listState.animateScrollToItem(0)
                 }
             }
-            val onWatchPartyClick = watchPartyClick
+            val watchPartyRowClick = watchPartyRow(onWatchPartyClick)
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -1155,7 +1159,7 @@ private fun TabletSettingsScreen(
                                 onTestUpdateBannerClick = onTestUpdateBannerClick,
                                 onAccountClick = { openInlinePage(SettingsPage.Account) },
                                 onSwitchProfileClick = onSwitchProfile,
-                                onWatchPartyClick = onWatchPartyClick,
+                                onWatchPartyClick = watchPartyRowClick,
                                 showAccountSection = activeCategory == SettingsCategory.Account,
                                 showGeneralSection = activeCategory == SettingsCategory.General,
                                 showAboutSection = activeCategory == SettingsCategory.About,
