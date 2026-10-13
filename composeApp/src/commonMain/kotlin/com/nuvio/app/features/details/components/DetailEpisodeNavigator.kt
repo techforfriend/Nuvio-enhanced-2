@@ -2,6 +2,7 @@ package com.nuvio.app.features.details.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
@@ -48,6 +49,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -679,6 +681,19 @@ private fun EpisodeNavigatorStickyBar(
     val floatingHeaderPx = with(density) { detailFloatingHeaderHeight().toPx() }
     var barHeightPx by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
+
+    var orderInitialized by remember { mutableStateOf(false) }
+    LaunchedEffect(navigator.sort, navigator.query, navigator.selectedSeason) {
+        if (!orderInitialized) {
+            orderInitialized = true
+            return@LaunchedEffect
+        }
+        val barIndex = firstEpisodeIndex - 1
+        if (listState.firstVisibleItemIndex >= barIndex) {
+            listState.scrollToItem(barIndex)
+            listState.scrollBy(-floatingHeaderPx)
+        }
+    }
 
     val jumpTo: (MetaVideo) -> Unit = { target ->
         scope.launch {

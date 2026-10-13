@@ -255,6 +255,11 @@ fun DetailSeriesContent(
                                 }
                             }
                         }
+                        var navigatorOrderInitialized by remember { mutableStateOf(false) }
+                        LaunchedEffect(navigator.sort, navigator.query) {
+                            if (navigatorOrderInitialized) rowState.scrollToItem(0)
+                            navigatorOrderInitialized = true
+                        }
                         EpisodeNavigatorBar(
                             state = navigator,
                             shownCount = shownEpisodes.size,
@@ -842,9 +847,11 @@ private fun EpisodeHorizontalRow(
     onEpisodeLongPress: ((MetaVideo) -> Unit)?,
 ) {
     val rowMetrics = rememberEpisodeHorizontalCardMetrics(maxWidthDp)
-    var hasPositioned by remember(episodes) { mutableStateOf(false) }
+    var positionedFor by remember { mutableStateOf<Int?>(null) }
+    var hasPositioned by remember { mutableStateOf(false) }
 
     LaunchedEffect(episodes, preferredEpisodeNumber) {
+        if (hasPositioned && positionedFor == preferredEpisodeNumber) return@LaunchedEffect
         val targetIndex = if (preferredEpisodeNumber != null) {
             episodes.indexOfFirst { it.episode == preferredEpisodeNumber }
         } else {
@@ -857,6 +864,7 @@ private fun EpisodeHorizontalRow(
                 listState.scrollToItem(targetIndex)
                 hasPositioned = true
             }
+            positionedFor = preferredEpisodeNumber
         }
     }
 
