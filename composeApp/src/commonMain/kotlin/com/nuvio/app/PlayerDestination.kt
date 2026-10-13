@@ -76,6 +76,7 @@ internal fun PlayerDestination(
         contentLanguage = launch.contentLanguage,
         launchId = route.launchId,
         sourceFilename = launch.sourceFilename,
+        stream = launch.stream,
         onBack = onBack,
         onOpenInExternalPlayer = { request ->
             val playerLaunch = PlayerLaunch(

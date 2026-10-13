@@ -1,5 +1,9 @@
 package com.nuvio.app.features.party
 
+import com.nuvio.app.features.streams.StreamBadge
+import com.nuvio.app.features.streams.StreamBehaviorHints
+import com.nuvio.app.features.streams.StreamItem
+import com.nuvio.app.features.streams.StreamProxyHeaders
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -32,6 +36,45 @@ data class PartyMedia(
     val key: String
         get() = partyMediaKey(metaType, metaId, season, episode)
 }
+
+@Serializable
+data class PartyStream(
+    @SerialName("media_key") val mediaKey: String,
+    val url: String,
+    val headers: Map<String, String> = emptyMap(),
+    @SerialName("response_headers") val responseHeaders: Map<String, String> = emptyMap(),
+    val name: String? = null,
+    val description: String? = null,
+    @SerialName("addon_name") val addonName: String = "",
+    @SerialName("addon_id") val addonId: String = "",
+    @SerialName("addon_logo") val addonLogo: String? = null,
+    val filename: String? = null,
+    @SerialName("video_size") val videoSize: Long? = null,
+    @SerialName("binge_group") val bingeGroup: String? = null,
+    @SerialName("stream_type") val streamType: String? = null,
+    val badges: List<StreamBadge> = emptyList(),
+) {
+    fun toStreamItem(): StreamItem = StreamItem(
+        name = name,
+        description = description,
+        url = url,
+        addonName = addonName,
+        addonId = addonId,
+        addonLogo = addonLogo,
+        streamType = streamType,
+        behaviorHints = StreamBehaviorHints(
+            bingeGroup = bingeGroup,
+            videoSize = videoSize,
+            filename = filename,
+            proxyHeaders = StreamProxyHeaders(request = headers, response = responseHeaders),
+        ),
+        badges = badges,
+    )
+}
+
+internal fun isShareableStreamUrl(url: String): Boolean = SHAREABLE_URL.containsMatchIn(url)
+
+private val SHAREABLE_URL = Regex("^https?://(?!localhost|127\\.|0\\.0\\.0\\.0|\\[::1])[^\\s/]+", RegexOption.IGNORE_CASE)
 
 internal fun partyMediaKey(metaType: String, metaId: String, season: Int?, episode: Int?): String =
     listOf(metaType.lowercase(), metaId, season?.toString().orEmpty(), episode?.toString().orEmpty())
@@ -126,6 +169,7 @@ data class ActiveParty(
     val maxMembers: Int,
     val connected: Boolean,
     val hostOnly: Boolean = false,
+    val sharing: Boolean = false,
 ) {
     val isHost: Boolean
         get() = memberId == hostMemberId

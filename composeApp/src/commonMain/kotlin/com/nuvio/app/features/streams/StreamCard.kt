@@ -46,6 +46,13 @@ import com.nuvio.app.features.debrid.DebridProviders
 
 internal val LocalStreamHighlight = staticCompositionLocalOf<(StreamItem) -> String?> { { null } }
 
+internal data class SharedStream(
+    val label: String,
+    val stream: StreamItem,
+)
+
+internal val LocalSharedStream = staticCompositionLocalOf<SharedStream?> { null }
+
 @Composable
 internal fun StreamCard(
     stream: StreamItem,

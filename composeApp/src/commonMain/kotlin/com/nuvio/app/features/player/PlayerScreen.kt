@@ -45,6 +45,7 @@ fun PlayerScreen(
     contentLanguage: String? = null,
     launchId: Long? = null,
     sourceFilename: String? = null,
+    stream: com.nuvio.app.features.streams.StreamItem? = null,
 ) {
     PlayerScreenContent(
         PlayerScreenArgs(
@@ -87,6 +88,7 @@ fun PlayerScreen(
             launchId = launchId,
             sourceFilename = sourceFilename,
             onOpenPartyMedia = onOpenPartyMedia,
+            stream = stream,
         )
     )
 }

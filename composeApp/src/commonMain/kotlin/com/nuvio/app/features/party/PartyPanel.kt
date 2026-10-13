@@ -48,6 +48,7 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_close
 import nuvio.composeapp.generated.resources.party_now_watching
 import nuvio.composeapp.generated.resources.party_play_for_everyone
+import nuvio.composeapp.generated.resources.party_share_unavailable
 import nuvio.composeapp.generated.resources.party_sign_in_required
 import nuvio.composeapp.generated.resources.party_start_action
 import nuvio.composeapp.generated.resources.party_start_description
@@ -71,6 +72,8 @@ internal fun PartyPanel(
     onEnd: () -> Unit,
     onRemove: (PartyMember) -> Unit,
     onHostOnlyChange: (Boolean) -> Unit,
+    canShareStream: Boolean,
+    onSharingChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
@@ -121,6 +124,8 @@ internal fun PartyPanel(
                         onEnd = onEnd,
                         onRemove = onRemove,
                         onHostOnlyChange = onHostOnlyChange,
+                        canShareStream = canShareStream,
+                        onSharingChange = onSharingChange,
                     )
                 }
             }
@@ -185,6 +190,8 @@ private fun PartyContent(
     onEnd: () -> Unit,
     onRemove: (PartyMember) -> Unit,
     onHostOnlyChange: (Boolean) -> Unit,
+    canShareStream: Boolean,
+    onSharingChange: (Boolean) -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
     Column(
@@ -200,9 +207,11 @@ private fun PartyContent(
             onRemove = onRemove,
         )
         if (party.isHost) {
-            HostOnlySwitch(
-                checked = party.hostOnly,
-                onCheckedChange = onHostOnlyChange,
+            HostSettings(
+                party = party,
+                onHostOnlyChange = onHostOnlyChange,
+                onSharingChange = onSharingChange,
+                sharingNote = stringResource(Res.string.party_share_unavailable).takeUnless { canShareStream },
             )
         }
         AnimatedVisibility(

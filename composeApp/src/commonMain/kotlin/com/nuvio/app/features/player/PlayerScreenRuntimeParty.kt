@@ -55,6 +55,8 @@ import com.nuvio.app.features.party.PartyPanel
 import com.nuvio.app.features.party.PartyPlayback
 import com.nuvio.app.features.party.PartyRepository
 import com.nuvio.app.features.party.PartySource
+import com.nuvio.app.features.party.PartyStream
+import com.nuvio.app.features.party.isShareableStreamUrl
 import com.nuvio.app.features.party.PartySync
 import com.nuvio.app.features.party.messageRes
 import com.nuvio.app.features.party.partyMediaKey
@@ -129,6 +131,27 @@ internal fun PlayerScreenRuntime.currentPartyMedia(): PartyMedia = PartyMedia(
     ),
 )
 
+internal fun PlayerScreenRuntime.currentPartyStream(): PartyStream? {
+    val stream = activeStream ?: return null
+    if (!isShareableStreamUrl(activeSourceUrl) || activeSourceAudioUrl != null) return null
+    return PartyStream(
+        mediaKey = partyKey,
+        url = activeSourceUrl,
+        headers = activeSourceHeaders,
+        responseHeaders = activeSourceResponseHeaders,
+        name = stream.name,
+        description = stream.description,
+        addonName = stream.addonName,
+        addonId = stream.addonId,
+        addonLogo = stream.addonLogo,
+        filename = activeSourceFilename ?: stream.behaviorHints.filename,
+        videoSize = stream.behaviorHints.videoSize,
+        bingeGroup = stream.behaviorHints.bingeGroup,
+        streamType = activeStreamType,
+        badges = stream.badges,
+    )
+}
+
 internal fun PlayerScreenRuntime.partyBaseRate(): Float =
     PartyRepository.playback.value?.rate ?: playbackSnapshot.playbackSpeed
 
@@ -186,6 +209,12 @@ internal fun PlayerScreenRuntime.BindPartyEffects() {
     val partyState by PartyRepository.state.collectAsStateWithLifecycle()
     val partyId = partyState.party?.id
     val key = partyKey
+    val sharing = partyState.party?.let { it.isHost && it.sharing } == true
+    val sharedStream = if (sharing) currentPartyStream() else null
+
+    LaunchedEffect(sharing, sharedStream) {
+        if (sharing) PartyRepository.shareStream(sharedStream)
+    }
 
     LaunchedEffect(key) {
         partySelfPaused = false
@@ -458,6 +487,8 @@ internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
             },
             onRemove = { member -> PartyRepository.removeMember(member.id) },
             onHostOnlyChange = { enabled -> PartyRepository.setHostOnly(enabled) },
+            canShareStream = currentPartyStream() != null,
+            onSharingChange = { enabled -> PartyRepository.setSharing(enabled) },
             onDismiss = { showPartyPanel = false },
         )
     }

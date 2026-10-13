@@ -228,6 +228,7 @@ internal fun PlayerScreenRuntime.switchToP2pSourceStream(stream: StreamItem) {
     activeStreamSubtitle = stream.streamSubtitle
     activeProviderName = stream.addonName
     activeProviderAddonId = stream.addonId
+    activeStream = stream
     currentStreamBingeGroup = stream.behaviorHints.bingeGroup
     activeInitialPositionMs = currentPositionMs
     activeInitialProgressFraction = null
@@ -328,6 +329,7 @@ internal fun PlayerScreenRuntime.switchToSource(
     activeStreamSubtitle = stream.streamSubtitle
     activeProviderName = stream.addonName
     activeProviderAddonId = stream.addonId
+    activeStream = stream
     currentStreamBingeGroup = stream.behaviorHints.bingeGroup
     activeInitialPositionMs = currentPositionMs
     activeInitialProgressFraction = null
@@ -427,6 +429,7 @@ internal fun PlayerScreenRuntime.switchToDownloadedEpisode(downloadItem: Downloa
     activeStreamSubtitle = downloadItem.streamSubtitle
     activeProviderName = downloadItem.providerName.ifBlank { downloadedLabel }
     activeProviderAddonId = downloadItem.providerAddonId
+    activeStream = null
     currentStreamBingeGroup = null
     activeSeasonNumber = episode.season
     activeEpisodeNumber = episode.episode
@@ -568,6 +571,7 @@ private fun PlayerScreenRuntime.applyEpisodeStreamMetadata(
     activeStreamSubtitle = stream.streamSubtitle
     activeProviderName = stream.addonName
     activeProviderAddonId = stream.addonId
+    activeStream = stream
     currentStreamBingeGroup = stream.behaviorHints.bingeGroup
     activeSeasonNumber = episode.season
     activeEpisodeNumber = episode.episode

@@ -839,6 +839,7 @@ internal fun PlayerScreenRuntime.tryRefreshCredentialedSourceAfterError(message:
             activeStreamSubtitle = stream.streamSubtitle
             activeProviderName = stream.addonName
             activeProviderAddonId = stream.addonId
+            activeStream = stream
             currentStreamBingeGroup = stream.behaviorHints.bingeGroup
             activeInitialPositionMs = savedPositionMs
             activeInitialProgressFraction = null

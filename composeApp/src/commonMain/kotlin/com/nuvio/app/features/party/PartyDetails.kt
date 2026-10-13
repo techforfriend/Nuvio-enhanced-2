@@ -86,6 +86,8 @@ import nuvio.composeapp.generated.resources.party_reconnecting
 import nuvio.composeapp.generated.resources.party_remove_message
 import nuvio.composeapp.generated.resources.party_remove_title
 import nuvio.composeapp.generated.resources.party_seats
+import nuvio.composeapp.generated.resources.party_share_description
+import nuvio.composeapp.generated.resources.party_share_title
 import nuvio.composeapp.generated.resources.party_you
 import org.jetbrains.compose.resources.stringResource
 
@@ -381,14 +383,40 @@ private fun PulsingDot() {
 }
 
 @Composable
-internal fun HostOnlySwitch(
+internal fun HostSettings(
+    party: ActiveParty,
+    onHostOnlyChange: (Boolean) -> Unit,
+    onSharingChange: (Boolean) -> Unit,
+    sharingNote: String? = null,
+) {
+    Column {
+        PartySwitch(
+            title = stringResource(Res.string.party_host_only_title),
+            description = stringResource(Res.string.party_host_only_description),
+            checked = party.hostOnly,
+            onCheckedChange = onHostOnlyChange,
+        )
+        PartySwitch(
+            title = stringResource(Res.string.party_share_title),
+            description = stringResource(Res.string.party_share_description),
+            checked = party.sharing,
+            onCheckedChange = onSharingChange,
+        )
+        if (party.sharing && sharingNote != null) PartyNote(sharingNote)
+    }
+}
+
+@Composable
+private fun PartySwitch(
+    title: String,
+    description: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
     SettingsSwitchRow(
-        title = stringResource(Res.string.party_host_only_title),
-        description = stringResource(Res.string.party_host_only_description),
+        title = title,
+        description = description,
         checked = checked,
         isTablet = false,
         horizontalPadding = 0.dp,

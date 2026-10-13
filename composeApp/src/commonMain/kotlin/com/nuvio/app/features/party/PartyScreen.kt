@@ -350,9 +350,10 @@ private fun PartyContent(
             onRemove = { member -> PartyRepository.removeMember(member.id) },
         )
         if (party.isHost) {
-            HostOnlySwitch(
-                checked = party.hostOnly,
-                onCheckedChange = PartyRepository::setHostOnly,
+            HostSettings(
+                party = party,
+                onHostOnlyChange = PartyRepository::setHostOnly,
+                onSharingChange = PartyRepository::setSharing,
             )
         } else if (party.hostOnly) {
             HostOnlyNote()

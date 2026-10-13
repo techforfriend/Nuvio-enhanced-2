@@ -54,7 +54,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import com.nuvio.app.features.party.PartyRepository
 import com.nuvio.app.features.party.matches
 import com.nuvio.app.features.party.partyMediaKey
+import com.nuvio.app.features.streams.LocalSharedStream
 import com.nuvio.app.features.streams.LocalStreamHighlight
+import com.nuvio.app.features.streams.SharedStream
 
 private data class PendingP2pStreamOpen(
     val stream: StreamItem,
@@ -239,6 +241,7 @@ internal fun StreamDestination(
             initialProgressFraction = resolvedResumeProgressFraction,
             contentLanguage = resolveLaunchContentLanguage(),
             sourceFilename = stream.behaviorHints.filename,
+            stream = stream,
         )
 
         autoPlayNavigationStarted = replaceStreamRoute
@@ -359,6 +362,18 @@ internal fun StreamDestination(
                 initialProgressFraction = launch.resumeProgressFraction,
                 contentLanguage = resolveLaunchContentLanguage(cached.contentLanguage),
                 sourceFilename = cached.filename,
+                stream = StreamItem(
+                    name = cached.streamName,
+                    url = cached.url,
+                    addonName = cached.addonName,
+                    addonId = cached.addonId,
+                    streamType = cached.streamType,
+                    behaviorHints = StreamBehaviorHints(
+                        filename = cached.filename,
+                        videoSize = cached.videoSize,
+                        bingeGroup = cached.bingeGroup,
+                    ),
+                ),
             )
             if (playerSettings.externalPlayerEnabled) {
                 openExternalPlayback(playerLaunch)
@@ -523,6 +538,7 @@ internal fun StreamDestination(
             initialProgressFraction = launch.resumeProgressFraction.takeIf { serverResumeMs == null },
             contentLanguage = resolveLaunchContentLanguage(),
             sourceFilename = stream.behaviorHints.filename,
+            stream = stream,
         )
         if (playerSettings.externalPlayerEnabled && stream.serverTarget == null) {
             openExternalPlayback(playerLaunch)
@@ -718,6 +734,7 @@ internal fun StreamDestination(
             initialProgressFraction = resolvedResumeProgressFraction,
             contentLanguage = resolveLaunchContentLanguage(),
             sourceFilename = stream.behaviorHints.filename,
+            stream = stream,
         )
 
         if (!forceInternal && (forceExternal || playerSettings.externalPlayerEnabled)) {
@@ -742,21 +759,32 @@ internal fun StreamDestination(
     }
 
     val partyState by PartyRepository.state.collectAsStateWithLifecycle()
-    val partySource = partyState.party?.media?.takeIf { media ->
-        media.key == partyMediaKey(
-            metaType = launch.parentMetaType ?: launch.type,
-            metaId = launch.parentMetaId ?: effectiveVideoId,
-            season = launch.seasonNumber,
-            episode = launch.episodeNumber,
-        )
-    }?.source
+    val partyStream by PartyRepository.sharedStream.collectAsStateWithLifecycle()
+    val party = partyState.party
+    val contentKey = partyMediaKey(
+        metaType = launch.parentMetaType ?: launch.type,
+        metaId = launch.parentMetaId ?: effectiveVideoId,
+        season = launch.seasonNumber,
+        episode = launch.episodeNumber,
+    )
+    val partySource = party?.media?.takeIf { it.key == contentKey }?.source
     val partySourceLabel = stringResource(Res.string.party_source)
     val streamHighlight: (StreamItem) -> String? = remember(partySource, partySourceLabel) {
         { stream -> if (partySource?.matches(stream) == true) partySourceLabel else null }
     }
+    val sharedLabel = stringResource(Res.string.party_shared_by, party?.member(party.hostMemberId)?.displayName.orEmpty())
+    val isHost = party?.isHost == true
+    val sharedStream = remember(partyStream, sharedLabel, isHost, contentKey) {
+        partyStream
+            ?.takeIf { !isHost && it.mediaKey == contentKey }
+            ?.let { SharedStream(label = sharedLabel, stream = it.toStreamItem()) }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        CompositionLocalProvider(LocalStreamHighlight provides streamHighlight) {
+        CompositionLocalProvider(
+            LocalStreamHighlight provides streamHighlight,
+            LocalSharedStream provides sharedStream,
+        ) {
             StreamsScreen(
                 showLoadingScreen = showLoadingScreen,
                 type = launch.type,
@@ -782,6 +810,7 @@ internal fun StreamDestination(
                         resolvedResumeProgressFraction = resolvedResumeProgressFraction,
                         forceExternal = false,
                         forceInternal = false,
+                        saveForReuse = stream != sharedStream?.stream,
                     )
                 },
                 onStreamActionOpen = { stream, openExternally, resolvedResumePositionMs, resolvedResumeProgressFraction ->

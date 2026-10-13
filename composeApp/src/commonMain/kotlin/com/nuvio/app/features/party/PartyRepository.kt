@@ -68,6 +68,9 @@ object PartyRepository {
     private val _notices = MutableSharedFlow<PartyNotice>(extraBufferCapacity = 8)
     val notices: SharedFlow<PartyNotice> = _notices.asSharedFlow()
 
+    private val _sharedStream = MutableStateFlow<PartyStream?>(null)
+    val sharedStream: StateFlow<PartyStream?> = _sharedStream.asStateFlow()
+
     private val _enabled = MutableStateFlow(true)
     val available: StateFlow<Boolean> = combine(ServerConfigurationRepository.active, _enabled) { server, enabled ->
         server.capabilities.watchParty && enabled
@@ -152,6 +155,23 @@ object PartyRepository {
             val snapshot = runRemote { PartyApi.setHostOnly(party.id, deviceId(), enabled) }
             if (snapshot?.party == null) updateParty { it.copy(hostOnly = party.hostOnly) }
             snapshot?.let(::applySnapshot)
+        }
+    }
+
+    fun setSharing(enabled: Boolean) {
+        scope.launch {
+            val party = _state.value.party ?: return@launch
+            if (!party.isHost || party.sharing == enabled) return@launch
+            updateParty { it.copy(sharing = enabled) }
+            if (!enabled) sendStream(null)
+        }
+    }
+
+    fun shareStream(stream: PartyStream?) {
+        scope.launch {
+            val party = _state.value.party ?: return@launch
+            if (!party.isHost || !party.sharing || stream == _sharedStream.value) return@launch
+            sendStream(stream)
         }
     }
 
@@ -264,6 +284,7 @@ object PartyRepository {
         channel = null
         localPresence = null
         _playback.value = null
+        _sharedStream.value = null
         _state.value = PartyUiState()
     }
 
@@ -289,6 +310,7 @@ object PartyRepository {
         runCatching { channel?.track(presence) }
         runCatching { channel?.send("status", presence) }
         _playback.value?.let { current -> runCatching { channel?.send("state", encodePlayback(current)) } }
+        if (party.isHost && party.sharing) _sharedStream.value?.let { sendStream(it) }
         requestState(party)
     }
 
@@ -299,6 +321,7 @@ object PartyRepository {
             "state_request" -> {
                 if (payload.string("member_id") == party.memberId) return
                 runCatching { channel?.send("status", encodePresence(ownPresence(party))) }
+                if (party.isHost && party.sharing) _sharedStream.value?.let { sendStream(it) }
                 val current = _playback.value ?: return
                 runCatching { channel?.send("state", encodePlayback(current)) }
             }
@@ -323,6 +346,13 @@ object PartyRepository {
                 val media = payload["media"]?.let { decode(it, PartyMedia.serializer()) } ?: return
                 val playback = payload["playback"]?.takeIf { it !is JsonNull }?.let { decode(it, PartyPlayback.serializer()) }
                 applyMedia(media, playback)
+            }
+            "stream" -> {
+                if (party.isHost || payload.string("member_id") != party.hostMemberId) return
+                _sharedStream.value = payload["stream"]
+                    ?.takeIf { it !is JsonNull }
+                    ?.let { decode(it, PartyStream.serializer()) }
+                    ?.takeIf { isShareableStreamUrl(it.url) }
             }
         }
     }
@@ -364,6 +394,7 @@ object PartyRepository {
             return
         }
         val name = party.member(memberId)?.displayName
+        if (memberId == party.hostMemberId) _sharedStream.value = null
         updateParty { current ->
             current.copy(
                 members = current.members.filterNot { it.id == memberId },
@@ -418,6 +449,7 @@ object PartyRepository {
         updateParty { it.copy(media = media) }
         if (changed) {
             _playback.value = playback?.takeIf { it.mediaKey == null || it.mediaKey == media.key }
+            if (_sharedStream.value?.mediaKey != media.key) _sharedStream.value = null
             ignoredWaiting.clear()
             waitStartedAt = null
             _events.tryEmit(PartyEvent.MediaChanged(media))
@@ -602,6 +634,16 @@ object PartyRepository {
     }
 
     private fun deviceId(): String = SyncClientIdentity.currentClientId()
+
+    private suspend fun sendStream(stream: PartyStream?) {
+        val party = _state.value.party ?: return
+        _sharedStream.value = stream
+        val payload = buildJsonObject {
+            put("member_id", party.memberId)
+            put("stream", stream?.let { PartyApi.json.encodeToJsonElement(PartyStream.serializer(), it) } ?: JsonNull)
+        }
+        runCatching { channel?.send("stream", payload) }
+    }
 
     private fun encodePlayback(playback: PartyPlayback): JsonObject =
         PartyApi.json.encodeToJsonElement(PartyPlayback.serializer(), playback).jsonObject
