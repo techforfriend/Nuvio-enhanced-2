@@ -143,3 +143,17 @@ sealed interface PartyEvent {
     data object Ended : PartyEvent
     data class MediaChanged(val media: PartyMedia) : PartyEvent
 }
+
+enum class PartyAction {
+    Paused,
+    Resumed,
+    Seeked,
+    Speed,
+}
+
+data class PartyNotice(
+    val name: String,
+    val action: PartyAction,
+    val positionMs: Long,
+    val rate: Float,
+)

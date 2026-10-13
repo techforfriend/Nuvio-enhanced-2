@@ -119,6 +119,38 @@ class PartySyncTest {
     }
 
     @Test
+    fun actionDetectsPauseAndResume() {
+        val playing = playback(seq = 1, at = 1_000_000)
+        val paused = playback(seq = 2, paused = true, positionMs = 12_000, at = 1_002_000)
+        assertEquals(PartyAction.Paused, PartySync.actionOf(playing, paused))
+        assertEquals(PartyAction.Resumed, PartySync.actionOf(paused, paused.copy(seq = 3, paused = false)))
+    }
+
+    @Test
+    fun actionDetectsSeekButNotSmallDrift() {
+        val playing = playback(seq = 1, positionMs = 10_000, at = 1_000_000)
+        val drifted = playback(seq = 2, positionMs = 12_400, at = 1_002_000)
+        val skipped = playback(seq = 2, positionMs = 22_000, at = 1_002_000)
+        assertEquals(null, PartySync.actionOf(playing, drifted))
+        assertEquals(PartyAction.Seeked, PartySync.actionOf(playing, skipped))
+    }
+
+    @Test
+    fun actionDetectsSpeedChange() {
+        val playing = playback(seq = 1, at = 1_000_000)
+        assertEquals(PartyAction.Speed, PartySync.actionOf(playing, playback(seq = 2, rate = 1.5f, at = 1_000_500)))
+    }
+
+    @Test
+    fun actionIgnoresWaitingAndFirstState() {
+        val playing = playback(seq = 1, at = 1_000_000)
+        val waiting = playback(seq = 2, paused = true, waiting = true, at = 1_000_500)
+        assertEquals(null, PartySync.actionOf(null, playing))
+        assertEquals(null, PartySync.actionOf(playing, waiting))
+        assertEquals(null, PartySync.actionOf(waiting, playback(seq = 3, at = 1_001_000)))
+    }
+
+    @Test
     fun waitingIgnoresOtherTitlesAndSkippedMembers() {
         val media = PartyMedia(type = "movie", metaId = "tt1", metaType = "movie")
         val party = party(memberId = "a", hostMemberId = "a", online = emptyList()).copy(

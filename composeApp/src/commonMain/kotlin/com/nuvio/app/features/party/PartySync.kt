@@ -14,6 +14,7 @@ internal object PartySync {
     const val SEEK_THRESHOLD_MS = 1_500L
     const val PAUSED_TOLERANCE_MS = 500L
     const val NUDGE_FACTOR = 0.05f
+    const val SEEK_NOTICE_MS = 2_000L
 
     fun expectedPositionMs(playback: PartyPlayback, nowMs: Long, durationMs: Long = 0L): Long {
         val position = if (playback.paused) {
@@ -59,6 +60,17 @@ internal object PartySync {
         val host = party.hostMemberId
         if (host != null && host in online) return host
         return party.members.firstOrNull { it.id in online }?.id ?: party.memberId
+    }
+
+    fun actionOf(previous: PartyPlayback?, next: PartyPlayback): PartyAction? {
+        if (previous == null || previous.waiting || next.waiting) return null
+        if (previous.mediaKey != next.mediaKey) return null
+        return when {
+            previous.paused != next.paused -> if (next.paused) PartyAction.Paused else PartyAction.Resumed
+            abs(previous.rate - next.rate) > 0.01f -> PartyAction.Speed
+            abs(next.positionMs - expectedPositionMs(previous, next.at)) > SEEK_NOTICE_MS -> PartyAction.Seeked
+            else -> null
+        }
     }
 
     fun waitingMemberIds(party: ActiveParty, ignored: Set<String>): List<String> =

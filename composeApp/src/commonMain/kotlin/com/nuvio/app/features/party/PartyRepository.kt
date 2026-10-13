@@ -63,6 +63,9 @@ object PartyRepository {
     private val _events = MutableSharedFlow<PartyEvent>(extraBufferCapacity = 16)
     val events: SharedFlow<PartyEvent> = _events.asSharedFlow()
 
+    private val _notices = MutableSharedFlow<PartyNotice>(extraBufferCapacity = 8)
+    val notices: SharedFlow<PartyNotice> = _notices.asSharedFlow()
+
     private val _enabled = MutableStateFlow(true)
     val available: StateFlow<Boolean> = combine(ServerConfigurationRepository.active, _enabled) { server, enabled ->
         server.capabilities.watchParty && enabled
@@ -412,6 +415,10 @@ object PartyRepository {
             if (current.waiting) ignoredWaiting += PartySync.waitingMemberIds(party, emptySet())
         }
         _playback.value = candidate
+        if (candidate.memberId == party.memberId) return
+        val action = PartySync.actionOf(current, candidate) ?: return
+        val name = party.member(candidate.memberId)?.displayName ?: return
+        _notices.tryEmit(PartyNotice(name, action, candidate.positionMs, candidate.rate))
     }
 
     private suspend fun publish(

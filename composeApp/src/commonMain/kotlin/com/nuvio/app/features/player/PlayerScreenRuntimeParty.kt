@@ -25,6 +25,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import co.touchlab.kermit.Logger
 import com.nuvio.app.features.party.ActiveParty
+import com.nuvio.app.features.party.PartyAction
 import com.nuvio.app.core.sync.AppForegroundMonitor
 import com.nuvio.app.core.sync.AppVisibility
 import com.nuvio.app.core.ui.NuvioToastController
@@ -41,6 +45,7 @@ import com.nuvio.app.features.party.PartyCorrection
 import com.nuvio.app.features.party.PartyEvent
 import com.nuvio.app.features.party.PartyMedia
 import com.nuvio.app.features.party.PartyMemberStatus
+import com.nuvio.app.features.party.PartyNotice
 import com.nuvio.app.features.party.PartyPanel
 import com.nuvio.app.features.party.PartyPlayback
 import com.nuvio.app.features.party.PartyPrompt
@@ -50,9 +55,14 @@ import com.nuvio.app.features.party.PartySync
 import com.nuvio.app.features.party.messageRes
 import com.nuvio.app.features.party.partyMediaKey
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.party_action_paused
+import nuvio.composeapp.generated.resources.party_action_resumed
+import nuvio.composeapp.generated.resources.party_action_seeked
+import nuvio.composeapp.generated.resources.party_action_speed
 import nuvio.composeapp.generated.resources.party_reconnecting
 import nuvio.composeapp.generated.resources.party_title
 import nuvio.composeapp.generated.resources.party_waiting
@@ -326,6 +336,14 @@ private fun PlayerScreenRuntime.clearPartyNudge(playback: PartyPlayback? = Party
 internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
     val partyState by PartyRepository.state.collectAsStateWithLifecycle()
     val playback by PartyRepository.playback.collectAsStateWithLifecycle()
+    var notice by remember { mutableStateOf<PartyNotice?>(null) }
+    LaunchedEffect(Unit) {
+        PartyRepository.notices.collectLatest { next ->
+            notice = next
+            delay(NOTICE_DURATION)
+            notice = null
+        }
+    }
     val party = partyState.party
     runtime.run {
         if (party != null) {
@@ -334,14 +352,16 @@ internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
             } else {
                 emptyList()
             }
+            val noticeText = notice?.text()
             PartyStatusPill(
-                visible = (controlsVisible || waitingNames.isNotEmpty() || !party.connected) &&
+                visible = (controlsVisible || waitingNames.isNotEmpty() || !party.connected || noticeText != null) &&
                     !playerControlsLocked && !showPartyPanel,
                 memberCount = party.members.size,
                 message = when {
                     !party.connected -> stringResource(Res.string.party_reconnecting)
                     waitingNames.isNotEmpty() -> stringResource(Res.string.party_waiting_for, waitingNames.joinToString())
                     playback?.waiting == true -> stringResource(Res.string.party_waiting)
+                    noticeText != null -> noticeText
                     else -> null
                 },
                 onClick = { showPartyPanel = true },
@@ -380,6 +400,14 @@ internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
             onDismiss = { showPartyPanel = false },
         )
     }
+}
+
+@Composable
+private fun PartyNotice.text(): String = when (action) {
+    PartyAction.Paused -> stringResource(Res.string.party_action_paused, name)
+    PartyAction.Resumed -> stringResource(Res.string.party_action_resumed, name)
+    PartyAction.Seeked -> stringResource(Res.string.party_action_seeked, name, formatPlaybackTime(positionMs))
+    PartyAction.Speed -> stringResource(Res.string.party_action_speed, name, formatPlaybackSpeedLabel(rate))
 }
 
 private fun ActiveParty.waitingNames(): List<String> =
@@ -436,6 +464,7 @@ private fun PartyStatusPill(
 
 private val partyLog = Logger.withTag("Party")
 private val PARTY_TICK = 250.milliseconds
+private val NOTICE_DURATION = 3_000.milliseconds
 private val BUFFERING_REPORT_DELAY = 1_000.milliseconds
 private val OUTSIDE_TOGGLE_DELAY = 1_200.milliseconds
 private val SEEK_SETTLE = 2_500.milliseconds
