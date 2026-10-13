@@ -7,6 +7,7 @@ import com.nuvio.app.core.network.ServerConfigurationRepository
 import com.nuvio.app.core.sync.AppForegroundMonitor
 import com.nuvio.app.core.sync.AppVisibility
 import com.nuvio.app.core.sync.SyncClientIdentity
+import com.nuvio.app.features.profiles.AvatarRepository
 import com.nuvio.app.features.profiles.ProfileRepository
 import io.github.jan.supabase.realtime.Presence
 import kotlinx.coroutines.CancellationException
@@ -590,12 +591,12 @@ object PartyRepository {
             null
         }
 
-    private fun identity(): PartyIdentity {
+    private suspend fun identity(): PartyIdentity {
         val profile = ProfileRepository.state.value.activeProfile
         return PartyIdentity(
             deviceId = deviceId(),
             displayName = profile?.name?.trim()?.takeIf { it.isNotEmpty() }?.take(40) ?: DEFAULT_NAME,
-            avatarUrl = profile?.avatarUrl?.takeIf { it.startsWith("https://") && it.length <= 512 },
+            avatarUrl = profile?.let { AvatarRepository.shareableImageUrl(it) }?.takeIf { it.startsWith("https://") && it.length <= 512 },
             avatarColor = profile?.avatarColorHex?.takeIf { COLOR_PATTERN.matches(it) },
         )
     }
