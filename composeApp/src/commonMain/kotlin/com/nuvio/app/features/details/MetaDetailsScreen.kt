@@ -164,10 +164,7 @@ import com.nuvio.app.features.watchprogress.buildPlaybackVideoId
 import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesRepository
 import com.nuvio.app.features.watching.application.WatchingActions
 import com.nuvio.app.features.watching.application.WatchingState
-import com.kmpalette.rememberDominantColorState
-import com.nuvio.app.core.ui.brightenedDominant
-import com.nuvio.app.core.ui.isBrightDominantSwatch
-import com.kmpalette.extensions.painter.rememberPainterDominantColorState
+import com.nuvio.app.core.ui.rememberArtworkDominantColor
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -1151,44 +1148,12 @@ fun MetaDetailsScreen(
                     val backdropUrl = meta.background ?: meta.poster
                     val backgroundMode = metaScreenSettingsUiState.backgroundMode
                     val dominantColorEnabled = backgroundMode == MetaScreenBackgroundMode.DominantColor &&
-                        deferredMetaWorkAllowed &&
                         !backdropUrl.isNullOrBlank()
-                    var dominantBackdropPainter by remember(meta.id, backdropUrl) {
-                        mutableStateOf<Painter?>(null)
-                    }
-                    var dominantBackdropImageBitmap by remember(meta.id, backdropUrl) {
-                        mutableStateOf<ImageBitmap?>(null)
-                    }
-                    val dominantImageBitmapColorState = rememberDominantColorState(
-                        defaultColor = colorScheme.background,
-                        defaultOnColor = colorScheme.onBackground,
-                        isSwatchValid = isBrightDominantSwatch,
+                    val extractedDominantColor = rememberArtworkDominantColor(
+                        url = backdropUrl,
+                        enabled = dominantColorEnabled,
                     )
-                    val dominantPainterColorState = rememberPainterDominantColorState(
-                        defaultColor = colorScheme.background,
-                        defaultOnColor = colorScheme.onBackground,
-                        isSwatchValid = isBrightDominantSwatch,
-                    )
-                    LaunchedEffect(dominantColorEnabled, dominantBackdropImageBitmap, dominantBackdropPainter) {
-                        val imageBitmap = dominantBackdropImageBitmap
-                        val painter = dominantBackdropPainter
-                        if (dominantColorEnabled) {
-                            when {
-                                imageBitmap != null -> runCatching {
-                                    dominantImageBitmapColorState.updateFrom(imageBitmap)
-                                }
-                                painter != null -> runCatching {
-                                    dominantPainterColorState.updateFrom(painter)
-                                }
-                            }
-                        }
-                    }
-                    val extractedDominantColor = if (dominantBackdropImageBitmap != null) {
-                        dominantImageBitmapColorState.color
-                    } else {
-                        dominantPainterColorState.color
-                    }.brightenedDominant(fallback = colorScheme.background)
-                    val dominantBackdropTargetColor = if (dominantColorEnabled) {
+                    val dominantBackdropTargetColor = if (dominantColorEnabled && extractedDominantColor != null) {
                         dominantBackdropBlendColor(extractedDominantColor, colorScheme.background)
                     } else {
                         colorScheme.background
@@ -1208,10 +1173,7 @@ fun MetaDetailsScreen(
                             !isLeavingDetails &&
                             !isHeroCollapsed.value
                     }
-                    val onBackdropLoaded: (Painter, ImageBitmap?) -> Unit = { painter, imageBitmap ->
-                        dominantBackdropPainter = painter
-                        dominantBackdropImageBitmap = imageBitmap
-                    }
+                    val onBackdropLoaded: (Painter, ImageBitmap?) -> Unit = { _, _ -> }
                     val onHeroTrailerReady: () -> Unit = {
                         if (!heroTrailerFinished) {
                             heroTrailerReady = true
@@ -1260,7 +1222,7 @@ fun MetaDetailsScreen(
                                             .background(colorScheme.background.copy(alpha = 0.92f)),
                                     )
                                 }
-                                MetaScreenBackgroundMode.DominantColor -> if (deferredMetaWorkAllowed) {
+                                MetaScreenBackgroundMode.DominantColor -> {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
