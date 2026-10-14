@@ -1480,6 +1480,8 @@ object WatchProgressRepository {
         }
     }
 
+    fun flushPendingWrites() = flushPendingPersist()
+
     private fun flushPendingPersist() {
         synchronized(persistWriteLock) {
             val pending = synchronized(persistLock) {

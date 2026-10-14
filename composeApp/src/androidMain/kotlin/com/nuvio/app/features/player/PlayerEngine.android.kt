@@ -2488,6 +2488,8 @@ private const val MPV_SUBTITLE_OUTLINE_SIZE_SCALE = 1.5
 private class ExoMediaInfoCache {
     private var tracks: androidx.media3.common.Tracks? = null
     private var mediaItem: MediaItem? = null
+    private var videoFormat: androidx.media3.common.Format? = null
+    private var audioFormat: androidx.media3.common.Format? = null
     private var videoDecoder: String? = null
     private var audioDecoder: String? = null
     private var json: String? = null
@@ -2495,11 +2497,15 @@ private class ExoMediaInfoCache {
     fun get(player: ExoPlayer, videoDecoder: String?, audioDecoder: String?): String {
         val currentTracks = player.currentTracks
         val currentMediaItem = player.currentMediaItem
+        val currentVideoFormat = player.videoFormat
+        val currentAudioFormat = player.audioFormat
         val cached = json
         if (
             cached != null &&
             currentTracks === tracks &&
             currentMediaItem === mediaItem &&
+            currentVideoFormat === videoFormat &&
+            currentAudioFormat === audioFormat &&
             videoDecoder == this.videoDecoder &&
             audioDecoder == this.audioDecoder
         ) {
@@ -2508,6 +2514,8 @@ private class ExoMediaInfoCache {
         val built = player.buildExoPlayerMediaInfoJson(videoDecoder, audioDecoder)
         tracks = currentTracks
         mediaItem = currentMediaItem
+        videoFormat = currentVideoFormat
+        audioFormat = currentAudioFormat
         this.videoDecoder = videoDecoder
         this.audioDecoder = audioDecoder
         json = built

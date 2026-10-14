@@ -778,7 +778,10 @@ internal fun MainAppContent(
                             SyncManager.stopPeriodicNuvioSyncPull()
                         }
                     }
-                    AppVisibility.Background -> SyncManager.stopPeriodicNuvioSyncPull()
+                    AppVisibility.Background -> {
+                        SyncManager.stopPeriodicNuvioSyncPull()
+                        WatchProgressRepository.flushPendingWrites()
+                    }
                 }
             }
         } finally {

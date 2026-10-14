@@ -25,7 +25,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.TimeSource
 
 private const val LogTag = "App/StartupPreload"
-private const val PreloadTimeoutMs = 6_000L
+private const val SlowPreloadWarningMs = 6_000L
 
 object StartupPreloader {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -36,8 +36,10 @@ object StartupPreloader {
 
     suspend fun awaitReady() {
         val active = job ?: start()
-        withTimeoutOrNull(PreloadTimeoutMs) { active.await() }
-            ?: InAppLogger.warn(LogTag, "preload exceeded ${PreloadTimeoutMs}ms, continuing")
+        if (withTimeoutOrNull(SlowPreloadWarningMs) { active.await() } == null) {
+            InAppLogger.warn(LogTag, "preload slower than ${SlowPreloadWarningMs}ms, still waiting")
+            active.await()
+        }
     }
 
     private fun start(): Deferred<Unit> = scope.async {

@@ -108,7 +108,7 @@ internal object AddonHttpClientProvider {
 
 private val addonDispatcher = Dispatcher().apply {
     maxRequests = 128
-    maxRequestsPerHost = 32
+    maxRequestsPerHost = 8
 }
 
 private fun buildAddonHttpClient(cache: Cache? = null): OkHttpClient =
