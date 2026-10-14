@@ -275,6 +275,28 @@ class PartySyncTest {
         assertEquals(presence, PartyApi.json.decodeFromString(PartyPresence.serializer(), encoded))
     }
 
+    @Test
+    fun previewsReadTheServerReply() {
+        val preview = PartyApi.json.decodeFromString(
+            PartyPreview.serializer(),
+            """{"host":{"id":"h","avatar_url":null,"avatar_color":"#48B461","display_name":"Aju"},""" +
+                """"media":{"type":"series","title":"Ted Lasso","season":1,"episode":6,"description":"Richmond plays Everton.",""" +
+                """"meta_id":"tt10986410","video_id":"tt10986410:1:6","meta_type":"series"},""" +
+                """"members":1,"max_members":3}""",
+        )
+        assertEquals("Ted Lasso", preview.media?.title)
+        assertEquals(6, preview.media?.episode)
+        assertEquals("Richmond plays Everton.", preview.media?.description)
+        assertEquals(null, preview.media?.source)
+        assertEquals(PartyMember(id = "h", displayName = "Aju", avatarColor = "#48B461"), preview.host)
+        assertFalse(preview.isFull)
+        assertTrue(preview.copy(members = 3).isFull)
+
+        val missing = PartyApi.json.decodeFromString(PartyPreview.serializer(), """{"error":"party_not_found"}""")
+        assertEquals(PartyError.NotFound, partyErrorOf(missing.error))
+        assertEquals(null, missing.media)
+    }
+
     private fun party(memberId: String, hostMemberId: String, online: List<String>) = ActiveParty(
         id = "p",
         code = "ABC234",

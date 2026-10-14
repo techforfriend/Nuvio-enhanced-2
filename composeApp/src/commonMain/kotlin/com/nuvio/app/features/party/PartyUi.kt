@@ -357,6 +357,14 @@ internal fun ActiveParty.statusRes(member: PartyMember): StringResource {
 }
 
 @Composable
+internal fun PartyMedia.episodeLabel(): String? {
+    val season = season ?: return null
+    val episode = episode ?: return null
+    val label = stringResource(Res.string.party_episode_format, season, episode)
+    return episodeTitle?.takeIf { it.isNotBlank() }?.let { "$label · $it" } ?: label
+}
+
+@Composable
 internal fun PartyMedia.displayTitle(): String {
     val season = season
     val episode = episode

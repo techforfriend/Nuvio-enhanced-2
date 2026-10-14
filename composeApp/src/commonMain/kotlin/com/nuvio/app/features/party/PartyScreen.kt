@@ -1,6 +1,7 @@
 package com.nuvio.app.features.party
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
@@ -12,13 +13,12 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,7 +30,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -38,6 +37,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -46,6 +46,7 @@ import com.nuvio.app.core.ui.DialogButtonStyle
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.nuvio
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
@@ -55,6 +56,7 @@ import nuvio.composeapp.generated.resources.party_join_action
 import nuvio.composeapp.generated.resources.party_join_description
 import nuvio.composeapp.generated.resources.party_join_title
 import nuvio.composeapp.generated.resources.party_joined_title
+import nuvio.composeapp.generated.resources.party_seats
 import nuvio.composeapp.generated.resources.party_title
 import nuvio.composeapp.generated.resources.party_watch_with_party
 import org.jetbrains.compose.resources.stringResource
@@ -141,17 +143,36 @@ private fun JoinContent(
     val haptic = LocalHapticFeedback.current
     val focusRequester = remember { FocusRequester() }
     val shake = remember { Animatable(0f) }
-    val autoJoin = remember { isValidPartyCode(initialCode) }
+    val prefilled = remember { isValidPartyCode(initialCode) }
     var code by remember {
-        mutableStateOf(if (autoJoin) "" else normalizePartyCode(initialCode).take(PARTY_CODE_LENGTH))
+        mutableStateOf(if (prefilled) "" else normalizePartyCode(initialCode).take(PARTY_CODE_LENGTH))
     }
     var error by remember { mutableStateOf<PartyError?>(null) }
+    var preview by remember { mutableStateOf<PartyPreview?>(null) }
+    var previewing by remember { mutableStateOf(false) }
+    var previewJob by remember { mutableStateOf<Job?>(null) }
     val blockedError = when {
         !available -> PartyError.Unavailable
         !PartyRepository.canUse -> PartyError.SignInRequired
         else -> null
     }
     val shownError = blockedError ?: error
+
+    suspend fun reject(result: PartyError) {
+        haptic.performHapticFeedback(HapticFeedbackType.Reject)
+        error = result
+        shake.animateTo(
+            targetValue = 0f,
+            animationSpec = keyframes {
+                durationMillis = 420
+                -14f at 60
+                12f at 120
+                -8f at 180
+                6f at 240
+                -3f at 300
+            },
+        )
+    }
 
     fun submit() {
         if (!isValidPartyCode(code) || state.busy || blockedError != null) return
@@ -163,33 +184,38 @@ private fun JoinContent(
                 haptic.performHapticFeedback(HapticFeedbackType.Confirm)
                 onJoined(party)
             } else {
-                haptic.performHapticFeedback(HapticFeedbackType.Reject)
-                error = result ?: PartyError.Network
-                shake.animateTo(
-                    targetValue = 0f,
-                    animationSpec = keyframes {
-                        durationMillis = 420
-                        -14f at 60
-                        12f at 120
-                        -8f at 180
-                        6f at 240
-                        -3f at 300
-                    },
-                )
+                reject(result ?: PartyError.Network)
+            }
+        }
+    }
+
+    fun lookUp(target: String) {
+        previewJob?.cancel()
+        previewing = true
+        previewJob = scope.launch {
+            val result = PartyRepository.preview(target)
+            previewing = false
+            val failure = partyErrorOf(result.error)
+            when {
+                failure == null && result.media != null -> {
+                    preview = result
+                    if (result.isFull) error = PartyError.Full
+                }
+                failure != null && failure != PartyError.Network -> reject(failure)
             }
         }
     }
 
     LaunchedEffect(Unit) {
         if (blockedError != null) return@LaunchedEffect
-        if (autoJoin) {
+        if (prefilled) {
             val target = normalizePartyCode(initialCode).take(PARTY_CODE_LENGTH)
             delay(250)
             target.indices.forEach { index ->
                 delay(60)
                 code = target.take(index + 1)
             }
-            submit()
+            lookUp(target)
         } else {
             delay(650)
             runCatching { focusRequester.requestFocus() }
@@ -205,24 +231,42 @@ private fun JoinContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        SeatsHero(
-            size = 72.dp,
-            ringColor = tokens.colors.background,
-            modifier = Modifier.padding(vertical = 12.dp),
-        )
-        Text(
-            text = stringResource(Res.string.party_join_title),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = tokens.colors.textPrimary,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            text = stringResource(Res.string.party_join_description),
-            style = MaterialTheme.typography.bodyLarge,
-            color = tokens.colors.textSecondary,
-            textAlign = TextAlign.Center,
-        )
+        AnimatedContent(
+            targetState = preview,
+            contentKey = { it != null },
+            transitionSpec = {
+                (fadeIn(tween(240, delayMillis = 60)) + slideInVertically(tween(300)) { it / 10 }) togetherWith fadeOut(tween(140))
+            },
+        ) { current ->
+            if (current != null) {
+                PreviewCard(current)
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    SeatsHero(
+                        size = 72.dp,
+                        ringColor = tokens.colors.background,
+                        modifier = Modifier.padding(vertical = 12.dp),
+                    )
+                    Text(
+                        text = stringResource(Res.string.party_join_title),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = tokens.colors.textPrimary,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        text = stringResource(Res.string.party_join_description),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = tokens.colors.textSecondary,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+        }
         CodeField(
             code = code,
             onCodeChange = { value ->
@@ -230,7 +274,10 @@ private fun JoinContent(
                 if (value.length > code.length) haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
                 code = value
                 error = null
-                if (isValidPartyCode(value)) submit()
+                preview = null
+                previewJob?.cancel()
+                previewing = false
+                if (isValidPartyCode(value)) lookUp(value)
             },
             onDone = ::submit,
             focusRequester = focusRequester,
@@ -258,18 +305,130 @@ private fun JoinContent(
             text = stringResource(Res.string.party_join_action),
             onClick = ::submit,
             style = DialogButtonStyle.Primary,
-            enabled = isValidPartyCode(code) && blockedError == null,
-            loading = state.busy,
+            enabled = isValidPartyCode(code) && blockedError == null &&
+                error !in setOf(PartyError.NotFound, PartyError.Removed, PartyError.RateLimited),
+            loading = state.busy || previewing,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
         )
-        Text(
-            text = stringResource(Res.string.party_host_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = tokens.colors.textMuted,
-            textAlign = TextAlign.Center,
-        )
+        AnimatedVisibility(
+            visible = preview == null,
+            enter = fadeIn(tween(180)),
+            exit = fadeOut(tween(120)),
+        ) {
+            Text(
+                text = stringResource(Res.string.party_host_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = tokens.colors.textMuted,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PreviewCard(preview: PartyPreview) {
+    val tokens = MaterialTheme.nuvio
+    val media = preview.media ?: return
+    val host = preview.host
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        MediaHeader(media, centered = true)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        ) {
+            if (host != null) {
+                PartyAvatar(member = host, size = 28.dp)
+                Text(
+                    text = stringResource(Res.string.party_hosted_by, host.displayName),
+                    modifier = Modifier.weight(1f, fill = false),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = tokens.colors.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Text(
+                text = stringResource(Res.string.party_seats, preview.members, preview.maxMembers),
+                style = MaterialTheme.typography.bodySmall,
+                color = tokens.colors.textMuted,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MediaHeader(media: PartyMedia, centered: Boolean = false) {
+    val tokens = MaterialTheme.nuvio
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        MediaTitle(media, centered)
+        media.description?.takeIf { it.isNotBlank() }?.let { description ->
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = tokens.colors.textSecondary,
+                textAlign = if (centered) TextAlign.Center else TextAlign.Start,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MediaTitle(media: PartyMedia, centered: Boolean) {
+    val tokens = MaterialTheme.nuvio
+    var logoFailed by remember(media.logo) { mutableStateOf(false) }
+    val logo = media.logo?.takeIf { it.isNotBlank() && !logoFailed }
+    val textAlign = if (centered) TextAlign.Center else TextAlign.Start
+    Column(
+        horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (logo != null) {
+            AsyncImage(
+                model = logo,
+                contentDescription = media.title,
+                contentScale = ContentScale.Fit,
+                alignment = if (centered) Alignment.Center else Alignment.CenterStart,
+                onError = { logoFailed = true },
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(80.dp),
+            )
+        } else if (media.title.isNotBlank()) {
+            Text(
+                text = media.title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = tokens.colors.textPrimary,
+                textAlign = textAlign,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        media.episodeLabel()?.let { label ->
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleSmall,
+                color = tokens.colors.textSecondary,
+                textAlign = textAlign,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -303,11 +462,9 @@ private fun JoinedContent(party: ActiveParty) {
                 color = tokens.colors.textSecondary,
             )
         }
-        Text(
-            text = party.media.displayTitle(),
-            style = MaterialTheme.typography.bodyMedium,
-            color = tokens.colors.textMuted,
-            textAlign = TextAlign.Center,
+        MediaTitle(
+            media = party.media,
+            centered = true,
         )
     }
 }
@@ -324,26 +481,7 @@ private fun PartyContent(
             .padding(top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            val image = party.media.background ?: party.media.poster
-            if (image != null) {
-                AsyncImage(
-                    model = image,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
-                        .clip(RoundedCornerShape(16.dp)),
-                )
-            }
-            Text(
-                text = party.media.displayTitle(),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = tokens.colors.textPrimary,
-            )
-        }
+        MediaHeader(party.media)
         PartyOverview(
             party = party,
             ringColor = tokens.colors.background,

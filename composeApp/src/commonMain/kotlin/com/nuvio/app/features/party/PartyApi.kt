@@ -38,6 +38,11 @@ internal object PartyApi {
             putIdentity(identity)
         })
 
+    suspend fun preview(code: String): PartyPreview {
+        val body = SupabaseProvider.client.postgrest.rpc("watch_party_preview", buildJsonObject { put("p_code", code) }).data
+        return json.decodeFromString(PartyPreview.serializer(), body)
+    }
+
     suspend fun heartbeat(partyId: String, deviceId: String): PartySnapshot =
         call("watch_party_heartbeat", buildJsonObject {
             put("p_party_id", partyId)

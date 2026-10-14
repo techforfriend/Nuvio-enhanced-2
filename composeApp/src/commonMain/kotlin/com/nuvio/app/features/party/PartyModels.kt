@@ -102,6 +102,18 @@ data class PartyMember(
 )
 
 @Serializable
+data class PartyPreview(
+    val media: PartyMedia? = null,
+    val host: PartyMember? = null,
+    val members: Int = 0,
+    @SerialName("max_members") val maxMembers: Int = 0,
+    val error: String? = null,
+) {
+    val isFull: Boolean
+        get() = maxMembers in 1..members
+}
+
+@Serializable
 enum class PartyMemberStatus {
     @SerialName("browsing") Browsing,
     @SerialName("loading") Loading,
