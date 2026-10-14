@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.10",
+          "buildVersion": "142",
+          "date": "2026-10-14T01:20:17Z",
+          "localizedDescription": "feat(ios): adopt @albertovinaroz morphed tabbar via native segmented glass bar @luqmanfadlli\r\nfix(details): start from the top of the list after re-sorting episodes @luqmanfadlli\r\nfeat(details): show the episode navigator for every season @luqmanfadlli\r\nfeat(details): add episode search, go-to and sort with a sticky bar @luqmanfadlli\r\nfeat add mini player and incognito mode in playback settings @chrisk325\r\nfeat(blur): add haze blur on bottom sheets for Android @chrisk325\r\nfix(simkl): dedupe multi-season anime in Continue Watching @chrisk325\r\nfeat(epg): add EPG to Live TV and player @chrisk325\r\nfix(progress): add progress bar to episode cards in details page @chrisk325\r\nperf(home): make the full-bleed hero swipe and scroll smoothly @luqmanfadlli\r\nfix(home): keep hero age rating bound to its own item @luqmanfadlli\r\nfeat(home): rework full-bleed hero and dynamic background @luqmanfadlli\r\nfix(player): stop downloads re-pausing and fix libass overlay offset @chrisk325\r\nfeat(tracker): add WeTrakr with library, rating and scrobbling support @chrisk325\r\nfeat(ios): add native PiP with existing MPV VideoToolbox frames (#2248) @WhiteGiso\r\nFix dismissed shows staying hidden after marking episodes watched (#2244) @Laskco\r\nAdd non-AI Subtitle AutoSync for mobile add-on subtitles (#2143) @DavidVamaiotu\r\nfix(i18n): localize generic Episode N titles like TV (#2241) @blueocean2308\r\nfix next episode card timing and prefetch with heuristic post-credits (#2238) @skoruppa\r\nOptimize custom poster URL resolving performance (#2239) @halibiram\r\nfix: In Poster Card Style settings screen one toggle get bigger then other and pushed out of the screen safe area. (#2219) @AdityasahuX07",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.5.10-beta/nuvio-0.5.10-enhanced-release.ipa",
+          "size": 71604983,
+          "sha256": "9aa562ea0c709623f126676067b3a362e27292efb486042ce617752e8c9164d9",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.9",
           "buildVersion": "141",
           "date": "2026-10-11T01:54:54Z",
