@@ -27,6 +27,7 @@ final class PlayerPictureInPictureController: NSObject,
     private var isForegroundActive = true
     private var shouldReturnToInline = false
     private var stopRequested = false
+    private var systemStartInProgress = false
 
     var keepsPlaybackAlive: Bool { isStarting || isActive }
 
@@ -163,6 +164,9 @@ final class PlayerPictureInPictureController: NSObject,
     func enteredForeground() -> Bool {
         handoffGeneration &+= 1
         let preservePlaybackState = keepsPlaybackAlive || hasPresentedPictureInPicture || controller?.isPictureInPictureActive == true
+        if isStarting, !systemStartInProgress, controller?.isPictureInPictureActive != true {
+            isStarting = false
+        }
         hasPresentedPictureInPicture = false
         isBackground = false
         isForegroundActive = false
@@ -218,6 +222,7 @@ final class PlayerPictureInPictureController: NSObject,
 
     func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
         isStarting = true
+        systemStartInProgress = true
         metalLayer?.nuvioPiPConsumesVideo = true
         updatePlaybackState()
     }
@@ -225,6 +230,7 @@ final class PlayerPictureInPictureController: NSObject,
     func pictureInPictureControllerDidStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
         handoffGeneration &+= 1
         isStarting = false
+        systemStartInProgress = false
         isActive = true
         hasPresentedPictureInPicture = true
         restoreInlineIfReady()
@@ -234,6 +240,7 @@ final class PlayerPictureInPictureController: NSObject,
                                    failedToStartPictureInPictureWithError error: Error) {
         handoffGeneration &+= 1
         isStarting = false
+        systemStartInProgress = false
         isActive = false
         stopRequested = false
         shouldReturnToInline = false
@@ -244,6 +251,7 @@ final class PlayerPictureInPictureController: NSObject,
     func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
         handoffGeneration &+= 1
         isStarting = false
+        systemStartInProgress = false
         isActive = false
         stopRequested = false
         shouldReturnToInline = false

@@ -751,9 +751,16 @@ final class MPVPlayerViewController: UIViewController {
                                                name: UIApplication.didBecomeActiveNotification, object: nil)
     }
 
+    private var hwdecBeforeBackground: String?
+
     @objc private func enterBackground() {
         metalLayer.releasePendingDrawable()
         guard mpv != nil else { return }
+        let coreGeneration = mpvGeneration
+        mpvQueue.async { [weak self] in
+            guard let self, self.mpvGeneration == coreGeneration, self.mpv != nil else { return }
+            self.hwdecBeforeBackground = self.getString("hwdec-current")
+        }
         if pictureInPictureController?.enteredBackground() == true { return }
         pausePlayback()
         setStringProperty("vid", "no")
@@ -770,6 +777,27 @@ final class MPVPlayerViewController: UIViewController {
 
     @objc private func didBecomeActive() {
         resumeRenderingAfterDeviceLossIfPossible(reason: "did-become-active")
+        restoreHardwareDecodingIfLost()
+    }
+
+    private func restoreHardwareDecodingIfLost() {
+        guard mpv != nil else { return }
+        let configured = lastVideoOutputSettings?.hardwareDecoder ?? "videotoolbox"
+        guard configured != "no" else { return }
+        let coreGeneration = mpvGeneration
+        mpvQueue.async { [weak self] in
+            guard let self, self.mpvGeneration == coreGeneration, self.mpv != nil else { return }
+            let before = self.hwdecBeforeBackground ?? ""
+            self.hwdecBeforeBackground = nil
+            let current = self.getString("hwdec-current") ?? ""
+            guard !before.isEmpty, before != "no", current.isEmpty || current == "no" else { return }
+            InAppLogBridge.shared.warn(
+                tag: "MPV/iOS",
+                message: "Hardware decoding lost in background (was \(before)); reinitialising hwdec=\(configured)"
+            )
+            self.setStringProperty("hwdec", "no")
+            self.setStringProperty("hwdec", configured)
+        }
     }
 
     private func resumeRenderingAfterDeviceLossIfPossible(reason: String) {
