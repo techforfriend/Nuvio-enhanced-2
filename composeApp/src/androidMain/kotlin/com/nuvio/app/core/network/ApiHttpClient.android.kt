@@ -13,6 +13,7 @@ internal actual fun createApiHttpClient(): HttpClient = HttpClient(OkHttp) {
         socketTimeoutMillis = 30_000
     }
     engine {
+        preconfigured = SharedOkHttpClient.base
         config {
             followRedirects(false)
             followSslRedirects(false)

@@ -19,6 +19,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -401,6 +402,9 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
     val canRate = rememberCanRate(userRatingTarget)
     val userRating = rememberUserRating(userRatingTarget.takeIf { canRate })
     val liveTvEpgNowMillis = rememberLiveTvEpgNowMillis()
+    LaunchedEffect(isLiveTvPlayback) {
+        if (isLiveTvPlayback) LiveTvRepository.ensureChannelsLoaded()
+    }
     val liveTvEpgState by LiveTvRepository.uiState.collectAsStateWithLifecycle()
     val liveTvNowProgramTitle = if (isLiveTvPlayback) {
         activeVideoId?.let { channelId -> liveTvEpgState.epgPrograms[channelId] }
@@ -622,13 +626,20 @@ private fun BoxScope.RenderPlaybackOverlays(
     p2pRebufferProgress: Float?,
 ) {
     runtime.run {
-        val displayedPositionMs = scrubbingPositionMs ?: playbackSnapshot.positionMs
+        val overlaySnapshot = if (playerControlsLocked && lockedOverlayVisible) {
+            playbackSnapshot
+        } else {
+            Snapshot.withoutReadObservation { playbackSnapshot }
+        }
+        val snapshotIsLoading by remember(runtime) { derivedStateOf { playbackSnapshot.isLoading } }
+        val snapshotDurationMs by remember(runtime) { derivedStateOf { playbackSnapshot.durationMs } }
+        val displayedPositionMs = scrubbingPositionMs ?: overlaySnapshot.positionMs
         PlayerPlaybackOverlays(
             playerControlsLocked = playerControlsLocked,
             useLegacyLayout = playerSettingsUiState.useLegacyPlayerLayout,
             lockedOverlayVisible = lockedOverlayVisible,
             showRemainingTime = showRemainingTime,
-            playbackSnapshot = playbackSnapshot,
+            playbackSnapshot = overlaySnapshot,
         displayedPositionMs = displayedPositionMs,
         metrics = metrics,
         horizontalSafePadding = horizontalSafePadding,
@@ -645,7 +656,7 @@ private fun BoxScope.RenderPlaybackOverlays(
             p2pInitialLoadingMessage ?: playerLoadingStatusMessage(
                 showStatus = true,
                 controllerReady = playerController != null,
-                buffering = playbackSnapshot.isLoading,
+                buffering = snapshotIsLoading,
             )
         } else null,
         p2pInitialLoadingProgress = p2pInitialLoadingProgress,
@@ -657,7 +668,7 @@ private fun BoxScope.RenderPlaybackOverlays(
         initialLoadCompleted = initialLoadCompleted,
         pausedOverlayVisible = pausedOverlayVisible,
         activeSkipInterval = activeSkipInterval,
-        skipsToPostCredits = activeSkipInterval?.internalSkipAction(skipIntervals, playbackSnapshot.durationMs)?.skipsToPostCredits == true,
+        skipsToPostCredits = activeSkipInterval?.internalSkipAction(skipIntervals, snapshotDurationMs)?.skipsToPostCredits == true,
         skipIntervalDismissed = skipIntervalDismissed,
         controlsVisible = controlsVisible,
         onSkipInterval = { interval ->
@@ -781,7 +792,13 @@ private fun PlayerScreenRuntime.playbackResolutionLabel(forButton: Boolean): Str
 
 @Composable
 private fun PlayerScreenRuntime.RenderPlayerModals() {
-    val displayedPositionMs = scrubbingPositionMs ?: playbackSnapshot.positionMs
+    val displayedPositionMs = if (showChaptersPanel || showSubmitIntroModal) {
+        scrubbingPositionMs ?: playbackSnapshot.positionMs
+    } else {
+        Snapshot.withoutReadObservation { scrubbingPositionMs ?: playbackSnapshot.positionMs }
+    }
+    val snapshotChapters by remember(this) { derivedStateOf { playbackSnapshot.chapters } }
+    val snapshotMediaInfoJson by remember(this) { derivedStateOf { playbackSnapshot.mediaInfoJson } }
     PlayerScreenModalHosts(
         pendingP2pSwitch = pendingP2pSwitch,
         onPendingP2pSwitchChanged = { pendingP2pSwitch = it },
@@ -966,7 +983,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals() {
             controlsVisible = true
         },
         showChaptersPanel = showChaptersPanel,
-        chapters = playbackSnapshot.chapters,
+        chapters = snapshotChapters,
         onChapterSelected = { chapter ->
             val targetMs = chapter.startMs.coerceAtLeast(0L)
             finishTimelineScrub(targetMs)
@@ -1003,7 +1020,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals() {
             showSubmitIntroModal = false
         },
         showStreamInfoModal = showStreamInfoModal,
-        mediaInfoJson = playbackSnapshot.mediaInfoJson,
+        mediaInfoJson = snapshotMediaInfoJson,
         onStreamInfoModalDismissed = { showStreamInfoModal = false },
     )
 

@@ -4,10 +4,12 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.nuvio.app.core.diagnostics.SentryNetworkBreadcrumbInterceptor
 import com.nuvio.app.core.network.IPv4FirstDns
+import com.nuvio.app.core.network.SharedOkHttpClient
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import nuvio.composeapp.generated.resources.Res
@@ -15,6 +17,10 @@ import nuvio.composeapp.generated.resources.network_empty_response_body
 import nuvio.composeapp.generated.resources.network_request_failed_http
 import org.jetbrains.compose.resources.getString
 import okhttp3.Cache
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.Dispatcher
+import okhttp3.Response
 import okhttp3.ResponseBody
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -100,12 +106,18 @@ internal object AddonHttpClientProvider {
     fun get(): OkHttpClient = client
 }
 
+private val addonDispatcher = Dispatcher().apply {
+    maxRequests = 128
+    maxRequestsPerHost = 32
+}
+
 private fun buildAddonHttpClient(cache: Cache? = null): OkHttpClient =
-    OkHttpClient.Builder()
+    SharedOkHttpClient.base.newBuilder()
+        .dispatcher(addonDispatcher)
         .dns(IPv4FirstDns())
-        .connectTimeout(60, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
-        .writeTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
         .followRedirects(true)
         .followSslRedirects(true)
         .addInterceptor(SentryNetworkBreadcrumbInterceptor())
@@ -208,15 +220,50 @@ private suspend fun executeTextRequest(
         builder.method(normalizedMethod, null)
     }.build()
 
-    AddonHttpClientProvider.get().newCall(request).execute().use { response ->
-        val payload = readResponseBody(response.body)
-        if (!response.isSuccessful) {
-            error(runBlocking { getString(Res.string.network_request_failed_http, response.code) })
+    val call = AddonHttpClientProvider.get().newCall(request)
+    suspendCancellableCoroutine { continuation ->
+        continuation.invokeOnCancellation {
+            call.cancel()
         }
-        if (payload.isBlank()) {
-            throw IllegalStateException(runBlocking { getString(Res.string.network_empty_response_body) })
-        }
-        payload
+        call.enqueue(
+            object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    if (!continuation.isActive) return
+                    val failure = if (call.isCanceled()) {
+                        CancellationException("Cancelled HTTP request", e)
+                    } else {
+                        e
+                    }
+                    continuation.resumeWith(Result.failure(failure))
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    if (!continuation.isActive) {
+                        response.close()
+                        return
+                    }
+                    val result = runCatching {
+                        response.use { current ->
+                            val payload = readResponseBody(current.body)
+                            if (!current.isSuccessful) {
+                                error(runBlocking { getString(Res.string.network_request_failed_http, current.code) })
+                            }
+                            if (payload.isBlank()) {
+                                throw IllegalStateException(runBlocking { getString(Res.string.network_empty_response_body) })
+                            }
+                            payload
+                        }
+                    }
+                    if (!continuation.isActive) return
+                    val failure = result.exceptionOrNull()
+                    if (failure != null && call.isCanceled() && failure !is CancellationException) {
+                        continuation.resumeWith(Result.failure(CancellationException("Cancelled HTTP request", failure)))
+                    } else {
+                        continuation.resumeWith(result)
+                    }
+                }
+            },
+        )
     }
 }
 

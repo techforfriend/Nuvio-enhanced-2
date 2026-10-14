@@ -7,6 +7,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +24,10 @@ object LiveTvRepository {
     val uiState: StateFlow<LiveTvUiState> = _uiState.asStateFlow()
 
     private var hasLoaded = false
+    private var channelsRequested = false
+    private var channelsSignature: String? = null
+    private var refreshJob: Job? = null
+    private var restoredEpg: LiveTvCachedEpg? = null
     private var epgJob: Job? = null
     private var detectedEpgUrls: List<String> = emptyList()
     private val epgGuideCache = mutableMapOf<String, LiveTvCachedEpgGuide>()
@@ -42,7 +48,36 @@ object LiveTvRepository {
             isEpgAutoDetectEnabled = LiveTvStorage.loadEpgAutoDetectEnabled() ?: true,
         )
         publishNavigationVisibility()
-        if (_uiState.value.hasPlaylist) {
+    }
+
+    fun ensureChannelsLoaded() {
+        ensureLoaded()
+        if (channelsRequested) return
+        channelsRequested = true
+        val state = _uiState.value
+        if (!state.hasPlaylist) return
+        val signature = liveTvChannelSourceSignature(state)
+        _uiState.value = state.copy(isLoading = true, errorMessage = null)
+        refreshJob = scope.launch {
+            val cachedChannels = withContext(Dispatchers.Default) { LiveTvCacheStore.loadChannels() }
+                ?.takeIf { it.signature == signature && it.channels.isNotEmpty() }
+            restoredEpg = withContext(Dispatchers.Default) { LiveTvCacheStore.loadEpg() }
+            if (cachedChannels != null && liveTvChannelSourceSignature(_uiState.value) == signature) {
+                detectedEpgUrls = cachedChannels.epgUrls
+                channelsSignature = signature
+                val isFresh = Clock.System.now().toEpochMilliseconds() - cachedChannels.savedAtMillis <
+                    LIVE_TV_CHANNEL_CACHE_FRESH_MILLIS
+                _uiState.value = _uiState.value.copy(
+                    channels = cachedChannels.channels,
+                    isLoading = !isFresh,
+                    errorMessage = null,
+                )
+                if (isFresh) {
+                    refreshEpg(force = false)
+                    return@launch
+                }
+                applyRestoredEpg()
+            }
             refresh()
         }
     }
@@ -279,24 +314,45 @@ object LiveTvRepository {
             return
         }
 
+        channelsRequested = true
+        val signature = liveTvChannelSourceSignature(currentState)
         _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-        scope.launch {
+        refreshJob?.cancel()
+        refreshJob = scope.launch {
             val loadedChannels = mutableListOf<LiveTvChannel>()
             val failedPlaylistNames = mutableListOf<String>()
             val playlistEpgUrls = mutableListOf<String>()
 
-            enabledPlaylists.forEach { playlist ->
-                val result = runCatching {
-                    val payload = when (playlist.type) {
-                        LiveTvPlaylistType.Url -> withContext(Dispatchers.Default) { httpGetText(playlist.source) }
-                        LiveTvPlaylistType.LocalFile -> playlist.source
+            val playlistResults = enabledPlaylists.map { playlist ->
+                async {
+                    runCatching {
+                        val payload = when (playlist.type) {
+                            LiveTvPlaylistType.Url -> httpGetText(playlist.source)
+                            LiveTvPlaylistType.LocalFile -> playlist.source
+                        }
+                        withContext(Dispatchers.Default) {
+                            parseM3uEpgUrls(payload) to parseM3uPlaylist(payload, playlist)
+                        }
                     }
-                    playlistEpgUrls += parseM3uEpgUrls(payload)
-                    parseM3uPlaylist(payload, playlist)
                 }
+            }
+            val xtreamResult = if (currentState.xtreamSettings.isConfigured && currentState.xtreamSettings.isEnabled) {
+                async { runCatching { withContext(Dispatchers.Default) { fetchXtreamChannels(currentState.xtreamSettings) } } }
+            } else {
+                null
+            }
+            val stalkerResult = if (currentState.stalkerSettings.isConfigured && currentState.stalkerSettings.isEnabled) {
+                async { runCatching { withContext(Dispatchers.Default) { fetchStalkerChannels(currentState.stalkerSettings) } } }
+            } else {
+                null
+            }
 
+            enabledPlaylists.zip(playlistResults.awaitAll()).forEach { (playlist, result) ->
                 result.fold(
-                    onSuccess = { channels -> loadedChannels += channels },
+                    onSuccess = { (epgUrls, channels) ->
+                        playlistEpgUrls += epgUrls
+                        loadedChannels += channels
+                    },
                     onFailure = { error ->
                         if (error is CancellationException) throw error
                         failedPlaylistNames += playlist.name
@@ -305,28 +361,30 @@ object LiveTvRepository {
                 )
             }
 
-            if (currentState.xtreamSettings.isConfigured && currentState.xtreamSettings.isEnabled) {
-                runCatching { fetchXtreamChannels(currentState.xtreamSettings) }.fold(
-                    onSuccess = { loadedChannels += it },
-                    onFailure = { error ->
-                        if (error is CancellationException) throw error
-                        failedPlaylistNames += "Xtream"
-                        log.w(error) { "Failed to load Xtream provider" }
-                    },
-                )
-            }
-            if (currentState.stalkerSettings.isConfigured && currentState.stalkerSettings.isEnabled) {
-                runCatching { fetchStalkerChannels(currentState.stalkerSettings) }.fold(
-                    onSuccess = { loadedChannels += it },
-                    onFailure = { error ->
-                        if (error is CancellationException) throw error
-                        failedPlaylistNames += "Stalker Portal"
-                        log.w(error) { "Failed to load Stalker provider" }
-                    },
-                )
-            }
+            xtreamResult?.await()?.fold(
+                onSuccess = { loadedChannels += it },
+                onFailure = { error ->
+                    if (error is CancellationException) throw error
+                    failedPlaylistNames += "Xtream"
+                    log.w(error) { "Failed to load Xtream provider" }
+                },
+            )
+            stalkerResult?.await()?.fold(
+                onSuccess = { loadedChannels += it },
+                onFailure = { error ->
+                    if (error is CancellationException) throw error
+                    failedPlaylistNames += "Stalker Portal"
+                    log.w(error) { "Failed to load Stalker provider" }
+                },
+            )
 
-            val channels = loadedChannels.distinctBy { it.streamUrl }
+            val fetchedChannels = withContext(Dispatchers.Default) { loadedChannels.distinctBy { it.streamUrl } }
+            val previousChannels = _uiState.value.channels
+            val keepPrevious = fetchedChannels.isEmpty() &&
+                failedPlaylistNames.isNotEmpty() &&
+                previousChannels.isNotEmpty() &&
+                channelsSignature == signature
+            val channels = if (keepPrevious) previousChannels else fetchedChannels
             _uiState.value = _uiState.value.copy(
                 playlistUrl = playlists.firstEnabledUrlSource(),
                 playlists = playlists,
@@ -339,7 +397,17 @@ object LiveTvRepository {
                     else -> null
                 },
             )
-            detectedEpgUrls = playlistEpgUrls.distinct()
+            if (!keepPrevious) {
+                detectedEpgUrls = playlistEpgUrls.distinct()
+                channelsSignature = signature
+                if (fetchedChannels.isNotEmpty()) {
+                    val epgUrls = detectedEpgUrls
+                    val savedAt = Clock.System.now().toEpochMilliseconds()
+                    withContext(Dispatchers.Default) {
+                        LiveTvCacheStore.saveChannels(signature, savedAt, epgUrls, fetchedChannels)
+                    }
+                }
+            }
             refreshEpg(force = false)
         }
     }
@@ -393,21 +461,29 @@ object LiveTvRepository {
             return
         }
 
+        if (!force && applyRestoredEpg()) return
+        val epgSignature = liveTvEpgSignature(state, requests)
+
         _uiState.value = state.copy(isEpgLoading = true, epgErrorMessage = null)
         epgJob = scope.launch {
             val nowMillis = Clock.System.now().toEpochMilliseconds()
             val guides = mutableListOf<LiveTvEpgGuide>()
             val failedGuideNames = mutableListOf<String>()
-            requests.forEach { request ->
+            val results = requests.map { request ->
                 val cached = epgGuideCache[request.cacheKey]
                     ?.takeIf { !force && nowMillis - it.loadedAtMillis < LIVE_TV_EPG_CACHE_TTL_MILLIS }
                 if (cached != null) {
-                    guides += cached.guide
-                    return@forEach
+                    async { Result.success(cached.guide) }
+                } else {
+                    async { runCatching { withContext(Dispatchers.Default) { request.load(nowMillis) } } }
                 }
-                runCatching { withContext(Dispatchers.Default) { request.load(nowMillis) } }.fold(
+            }.awaitAll()
+            requests.zip(results).forEach { (request, result) ->
+                result.fold(
                     onSuccess = { guide ->
-                        epgGuideCache[request.cacheKey] = LiveTvCachedEpgGuide(guide, nowMillis)
+                        if (epgGuideCache[request.cacheKey]?.guide !== guide) {
+                            epgGuideCache[request.cacheKey] = LiveTvCachedEpgGuide(guide, nowMillis)
+                        }
                         guides += guide
                     },
                     onFailure = { error ->
@@ -428,7 +504,29 @@ object LiveTvRepository {
                     null
                 },
             )
+            if (failedGuideNames.isEmpty() && programs.isNotEmpty()) {
+                restoredEpg = LiveTvCachedEpg(epgSignature, nowMillis, programs)
+                withContext(Dispatchers.Default) {
+                    LiveTvCacheStore.saveEpg(epgSignature, nowMillis, programs)
+                }
+            }
         }
+    }
+
+    private fun applyRestoredEpg(): Boolean {
+        val state = _uiState.value
+        val restored = restoredEpg ?: return false
+        if (state.channels.isEmpty()) return false
+        val requests = buildEpgRequests(state)
+        if (requests.isEmpty()) return false
+        if (restored.signature != liveTvEpgSignature(state, requests)) return false
+        if (Clock.System.now().toEpochMilliseconds() - restored.savedAtMillis >= LIVE_TV_EPG_CACHE_TTL_MILLIS) return false
+        _uiState.value = state.copy(
+            epgPrograms = restored.programs,
+            isEpgLoading = false,
+            epgErrorMessage = null,
+        )
+        return true
     }
 
     private fun buildEpgRequests(state: LiveTvUiState): List<LiveTvEpgRequest> {
@@ -519,6 +617,10 @@ object LiveTvRepository {
 }
 
 private const val LIVE_TV_EPG_CACHE_TTL_MILLIS = 6L * 60L * 60L * 1000L
+private const val LIVE_TV_CHANNEL_CACHE_FRESH_MILLIS = 15L * 60L * 1000L
+
+private fun liveTvEpgSignature(state: LiveTvUiState, requests: List<LiveTvEpgRequest>): String =
+    liveTvChannelSourceSignature(state) + "#" + requests.joinToString("|") { it.cacheKey }.let { "${it.length}:${it.hashCode()}" }
 
 internal data class LiveTvCachedEpgGuide(
     val guide: LiveTvEpgGuide,

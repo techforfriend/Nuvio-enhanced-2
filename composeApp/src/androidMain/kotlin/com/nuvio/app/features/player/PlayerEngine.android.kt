@@ -544,8 +544,15 @@ private fun ExoPlayerSurface(
         )
     }
 
+    val exoMediaInfoCache = remember(exoPlayer) { ExoMediaInfoCache() }
+
     fun dispatchExoPlayerSnapshot() {
-        val snapshot = exoPlayer.snapshot(initializedVideoDecoderName, initializedAudioDecoderName, playerChapters)
+        val snapshot = exoPlayer.snapshot(
+            initializedVideoDecoderName,
+            initializedAudioDecoderName,
+            playerChapters,
+            exoMediaInfoCache,
+        )
         latestOnSnapshot.value(snapshot)
         nowPlayingController.syncPlayback(snapshot)
     }
@@ -2478,10 +2485,41 @@ private const val MPV_SUBTITLE_FONT_SIZE_MIN = 36
 private const val MPV_SUBTITLE_FONT_SIZE_MAX = 122
 private const val MPV_SUBTITLE_OUTLINE_SIZE_SCALE = 1.5
 
+private class ExoMediaInfoCache {
+    private var tracks: androidx.media3.common.Tracks? = null
+    private var mediaItem: MediaItem? = null
+    private var videoDecoder: String? = null
+    private var audioDecoder: String? = null
+    private var json: String? = null
+
+    fun get(player: ExoPlayer, videoDecoder: String?, audioDecoder: String?): String {
+        val currentTracks = player.currentTracks
+        val currentMediaItem = player.currentMediaItem
+        val cached = json
+        if (
+            cached != null &&
+            currentTracks === tracks &&
+            currentMediaItem === mediaItem &&
+            videoDecoder == this.videoDecoder &&
+            audioDecoder == this.audioDecoder
+        ) {
+            return cached
+        }
+        val built = player.buildExoPlayerMediaInfoJson(videoDecoder, audioDecoder)
+        tracks = currentTracks
+        mediaItem = currentMediaItem
+        this.videoDecoder = videoDecoder
+        this.audioDecoder = audioDecoder
+        json = built
+        return built
+    }
+}
+
 private fun ExoPlayer.snapshot(
     videoDecoder: String?,
     audioDecoder: String?,
     chapters: List<PlayerChapter> = emptyList(),
+    mediaInfoCache: ExoMediaInfoCache? = null,
 ): PlayerPlaybackSnapshot {
     val (videoWidth, videoHeight) = videoDimensions()
     return PlayerPlaybackSnapshot(
@@ -2494,7 +2532,8 @@ private fun ExoPlayer.snapshot(
         playbackSpeed = playbackParameters.speed,
         videoWidth = videoWidth,
         videoHeight = videoHeight,
-        mediaInfoJson = buildExoPlayerMediaInfoJson(videoDecoder, audioDecoder),
+        mediaInfoJson = mediaInfoCache?.get(this, videoDecoder, audioDecoder)
+            ?: buildExoPlayerMediaInfoJson(videoDecoder, audioDecoder),
         chapters = chapters,
     )
 }

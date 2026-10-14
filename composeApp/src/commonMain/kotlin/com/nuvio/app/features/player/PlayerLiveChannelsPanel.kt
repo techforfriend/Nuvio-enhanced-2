@@ -95,6 +95,9 @@ fun PlayerLiveChannelsPanel(
     modifier: Modifier = Modifier,
 ) {
     LiveTvRepository.ensureLoaded()
+    LaunchedEffect(visible) {
+        if (visible) LiveTvRepository.ensureChannelsLoaded()
+    }
     val liveTvUiState by LiveTvRepository.uiState.collectAsStateWithLifecycle()
     val favoriteChannelIds = liveTvUiState.favoriteChannelIds
     val epgNowMillis = rememberLiveTvEpgNowMillis()
