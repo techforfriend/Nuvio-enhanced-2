@@ -165,6 +165,8 @@ import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesRepositor
 import com.nuvio.app.features.watching.application.WatchingActions
 import com.nuvio.app.features.watching.application.WatchingState
 import com.kmpalette.rememberDominantColorState
+import com.nuvio.app.core.ui.brightenedDominant
+import com.nuvio.app.core.ui.isBrightDominantSwatch
 import com.kmpalette.extensions.painter.rememberPainterDominantColorState
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -1160,10 +1162,12 @@ fun MetaDetailsScreen(
                     val dominantImageBitmapColorState = rememberDominantColorState(
                         defaultColor = colorScheme.background,
                         defaultOnColor = colorScheme.onBackground,
+                        isSwatchValid = isBrightDominantSwatch,
                     )
                     val dominantPainterColorState = rememberPainterDominantColorState(
                         defaultColor = colorScheme.background,
                         defaultOnColor = colorScheme.onBackground,
+                        isSwatchValid = isBrightDominantSwatch,
                     )
                     LaunchedEffect(dominantColorEnabled, dominantBackdropImageBitmap, dominantBackdropPainter) {
                         val imageBitmap = dominantBackdropImageBitmap
@@ -1183,7 +1187,7 @@ fun MetaDetailsScreen(
                         dominantImageBitmapColorState.color
                     } else {
                         dominantPainterColorState.color
-                    }
+                    }.brightenedDominant(fallback = colorScheme.background)
                     val dominantBackdropTargetColor = if (dominantColorEnabled) {
                         dominantBackdropBlendColor(extractedDominantColor, colorScheme.background)
                     } else {

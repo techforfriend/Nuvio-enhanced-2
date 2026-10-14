@@ -73,10 +73,12 @@ fun DynamicArtworkBackground(
     val imageBitmapColorState = rememberDominantColorState(
         defaultColor = baseColor,
         defaultOnColor = colorScheme.onBackground,
+        isSwatchValid = isBrightDominantSwatch,
     )
     val painterColorState = rememberPainterDominantColorState(
         defaultColor = baseColor,
         defaultOnColor = colorScheme.onBackground,
+        isSwatchValid = isBrightDominantSwatch,
     )
 
     LaunchedEffect(sampleImageBitmap, samplePainter) {
@@ -92,7 +94,7 @@ fun DynamicArtworkBackground(
         imageBitmapColorState.color
     } else {
         painterColorState.color
-    }
+    }.brightenedDominant(fallback = baseColor)
 
     val targetColor = if (normalizedUrl != null) {
         baseColor.blendTowards(extractedColor, DOMINANT_BLEND_FRACTION)
