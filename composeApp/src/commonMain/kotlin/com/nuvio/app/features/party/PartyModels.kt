@@ -28,6 +28,7 @@ data class PartyMedia(
     val episode: Int? = null,
     val title: String = "",
     @SerialName("episode_title") val episodeTitle: String? = null,
+    val description: String? = null,
     val poster: String? = null,
     val background: String? = null,
     val logo: String? = null,
