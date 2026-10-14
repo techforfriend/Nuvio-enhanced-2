@@ -102,7 +102,7 @@ internal fun PartyOverview(
 ) {
     val haptic = LocalHapticFeedback.current
     val clipboard = LocalClipboardManager.current
-    val invite = stringResource(Res.string.party_invite_message, formatPartyCode(party.code), party.code)
+    val invite = stringResource(Res.string.party_invite_message, formatPartyCode(party.code), partyInviteLink(party.code))
     val copiedLabel = stringResource(Res.string.party_invite_copied)
     var copied by remember { mutableStateOf(false) }
     var memberToRemove by remember { mutableStateOf<PartyMember?>(null) }
