@@ -683,6 +683,7 @@ final class MPVPlayerViewController: UIViewController {
         setSetupOption("gpu-context", "moltenvk")
         setSetupOption("hwdec", "videotoolbox")
         setSetupOption("ao", Self.defaultAudioOutput)
+        setSetupOption("audio-exclusive", "yes")
         setSetupOption("audio-channels", "auto")
         setSetupOption("audio-fallback-to-null", "yes")
         setSetupOption("volume-max", "200")
@@ -1537,22 +1538,54 @@ final class MPVPlayerViewController: UIViewController {
         teardownMpvCore()
     }
 
+    private static let audioSessionQueue = DispatchQueue(label: "nuvio.audio-session", qos: .userInitiated)
+    private static let slowAudioSessionCallMs = 500.0
+
     private func activateAudioSessionForPlayback() {
-        do {
+        Self.audioSessionQueue.async {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .moviePlayback)
-            try session.setActive(true)
-        } catch {
-            print("[NowPlaying] Failed to activate audio session: \(error)")
+            let needsCategory = session.category != .playback ||
+                session.mode != .moviePlayback ||
+                session.categoryOptions.contains(.mixWithOthers)
+            do {
+                if needsCategory {
+                    try Self.timedAudioSessionCall("setCategory(.playback, .moviePlayback)") {
+                        try session.setCategory(.playback, mode: .moviePlayback)
+                    }
+                }
+                try Self.timedAudioSessionCall("setActive(true)") {
+                    try session.setActive(true)
+                }
+            } catch {
+                InAppLogBridge.shared.warn(tag: "Audio/iOS", message: "Failed to activate audio session: \(error)")
+            }
         }
     }
 
     private func deactivateAudioSession() {
-        do {
-            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        } catch {
-            print("[NowPlaying] Failed to deactivate audio session: \(error)")
+        Self.audioSessionQueue.async {
+            do {
+                try Self.timedAudioSessionCall("setActive(false)") {
+                    try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+                }
+            } catch {
+                InAppLogBridge.shared.warn(tag: "Audio/iOS", message: "Failed to deactivate audio session: \(error)")
+            }
         }
+    }
+
+    private static func timedAudioSessionCall(_ name: String, _ call: () throws -> Void) throws {
+        let start = CACurrentMediaTime()
+        defer {
+            let elapsedMs = (CACurrentMediaTime() - start) * 1000
+            let message = "audioSession.\(name) took \(Int(elapsedMs))ms"
+            if elapsedMs >= slowAudioSessionCallMs {
+                InAppLogBridge.shared.warn(tag: "Audio/iOS", message: message)
+            } else {
+                InAppLogBridge.shared.info(tag: "Audio/iOS", message: message)
+            }
+        }
+        try call()
     }
 
     // MARK: - Media Info
@@ -1819,6 +1852,7 @@ final class MPVPlayerViewController: UIViewController {
     }
 
     private func syncNowPlayingPlaybackState(isPlaying: Bool) {
+        let start = CACurrentMediaTime()
         pictureInPictureController?.updatePlaybackState()
         nowPlayingController.syncPlayback(
             positionMs: positionMs,
@@ -1826,6 +1860,13 @@ final class MPVPlayerViewController: UIViewController {
             isPlaying: isPlaying,
             playbackSpeed: currentSpeed
         )
+        let elapsedMs = (CACurrentMediaTime() - start) * 1000
+        if elapsedMs >= 100 {
+            InAppLogBridge.shared.warn(
+                tag: "Audio/iOS",
+                message: "Now Playing sync (isPlaying=\(isPlaying)) took \(Int(elapsedMs))ms on main thread"
+            )
+        }
     }
 
     func updateState() {
