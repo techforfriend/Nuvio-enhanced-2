@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntSize
+import com.nuvio.app.core.logging.InAppLogger
 import kotlin.math.abs
 import kotlin.math.roundToLong
 
@@ -120,6 +121,7 @@ internal fun Modifier.playerSurfaceDragGestures(
             var verticalGestureActivationDy = 0f
             val horizontalSeekBaselineMs = currentPositionMsState.value
             var horizontalSeekPreviewMs = horizontalSeekBaselineMs
+            var lastVolumeTarget: Float? = null
 
             while (true) {
                 val event = awaitPointerEvent()
@@ -208,6 +210,7 @@ internal fun Modifier.playerSurfaceDragGestures(
                             (-activeTotalDy / height) * PlayerVerticalGestureSensitivity
                         val target = ((initialVolume?.fraction ?: 0f) + gestureDeltaFraction)
                             .coerceIn(0f, PlayerMaxVolumeBoost)
+                        lastVolumeTarget = target
                         setCombinedVolumeLevel(
                             target = target,
                             systemController = controller,
@@ -218,9 +221,24 @@ internal fun Modifier.playerSurfaceDragGestures(
                 change.consume()
             }
 
+            lastVolumeTarget?.let { target ->
+                val system = target.coerceAtMost(PlayerNormalVolumeCeiling)
+                val software = target.coerceAtLeast(PlayerNormalVolumeCeiling)
+                InAppLogger.debug(
+                    "Player/Gesture",
+                    "volume gesture end target=${formatVolumeFraction(target)} " +
+                        "system=${formatVolumeFraction(system)} software=${formatVolumeFraction(software)}",
+                )
+            }
+
             if (gestureMode == PlayerGestureMode.HorizontalSeek && !isHoldToSpeedGestureActiveState.value) {
                 commitHorizontalSeekState.value(horizontalSeekPreviewMs)
                 clearLiveGestureFeedbackState.value()
             }
         }
     }
+
+private fun formatVolumeFraction(value: Float): String {
+    val hundredths = (value * 100f).roundToLong()
+    return "${hundredths / 100}.${(hundredths % 100).toString().padStart(2, '0')}"
+}

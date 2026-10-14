@@ -969,6 +969,8 @@ private fun ExoPlayerSurface(
             autoSyncCoordinator.wrap(object : PlayerEngineController { // AutoSync hook
                 override val playbackEngine = AndroidPlaybackEngine.ExoPlayer
 
+                private var lastAppliedVolume: Float? = null
+
                 private var cachedAudioTracksSource: androidx.media3.common.Tracks? = null
                 private var cachedAudioTracks: List<AudioTrack> = emptyList()
 
@@ -1028,12 +1030,11 @@ private fun ExoPlayerSurface(
 
                 override fun setPlayerVolume(level: Float): PlayerAudioLevel {
                     val target = level.coerceIn(0f, 2f)
-                    InAppLogger.debug("ExoPlayer/Android", "control volume target=$target muted=${target <= 0.001f}")
-                    // Keep ExoPlayer's own volume at unity and apply gain in the PCM audio processor.
-                    // ExoPlayer#setVolume is effectively a normal 0..1 output volume control on many devices,
-                    // so values above 1 may not create audible amplification.
-                    exoPlayer.volume = 1f
-                    volumeBoostAudioProcessor.level = target
+                    if (target != lastAppliedVolume) {
+                        lastAppliedVolume = target
+                        exoPlayer.volume = 1f
+                        volumeBoostAudioProcessor.level = target
+                    }
                     return PlayerAudioLevel(
                         fraction = target,
                         isMuted = target <= 0.001f,
@@ -2008,6 +2009,10 @@ private class NuvioLibmpvView(
         object : PlayerEngineController {
             override val playbackEngine = AndroidPlaybackEngine.Libmpv
 
+            private var lastAppliedVolume: Float? = null
+            private var lastLoggedAudioTracks: String? = null
+            private var lastLoggedSubtitleTracks: String? = null
+
             override fun play() {
                 InAppLogger.debug("MPV/Android", "control play positionMs=${latestSnapshot.positionMs}")
                 setPaused(false)
@@ -2063,10 +2068,12 @@ private class NuvioLibmpvView(
             override fun setPlayerVolume(level: Float): PlayerAudioLevel {
                 val target = level.coerceIn(0f, 2f)
                 libmpvVolumeLevel = target
-                val mpvVolume = (100.0 * playerBoostLinearGain(target).toDouble().pow(1.0 / 3.0))
-                    .coerceIn(0.0, LIBMPV_VOLUME_MAX.toDouble())
-                InAppLogger.debug("MPV/Android", "control volume target=$target mpvVolume=$mpvVolume")
-                executeMpv { mpv.setPropertyDouble("volume", mpvVolume) }
+                if (target != lastAppliedVolume) {
+                    lastAppliedVolume = target
+                    val mpvVolume = (100.0 * playerBoostLinearGain(target).toDouble().pow(1.0 / 3.0))
+                        .coerceIn(0.0, LIBMPV_VOLUME_MAX.toDouble())
+                    executeMpv { mpv.setPropertyDouble("volume", mpvVolume) }
+                }
                 return PlayerAudioLevel(
                     fraction = target,
                     isMuted = target <= 0.001f,
@@ -2083,10 +2090,12 @@ private class NuvioLibmpvView(
                         isSelected = track.isSelected,
                     )
                 }
-                InAppLogger.debug(
-                    "MPV/Android",
-                    "getAudioTracks count=${tracks.size} selected=${tracks.firstOrNull { it.isSelected }?.index ?: -1}",
-                )
+                val tracksLog =
+                    "getAudioTracks count=${tracks.size} selected=${tracks.firstOrNull { it.isSelected }?.index ?: -1}"
+                if (tracksLog != lastLoggedAudioTracks) {
+                    lastLoggedAudioTracks = tracksLog
+                    InAppLogger.debug("MPV/Android", tracksLog)
+                }
                 return tracks
             }
 
@@ -2101,10 +2110,12 @@ private class NuvioLibmpvView(
                         isForced = track.isForced,
                     )
                 }
-                InAppLogger.debug(
-                    "MPV/Android",
-                    "getSubtitleTracks count=${tracks.size} selected=${tracks.firstOrNull { it.isSelected }?.index ?: -1}",
-                )
+                val tracksLog =
+                    "getSubtitleTracks count=${tracks.size} selected=${tracks.firstOrNull { it.isSelected }?.index ?: -1}"
+                if (tracksLog != lastLoggedSubtitleTracks) {
+                    lastLoggedSubtitleTracks = tracksLog
+                    InAppLogger.debug("MPV/Android", tracksLog)
+                }
                 return tracks
             }
 
@@ -3056,12 +3067,14 @@ private fun ExoPlayer.selectTrackByPredicate(
     return false
 }
 
+private val lastInAppTrackDump = java.util.WeakHashMap<ExoPlayer, String>()
+
 private fun ExoPlayer.logCurrentTracks(context: String) {
     Log.d(TAG, "--- logCurrentTracks ($context) ---")
     val textDisabled = trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)
     Log.d(TAG, "  textDisabled=$textDisabled")
-    InAppLogger.debug("ExoPlayer/Android", "tracks context=$context textDisabled=$textDisabled groups=${currentTracks.groups.size}")
 
+    val groupLines = mutableListOf<Pair<Boolean, String>>()
     for (group in currentTracks.groups) {
         val typeName = when (group.type) {
             C.TRACK_TYPE_AUDIO -> "AUDIO"
@@ -3075,14 +3088,27 @@ private fun ExoPlayer.logCurrentTracks(context: String) {
             format.toTrackLogSummary(group.type)
         Log.d(TAG, "  $message")
         if (group.type == C.TRACK_TYPE_VIDEO || group.type == C.TRACK_TYPE_AUDIO || group.type == C.TRACK_TYPE_TEXT) {
-            if (group.isSelected) {
-                InAppLogger.info("ExoPlayer/Android", message)
-            } else {
-                InAppLogger.debug("ExoPlayer/Android", message)
-            }
+            groupLines += group.isSelected to message
         }
     }
     Log.d(TAG, "--- end logCurrentTracks ---")
+
+    val dump = "textDisabled=$textDisabled\n" + groupLines.joinToString("\n") { it.second }
+    val unchanged = synchronized(lastInAppTrackDump) {
+        (lastInAppTrackDump[this] == dump).also { if (!it) lastInAppTrackDump[this] = dump }
+    }
+    if (unchanged) {
+        InAppLogger.debug("ExoPlayer/Android", "tracks context=$context unchanged")
+        return
+    }
+    InAppLogger.debug("ExoPlayer/Android", "tracks context=$context textDisabled=$textDisabled groups=${currentTracks.groups.size}")
+    for ((selected, message) in groupLines) {
+        if (selected) {
+            InAppLogger.info("ExoPlayer/Android", message)
+        } else {
+            InAppLogger.debug("ExoPlayer/Android", message)
+        }
+    }
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)
