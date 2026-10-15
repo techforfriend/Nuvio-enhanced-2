@@ -75,6 +75,12 @@ import nuvio.composeapp.generated.resources.live_tv_settings_section_epg
 import nuvio.composeapp.generated.resources.live_tv_settings_section_navigation
 import nuvio.composeapp.generated.resources.live_tv_settings_section_playlist
 import nuvio.composeapp.generated.resources.live_tv_settings_section_providers
+import nuvio.composeapp.generated.resources.live_tv_settings_section_reload
+import nuvio.composeapp.generated.resources.live_tv_settings_reload_description
+import nuvio.composeapp.generated.resources.live_tv_settings_reload_channels
+import nuvio.composeapp.generated.resources.live_tv_settings_reload_channels_loading
+import nuvio.composeapp.generated.resources.live_tv_settings_reload_channels_status
+import nuvio.composeapp.generated.resources.live_tv_settings_reload_epg
 import nuvio.composeapp.generated.resources.live_tv_connect
 import nuvio.composeapp.generated.resources.live_tv_disconnect
 import nuvio.composeapp.generated.resources.live_tv_password
@@ -103,6 +109,22 @@ internal fun LazyListScope.liveTvSettingsContent(
                         isTablet = isTablet,
                         enabled = uiState.isNavigationEnabled,
                         onEnabledChanged = LiveTvRepository::setNavigationEnabled,
+                    )
+                }
+            }
+        }
+    }
+
+    if (uiState.hasPlaylist) {
+        item {
+            SettingsSection(
+                title = stringResource(Res.string.live_tv_settings_section_reload),
+                isTablet = isTablet,
+            ) {
+                SettingsGroup(isTablet = isTablet) {
+                    LiveTvManualReloadRow(
+                        isTablet = isTablet,
+                        uiState = uiState,
                     )
                 }
             }
@@ -150,6 +172,84 @@ internal fun LazyListScope.liveTvSettingsContent(
                     uiState = uiState,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun LiveTvManualReloadRow(
+    isTablet: Boolean,
+    uiState: LiveTvUiState,
+) {
+    LaunchedEffect(Unit) {
+        LiveTvRepository.ensureChannelsLoaded()
+    }
+    val horizontalPadding = if (isTablet) 20.dp else 16.dp
+    val verticalPadding = if (isTablet) 16.dp else 14.dp
+    val matchedChannelCount = uiState.channels.count { channel -> !uiState.epgPrograms[channel.id].isNullOrEmpty() }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = stringResource(Res.string.live_tv_settings_reload_description),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Button(
+                onClick = LiveTvRepository::reloadChannels,
+                enabled = !uiState.isLoading,
+            ) {
+                Text(stringResource(Res.string.live_tv_settings_reload_channels))
+            }
+            OutlinedButton(
+                onClick = LiveTvRepository::reloadEpg,
+                enabled = uiState.channels.isNotEmpty() && !uiState.isLoading && !uiState.isEpgLoading,
+            ) {
+                Text(stringResource(Res.string.live_tv_settings_reload_epg))
+            }
+        }
+
+        when {
+            uiState.isLoading -> Text(
+                text = stringResource(Res.string.live_tv_settings_reload_channels_loading),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            uiState.channels.isNotEmpty() -> Text(
+                text = stringResource(Res.string.live_tv_settings_reload_channels_status, uiState.channels.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        uiState.errorMessage?.takeIf(String::isNotBlank)?.let { message ->
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+
+        when {
+            uiState.isEpgLoading -> Text(
+                text = stringResource(Res.string.live_tv_settings_epg_loading),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            uiState.channels.isNotEmpty() && !uiState.isLoading -> Text(
+                text = stringResource(Res.string.live_tv_settings_epg_status, matchedChannelCount, uiState.channels.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
