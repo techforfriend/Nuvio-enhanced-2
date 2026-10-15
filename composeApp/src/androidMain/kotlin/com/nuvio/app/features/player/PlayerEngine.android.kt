@@ -84,7 +84,6 @@ import `is`.xyz.mpv.BaseMPVView
 import `is`.xyz.mpv.MPV
 import `is`.xyz.mpv.MPVNode
 import `is`.xyz.mpv.Utils
-import io.github.peerless2012.ass.media.widget.AssSubtitleView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -2849,8 +2848,8 @@ private fun PlayerView.syncLibassOverlay(
     }
 
     overlayContainer.removeAssOverlayChildren()
-    val assSubtitleView = AssSubtitleView(overlayContainer.context, assHandler)
-    assSubtitleView.attachVsyncRenderDriver(
+    val assSubtitleView = LibassOverlayView(
+        context = overlayContainer.context,
         player = player,
         assHandler = assHandler,
         subtitleDelayUsProvider = subtitleDelayUsProvider,
@@ -2867,7 +2866,7 @@ private fun LibassRenderType.usesOverlaySubtitleView(): Boolean =
 
 private fun android.widget.FrameLayout.hasAssOverlayChild(): Boolean {
     for (index in 0 until childCount) {
-        if (getChildAt(index) is AssSubtitleView) {
+        if (getChildAt(index) is LibassOverlayView) {
             return true
         }
     }
@@ -2876,7 +2875,7 @@ private fun android.widget.FrameLayout.hasAssOverlayChild(): Boolean {
 
 private fun android.widget.FrameLayout.removeAssOverlayChildren() {
     for (index in childCount - 1 downTo 0) {
-        if (getChildAt(index) is AssSubtitleView) {
+        if (getChildAt(index) is LibassOverlayView) {
             removeViewAt(index)
         }
     }
