@@ -1101,6 +1101,7 @@
     <string name="settings_fusion_badge_other_group_title">Other Fusion badges</string>
     <string name="settings_debrid_key_valid">API key validated.</string>
     <string name="settings_debrid_key_invalid">Could not validate this API key.</string>
+    <string name="settings_debrid_use_api_key">Use API key instead</string>
     <string name="settings_mdb_add_api_key_first">Add your MDBList API key below before turning ratings on.</string>
     <string name="settings_mdb_api_key_description">Required to fetch ratings from MDBList</string>
     <string name="settings_mdb_api_key_label">API Key</string>
@@ -2200,6 +2201,8 @@
     <string name="cloud_library_connect_action">Connect account</string>
     <string name="cloud_library_connect_message">Connect an account in Connected Services settings to browse playable files from your cloud library.</string>
     <string name="cloud_library_connect_title">No cloud account connected</string>
+    <string name="cloud_library_connect_torbox_api_key">Connect Torbox with API key</string>
+    <string name="cloud_library_torbox_api_key_hint">Find your API key at torbox.app/settings</string>
     <string name="cloud_library_disabled_action">Open Connected Services</string>
     <string name="cloud_library_disabled_message">Turn on Cloud library in Connected Services settings to browse files from connected accounts.</string>
     <string name="cloud_library_disabled_title">Cloud library is off</string>
