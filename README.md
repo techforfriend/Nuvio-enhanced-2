@@ -73,9 +73,11 @@ Everythings below are added on top of upstream Nuvio Mobile.
 | **Adjustable subtitle transparency** | Settings → Playback → Subtitle Rendering → **Background Color** | — |
 | **Sync subtitles by ear** — tap **Heard** when you hear a line and **Saw** when its subtitle appears, in either order, and the offset is set for you. | Player → Subtitles panel → **Sync by ear** | — |
 | **Buffered range on the seek bar** — the timeline shows how far ahead the stream is buffered, in both the legacy and the new control layout. | — | Always on |
-| **Seek bar thumbnails** — a preview frame floats above the seek bar while you drag it, so you can see where you will land. Frames are grabbed from the stream itself (stream headers and extension-less HLS included) only while you scrub, and the connection is released when you let go. | Settings → Playback → **Seek Bar Thumbnails** | On |
+| **Seek bar thumbnails** — a preview frame floats above the seek bar while you drag it, so you can see where you will land. Frames are grabbed from the stream itself (stream headers and extension-less HLS included) only around scrubbing: the connection opens shortly after the controls appear and is released after a short idle. | Settings → Playback → **Seek Bar Thumbnails** | On |
 | **Chapters** — when the file has embedded chapters, the seek bar is split into chapter segments and the current chapter's name is shown in the player. Tap the chapter name or the **Chapters** button to open the list and jump to any chapter. | Player screen overlay → chapter label / **Chapters** | Shown when the stream has chapters |
 | **Movie recommendations** — in the last four minutes of a movie, a small card suggests More Like This titles you haven't watched. Dismissing it snoozes it for a minute. | Settings → Playback → **Movie Recommendations** | On |
+| **Mini player** *(Android)* — keep watching in a small floating window while you browse. Tap it to return to full screen. With it on, the player's back button still ends playback; use the **PiP** button in the player header (or the system back gesture) to minimize. | Settings → Playback → **Mini Player** | Off |
+| **Private viewing** — play without saving watch progress, Continue Watching or watched status, and without syncing playback to connected trackers. | Settings → Playback → **Private Viewing** | Off |
 | **Custom playback buffers** *(Android)* — set min, max, start, after-stall and back buffer, and the target buffer size. | Settings → Playback → **Custom Playback Buffers** | Upstream defaults |
 | **ExoPlayer native memory** *(Android, experimental)* — buffers in native memory instead of the Java heap, so you can set a larger buffer. The limit depends on how much memory the device has. | Settings → Playback → **ExoPlayer Native Memory (Experimental)** | Off |
 
@@ -88,6 +90,7 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 | **M3U playlists** | Settings → Integrations → Live TV → **Playlists** | — |
 | **Xtream** — connect with a server URL, username and password. | Settings → Integrations → Live TV → **Providers** → Xtream | Not configured |
 | **Stalker Portal** — connect with a portal URL and MAC address; login details optional. | Settings → Integrations → Live TV → **Providers** → Stalker Portal | Not configured |
+| **TV guide (EPG)** — now/next programmes in the channel list and the player, plus a full guide per channel. XMLTV guides linked in playlists and from Xtream/Stalker are found automatically; you can also add your own `.xml` or `.xml.gz` URLs. | Settings → Integrations → Live TV → **TV Guide (EPG)** | Auto-detect on |
 | **Show Live TV in navigation** — the tab appears once at least one source is configured. | Settings → Integrations → Live TV → **Show Live TV in navigation** | On |
 
 ### Profiles
@@ -103,6 +106,8 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 | Feature | Where | Default |
 |---|---|---|
 | **More Like This → View All** — the recommendation rail's header opens the full list as a paged grid that keeps loading as you scroll, instead of stopping at one page. | — | Always on when the rail has more to show |
+| **Episode navigator** — a sticky bar above the episode list of every season to search episodes by title, plot or number, jump straight to an episode number, and sort (first to last, last to first, highest rated, newest aired, unwatched first). | Details page → episode list | Always on for series |
+| **Progress on episode cards** — partially watched episodes show a progress bar on their card. | — | Always on |
 | **Budget and revenue** — added to the details block for movies. | Shown with Settings → Layout → Detail Page → **Details** | — |
 | **Episode ratings** — TMDB vote averages on episode cards. | Settings → Content & Discovery → TMDB Enrichment → **Episode ratings** | — |
 | **Icon action row** — play/resume spans the full width and the other actions (download, start from the beginning, random episode, external player, watched, library) sit as icons underneath it, instead of hiding behind the 3-dots menu. Turn it off to get the old row back. | Settings → Layout → Detail Page → **Icon action row** | On |
@@ -127,6 +132,7 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 | Feature | Where | Default |
 |---|---|---|
 | **Library Calendar** — show release date of ongoing series in the library. | Library screen → **calendar icon toggle** | — |
+| **WeTrakr Library** — browse your WeTrakr lists as a Library source once WeTrakr is connected. | Library screen → source picker → **WeTrakr** | — |
 | **AniList Library** — browse your AniList anime lists as a Library source once AniList is connected. | Library screen → source picker → **AniList** | — |
 
 ### Downloads
@@ -143,6 +149,7 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 | Feature | Where | Default |
 |---|---|---|
 | **AniList** — connect your AniList account to sync anime watch progress, watched episodes, list status (Watching, Planning, Completed, Paused, Dropped, Rewatching) and scores. AniList can also be the source for Continue Watching and the Library. Titles are matched to AniList through IMDb, MAL, Kitsu and AniDB IDs. Connected per profile. | Settings → Tracking → **AniList** → **Connect AniList** | Not connected |
+| **WeTrakr** — connect your WeTrakr account to sync lists, watch history, ratings, scrobbles and Continue Watching. WeTrakr can also be the source for the Library (Planning, Watching, Waiting, Watched, Paused, Dropped). | Settings → Tracking → **WeTrakr** → **Connect WeTrakr** | Not connected |
 | **Sign in with a code** — device-code sign-in for **Trakt** and **SIMKL**, for when the browser redirect will not come back, especially for installation within LiveContainer. Shows a code to enter on any other device. | Settings → Tracking → provider card → **Connect with code** | — |
 
 ### Navigation & settings
@@ -150,16 +157,24 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 | Feature | Where | Default |
 |---|---|---|
 | **Floating nav bar on iPad and tablets** — the jelly floating pill, with inline labels on tablets. | Settings → Layout → navigation bar style | — |
+| **Blurred bottom sheets** *(Android)* — bottom sheets blur the screen behind them, as on iOS. | — | Always on |
 | **Nav bar at the top** — move the floating nav bar to the top of the screen. | Settings → Layout → navigation bar → **Position** | Bottom |
 
 ### iOS look and feel
 
 | Feature | Where | Default |
 |---|---|---|
-| **Experimental Picture in Picture** *(iOS)* — Metal-based render pipeline that slides into PiP without reopening the stream. It changes the core video output, so treat it as experimental. | Settings → Playback → **Experimental Picture in Picture** | Off |
 | **Morphed Liquid Glass tab bar** — shrinks to a compact pill, with native drag-across-tabs and the system glass highlight (requires an **iPhone on iOS 26 or newer**). | Settings → Layout → **Liquid Glass tab bar** | Morphed |
 | **Skia graphics engine** — rebuild graphics engine for animated artwork rendering with shared codecs and bounded memory. Fixed crash on large animated collection, support animated avatar and badge | — | — |
 | **Bundle CJK Font** — fixed Chinese subtitle rendering | — | — |
+
+### Performance
+
+- **Faster startup** *(Android)* — saved data is loaded in the background while the splash screen is up.
+- **Instant home** — the last home screen is saved per profile and shown on the next launch while fresh rows load.
+- **Lighter Live TV** — channels load only when you open Live TV, sources download in parallel, and the guide is cached for up to 6 hours.
+- **Smoother artwork colours** — dynamic background and details-page colours appear without a dark first frame and blend straight from one hero to the next.
+- **Libass rendering off the main thread** *(Android, ExoPlayer)* — ASS/SSA subtitles render on their own thread for less stutter with heavy styled subtitles.
 
 ---
 
