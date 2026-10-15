@@ -1,6 +1,7 @@
 package com.nuvio.app.features.notifications
 
 import android.Manifest
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -10,16 +11,15 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
-import androidx.work.Data
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.Operation
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.nuvio.app.core.storage.ProfileScopedKey
 import com.nuvio.app.features.settings.AppIconPlatform
@@ -36,22 +36,41 @@ import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 
 internal actual object EpisodeReleaseNotificationPlatform {
     private const val permissionRequestCode = 4607
     private const val platformPreferencesName = "nuvio_episode_release_notifications_platform"
-    private const val scheduledIdsKey = "scheduled_episode_release_ids"
+    private const val legacyScheduledIdsKey = "scheduled_episode_release_ids"
+    private const val scheduledRequestsKey = "scheduled_episode_release_requests"
+    private const val deliveredIdsKey = "delivered_episode_release_ids"
     private const val workTag = "episode_release_notifications"
+    private const val backstopWorkName = "episode_release_notifications_backstop"
+    private const val backstopIntervalHours = 3L
+    private const val alarmRequestCode = 4608
+    private const val deliveredRetentionDays = 14L
+    private const val backdropLoadTimeoutMs = 8_000L
+    private const val exactAlarmPromptedKey = "exact_alarm_access_prompted"
+    internal const val alarmAction = "com.nuvio.app.action.EPISODE_RELEASE_NOTIFICATION_ALARM"
     internal const val channelId = "episode_release_notifications"
-    internal const val workerRequestIdKey = "request_id"
-    internal const val workerTitleKey = "title"
-    internal const val workerBodyKey = "body"
-    internal const val workerDeepLinkKey = "deep_link"
-    internal const val workerBackdropUrlKey = "backdrop_url"
 
+    @Volatile
     private var appContext: Context? = null
+    private val stateMutex = Mutex()
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
+    private val requestListSerializer = ListSerializer(EpisodeReleaseNotificationRequest.serializer())
     private var currentActivity: ComponentActivity? = null
     private var pendingPermissionContinuation: kotlin.coroutines.Continuation<Boolean>? = null
     private val httpClient by lazy {
@@ -105,6 +124,14 @@ internal actual object EpisodeReleaseNotificationPlatform {
     }
 
     actual suspend fun requestAuthorization(): Boolean {
+        val granted = requestNotificationPermission()
+        if (granted) {
+            promptExactAlarmAccessIfNeeded()
+        }
+        return granted
+    }
+
+    private suspend fun requestNotificationPermission(): Boolean {
         val context = appContext ?: return false
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             ensureNotificationChannel()
@@ -131,63 +158,161 @@ internal actual object EpisodeReleaseNotificationPlatform {
         }
     }
 
+    internal fun canScheduleExactAlarms(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return false
+        return alarmManager.canScheduleExactAlarms()
+    }
+
+    private fun promptExactAlarmAccessIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        val context = appContext ?: return
+        if (canScheduleExactAlarms(context)) return
+        val prefs = preferences(context)
+        if (prefs.getBoolean(exactAlarmPromptedKey, false)) return
+        val activity = currentActivity ?: return
+
+        prefs.edit().putBoolean(exactAlarmPromptedKey, true).apply()
+        activity.runOnUiThread {
+            runCatching {
+                activity.startActivity(
+                    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                        data = android.net.Uri.parse("package:${activity.packageName}")
+                    },
+                )
+            }
+        }
+    }
+
     actual suspend fun scheduleEpisodeReleaseNotifications(requests: List<EpisodeReleaseNotificationRequest>) {
         val context = appContext ?: return
         ensureNotificationChannel()
 
-        withContext(Dispatchers.IO) {
-            val workManager = WorkManager.getInstance(context)
-            cancelTrackedWork(workManager)
+        stateMutex.withLock {
+            withContext(Dispatchers.IO) {
+                cancelLegacyWork(context)
 
-            val nowEpochMs = System.currentTimeMillis()
-            val scheduledIds = mutableListOf<String>()
+                val prefs = preferences(context)
+                val key = scopedScheduledRequestsKey()
+                val previousIds = loadStoredRequests(context, key)
+                    .mapTo(hashSetOf(), EpisodeReleaseNotificationRequest::requestId)
+                val deliveredIds = loadDeliveredIds(context)
+                val nowEpochMs = System.currentTimeMillis()
+                val todayIso = LocalDate.now().toString()
 
-            requests.forEach { request ->
-                val triggerAtEpochMs = triggerAtEpochMs(request.releaseDateIso) ?: return@forEach
-                val initialDelayMs = triggerAtEpochMs - nowEpochMs
-                if (initialDelayMs <= 0L) return@forEach
+                val retained = requests
+                    .distinctBy(EpisodeReleaseNotificationRequest::requestId)
+                    .filter { request ->
+                        if (request.requestId in deliveredIds) return@filter false
+                        val triggerAtEpochMs = triggerAtEpochMs(request.releaseDateIso) ?: return@filter false
+                        triggerAtEpochMs > nowEpochMs ||
+                            (request.releaseDateIso == todayIso && request.requestId in previousIds)
+                    }
 
-                val inputData = Data.Builder()
-                    .putString(workerRequestIdKey, request.requestId)
-                    .putString(workerTitleKey, request.notificationTitle)
-                    .putString(workerBodyKey, request.notificationBody)
-                    .putString(workerDeepLinkKey, request.deepLinkUrl)
-                    .putString(workerBackdropUrlKey, request.backdropUrl)
-                    .build()
-
-                val workRequest = OneTimeWorkRequestBuilder<EpisodeReleaseNotificationWorker>()
-                    .setInputData(inputData)
-                    .setInitialDelay(initialDelayMs, TimeUnit.MILLISECONDS)
-                    .addTag(workTag)
-                    .build()
-
-                awaitOperation(
-                    workManager.enqueueUniqueWork(
-                        uniqueWorkName(request.requestId),
-                        ExistingWorkPolicy.REPLACE,
-                        workRequest,
-                    ),
-                )
-
-                scheduledIds += request.requestId
+                prefs.edit()
+                    .putString(key, json.encodeToString(requestListSerializer, retained))
+                    .remove(ProfileScopedKey.of(legacyScheduledIdsKey))
+                    .commit()
             }
-
-            preferences(context)
-                .edit()
-                .putStringSet(scopedScheduledIdsKey(), scheduledIds.toSet())
-                .apply()
         }
+
+        deliverDueAndScheduleNext(context)
     }
 
     actual suspend fun clearScheduledEpisodeReleaseNotifications() {
         val context = appContext ?: return
-        withContext(Dispatchers.IO) {
-            val workManager = WorkManager.getInstance(context)
-            cancelTrackedWork(workManager)
-            preferences(context)
-                .edit()
-                .remove(scopedScheduledIdsKey())
-                .apply()
+        stateMutex.withLock {
+            withContext(Dispatchers.IO) {
+                cancelLegacyWork(context)
+                preferences(context)
+                    .edit()
+                    .remove(scopedScheduledRequestsKey())
+                    .remove(ProfileScopedKey.of(legacyScheduledIdsKey))
+                    .commit()
+            }
+        }
+        deliverDueAndScheduleNext(context)
+    }
+
+    internal suspend fun deliverDueAndScheduleNext(context: Context) {
+        initialize(context)
+        val applicationContext = context.applicationContext
+
+        stateMutex.withLock {
+            withContext(Dispatchers.IO) {
+                val prefs = preferences(applicationContext)
+                val nowEpochMs = System.currentTimeMillis()
+                val todayIso = LocalDate.now().toString()
+                val deliveredIds = loadDeliveredIds(applicationContext).toMutableSet()
+                val scheduleKeys = prefs.all.keys.filter { key -> key.startsWith("${scheduledRequestsKey}_") }
+
+                val dueRequests = mutableListOf<EpisodeReleaseNotificationRequest>()
+                val remainingByKey = linkedMapOf<String, List<EpisodeReleaseNotificationRequest>>()
+                var nextTriggerAtEpochMs: Long? = null
+
+                scheduleKeys.forEach { key ->
+                    val remaining = loadStoredRequests(applicationContext, key).filter { request ->
+                        if (request.requestId in deliveredIds) return@filter false
+                        val triggerAtEpochMs = triggerAtEpochMs(request.releaseDateIso) ?: return@filter false
+                        when {
+                            triggerAtEpochMs > nowEpochMs -> {
+                                nextTriggerAtEpochMs = minOf(nextTriggerAtEpochMs ?: triggerAtEpochMs, triggerAtEpochMs)
+                                true
+                            }
+                            request.releaseDateIso == todayIso -> {
+                                if (dueRequests.none { due -> due.requestId == request.requestId }) {
+                                    dueRequests += request
+                                }
+                                false
+                            }
+                            else -> false
+                        }
+                    }
+                    remainingByKey[key] = remaining
+                }
+
+                scheduleNextAlarm(applicationContext, nextTriggerAtEpochMs)
+                updateBackstopWork(applicationContext, hasPending = nextTriggerAtEpochMs != null)
+
+                if (dueRequests.isNotEmpty()) {
+                    val authorized = notificationsAuthorized()
+                    val notifications = if (authorized) {
+                        coroutineScope {
+                            dueRequests.map { request ->
+                                async {
+                                    runCatching { buildNotification(applicationContext, request) }.getOrNull()
+                                }
+                            }.awaitAll()
+                        }
+                    } else {
+                        dueRequests.map { null }
+                    }
+                    dueRequests.forEachIndexed { index, request ->
+                        notifications[index]?.let { notification ->
+                            runCatching {
+                                NotificationManagerCompat.from(applicationContext)
+                                    .notify(kotlin.math.abs(request.requestId.hashCode()), notification)
+                            }
+                        }
+                        deliveredIds += request.requestId
+                        prefs.edit()
+                            .putStringSet(deliveredIdsKey, pruneDeliveredIds(deliveredIds))
+                            .commit()
+                    }
+                }
+
+                val editor = prefs.edit()
+                remainingByKey.forEach { (key, remaining) ->
+                    if (remaining.isEmpty()) {
+                        editor.remove(key)
+                    } else {
+                        editor.putString(key, json.encodeToString(requestListSerializer, remaining))
+                    }
+                }
+                editor
+                    .putStringSet(deliveredIdsKey, pruneDeliveredIds(deliveredIds))
+                    .commit()
+            }
         }
     }
 
@@ -234,8 +359,10 @@ internal actual object EpisodeReleaseNotificationPlatform {
     internal suspend fun loadBackdropBitmap(backdropUrl: String?): Bitmap? {
         val imageUrl = backdropUrl?.trim().takeUnless { it.isNullOrEmpty() } ?: return null
         return runCatching {
-            val bytes: ByteArray = httpClient.get(imageUrl).body()
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            withTimeoutOrNull(backdropLoadTimeoutMs) {
+                val bytes: ByteArray = httpClient.get(imageUrl).body()
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            }
         }.getOrNull()
     }
 
@@ -259,24 +386,83 @@ internal actual object EpisodeReleaseNotificationPlatform {
         )
     }
 
-    private fun cancelTrackedWork(workManager: WorkManager) {
-        val context = appContext ?: return
-        preferences(context)
-            .getStringSet(scopedScheduledIdsKey(), emptySet())
-            .orEmpty()
-            .forEach { requestId ->
-                awaitOperation(workManager.cancelUniqueWork(uniqueWorkName(requestId)))
+    private fun scheduleNextAlarm(context: Context, triggerAtEpochMs: Long?) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        val pendingIntent = alarmPendingIntent(context)
+        if (triggerAtEpochMs == null) {
+            alarmManager.cancel(pendingIntent)
+            return
+        }
+
+        val canUseExact = canScheduleExactAlarms(context)
+        try {
+            if (canUseExact) {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtEpochMs, pendingIntent)
+            } else {
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtEpochMs, pendingIntent)
             }
+        } catch (error: SecurityException) {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtEpochMs, pendingIntent)
+        }
     }
 
-    private fun awaitOperation(operation: Operation) {
-        operation.result.get()
+    private fun alarmPendingIntent(context: Context): PendingIntent {
+        val intent = Intent(context, EpisodeReleaseNotificationReceiver::class.java).apply {
+            action = alarmAction
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            alarmRequestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    private fun updateBackstopWork(context: Context, hasPending: Boolean) {
+        runCatching {
+            val workManager = WorkManager.getInstance(context)
+            if (hasPending) {
+                val workRequest = PeriodicWorkRequestBuilder<EpisodeReleaseNotificationWorker>(
+                    backstopIntervalHours,
+                    TimeUnit.HOURS,
+                ).build()
+                workManager.enqueueUniquePeriodicWork(
+                    backstopWorkName,
+                    ExistingPeriodicWorkPolicy.KEEP,
+                    workRequest,
+                )
+            } else {
+                workManager.cancelUniqueWork(backstopWorkName)
+            }
+        }
+    }
+
+    private fun cancelLegacyWork(context: Context) {
+        runCatching {
+            WorkManager.getInstance(context).cancelAllWorkByTag(workTag)
+        }
+    }
+
+    private fun loadStoredRequests(context: Context, key: String): List<EpisodeReleaseNotificationRequest> {
+        val raw = preferences(context).getString(key, null)?.takeIf { it.isNotBlank() } ?: return emptyList()
+        return runCatching { json.decodeFromString(requestListSerializer, raw) }.getOrDefault(emptyList())
+    }
+
+    private fun loadDeliveredIds(context: Context): Set<String> =
+        preferences(context).getStringSet(deliveredIdsKey, emptySet()).orEmpty().toSet()
+
+    private fun pruneDeliveredIds(ids: Set<String>): Set<String> {
+        val cutoffIso = LocalDate.now().minusDays(deliveredRetentionDays).toString()
+        return ids.filterTo(hashSetOf()) { id ->
+            val dateSuffix = id.takeLast(10)
+            runCatching { LocalDate.parse(dateSuffix) }.isFailure || dateSuffix >= cutoffIso
+        }
     }
 
     private fun preferences(context: Context) =
         context.getSharedPreferences(platformPreferencesName, Context.MODE_PRIVATE)
 
-    private fun scopedScheduledIdsKey(): String = ProfileScopedKey.of(scheduledIdsKey)
+    private fun scopedScheduledRequestsKey(): String = ProfileScopedKey.of(scheduledRequestsKey)
 
     private fun triggerAtEpochMs(releaseDateIso: String): Long? = runCatching {
         LocalDate.parse(releaseDateIso)
@@ -304,6 +490,4 @@ internal actual object EpisodeReleaseNotificationPlatform {
         }
         notificationManager.createNotificationChannel(channel)
     }
-
-    private fun uniqueWorkName(requestId: String): String = "$workTag:$requestId"
 }
