@@ -57,6 +57,8 @@ object HomeRepository {
     private var preloadedSnapshot: HomeSnapshot? = null
     private var snapshotGeneration = 0
     private var snapshotSaveJob: Job? = null
+    private var lastRefreshAddonSignature: List<String>? = null
+    private var collectionHeroResolving: Boolean = false
 
     fun preloadSnapshot() {
         val profileKey = HomeSnapshotStore.currentProfileKey() ?: return
@@ -65,6 +67,7 @@ object HomeRepository {
 
     fun refresh(addons: List<ManagedAddon>, force: Boolean = false) {
         val activeAddons = addons.enabledAddons()
+        lastRefreshAddonSignature = buildAddonCatalogRefreshSignature(addons)
         val requests = buildHomeCatalogDefinitions(activeAddons)
         currentDefinitions = requests
         val requestCacheKeys = requests.mapTo(mutableSetOf(), HomeCatalogDefinition::cacheKey)
@@ -192,6 +195,8 @@ object HomeRepository {
         lastPublishedEntries = emptyList()
         snapshotSaveJob?.cancel()
         snapshotSaveJob = null
+        lastRefreshAddonSignature = null
+        collectionHeroResolving = false
         _uiState.value = HomeUiState()
         restoreSnapshot()
     }
@@ -289,8 +294,13 @@ object HomeRepository {
             emptyList()
         }
         lastPublishedCatalogHeroEmpty = snapshot.heroEnabled && catalogHeroItems.isEmpty()
+        val visibleHeroItems = _uiState.value.heroItems
         val heroItems = if (snapshot.heroEnabled) {
-            catalogHeroItems.ifEmpty { cachedCollectionHeroItems }
+            if (visibleHeroItems.isNotEmpty() && isHeroResolutionPending(isLoading)) {
+                visibleHeroItems
+            } else {
+                catalogHeroItems.ifEmpty { cachedCollectionHeroItems }
+            }
         } else {
             emptyList()
         }
@@ -301,6 +311,14 @@ object HomeRepository {
             sections = sections,
             errorMessage = if (sections.isEmpty()) lastErrorMessage else null,
         )
+    }
+
+    private fun isHeroResolutionPending(isLoading: Boolean): Boolean {
+        if (isLoading || collectionHeroResolving) return true
+        val refreshSignature = lastRefreshAddonSignature ?: return false
+        val addons = AddonRepository.uiState.value.addons
+        if (addons.enabledAddons().any { addon -> addon.manifest == null && addon.isRefreshing }) return true
+        return refreshSignature != buildAddonCatalogRefreshSignature(addons)
     }
 
     private suspend fun HomeCatalogDefinition.toSection(forceRefresh: Boolean): HomeCatalogSection {
@@ -396,6 +414,7 @@ object HomeRepository {
         collectionHeroJob?.cancel()
         collectionHeroRequestKey = nextRequestKey
         cachedCollectionHeroItems = emptyList()
+        collectionHeroResolving = true
         publishCurrentState(
             isLoading = _uiState.value.isLoading,
             requestKey = requestKey,
@@ -418,6 +437,7 @@ object HomeRepository {
                 .distinctBy { item -> item.stableKey() }
                 .shuffled(random)
                 .take(HOME_HERO_ITEM_LIMIT)
+            collectionHeroResolving = false
             publishCurrentState(
                 isLoading = _uiState.value.isLoading,
                 requestKey = requestKey,
