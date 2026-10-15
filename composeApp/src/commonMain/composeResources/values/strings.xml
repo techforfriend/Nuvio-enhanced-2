@@ -1008,6 +1008,12 @@
     <string name="live_tv_settings_epg_none">No guides added yet.</string>
     <string name="live_tv_settings_epg_loading">Loading guide…</string>
     <string name="live_tv_settings_epg_status">Guide available for %1$d of %2$d channels.</string>
+    <string name="live_tv_settings_section_reload">MANUAL RELOAD</string>
+    <string name="live_tv_settings_reload_description">Channels and the TV guide are saved on your device and reused when you open the app. Reload them here to fetch the latest from your providers.</string>
+    <string name="live_tv_settings_reload_channels">Reload channels</string>
+    <string name="live_tv_settings_reload_epg">Reload EPG</string>
+    <string name="live_tv_settings_reload_channels_loading">Loading channels…</string>
+    <string name="live_tv_settings_reload_channels_status">%1$d channels loaded.</string>
     <string name="settings_debrid_section_title">CONNECTED SERVICES</string>
     <string name="settings_debrid_experimental_notice">These integrations are experimental and may be kept, changed, or removed later.</string>
     <string name="settings_debrid_cloud_library">Cloud library</string>
