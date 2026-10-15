@@ -132,8 +132,11 @@ object MiniPlayerController {
     }
 }
 
+internal fun PlayerScreenRuntime.canHandOffToMiniPlayer(): Boolean =
+    MiniPlayerController.hostedRuntime === this && !isMiniPresentation
+
 internal fun PlayerScreenRuntime.handOffToMiniPlayer(): Boolean {
-    if (MiniPlayerController.hostedRuntime !== this || isMiniPresentation) return false
+    if (!canHandOffToMiniPlayer()) return false
     return MiniPlayerController.requestMinimize()
 }
 

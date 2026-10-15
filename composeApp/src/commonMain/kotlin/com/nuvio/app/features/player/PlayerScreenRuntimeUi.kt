@@ -448,7 +448,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
                 if (playerControlsLocked) unlockPlayerControls() else lockPlayerControls()
             },
             onBack = {
-                if (!handOffToMiniPlayer()) flushWatchProgress()
+                flushWatchProgress()
                 args.onBack()
             },
             onTogglePlayback = { togglePlayback() },
@@ -485,13 +485,22 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
                 { playerController?.showCastDialog() }
             } else null,
             isCasting = playbackSnapshot.castDeviceName != null,
-            onPictureInPictureClick = if (pipAvailable) {
-                {
-                    InAppLogger.info("Player/PiP", "start requested")
-                    playerController?.startPictureInPicture()
-                    controlsVisible = false
+            onPictureInPictureClick = when {
+                pipAvailable -> {
+                    {
+                        InAppLogger.info("Player/PiP", "start requested")
+                        playerController?.startPictureInPicture()
+                        controlsVisible = false
+                    }
                 }
-            } else null,
+                !isIos && canHandOffToMiniPlayer() -> {
+                    {
+                        InAppLogger.info("Player/MiniPlayer", "minimize requested")
+                        if (handOffToMiniPlayer()) args.onBack()
+                    }
+                }
+                else -> null
+            },
             onInfoClick = {
                 val selectedQuality = playerQualityState.selectedVariantFor(selectedPlayerQualityId)
                 InAppLogger.info(
