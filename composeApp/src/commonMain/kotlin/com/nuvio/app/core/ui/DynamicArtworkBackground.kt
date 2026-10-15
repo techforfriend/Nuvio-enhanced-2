@@ -11,6 +11,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -48,7 +51,10 @@ fun DynamicArtworkBackground(
     val colorScheme = MaterialTheme.colorScheme
     val baseColor = colorScheme.background
     val extractedColor = rememberArtworkDominantColor(artworkUrl)
-    val targetColor = extractedColor
+    var lastTint by remember { mutableStateOf<Color?>(null) }
+    if (extractedColor != null) lastTint = extractedColor
+    if (artworkUrl.isNullOrBlank()) lastTint = null
+    val targetColor = (extractedColor ?: lastTint)
         ?.let { baseColor.blendTowards(it, DOMINANT_BLEND_FRACTION) }
         ?: baseColor
 

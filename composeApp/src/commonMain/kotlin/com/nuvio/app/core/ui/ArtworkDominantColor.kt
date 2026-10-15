@@ -8,12 +8,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import coil3.SingletonImageLoader
+import coil3.PlatformContext
 import coil3.compose.LocalPlatformContext
 import coil3.compose.asPainter
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.kmpalette.extensions.painter.rememberPainterDominantColorState
+import com.kmpalette.DominantColorState
 import com.kmpalette.rememberDominantColorState
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.painter.Painter
 import com.nuvio.app.features.details.components.loadedBackdropImageBitmap
 
 private const val PALETTE_SAMPLE_PX = 96
@@ -58,26 +62,56 @@ fun rememberArtworkDominantColor(url: String?, enabled: Boolean = true): Color? 
 
     LaunchedEffect(key, enabled) {
         if (!enabled || key == null || color != null) return@LaunchedEffect
-        val request = ImageRequest.Builder(platformContext)
-            .data(key)
-            .size(PALETTE_SAMPLE_PX, PALETTE_SAMPLE_PX)
-            .build()
-        val result = SingletonImageLoader.get(platformContext).execute(request) as? SuccessResult
-            ?: return@LaunchedEffect
-        val bitmap = loadedBackdropImageBitmap(result)
-        val extracted = runCatching {
-            if (bitmap != null) {
-                bitmapState.updateFrom(bitmap)
-                bitmapState.color
-            } else {
-                painterState.updateFrom(result.image.asPainter(platformContext))
-                painterState.color
-            }
-        }.getOrNull() ?: return@LaunchedEffect
-        val resolved = extracted.brightenedDominant(fallback = NoTint)
-        ArtworkDominantColorCache.put(key, resolved)
-        color = resolved
+        color = sampleArtworkDominantColor(key, platformContext, bitmapState, painterState) ?: return@LaunchedEffect
     }
 
     return color?.takeIf { it != NoTint }
+}
+
+@Composable
+fun PrefetchArtworkDominantColors(urls: List<String>) {
+    val platformContext = LocalPlatformContext.current
+    val bitmapState = rememberDominantColorState(
+        defaultColor = NoTint,
+        defaultOnColor = NoTint,
+        isSwatchValid = isBrightDominantSwatch,
+    )
+    val painterState = rememberPainterDominantColorState(
+        defaultColor = NoTint,
+        defaultOnColor = NoTint,
+        isSwatchValid = isBrightDominantSwatch,
+    )
+    LaunchedEffect(urls) {
+        urls.filter { it.isNotBlank() }.distinct().forEach { url ->
+            if (ArtworkDominantColorCache.get(url) == null) {
+                sampleArtworkDominantColor(url, platformContext, bitmapState, painterState)
+            }
+        }
+    }
+}
+
+private suspend fun sampleArtworkDominantColor(
+    url: String,
+    platformContext: PlatformContext,
+    bitmapState: DominantColorState<ImageBitmap>,
+    painterState: DominantColorState<Painter>,
+): Color? {
+    val request = ImageRequest.Builder(platformContext)
+        .data(url)
+        .size(PALETTE_SAMPLE_PX, PALETTE_SAMPLE_PX)
+        .build()
+    val result = SingletonImageLoader.get(platformContext).execute(request) as? SuccessResult ?: return null
+    val bitmap = loadedBackdropImageBitmap(result)
+    val extracted = runCatching {
+        if (bitmap != null) {
+            bitmapState.updateFrom(bitmap)
+            bitmapState.color
+        } else {
+            painterState.updateFrom(result.image.asPainter(platformContext))
+            painterState.color
+        }
+    }.getOrNull() ?: return null
+    val resolved = extracted.brightenedDominant(fallback = NoTint)
+    ArtworkDominantColorCache.put(url, resolved)
+    return resolved
 }

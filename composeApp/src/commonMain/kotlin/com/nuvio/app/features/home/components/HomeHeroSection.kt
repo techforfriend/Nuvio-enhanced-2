@@ -76,6 +76,8 @@ import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.build.TrailerPlaybackMode
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.LocalDynamicArtworkBackgroundColor
+import com.nuvio.app.core.ui.rememberDynamicArtworkBackgroundEnabled
+import com.nuvio.app.core.ui.PrefetchArtworkDominantColors
 import com.nuvio.app.core.ui.heroStretchHeight
 import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.heroStretchZoom
@@ -323,11 +325,16 @@ internal fun HomeHeroSection(
                     .map { page -> HeroPageLayer(page = page, itemIndex = page % items.size) }
             }
             val currentItem = items[currentPage % items.size]
-            val settledItem = items[pagerState.settledPage % items.size]
 
-            val activeArtworkUrl = heroArtworkUrl(settledItem, effectiveArtworkSource)
+            val activeArtworkUrl = heroArtworkUrl(items[pagerState.targetPage % items.size], effectiveArtworkSource)
             LaunchedEffect(onActiveArtworkChange, activeArtworkUrl) {
                 onActiveArtworkChange?.invoke(activeArtworkUrl)
+            }
+            if (onActiveArtworkChange != null && rememberDynamicArtworkBackgroundEnabled()) {
+                val heroArtworkUrls = remember(items, effectiveArtworkSource) {
+                    items.mapNotNull { item -> heroArtworkUrl(item, effectiveArtworkSource) }
+                }
+                PrefetchArtworkDominantColors(heroArtworkUrls)
             }
 
             val platformContext = LocalPlatformContext.current
