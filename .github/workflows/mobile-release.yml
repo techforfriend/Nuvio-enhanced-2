@@ -31,6 +31,10 @@ on:
         description: Optional comma-separated commit hashes to omit from the notes
         required: false
         type: string
+      notes_from:
+        description: Optional commit to start the release notes after (default - the last "chore(store) publish" commit on this branch)
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -129,14 +133,46 @@ jobs:
       - name: Generate release notes
         env:
           PREVIOUS_BUMP: ${{ steps.release.outputs.previous_bump }}
-          CURRENT_BUMP: ${{ steps.release.outputs.current_bump }}
           EXCLUDE_COMMITS: ${{ inputs.exclude_commits }}
+          NOTES_FROM: ${{ inputs.notes_from }}
+          UPSTREAM_URL: https://github.com/NuvioMedia/NuvioMobile.git
+          UPSTREAM_BRANCH: cmp-rewrite
         run: |
+          notes_to="${GITHUB_SHA}"
+          notes_from="$(printf '%s' "${NOTES_FROM}" | tr -d '[:space:]')"
+          if [[ -n "${notes_from}" ]]; then
+            if ! git cat-file -e "${notes_from}^{commit}" 2>/dev/null; then
+              echo "notes_from commit not found: ${notes_from}" >&2
+              exit 1
+            fi
+            if ! git merge-base --is-ancestor "${notes_from}" "${notes_to}"; then
+              echo "notes_from ${notes_from} is not an ancestor of ${GITHUB_REF_NAME}." >&2
+              exit 1
+            fi
+            echo "Release notes start after the given commit ${notes_from}."
+          else
+            notes_from="$(git log "${notes_to}" -n 1 --format=%H --grep='^chore(store): publish ')"
+            if [[ -n "${notes_from}" ]]; then
+              echo "Release notes start after the last store publish commit ${notes_from}."
+            else
+              notes_from="${PREVIOUS_BUMP}"
+              echo "No store publish commit on this branch; starting after the previous version bump ${notes_from}."
+            fi
+          fi
+
+          exclude_ref_args=()
+          if git fetch --no-tags --quiet "${UPSTREAM_URL}" "${UPSTREAM_BRANCH}:refs/remotes/upstream/${UPSTREAM_BRANCH}"; then
+            exclude_ref_args=(--exclude-ref "refs/remotes/upstream/${UPSTREAM_BRANCH}")
+          else
+            echo "::warning::Could not fetch upstream; release notes may include upstream commits."
+          fi
+
           ./scripts/generate-release-notes.sh \
-            --from "${PREVIOUS_BUMP}" \
-            --to "${CURRENT_BUMP}" \
+            --from "${notes_from}" \
+            --to "${notes_to}" \
             --repository "${GITHUB_REPOSITORY}" \
             --exclude "${EXCLUDE_COMMITS}" \
+            "${exclude_ref_args[@]}" \
             > release-notes.md
 
           if [[ ! -s release-notes.md ]]; then
