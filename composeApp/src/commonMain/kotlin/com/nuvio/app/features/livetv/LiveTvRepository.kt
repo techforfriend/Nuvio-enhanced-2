@@ -65,18 +65,13 @@ object LiveTvRepository {
             if (cachedChannels != null && liveTvChannelSourceSignature(_uiState.value) == signature) {
                 detectedEpgUrls = cachedChannels.epgUrls
                 channelsSignature = signature
-                val isFresh = Clock.System.now().toEpochMilliseconds() - cachedChannels.savedAtMillis <
-                    LIVE_TV_CHANNEL_CACHE_FRESH_MILLIS
                 _uiState.value = _uiState.value.copy(
                     channels = cachedChannels.channels,
-                    isLoading = !isFresh,
+                    isLoading = false,
                     errorMessage = null,
                 )
-                if (isFresh) {
-                    refreshEpg(force = false)
-                    return@launch
-                }
-                applyRestoredEpg()
+                refreshEpg(force = false)
+                return@launch
             }
             refresh()
         }
@@ -280,6 +275,14 @@ object LiveTvRepository {
     fun removeStalker() = saveStalkerSettings(LiveTvStalkerSettings())
     fun removeXtream() = saveXtreamSettings(LiveTvXtreamSettings())
 
+    fun reloadChannels() {
+        refresh()
+    }
+
+    fun reloadEpg() {
+        refreshEpg(force = true)
+    }
+
     suspend fun prepareForPlayback(channel: LiveTvChannel): LiveTvChannel =
         if (channel.stalkerCommand.isNullOrBlank()) channel
         else preparePortalChannelForPlayback(channel, _uiState.value.stalkerSettings)
@@ -398,6 +401,9 @@ object LiveTvRepository {
                 },
             )
             if (!keepPrevious) {
+                val channelsChanged = previousChannels.isNotEmpty() &&
+                    withContext(Dispatchers.Default) { previousChannels != fetchedChannels }
+                if (channelsChanged) restoredEpg = null
                 detectedEpgUrls = playlistEpgUrls.distinct()
                 channelsSignature = signature
                 if (fetchedChannels.isNotEmpty()) {
@@ -504,7 +510,7 @@ object LiveTvRepository {
                     null
                 },
             )
-            if (failedGuideNames.isEmpty() && programs.isNotEmpty()) {
+            if (programs.isNotEmpty()) {
                 restoredEpg = LiveTvCachedEpg(epgSignature, nowMillis, programs)
                 withContext(Dispatchers.Default) {
                     LiveTvCacheStore.saveEpg(epgSignature, nowMillis, programs)
@@ -616,8 +622,7 @@ object LiveTvRepository {
     }
 }
 
-private const val LIVE_TV_EPG_CACHE_TTL_MILLIS = 6L * 60L * 60L * 1000L
-private const val LIVE_TV_CHANNEL_CACHE_FRESH_MILLIS = 15L * 60L * 1000L
+private const val LIVE_TV_EPG_CACHE_TTL_MILLIS = 24L * 60L * 60L * 1000L
 
 private fun liveTvEpgSignature(state: LiveTvUiState, requests: List<LiveTvEpgRequest>): String =
     liveTvChannelSourceSignature(state) + "#" + requests.joinToString("|") { it.cacheKey }.let { "${it.length}:${it.hashCode()}" }
