@@ -50,11 +50,15 @@ fun DynamicArtworkBackground(
 
     val colorScheme = MaterialTheme.colorScheme
     val baseColor = colorScheme.background
-    val extractedColor = rememberArtworkDominantColor(artworkUrl)
+    val tint = rememberArtworkTint(artworkUrl)
     var lastTint by remember { mutableStateOf<Color?>(null) }
-    if (extractedColor != null) lastTint = extractedColor
-    if (artworkUrl.isNullOrBlank()) lastTint = null
-    val targetColor = (extractedColor ?: lastTint)
+    val currentTint: Color? = when (tint) {
+        ArtworkTint.Pending -> lastTint
+        ArtworkTint.None -> null
+        is ArtworkTint.Tinted -> tint.value
+    }
+    if (tint != ArtworkTint.Pending) lastTint = currentTint
+    val targetColor = currentTint
         ?.let { baseColor.blendTowards(it, DOMINANT_BLEND_FRACTION) }
         ?: baseColor
 

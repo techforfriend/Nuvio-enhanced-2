@@ -43,10 +43,21 @@ object ArtworkDominantColorCache {
     }
 }
 
+sealed interface ArtworkTint {
+    data object Pending : ArtworkTint
+    data object None : ArtworkTint
+    data class Tinted(val value: Color) : ArtworkTint
+}
+
 @Composable
-fun rememberArtworkDominantColor(url: String?, enabled: Boolean = true): Color? {
+fun rememberArtworkDominantColor(url: String?, enabled: Boolean = true): Color? =
+    (rememberArtworkTint(url, enabled) as? ArtworkTint.Tinted)?.value
+
+@Composable
+fun rememberArtworkTint(url: String?, enabled: Boolean = true): ArtworkTint {
     val key = url?.takeIf { it.isNotBlank() }
     var color by remember(key) { mutableStateOf(key?.let(ArtworkDominantColorCache::get)) }
+    var failed by remember(key) { mutableStateOf(false) }
     val platformContext = LocalPlatformContext.current
 
     val bitmapState = rememberDominantColorState(
@@ -62,10 +73,17 @@ fun rememberArtworkDominantColor(url: String?, enabled: Boolean = true): Color? 
 
     LaunchedEffect(key, enabled) {
         if (!enabled || key == null || color != null) return@LaunchedEffect
-        color = sampleArtworkDominantColor(key, platformContext, bitmapState, painterState) ?: return@LaunchedEffect
+        val sampled = sampleArtworkDominantColor(key, platformContext, bitmapState, painterState)
+        if (sampled != null) color = sampled else failed = true
     }
 
-    return color?.takeIf { it != NoTint }
+    val resolved = color
+    return when {
+        key == null -> ArtworkTint.None
+        resolved == null -> if (failed) ArtworkTint.None else ArtworkTint.Pending
+        resolved == NoTint -> ArtworkTint.None
+        else -> ArtworkTint.Tinted(resolved)
+    }
 }
 
 @Composable
