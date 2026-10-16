@@ -9,6 +9,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import platform.Foundation.NSUserDefaults
+import platform.UIKit.UIDevice
+import platform.UIKit.UIUserInterfaceIdiomPad
 
 actual object ThemeSettingsStorage {
     private const val selectedThemeKey = "selected_theme"
@@ -24,6 +26,8 @@ actual object ThemeSettingsStorage {
 
     private const val localNavBarStyleKey = "enhanced_local_nav_bar_style"
     private const val localNavBarPositionKey = "enhanced_local_nav_bar_position"
+    private const val localTabletTabBarBehaviorKey = "enhanced_local_tablet_tab_bar_behavior"
+    private const val tabletTabBarBehaviorDefault = "off"
     private const val navBarGlowEnabledKey = "nav_bar_glow_enabled"
     private val profileScopedSyncKeys = listOf(
         selectedThemeKey,
@@ -94,10 +98,21 @@ actual object ThemeSettingsStorage {
         )
     }
 
-    actual fun loadTabBarBehavior(): String? =
-        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(tabBarBehaviorKey))
+    actual fun isTabBarBehaviorDeviceLocal(): Boolean =
+        UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPad
+
+    actual fun loadTabBarBehavior(): String? {
+        if (isTabBarBehaviorDeviceLocal()) {
+            return loadRawString(localTabletTabBarBehaviorKey) ?: tabletTabBarBehaviorDefault
+        }
+        return NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(tabBarBehaviorKey))
+    }
 
     actual fun saveTabBarBehavior(behaviorKey: String) {
+        if (isTabBarBehaviorDeviceLocal()) {
+            saveRawString(localTabletTabBarBehaviorKey, behaviorKey)
+            return
+        }
         NSUserDefaults.standardUserDefaults.setObject(
             behaviorKey,
             forKey = ProfileScopedKey.of(tabBarBehaviorKey),

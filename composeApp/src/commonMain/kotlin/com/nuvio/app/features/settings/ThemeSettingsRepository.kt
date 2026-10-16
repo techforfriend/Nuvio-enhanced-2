@@ -34,7 +34,6 @@ object ThemeSettingsRepository {
     private val _tabBarBehavior = MutableStateFlow(NuvioTabBarBehavior.Default)
     val tabBarBehavior: StateFlow<NuvioTabBarBehavior> = _tabBarBehavior.asStateFlow()
 
-    /** Derived from [tabBarBehavior]; kept so existing call sites keep reading a single boolean. */
     private val _liquidGlassNativeTabBarEnabled = MutableStateFlow(NuvioTabBarBehavior.Default.isEnabled)
     val liquidGlassNativeTabBarEnabled: StateFlow<Boolean> = _liquidGlassNativeTabBarEnabled.asStateFlow()
 
@@ -108,7 +107,6 @@ object ThemeSettingsRepository {
         _customThemePreference.value = CustomThemeColors.decode(ThemeSettingsStorage.loadCustomThemeColors())
         applyEffectiveTheme()
         _amoledEnabled.value = ThemeSettingsStorage.loadAmoledEnabled() ?: false
-        // The four-way behavior replaced the old on/off toggle; fall back to it for existing profiles.
         val behavior = NuvioTabBarBehavior.fromKey(ThemeSettingsStorage.loadTabBarBehavior())
             ?: NuvioTabBarBehavior.fromLegacyEnabled(
                 ThemeSettingsStorage.loadLiquidGlassNativeTabBarEnabled(),
@@ -159,9 +157,9 @@ object ThemeSettingsRepository {
         if (_tabBarBehavior.value == behavior) return
         applyTabBarBehavior(behavior)
         ThemeSettingsStorage.saveTabBarBehavior(behavior.key)
-        // Keep the legacy key in step so a downgrade, or an older device syncing this profile,
-        // still sees the right on/off state.
-        ThemeSettingsStorage.saveLiquidGlassNativeTabBarEnabled(behavior.isEnabled)
+        if (!ThemeSettingsStorage.isTabBarBehaviorDeviceLocal()) {
+            ThemeSettingsStorage.saveLiquidGlassNativeTabBarEnabled(behavior.isEnabled)
+        }
     }
 
     private fun applyTabBarBehavior(behavior: NuvioTabBarBehavior) {

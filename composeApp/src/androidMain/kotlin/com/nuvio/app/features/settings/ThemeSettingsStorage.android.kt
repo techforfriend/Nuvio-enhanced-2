@@ -115,6 +115,8 @@ actual object ThemeSettingsStorage {
             ?.apply()
     }
 
+    actual fun isTabBarBehaviorDeviceLocal(): Boolean = false
+
     actual fun loadDynamicArtworkBackgroundEnabled(): Boolean? =
         preferences?.let { prefs ->
             val key = ProfileScopedKey.of(dynamicArtworkBackgroundEnabledKey)
