@@ -117,6 +117,8 @@ internal class PlayerScreenRuntime(
     var activeProviderName by mutableStateOf(providerName)
     var activeProviderAddonId by mutableStateOf(providerAddonId)
     var currentStreamBingeGroup by mutableStateOf(initialBingeGroup)
+    var currentStreamFilename by mutableStateOf<String?>(null)
+    var currentStreamInfoHash by mutableStateOf<String?>(null)
     var activeSeasonNumber by mutableStateOf(seasonNumber)
     var activeEpisodeNumber by mutableStateOf(episodeNumber)
     var activeEpisodeTitle by mutableStateOf(episodeTitle)
