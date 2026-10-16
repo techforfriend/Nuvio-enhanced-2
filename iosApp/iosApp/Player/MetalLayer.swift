@@ -5,7 +5,6 @@ import CoreVideo
 import Metal
 
 class MetalLayer: CAMetalLayer {
-    // Upstream VideoToolbox PiP handoff: libmpv pushes decoded frames here while PiP owns video.
     weak var pictureInPictureSink: PlayerPictureInPictureController?
     private let pictureInPictureLock = NSLock()
     private var consumesVideo = false
@@ -26,30 +25,23 @@ class MetalLayer: CAMetalLayer {
         pictureInPictureLock.unlock()
     }
 
-    override func nextDrawable() -> CAMetalDrawable? {
-        pictureInPictureLock.lock()
-        let generation = presentationObserver?.generation
-        pictureInPictureLock.unlock()
-        // Return the same drawable that MoltenVK would normally acquire.
-        let drawable = super.nextDrawable()
-        guard let drawable, let generation else { return drawable }
+    private func attachPresentationObserver(to drawable: CAMetalDrawable, generation: UInt?) {
+        guard let generation else { return }
         pictureInPictureLock.lock()
         let observer = presentationObserver?.generation == generation ? presentationObserver : nil
         if observer != nil { presentationObserver = nil }
         pictureInPictureLock.unlock()
-        if let observer {
-            drawable.addPresentedHandler { [weak self] presented in
-                let time = presented.presentedTime
-                DispatchQueue.main.async { [weak self] in
-                    guard let self else { return }
-                    self.pictureInPictureLock.lock()
-                    let current = self.presentationGeneration == generation
-                    self.pictureInPictureLock.unlock()
-                    if current { observer.callback(time) }
-                }
+        guard let observer else { return }
+        drawable.addPresentedHandler { [weak self] presented in
+            let time = presented.presentedTime
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.pictureInPictureLock.lock()
+                let current = self.presentationGeneration == generation
+                self.pictureInPictureLock.unlock()
+                if current { observer.callback(time) }
             }
         }
-        return drawable
     }
 
     @objc var nuvioPiPConsumesVideo: Bool {
@@ -191,7 +183,11 @@ class MetalLayer: CAMetalLayer {
             captureLock.unlock()
         }
 
+        pictureInPictureLock.lock()
+        let observerGeneration = presentationObserver?.generation
+        pictureInPictureLock.unlock()
         let drawable = super.nextDrawable()
+        if let drawable { attachPresentationObserver(to: drawable, generation: observerGeneration) }
         let acquisitionFailed = drawable == nil
 
         captureLock.lock()
