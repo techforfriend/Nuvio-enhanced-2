@@ -135,6 +135,7 @@ import com.nuvio.app.features.party.PartyMedia
 import com.nuvio.app.features.party.PartyRepository
 import com.nuvio.app.features.party.PartyScreen
 import com.nuvio.app.features.party.PartySync
+import com.nuvio.app.features.party.partyMediaKey
 import com.nuvio.app.features.player.ExternalPlayerIntentResult
 import com.nuvio.app.features.player.externalPlaybackSession
 import com.nuvio.app.features.player.infusePlaybackCallbacks
@@ -1125,7 +1126,9 @@ internal fun MainAppContent(
                 }
             }
 
-            if (!PlaybackAvailability.current().canStream(type, videoId)) {
+            val isPartyMedia = PartyRepository.state.value.party?.media?.key ==
+                partyMediaKey(parentMetaType, parentMetaId, seasonNumber, episodeNumber)
+            if (!isPartyMedia && !PlaybackAvailability.current().canStream(type, videoId)) {
                 NuvioToastController.show(playbackUnavailableMessage)
                 return
             }
