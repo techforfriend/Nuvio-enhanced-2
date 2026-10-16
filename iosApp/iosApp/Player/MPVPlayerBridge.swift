@@ -300,6 +300,15 @@ final class MPVPlayerViewController: UIViewController {
     var mpv: OpaquePointer?
     private var cachedNowPlayingMetadata: CachedNowPlayingMetadata?
     private lazy var nowPlayingController = PlayerNowPlayingController(owner: self)
+    private lazy var audioSessionController: PlayerAudioSessionController = {
+        let controller = PlayerAudioSessionController()
+        controller.onConfigurationChanged = { [weak self] in
+            guard let self, self.mpv != nil else { return }
+            self.publishCachedNowPlayingInfoIfNeeded()
+            self.syncNowPlayingPlaybackState(isPlaying: self.isPlayerPlaying)
+        }
+        return controller
+    }()
     private let eventQueue = DispatchQueue(label: "mpv-events", qos: .userInitiated)
     private let mpvQueue: DispatchQueue = {
         let queue = DispatchQueue(label: "mpv-properties", qos: .userInitiated)
@@ -517,6 +526,10 @@ final class MPVPlayerViewController: UIViewController {
         }
         setupNotifications()
         refreshImmersiveSystemUI()
+    }
+
+    func setPictureInPicturePlaceholderVisible(_ visible: Bool) {
+        SystemUI.shared.setPictureInPicturePlaceholder(self, visible: visible)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -762,8 +775,16 @@ final class MPVPlayerViewController: UIViewController {
             self.hwdecBeforeBackground = self.getString("hwdec-current")
         }
         if pictureInPictureController?.enteredBackground() == true { return }
+        pauseBackgroundPlayback()
+    }
+
+    func pauseBackgroundPlayback() {
         pausePlayback()
         setStringProperty("vid", "no")
+    }
+
+    func restoreBackgroundVideo() {
+        setStringProperty("vid", "auto")
     }
 
     @objc private func enterForeground() {
@@ -771,7 +792,7 @@ final class MPVPlayerViewController: UIViewController {
         guard mpv != nil else { return }
         let wasInPictureInPicture = pictureInPictureController?.enteredForeground() == true
         if wasInPictureInPicture { return }
-        setStringProperty("vid", "auto")
+        restoreBackgroundVideo()
         playPlayback()
     }
 
@@ -1566,54 +1587,12 @@ final class MPVPlayerViewController: UIViewController {
         teardownMpvCore()
     }
 
-    private static let audioSessionQueue = DispatchQueue(label: "nuvio.audio-session", qos: .userInitiated)
-    private static let slowAudioSessionCallMs = 500.0
-
     private func activateAudioSessionForPlayback() {
-        Self.audioSessionQueue.async {
-            let session = AVAudioSession.sharedInstance()
-            let needsCategory = session.category != .playback ||
-                session.mode != .moviePlayback ||
-                session.categoryOptions.contains(.mixWithOthers)
-            do {
-                if needsCategory {
-                    try Self.timedAudioSessionCall("setCategory(.playback, .moviePlayback)") {
-                        try session.setCategory(.playback, mode: .moviePlayback)
-                    }
-                }
-                try Self.timedAudioSessionCall("setActive(true)") {
-                    try session.setActive(true)
-                }
-            } catch {
-                InAppLogBridge.shared.warn(tag: "Audio/iOS", message: "Failed to activate audio session: \(error)")
-            }
-        }
+        audioSessionController.activate()
     }
 
     private func deactivateAudioSession() {
-        Self.audioSessionQueue.async {
-            do {
-                try Self.timedAudioSessionCall("setActive(false)") {
-                    try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-                }
-            } catch {
-                InAppLogBridge.shared.warn(tag: "Audio/iOS", message: "Failed to deactivate audio session: \(error)")
-            }
-        }
-    }
-
-    private static func timedAudioSessionCall(_ name: String, _ call: () throws -> Void) throws {
-        let start = CACurrentMediaTime()
-        defer {
-            let elapsedMs = (CACurrentMediaTime() - start) * 1000
-            let message = "audioSession.\(name) took \(Int(elapsedMs))ms"
-            if elapsedMs >= slowAudioSessionCallMs {
-                InAppLogBridge.shared.warn(tag: "Audio/iOS", message: message)
-            } else {
-                InAppLogBridge.shared.info(tag: "Audio/iOS", message: message)
-            }
-        }
-        try call()
+        audioSessionController.deactivate()
     }
 
     // MARK: - Media Info

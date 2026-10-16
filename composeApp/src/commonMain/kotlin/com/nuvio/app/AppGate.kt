@@ -246,9 +246,14 @@ internal fun AppGate(
         profileSelectionTransitionActive = false
     }
 
+    fun reportAppReady(ready: Boolean) {
+        appGateController?.reportAppReady(ready)
+        onAppReady?.invoke(ready)
+    }
+
     LaunchedEffect(gateScreen, onAppReady) {
         if (gateScreen != AppGateScreen.Main.name) {
-            onAppReady?.invoke(false)
+            reportAppReady(false)
         }
     }
 
@@ -541,11 +546,12 @@ internal fun AppGate(
                 !profileOverlayState.currentState &&
                 launchOverlayState.isIdle &&
                 !launchOverlayState.currentState
-        val ready = gateScreen == AppGateScreen.Main.name &&
-            externalMainContentReady &&
-            !profileSelectionLoading &&
-            overlaysHidden
-        onAppReady?.invoke(ready)
+        reportAppReady(
+            gateScreen == AppGateScreen.Main.name &&
+                externalMainContentReady &&
+                !profileSelectionLoading &&
+                overlaysHidden,
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

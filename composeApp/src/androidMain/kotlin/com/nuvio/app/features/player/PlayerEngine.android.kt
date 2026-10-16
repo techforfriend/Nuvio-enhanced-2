@@ -490,28 +490,28 @@ private fun ExoPlayerSurface(
                 "libassRenderType=$libassRenderType mapDV7ToHevc=${playerSettings.mapDV7ToHevc}",
         )
 
+        val playerBuilder = ExoPlayer.Builder(context)
+            .setAudioAttributes(playbackAudioAttributes, true)
+            .setTrackSelector(trackSelector)
+            .setLoadControl(loadControl)
+
         val player = if (useLibass) {
-            ExoPlayer.Builder(context)
-                .setTrackSelector(trackSelector)
-                .setLoadControl(loadControl)
-                .buildWithAssSupportCompat(
-                    context = context,
-                    renderType = libassRenderType.toAssRenderType(),
-                    config = createLibassHandlerConfig(context),
-                    dataSourceFactory = dataSourceFactory,
-                    extractorsFactory = extractorsFactory,
-                    renderersFactory = renderersFactory
-                )
+            playerBuilder.buildWithAssSupportCompat(
+                context = context,
+                renderType = libassRenderType.toAssRenderType(),
+                config = createLibassHandlerConfig(context),
+                dataSourceFactory = dataSourceFactory,
+                extractorsFactory = extractorsFactory,
+                renderersFactory = renderersFactory
+            )
         } else {
             val mediaSourceFactory = DefaultMediaSourceFactory(
                 dataSourceFactory,
                 extractorsFactory,
             )
 
-            ExoPlayer.Builder(context)
+            playerBuilder
                 .setRenderersFactory(renderersFactory)
-                .setTrackSelector(trackSelector)
-                .setLoadControl(loadControl)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .build()
         }
@@ -1363,6 +1363,14 @@ private fun LibmpvPlayerSurface(
         onDispose { nowPlayingController?.release() }
     }
 
+    val audioFocus = remember(context) {
+        PlayerAudioFocus(context) { playerViewRef?.setPaused(true) }
+    }
+
+    DisposableEffect(audioFocus) {
+        onDispose { audioFocus.abandon() }
+    }
+
     DisposableEffect(lifecycleOwner, nowPlayingController) {
         val activity = context.findActivity()
         val observer = LifecycleEventObserver { _, event ->
@@ -1412,6 +1420,9 @@ private fun LibmpvPlayerSurface(
                         "mpv_property=eof-reached value=true attempt=${playbackDiagnostics.attempt} " +
                             "elapsedMs=${diagnosticElapsedSince(playbackDiagnostics.prepareStartedAtMs)}",
                     )
+                }
+                if (property == "pause" && !value) {
+                    coroutineScope.launch(Dispatchers.Main.immediate) { audioFocus.request() }
                 }
                 if (property == "eof-reached" || property == "pause" || property == "paused-for-cache" || property == "seeking") {
                     dispatchSnapshot(updateKeepScreenOn = true)

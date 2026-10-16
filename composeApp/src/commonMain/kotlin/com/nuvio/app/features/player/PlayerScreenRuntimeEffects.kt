@@ -2,6 +2,7 @@ package com.nuvio.app.features.player
 
 import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
 import com.nuvio.app.core.ui.NuvioToastController
+import com.nuvio.app.features.party.PartyRepository
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.shuffle.EpisodeShuffleRepository
 import com.nuvio.app.features.shuffle.ShuffleSurface
@@ -355,6 +356,10 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
                 controllerSourceUrl == p2pResolvedSourceUrl
         if (!controllerMatchesActivePlayback) return@LaunchedEffect
         if (initialSeekApplied || playbackSnapshot.isLoading) return@LaunchedEffect
+        if (isPartySynced && PartyRepository.playback.value != null) {
+            initialSeekApplied = true
+            return@LaunchedEffect
+        }
 
         val progressFraction = activeInitialProgressFraction
             ?.takeIf { it > 0f }
@@ -378,6 +383,7 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
 
     BindPlayerUiVisibilityEffects()
     BindPlayerMetadataAndSkipEffects()
+    BindPartyEffects()
 
     DisposableEffect(activeSourceUrl) {
         val effectSourceUrl = activeSourceUrl
@@ -615,7 +621,7 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         if (current != null && controller != null &&
             playerControllerSourceUrl == activeSourceUrl &&
             playerSettingsUiState.skipIntroEnabled && playbackSnapshot.isPlaying &&
-            !isScrubbingTimeline && initialSeekApplied &&
+            !isScrubbingTimeline && initialSeekApplied && !isPartyControlLocked &&
             // The pre-roll only reveals the button; auto-skip waits for the segment itself.
             positionSec >= current.startTime &&
             current.shouldAutoSkip(playerSettingsUiState.autoSkipSegmentTypes) &&
@@ -628,6 +634,7 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
             autoSkippedIntervals.add(current)
             controller.seekTo(seekPositionMs)
             scheduleProgressSyncAfterSeek()
+            publishPartyPlayback(positionMs = seekPositionMs)
             skipIntervalDismissed = true
             notification?.let { NuvioToastController.show(it, AUTO_SKIP_NOTIFICATION_DURATION_MS) }
         }
@@ -733,7 +740,7 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         }
         if (shouldShow && !showNextEpisodeCard) {
             showNextEpisodeCard = true
-            if (playerSettingsUiState.streamAutoPlayNextEpisodeEnabled && nextEpisodeInfo?.hasAired == true) {
+            if (playerSettingsUiState.streamAutoPlayNextEpisodeEnabled && nextEpisodeInfo?.hasAired == true && !isPartyControlLocked) {
                 playNextEpisode(automatic = true)
             }
         } else if (!shouldShow) {
@@ -902,6 +909,7 @@ internal fun PlayerScreenRuntime.tryRefreshCredentialedSourceAfterError(message:
             activeStreamSubtitle = stream.streamSubtitle
             activeProviderName = stream.addonName
             activeProviderAddonId = stream.addonId
+            activeStream = stream
             currentStreamBingeGroup = stream.behaviorHints.bingeGroup
             activeInitialPositionMs = savedPositionMs
             activeInitialProgressFraction = null

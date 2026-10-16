@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.CastConnected
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.HighQuality
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
@@ -69,9 +70,19 @@ internal fun PlayerToolbar(
     onCastClick: (() -> Unit)? = null,
     isCasting: Boolean = false,
     modifier: Modifier = Modifier,
+    onPartyClick: (() -> Unit)? = null,
+    partyActive: Boolean = false,
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
+        if (onPartyClick != null) {
+            PlayerAction(
+                description = stringResource(Res.string.party_title),
+                icon = Icons.Rounded.Groups,
+                onClick = onPartyClick,
+                tint = if (partyActive) MaterialTheme.colorScheme.primary else Color.White,
+            )
+        }
         onCastClick?.let {
             PlayerAction(
                 description = stringResource(Res.string.player_cast),
@@ -313,12 +324,13 @@ private fun PlayerAction(
     icon: ImageVector? = null,
     painter: Painter? = null,
     iconSize: Dp = 24.dp,
+    tint: Color = Color.White,
 ) {
     IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
         if (painter != null) {
-            Icon(painter, description, tint = Color.White, modifier = Modifier.size(iconSize))
+            Icon(painter, description, tint = tint, modifier = Modifier.size(iconSize))
         } else if (icon != null) {
-            Icon(icon, description, tint = Color.White, modifier = Modifier.size(iconSize))
+            Icon(icon, description, tint = tint, modifier = Modifier.size(iconSize))
         }
     }
 }
