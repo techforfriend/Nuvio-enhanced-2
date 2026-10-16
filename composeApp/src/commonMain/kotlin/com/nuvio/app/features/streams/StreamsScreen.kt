@@ -838,8 +838,10 @@ internal fun StreamList(
             }
 
             !hasAnyStreams && !uiState.isAnyLoading -> {
-                item {
-                    EmptyStateBlock(reason = uiState.emptyStateReason)
+                if (sharedStream == null) {
+                    item {
+                        EmptyStateBlock(reason = uiState.emptyStateReason)
+                    }
                 }
             }
 

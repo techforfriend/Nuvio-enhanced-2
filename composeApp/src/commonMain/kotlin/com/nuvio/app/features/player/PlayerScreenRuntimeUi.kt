@@ -992,7 +992,13 @@ private fun PlayerScreenRuntime.RenderPlayerModals() {
             episodeStreamsPanelState = EpisodeStreamsPanelState(showStreams = true, selectedEpisode = episode)
         },
         onEpisodeStreamFilterSelected = PlayerStreamsRepository::selectEpisodeStreamsFilter,
-        onEpisodeStreamSelected = { stream, episode -> switchToEpisodeStream(stream, episode) },
+        onEpisodeStreamSelected = { stream, episode ->
+            switchToEpisodeStream(
+                stream,
+                episode,
+                saveForReuse = stream != PartyRepository.sharedStream.value?.toStreamItem(),
+            )
+        },
         onBackToEpisodes = {
             episodeStreamsPanelState = EpisodeStreamsPanelState()
             PlayerStreamsRepository.clearEpisodeStreams()
