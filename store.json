@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.6.1",
+          "buildVersion": "144",
+          "date": "2026-10-16T16:15:30Z",
+          "localizedDescription": "# 0.6.1-beta:\r\n- fix(ios): merge duplicate MetalLayer.nextDrawable overrides @luqmanfadlli \r\n- fix(streams): adapt the party shared-stream header to fork pinning @luqmanfadlli\r\n- fix(party): let only the host change what's playing @tapframe\r\n- fix(home): update dynamic background for dark hero artwork @luqmanfadlli\r\n\r\n# 0.6.0-beta:\r\n- feat add searchbar to livetv category bottomsheet (#195) @chrisk325\r\n- fix(debrid) cache results and refresh in background @chrisk325\r\n- feat(debrid) add torbox api key login #194 @chrisk325\r\n- fix notification episode alerts not working in background #191 @chrisk325\r\n- feat(iptv) persist cache live tv channels through restart @chrisk325\r\n- feat(iptv) add reload button to xstream protocol and epg @chrisk325\r\n- feat(iptv): add new strings for iptv reload buttons @chrisk325\r\n- fix(hero) flicker while launching the app (#187) @chrisk325\r\n- perf(home): seamless dynamic background on hero changes @luqmanfadlli\r\n- feat(android): minimize to mini player from a PiP button @luqmanfadlli\r\n- fix(ios): sample artwork pixels directly for dominant color @luqmanfadlli\r\n- fix(player): stop redundant volume writes and log volume once per gesture @luqmanfadlli\r\n- fix(ios): recover inline video and hwdec after Notification Center @luqmanfadlli\r\n- fix(ios): move audio session calls off the main thread @luqmanfadlli\r\n- optimised libass for exoplayer (#186) @chrisk325\r\n- fix: harden #183 startup preload, progress saves and timeouts @luqmanfadlli\r\n- perf: faster startup, lazy-loaded Live TV, cached home rows, cancellable addon requests, fewer player redraws and background watch-progress saves (#183) @chrisk325\r\n- fix(seekthumb): optimise seekbar thumbnails (#182) @chrisk325\r\n- perf(details): show dominant color without the dark first frame @luqmanfadlli\r\n- fix(ui): prefer bright swatches for dominant/dynamic artwork color @luqmanfadlli\r\n- feat(party): add experimental watch parties (#2253) @tapframe\r\n- fix(player): pause other apps audio on android @tapframe\r\n- feat(mdblist): show dynamic and liked lists in the library (#2268) @kernexshadow\r\n- i18n(el): translate new 0.5.10 strings (#2263) @nosvasedis\r\n- Complete missing Italian translations (#2260) @WhiteGiso\r\n- fix(ios): improve PiP transitions and recover playback after closing PiP (#2259) @WhiteGiso\r\n- fix(ios): restore Now Playing by limiting audio mixing to calls (#2246) @WhiteGiso\r\n- fix(i18n): update, complete and review Brazilian Portuguese (pt-BR) localization (#2234) @jhojhocraazy\r\n- feat(mdblist): show external lists in the library (#2172) @kernexshadow",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.6.1-beta/nuvio-0.6.1-enhanced-release.ipa",
+          "size": 72640851,
+          "sha256": "d2e759c4698ca7d16a9e2e124ca3dd52bf1f6512f7cb5ae646aa6d6a75742454",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.10",
           "buildVersion": "142",
           "date": "2026-10-14T01:20:17Z",
