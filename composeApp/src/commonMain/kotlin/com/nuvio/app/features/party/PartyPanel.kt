@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -49,6 +50,7 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_close
 import nuvio.composeapp.generated.resources.party_behind_title
 import nuvio.composeapp.generated.resources.party_catch_up
+import nuvio.composeapp.generated.resources.party_experimental
 import nuvio.composeapp.generated.resources.party_now_watching
 import nuvio.composeapp.generated.resources.party_play_for_everyone
 import nuvio.composeapp.generated.resources.party_share_unavailable
@@ -184,6 +186,7 @@ private fun StartContent(
                     .padding(top = 8.dp),
             )
         }
+        ExperimentalNote()
     }
 }
 
@@ -316,5 +319,16 @@ internal fun PartyNote(text: String) {
         text = text,
         style = MaterialTheme.typography.bodyMedium,
         color = tokens.colors.textMuted,
+    )
+}
+
+@Composable
+internal fun ExperimentalNote(textAlign: TextAlign = TextAlign.Start) {
+    val tokens = MaterialTheme.nuvio
+    Text(
+        text = stringResource(Res.string.party_experimental),
+        style = MaterialTheme.typography.bodySmall,
+        color = tokens.colors.textMuted,
+        textAlign = textAlign,
     )
 }

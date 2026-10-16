@@ -5,6 +5,7 @@
     <string name="party_start_action">Start watch party</string>
     <string name="party_sign_in_required">Sign in to your Nuvio account to use watch parties.</string>
     <string name="party_unavailable">Watch parties aren't available right now.</string>
+    <string name="party_experimental">Watch parties are experimental and may not work as expected.</string>
     <string name="party_code_label">Party code</string>
     <string name="party_copy_invite">Copy invite</string>
     <string name="party_invite_copied">Invite copied</string>

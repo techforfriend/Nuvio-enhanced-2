@@ -312,6 +312,7 @@ private fun JoinContent(
                 .fillMaxWidth()
                 .height(52.dp),
         )
+        ExperimentalNote(textAlign = TextAlign.Center)
         AnimatedVisibility(
             visible = preview == null,
             enter = fadeIn(tween(180)),
