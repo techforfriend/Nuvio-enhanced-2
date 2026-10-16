@@ -21,12 +21,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
@@ -45,6 +48,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.nuvio.app.core.ui.NuvioInputField
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
@@ -52,6 +56,8 @@ import com.nuvio.app.core.ui.nuvio
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.live_tv_categories
+import nuvio.composeapp.generated.resources.live_tv_no_matching_categories
+import nuvio.composeapp.generated.resources.live_tv_search_categories_placeholder
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -252,6 +258,16 @@ private fun LiveTvCategoryOptionsSheet(
     onGroupSelected: (String) -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
+    var categoryQuery by remember { mutableStateOf("") }
+    val isSearchingCategories = categoryQuery.isNotBlank()
+    val filteredGroups = remember(groups, categoryQuery) {
+        val normalizedQuery = categoryQuery.trim()
+        if (normalizedQuery.isEmpty()) {
+            groups
+        } else {
+            groups.filter { group -> group.contains(normalizedQuery, ignoreCase = true) }
+        }
+    }
     NuvioModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -288,23 +304,54 @@ private fun LiveTvCategoryOptionsSheet(
                 )
                 LiveTvFilterSheetDivider()
             }
-            item(key = "live_tv_filter_all") {
-                LiveTvFilterSheetRow(
-                    title = allLabel,
-                    icon = Icons.Rounded.Tv,
-                    selected = selectedGroup.isNullOrBlank() && !favoritesOnly,
-                    onClick = onAllSelected,
+            item(key = "live_tv_filter_search") {
+                NuvioInputField(
+                    value = categoryQuery,
+                    onValueChange = { categoryQuery = it },
+                    placeholder = stringResource(Res.string.live_tv_search_categories_placeholder),
+                    modifier = Modifier.padding(
+                        horizontal = tokens.spacing.screenHorizontal,
+                        vertical = NuvioTokens.Space.s12,
+                    ),
+                    trailingContent = {
+                        if (categoryQuery.isEmpty()) {
+                            Icon(
+                                imageVector = Icons.Rounded.Search,
+                                contentDescription = null,
+                                tint = tokens.colors.textMuted,
+                            )
+                        } else {
+                            IconButton(onClick = { categoryQuery = "" }) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = null,
+                                    tint = tokens.colors.textMuted,
+                                )
+                            }
+                        }
+                    },
                 )
                 LiveTvFilterSheetDivider()
             }
-            item(key = "live_tv_filter_favorites") {
-                LiveTvFilterSheetRow(
-                    title = favoritesLabel,
-                    icon = Icons.Rounded.Star,
-                    selected = favoritesOnly,
-                    onClick = onFavoritesSelected,
-                )
-                LiveTvFilterSheetDivider()
+            if (!isSearchingCategories) {
+                item(key = "live_tv_filter_all") {
+                    LiveTvFilterSheetRow(
+                        title = allLabel,
+                        icon = Icons.Rounded.Tv,
+                        selected = selectedGroup.isNullOrBlank() && !favoritesOnly,
+                        onClick = onAllSelected,
+                    )
+                    LiveTvFilterSheetDivider()
+                }
+                item(key = "live_tv_filter_favorites") {
+                    LiveTvFilterSheetRow(
+                        title = favoritesLabel,
+                        icon = Icons.Rounded.Star,
+                        selected = favoritesOnly,
+                        onClick = onFavoritesSelected,
+                    )
+                    LiveTvFilterSheetDivider()
+                }
             }
             item(key = "live_tv_filter_categories_header") {
                 Text(
@@ -319,8 +366,21 @@ private fun LiveTvCategoryOptionsSheet(
                 )
                 LiveTvFilterSheetDivider()
             }
+            if (filteredGroups.isEmpty() && isSearchingCategories) {
+                item(key = "live_tv_filter_no_matching_categories") {
+                    Text(
+                        text = stringResource(Res.string.live_tv_no_matching_categories),
+                        modifier = Modifier.padding(
+                            horizontal = tokens.spacing.screenHorizontal,
+                            vertical = NuvioTokens.Space.s14,
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = tokens.colors.textMuted,
+                    )
+                }
+            }
             items(
-                items = groups,
+                items = filteredGroups,
                 key = { group -> group },
             ) { group ->
                 LiveTvFilterSheetRow(
@@ -328,7 +388,7 @@ private fun LiveTvCategoryOptionsSheet(
                     selected = group == selectedGroup,
                     onClick = { onGroupSelected(group) },
                 )
-                if (group != groups.lastOrNull()) {
+                if (group != filteredGroups.lastOrNull()) {
                     LiveTvFilterSheetDivider()
                 }
             }

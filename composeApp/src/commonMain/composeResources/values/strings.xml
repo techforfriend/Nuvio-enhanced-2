@@ -941,6 +941,8 @@
     <string name="live_tv_filter_favorites">Favorites</string>
     <string name="live_tv_filter_choose_category">Choose Category</string>
     <string name="live_tv_categories">Categories</string>
+    <string name="live_tv_search_categories_placeholder">Search categories</string>
+    <string name="live_tv_no_matching_categories">No matching categories</string>
     <string name="live_tv_section_channels">Channels</string>
     <string name="live_tv_last_watched_title">Last Watched Channel</string>
     <string name="live_tv_action_back_to_top">Back to top</string>
