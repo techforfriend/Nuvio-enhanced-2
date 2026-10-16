@@ -909,6 +909,11 @@ final class AppNavigationCoordinator: ObservableObject {
         NuvioAppTab.allCases.filter { $0 != .liveTv || isLiveTvTabVisible }
     }
 
+    var usesGlassTabBarOverlay: Bool {
+        tabBarBehavior.usesCompactPill ||
+            (tabBarBehavior.isEnabled && UIDevice.current.userInterfaceIdiom == .pad)
+    }
+
     func reloadTabBarBehavior() {
         let behavior = NuvioTabBarBehavior.current()
         guard tabBarBehavior != behavior else { return }
@@ -1249,7 +1254,7 @@ struct TabContentView: View {
             usesNativeTabBar &&
                 appCoordinator.isMainContentVisible &&
                 coordinator.path.keepsTabBar &&
-                !appCoordinator.tabBarBehavior.usesCompactPill &&
+                !appCoordinator.usesGlassTabBarOverlay &&
                 appCoordinator.isNativeTabBarVisible
                 ? Visibility.visible
                 : Visibility.hidden,
@@ -1337,7 +1342,7 @@ private struct DetailDestinationView: View {
         .toolbar(
             usesNativeTabBar &&
                 wrapper.route.keepsTabBar &&
-                !appCoordinator.tabBarBehavior.usesCompactPill &&
+                !appCoordinator.usesGlassTabBarOverlay &&
                 appCoordinator.isNativeTabBarVisible
                 ? Visibility.visible
                 : Visibility.hidden,
@@ -1635,7 +1640,8 @@ struct NativeNavContentView: View {
     @StateObject private var iconStore = NativeTabIconStore()
 
     private var usesNativeTabBar: Bool {
-        guard UIDevice.current.userInterfaceIdiom == .phone else {
+        let idiom = UIDevice.current.userInterfaceIdiom
+        guard idiom == .phone || idiom == .pad else {
             return false
         }
         if #available(iOS 26.0, *) {
@@ -1770,7 +1776,7 @@ struct NativeNavContentView: View {
             appCoordinator.tabBarBehavior == .autoHide ? .onScrollDown : .never
         )
         .overlay(alignment: .bottom) {
-            if appCoordinator.tabBarBehavior.usesCompactPill &&
+            if appCoordinator.usesGlassTabBarOverlay &&
                 appCoordinator.isAppReady &&
                 appCoordinator.isSelectedTabAtRoot {
                 GeometryReader { proxy in

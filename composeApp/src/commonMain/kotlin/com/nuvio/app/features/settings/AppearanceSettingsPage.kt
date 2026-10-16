@@ -193,10 +193,7 @@ internal fun LazyListScope.appearanceSettingsContent(
                     isTablet = isTablet,
                     onClick = { showLanguageSheet = true },
                 )
-                // Relevant wherever the Compose pill is the navigation bar: Android, iPad, and
-                // iPhone before iOS 26. Only an iPhone on iOS 26 hides it, because there the tab
-                // bar is native and governed by the Liquid Glass row above instead.
-                if (!liquidGlassNativeTabBarSupported) {
+                if (!liquidGlassNativeTabBarSupported || !tabBarBehavior.isEnabled) {
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_appearance_nav_bar_style),

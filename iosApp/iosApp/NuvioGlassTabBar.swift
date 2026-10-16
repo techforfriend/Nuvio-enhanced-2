@@ -111,12 +111,24 @@ struct NuvioGlassTabBar: View {
         return defaults.object(forKey: key) == nil ? true : defaults.bool(forKey: key)
     }
 
-    private var isCompactHeight: Bool { verticalSizeClass == .compact }
+    private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
+
+    private var isCompactHeight: Bool { verticalSizeClass == .compact || isPad }
+
+    private var hidesWhenCollapsed: Bool {
+        isPad && appCoordinator.tabBarBehavior == .autoHide
+    }
+
+    private var isHidden: Bool { hidesWhenCollapsed && !isExpanded }
 
     var body: some View {
         segmentedBar
             .padding(.horizontal, 16)
             .padding(.bottom, bottomInset)
+            .offset(y: isHidden ? NuvioSegmentedTabBar.height(compact: true) + bottomInset + 24 : 0)
+            .opacity(isHidden ? 0 : 1)
+            .allowsHitTesting(!isHidden)
+            .animation(.easeInOut(duration: 0.22), value: isHidden)
             .ignoresSafeArea(.container, edges: .bottom)
     }
 
@@ -138,7 +150,7 @@ struct NuvioGlassTabBar: View {
             items: items,
             contentKey: contentKey,
             selectedIndex: tabs.firstIndex(of: selectedTab) ?? 0,
-            isExpanded: isExpanded,
+            isExpanded: isExpanded || hidesWhenCollapsed,
             isCompact: isCompactHeight,
             accentColor: iconStore.accentColor,
             indicatorColor: iconStore.accentColors.isEmpty
