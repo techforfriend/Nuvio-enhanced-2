@@ -29,6 +29,18 @@ internal class AniListRatingsProvider(
         return listOfNotNull(target.catalog?.contentId, ids.imdb).any { projection.mediaIdFor(it) != null }
     }
 
+    override suspend fun normalize(target: TrackingRatingTarget): TrackingRatingTarget {
+        if (target.scope != TrackingRatingScope.SHOW) return target
+        val catalogType = target.catalog?.contentType?.trim()?.lowercase()
+        if (catalogType == "movie" || catalogType == "film") return target.copy(scope = TrackingRatingScope.MOVIE)
+        val projection = sync.currentProjection()
+        val mediaId = target.ids.anilist
+            ?: listOfNotNull(target.catalog?.contentId, target.ids.imdb).firstNotNullOfOrNull { projection.mediaIdFor(it) }
+            ?: return target
+        val media = projection.entryByMediaId[mediaId]?.media ?: return target
+        return if (media.isMovie) target.copy(scope = TrackingRatingScope.MOVIE) else target
+    }
+
     override suspend fun fetchRatings(profileId: Int, scope: TrackingRatingScope): List<TrackingRatingRecord> {
         scope(profileId)
         if (scope !in supportedScopes) return emptyList()
