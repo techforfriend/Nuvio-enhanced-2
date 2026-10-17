@@ -11,8 +11,6 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
 
     private var playerVC: MPVPlayerViewController?
     private var experimentalSinglePrimaryPictureInPictureEnabled = false
-    // Kotlin can set these before the view controller exists, so they are held here and replayed
-    // in ensurePlayerViewController().
     private var keyboardShortcutsEnabled = true
     private var keyboardShortcutHandler: ((String) -> Void)?
 
@@ -66,8 +64,6 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
     func isPictureInPictureSupported() -> Bool { playerVC?.isPictureInPictureSupported() ?? false }
     func startPictureInPicture() { playerVC?.startPictureInPicture() }
     func setExperimentalSinglePrimaryPictureInPictureEnabled(enabled: Bool) {
-        // The experimental Metal-capture PiP renderer was replaced by upstream's VideoToolbox
-        // frame handoff; the toggle is kept only so the Kotlin bridge contract stays intact.
         experimentalSinglePrimaryPictureInPictureEnabled = enabled
     }
     func updateNowPlayingMetadata(
@@ -437,12 +433,8 @@ final class MPVPlayerViewController: UIViewController {
     private let logCoalesceLock = NSLock()
     private var throttledLogEntries: [String: ThrottledLogEntry] = [:]
 
-
-    // Cached track lists
     var audioTracks: [TrackInfo] = []
     var subtitleTracks: [TrackInfo] = []
-
-    // State (polled from Kotlin every 250ms)
     var isPlayerLoading: Bool = true
     var isPlayerPlaying: Bool = false
     var isPlayerEnded: Bool = false
@@ -673,7 +665,6 @@ final class MPVPlayerViewController: UIViewController {
         CATransaction.commit()
     }
 
-    /// Subtitle font selection for non-Latin scripts. See MPVSubtitleFontResolver.
     private lazy var subtitleFonts = MPVSubtitleFontController(player: self)
 
     // MARK: - MPV Setup
@@ -722,7 +713,6 @@ final class MPVPlayerViewController: UIViewController {
 
         checkError(mpv_initialize(mpv))
 
-        // Observe properties
         mpv_observe_property(mpv, 0, "pause", MPV_FORMAT_FLAG)
         mpv_observe_property(mpv, 0, "paused-for-cache", MPV_FORMAT_FLAG)
         mpv_observe_property(mpv, 0, "core-idle", MPV_FORMAT_FLAG)
@@ -834,13 +824,27 @@ final class MPVPlayerViewController: UIViewController {
         pictureInPictureController?.isSupported ?? false
     }
 
-    /// The player's PiP button. Automatic PiP on backgrounding is handled by the controller.
     func startPictureInPicture() {
         pictureInPictureController?.start()
     }
 
     func isPictureInPictureActive() -> Bool {
         pictureInPictureController?.isActive ?? false
+    }
+
+    func setParkedInPictureInPicture(_ parked: Bool) {
+        guard !isEmbeddedPreviewMode else { return }
+        publishImmersiveSystemUIVisibility(isVisible: !parked)
+        if parked {
+            resignFirstResponder()
+        } else {
+            becomeFirstResponder()
+        }
+    }
+
+    func endPictureInPictureSession() {
+        pictureInPictureController?.invalidate()
+        pictureInPictureController = nil
     }
 
     // MARK: - Playback API
@@ -1372,8 +1376,6 @@ final class MPVPlayerViewController: UIViewController {
             return
         }
 
-        // Keep mpv's base volume at 100 and apply real software amplification through volume-gain.
-        // 2.0x equals about +6.02 dB.
         setDoubleProperty("volume", 100.0)
         setDoubleProperty("volume-gain", 20.0 * log10(clamped))
     }
@@ -2501,8 +2503,6 @@ final class MPVPlayerViewController: UIViewController {
             handler(shortcut.rawValue)
         }
 
-        // Forward only what we did not consume, so an unrecognised key still reaches the next
-        // responder even when it arrived in the same batch as one we handled.
         if !unhandled.isEmpty {
             super.pressesBegan(unhandled, with: event)
         }

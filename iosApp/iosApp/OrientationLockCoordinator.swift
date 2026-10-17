@@ -63,6 +63,8 @@ final class OrientationLockCoordinator {
 
     private(set) var supportedOrientations: UIInterfaceOrientationMask = .allButUpsideDown
     private var observers: [NSObjectProtocol] = []
+    private var landscapeLockRequested = false
+    private var parkedPlayerSuspension = false
 
     private init() {}
 
@@ -83,9 +85,23 @@ final class OrientationLockCoordinator {
     }
 
     private func setLandscapeLock(enabled: Bool) {
-        let nextOrientations: UIInterfaceOrientationMask = enabled ? .landscape : .allButUpsideDown
+        landscapeLockRequested = enabled
+        if !enabled { parkedPlayerSuspension = false }
+        applyLandscapeLock()
+    }
+
+    func setParkedPlayerSuspension(_ suspended: Bool) {
+        guard parkedPlayerSuspension != suspended else { return }
+        parkedPlayerSuspension = suspended
+        applyLandscapeLock()
+    }
+
+    private func applyLandscapeLock() {
+        let locked = landscapeLockRequested && !parkedPlayerSuspension
+        let nextOrientations: UIInterfaceOrientationMask = locked ? .landscape : .allButUpsideDown
+        guard nextOrientations != supportedOrientations else { return }
         supportedOrientations = nextOrientations
-        requestOrientationUpdate(for: nextOrientations, forceRotate: enabled)
+        requestOrientationUpdate(for: nextOrientations, forceRotate: locked)
     }
 
     private func requestOrientationUpdate(for mask: UIInterfaceOrientationMask, forceRotate: Bool) {
