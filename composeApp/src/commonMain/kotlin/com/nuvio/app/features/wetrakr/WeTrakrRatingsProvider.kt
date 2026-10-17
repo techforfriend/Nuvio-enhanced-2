@@ -3,6 +3,8 @@ package com.nuvio.app.features.wetrakr
 import com.nuvio.app.features.player.skip.SimklIdResolver
 import com.nuvio.app.features.tracking.TRACKING_RATING_MAX
 import com.nuvio.app.features.tracking.TRACKING_RATING_MIN
+import com.nuvio.app.features.tracking.TrackingAnimeIdMapper
+import com.nuvio.app.features.tracking.TrackingEpisode
 import com.nuvio.app.features.tracking.TrackingExternalIds
 import com.nuvio.app.features.tracking.TrackingMediaKind
 import com.nuvio.app.features.tracking.TrackingMediaReference
@@ -44,6 +46,7 @@ internal class WeTrakrRatingsProvider(
 
     override suspend fun normalize(target: TrackingRatingTarget): TrackingRatingTarget {
         val effective = weTrakrTarget(target)
+        if (effective.scope == TrackingRatingScope.EPISODE) return animeEpisodeTarget(effective)
         if (effective.scope != TrackingRatingScope.SHOW || effective.kind != TrackingMediaKind.ANIME) return effective
         val contentId = effective.catalog?.contentId ?: return effective
         val catalogIds = parseTrackingExternalIds(contentId)
@@ -103,6 +106,27 @@ internal class WeTrakrRatingsProvider(
         val resolved = resolve(target) ?: return
         api.post(authScope, "/sync/ratings/remove", document(target, resolved, null))
         sync.applyRating(authScope, entry(target, resolved, 0.0), null)
+    }
+
+    private suspend fun animeEpisodeTarget(target: TrackingRatingTarget): TrackingRatingTarget {
+        val catalog = target.catalog ?: return target
+        val number = target.episode ?: return target
+        val reference = TrackingMediaReference(
+            kind = target.kind,
+            title = target.title,
+            year = target.year,
+            ids = target.ids,
+            episode = TrackingEpisode(season = target.season, number = number, title = target.episodeTitle),
+            catalog = catalog,
+        )
+        val mapped = TrackingAnimeIdMapper.toImdbReference(reference)
+        if (mapped === reference) return target
+        val episode = mapped.episode ?: return target
+        return target.copy(
+            ids = mapped.ids,
+            season = episode.season ?: return target,
+            episode = episode.number,
+        )
     }
 
     private fun weTrakrTarget(target: TrackingRatingTarget): TrackingRatingTarget {
