@@ -4,6 +4,7 @@ import co.touchlab.kermit.Logger
 import com.nuvio.app.features.addons.RawHttpResponse
 import com.nuvio.app.features.addons.httpRequestRaw
 import com.nuvio.app.features.tmdb.TmdbService
+import com.nuvio.app.features.tracking.TrackingAnimeIdMapper
 import com.nuvio.app.features.tracking.TrackingProviderId
 import com.nuvio.app.features.tracking.TrackingWatchedProvider
 import com.nuvio.app.features.trakt.TraktAuthRepository
@@ -157,6 +158,14 @@ object TraktWatchedSyncAdapter : TrackingWatchedProvider {
 
     // ── push (add to history) ───────────────────────────────────────────
     override suspend fun push(
+        profileId: Int,
+        items: Collection<WatchedItem>,
+    ) {
+        if (items.isEmpty()) return
+        pushMapped(profileId, TrackingAnimeIdMapper.toImdbWatchedItems(items))
+    }
+
+    private suspend fun pushMapped(
         profileId: Int,
         items: Collection<WatchedItem>,
     ) {
@@ -356,6 +365,14 @@ object TraktWatchedSyncAdapter : TrackingWatchedProvider {
 
     // ── delete (remove from history) ────────────────────────────────────
     override suspend fun delete(
+        profileId: Int,
+        items: Collection<WatchedItem>,
+    ) {
+        if (items.isEmpty()) return
+        deleteMapped(profileId, TrackingAnimeIdMapper.toImdbWatchedItems(items))
+    }
+
+    private suspend fun deleteMapped(
         profileId: Int,
         items: Collection<WatchedItem>,
     ) {
