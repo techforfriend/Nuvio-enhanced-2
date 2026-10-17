@@ -1,10 +1,16 @@
 package com.nuvio.app.features.tracking
 
+import com.nuvio.app.features.addons.httpGetText
+import com.nuvio.app.features.anilist.AniListConfig
 import com.nuvio.app.features.player.skip.SimklIdResolver
 import com.nuvio.app.features.watched.WatchedItem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 internal object TrackingAnimeIdMapper {
     private data class Mapped(
@@ -14,6 +20,13 @@ internal object TrackingAnimeIdMapper {
         val episode: Int? = null,
     )
 
+    private data class AnimeVideo(
+        val source: String,
+        val id: Long,
+        val episode: Int,
+    )
+
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
     private val lock = Mutex()
     private val cache = mutableMapOf<String, Mapped>()
     private const val MAX_CACHE_ENTRIES = 512
@@ -21,13 +34,12 @@ internal object TrackingAnimeIdMapper {
 
     suspend fun toImdbReference(media: TrackingMediaReference): TrackingMediaReference {
         val mapped = map(
-            contentId = media.catalog?.contentId,
             videoId = media.catalog?.videoId,
             contentType = media.catalog?.contentType,
             ids = media.ids,
             episode = media.episode?.number,
         ) ?: return media
-        val ids = media.ids.mergeMissing(TrackingExternalIds(imdb = mapped.imdb))
+        val ids = media.ids.withImdb(mapped.imdb)
         if (mapped.isMovie) {
             return media.copy(
                 kind = TrackingMediaKind.MOVIE,
@@ -62,7 +74,6 @@ internal object TrackingAnimeIdMapper {
 
     private suspend fun toImdbWatchedItem(item: WatchedItem): WatchedItem {
         val mapped = map(
-            contentId = item.id,
             videoId = item.videoId,
             contentType = item.type,
             ids = parseTrackingExternalIds(item.id).mergeMissing(parseTrackingExternalIds(item.videoId)),
@@ -79,24 +90,35 @@ internal object TrackingAnimeIdMapper {
         )
     }
 
+    private fun TrackingExternalIds.withImdb(imdb: String): TrackingExternalIds {
+        val current = this.imdb?.trim()?.takeIf(String::isNotBlank)
+        return when {
+            current == null -> mergeMissing(TrackingExternalIds(imdb = imdb))
+            current.equals(imdb, ignoreCase = true) -> this
+            else -> copy(imdb = imdb, tmdb = null, tvdb = null, trakt = null)
+        }
+    }
+
     private suspend fun map(
-        contentId: String?,
         videoId: String?,
         contentType: String?,
         ids: TrackingExternalIds,
         episode: Int?,
     ): Mapped? {
-        if (!ids.imdb.isNullOrBlank() || ids.tmdb != null || !ids.tvdb.isNullOrBlank() || ids.trakt != null) return null
+        val type = contentType?.trim()?.lowercase()
+        val isMovie = type == "movie" || type == "film"
+        val video = if (isMovie) null else animeVideo(videoId)
+        val hasStandardIds = !ids.imdb.isNullOrBlank() || ids.tmdb != null || !ids.tvdb.isNullOrBlank() || ids.trakt != null
         val (source, id) = when {
+            video != null -> video.source to video.id
+            hasStandardIds -> return null
             ids.kitsu != null -> "kitsu" to ids.kitsu
             ids.mal != null -> "mal" to ids.mal
             ids.anilist != null -> "anilist" to ids.anilist
             ids.anidb != null -> "anidb" to ids.anidb
             else -> return null
         }
-        val type = contentType?.trim()?.lowercase()
-        val isMovie = type == "movie" || type == "film"
-        val animeEpisode = if (isMovie) null else (videoEpisode(videoId) ?: episode ?: return null)
+        val animeEpisode = if (isMovie) null else (video?.episode ?: episode ?: return null)
         val key = "$source:$id:${animeEpisode ?: "movie"}"
         return lock.withLock {
             cache[key]?.let { return@withLock it }
@@ -108,13 +130,7 @@ internal object TrackingAnimeIdMapper {
     }
 
     private suspend fun lookup(source: String, id: Long, isMovie: Boolean, animeEpisode: Int?): Mapped? {
-        val resolved = try {
-            SimklIdResolver.resolveIds(source, id.toString(), "anime")
-        } catch (error: CancellationException) {
-            throw error
-        } catch (_: Exception) {
-            null
-        } ?: return null
+        val resolved = resolveSimkl(source, id) ?: return null
         val imdb = resolved.imdb?.trim()?.takeIf { it.startsWith("tt", ignoreCase = true) } ?: return null
         if (isMovie) return Mapped(imdb = imdb, isMovie = true)
         val number = animeEpisode ?: return null
@@ -141,9 +157,61 @@ internal object TrackingAnimeIdMapper {
         return Mapped(imdb = imdb, isMovie = false, season = season, episode = number)
     }
 
-    private fun videoEpisode(videoId: String?): Int? {
+    private suspend fun resolveSimkl(source: String, id: Long): SimklIdResolver.ResolvedIds? {
+        val candidates = buildList {
+            if (source == "kitsu" || source == "anidb") {
+                armIds(source, id)?.let { (anilist, mal) ->
+                    anilist?.let { add("anilist" to it) }
+                    mal?.let { add("mal" to it) }
+                }
+            }
+            add(source to id)
+        }.distinct()
+        for ((candidateSource, candidateId) in candidates) {
+            val resolved = try {
+                SimklIdResolver.resolveIds(candidateSource, candidateId.toString(), "anime")
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                null
+            } ?: continue
+            if (resolved.isEntryFor(candidateSource, candidateId)) return resolved
+        }
+        return null
+    }
+
+    private fun SimklIdResolver.ResolvedIds.isEntryFor(source: String, id: Long): Boolean {
+        val reported = when (source) {
+            "anilist" -> anilist
+            "mal" -> mal
+            "kitsu" -> kitsu
+            else -> null
+        }?.trim()?.toLongOrNull() ?: return true
+        return reported == id
+    }
+
+    private suspend fun armIds(source: String, id: Long): Pair<Long?, Long?>? {
+        val body = try {
+            httpGetText("${AniListConfig.ARM_BASE_URL}/ids?source=$source&id=$id&include=anilist,myanimelist")
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            return null
+        }
+        val value = runCatching { json.parseToJsonElement(body) as? JsonObject }.getOrNull() ?: return null
+        fun long(key: String): Long? = (value[key] as? JsonPrimitive)?.contentOrNull?.trim()?.toLongOrNull()?.takeIf { it > 0L }
+        val anilist = long("anilist")
+        val mal = long("myanimelist")
+        return if (anilist == null && mal == null) null else anilist to mal
+    }
+
+    private fun animeVideo(videoId: String?): AnimeVideo? {
         val parts = videoId?.trim()?.split(':') ?: return null
-        if (parts.size < 3 || parts[0].lowercase() !in animePrefixes) return null
-        return parts[2].toIntOrNull()?.takeIf { it > 0 }
+        if (parts.size < 3) return null
+        val source = parts[0].lowercase()
+        if (source !in animePrefixes) return null
+        val id = parts[1].toLongOrNull()?.takeIf { it > 0L } ?: return null
+        val episode = parts[2].toIntOrNull()?.takeIf { it > 0 } ?: return null
+        return AnimeVideo(source, id, episode)
     }
 }
