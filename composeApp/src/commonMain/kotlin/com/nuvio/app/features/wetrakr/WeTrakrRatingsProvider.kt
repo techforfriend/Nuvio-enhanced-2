@@ -1,7 +1,9 @@
 package com.nuvio.app.features.wetrakr
 
+import com.nuvio.app.features.player.skip.SimklIdResolver
 import com.nuvio.app.features.tracking.TRACKING_RATING_MAX
 import com.nuvio.app.features.tracking.TRACKING_RATING_MIN
+import com.nuvio.app.features.tracking.TrackingExternalIds
 import com.nuvio.app.features.tracking.TrackingMediaKind
 import com.nuvio.app.features.tracking.TrackingMediaReference
 import com.nuvio.app.features.tracking.TrackingProviderId
@@ -11,6 +13,7 @@ import com.nuvio.app.features.tracking.TrackingRatingRecord
 import com.nuvio.app.features.tracking.TrackingRatingScope
 import com.nuvio.app.features.tracking.TrackingRatingTarget
 import com.nuvio.app.features.tracking.TrackingRefreshIntent
+import com.nuvio.app.features.tracking.parseTrackingExternalIds
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
@@ -31,8 +34,42 @@ internal class WeTrakrRatingsProvider(
         TrackingRatingScope.EPISODE,
     )
 
-    override fun canRate(target: TrackingRatingTarget): Boolean =
-        target.scope in supportedScopes && target.isValid && resolve(target) != null
+    override fun canRate(target: TrackingRatingTarget): Boolean {
+        val effective = weTrakrTarget(target)
+        return effective.scope in supportedScopes &&
+            effective.isValid &&
+            !usesAnimeNumbering(effective) &&
+            resolve(effective) != null
+    }
+
+    override suspend fun normalize(target: TrackingRatingTarget): TrackingRatingTarget {
+        val effective = weTrakrTarget(target)
+        if (effective.scope != TrackingRatingScope.SHOW || effective.kind != TrackingMediaKind.ANIME) return effective
+        val contentId = effective.catalog?.contentId ?: return effective
+        val catalogIds = parseTrackingExternalIds(contentId)
+        if (catalogIds.toWeTrakrIds().hasAny) return effective
+        val (source, id) = when {
+            catalogIds.kitsu != null -> "kitsu" to catalogIds.kitsu
+            catalogIds.mal != null -> "mal" to catalogIds.mal
+            catalogIds.anilist != null -> "anilist" to catalogIds.anilist
+            catalogIds.anidb != null -> "anidb" to catalogIds.anidb
+            else -> return effective
+        }
+        val resolved = try {
+            SimklIdResolver.resolveIds(source, id.toString(), "anime")
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            null
+        } ?: return effective
+        val season = resolved.tvdbSeason?.takeIf { it > 1 } ?: return effective
+        val imdb = resolved.imdb?.trim()?.takeIf { it.startsWith("tt", ignoreCase = true) }
+        return effective.copy(
+            scope = TrackingRatingScope.SEASON,
+            season = season,
+            ids = effective.ids.mergeMissing(TrackingExternalIds(imdb = imdb)),
+        )
+    }
 
     override suspend fun fetchRatings(profileId: Int, scope: TrackingRatingScope): List<TrackingRatingRecord> {
         scope(profileId)
@@ -66,6 +103,21 @@ internal class WeTrakrRatingsProvider(
         val resolved = resolve(target) ?: return
         api.post(authScope, "/sync/ratings/remove", document(target, resolved, null))
         sync.applyRating(authScope, entry(target, resolved, 0.0), null)
+    }
+
+    private fun weTrakrTarget(target: TrackingRatingTarget): TrackingRatingTarget {
+        val catalogType = target.catalog?.contentType?.trim()?.lowercase()
+        val isAnimeMovie = target.scope == TrackingRatingScope.SHOW &&
+            target.kind == TrackingMediaKind.ANIME &&
+            (catalogType == "movie" || catalogType == "film")
+        return if (isAnimeMovie) target.copy(scope = TrackingRatingScope.MOVIE) else target
+    }
+
+    private fun usesAnimeNumbering(target: TrackingRatingTarget): Boolean {
+        if (target.scope != TrackingRatingScope.SEASON && target.scope != TrackingRatingScope.EPISODE) return false
+        if (target.kind != TrackingMediaKind.ANIME) return false
+        val contentId = target.catalog?.contentId ?: return false
+        return !parseTrackingExternalIds(contentId).toWeTrakrIds().hasAny
     }
 
     private fun resolve(target: TrackingRatingTarget): WeTrakrTarget? = writes.resolve(
