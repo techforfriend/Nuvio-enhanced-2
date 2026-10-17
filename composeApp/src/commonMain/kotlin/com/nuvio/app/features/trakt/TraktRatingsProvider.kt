@@ -2,8 +2,10 @@ package com.nuvio.app.features.trakt
 
 import com.nuvio.app.features.addons.RawHttpResponse
 import com.nuvio.app.features.addons.httpRequestRaw
+import com.nuvio.app.features.player.skip.SimklIdResolver
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.tracking.TrackingExternalIds
+import com.nuvio.app.features.tracking.TrackingMediaKind
 import com.nuvio.app.features.tracking.TrackingProviderId
 import com.nuvio.app.features.tracking.TrackingRatingException
 import com.nuvio.app.features.tracking.TrackingRatingProvider
@@ -15,6 +17,7 @@ import com.nuvio.app.features.tracking.countersTotal
 import com.nuvio.app.features.tracking.intOrNull
 import com.nuvio.app.features.tracking.notFoundTotal
 import com.nuvio.app.features.tracking.objectOrNull
+import com.nuvio.app.features.tracking.parseTrackingExternalIds
 import com.nuvio.app.features.tracking.toTrackingExternalIds
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
@@ -40,7 +43,7 @@ object TraktRatingsProvider : TrackingRatingProvider {
     override fun canRate(target: TrackingRatingTarget): Boolean = target.ids.traktRequestIds() != null
 
     override suspend fun normalize(target: TrackingRatingTarget): TrackingRatingTarget {
-        if (target.scope != TrackingRatingScope.EPISODE) return target
+        if (target.scope != TrackingRatingScope.EPISODE) return animeTarget(target)
         val catalog = target.catalog ?: return target
         val mapped = try {
             TraktEpisodeMappingService.resolveEpisodeMapping(
@@ -57,6 +60,43 @@ object TraktRatingsProvider : TrackingRatingProvider {
             null
         } ?: return target
         return target.copy(season = mapped.season, episode = mapped.episode)
+    }
+
+    private suspend fun animeTarget(target: TrackingRatingTarget): TrackingRatingTarget {
+        if (target.kind != TrackingMediaKind.ANIME) return target
+        val catalog = target.catalog ?: return target
+        val catalogType = catalog.contentType.trim().lowercase()
+        if (target.scope == TrackingRatingScope.SHOW && (catalogType == "movie" || catalogType == "film")) {
+            return target.copy(scope = TrackingRatingScope.MOVIE)
+        }
+        val remapsSeason = target.scope == TrackingRatingScope.SHOW ||
+            (target.scope == TrackingRatingScope.SEASON && target.season == 1)
+        if (!remapsSeason) return target
+        val catalogIds = parseTrackingExternalIds(catalog.contentId)
+        if (!catalogIds.imdb.isNullOrBlank() || catalogIds.tmdb != null || !catalogIds.tvdb.isNullOrBlank() || catalogIds.trakt != null) {
+            return target
+        }
+        val (source, id) = when {
+            catalogIds.kitsu != null -> "kitsu" to catalogIds.kitsu
+            catalogIds.mal != null -> "mal" to catalogIds.mal
+            catalogIds.anilist != null -> "anilist" to catalogIds.anilist
+            catalogIds.anidb != null -> "anidb" to catalogIds.anidb
+            else -> return target
+        }
+        val resolved = try {
+            SimklIdResolver.resolveIds(source, id.toString(), "anime")
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            null
+        } ?: return target
+        val season = resolved.tvdbSeason?.takeIf { it > 1 } ?: return target
+        val imdb = resolved.imdb?.trim()?.takeIf { it.startsWith("tt", ignoreCase = true) }
+        return target.copy(
+            scope = TrackingRatingScope.SEASON,
+            season = season,
+            ids = target.ids.mergeMissing(TrackingExternalIds(imdb = imdb)),
+        )
     }
 
     override suspend fun fetchRatings(profileId: Int, scope: TrackingRatingScope): List<TrackingRatingRecord> {

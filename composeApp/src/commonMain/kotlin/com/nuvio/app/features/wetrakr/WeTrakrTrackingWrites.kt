@@ -1,5 +1,6 @@
 package com.nuvio.app.features.wetrakr
 
+import com.nuvio.app.features.tracking.TrackingAnimeIdMapper
 import com.nuvio.app.features.tracking.TrackingHistoryItem
 import com.nuvio.app.features.tracking.TrackingHistoryWriter
 import com.nuvio.app.features.tracking.TrackingListStatus
@@ -60,8 +61,9 @@ class WeTrakrTrackingWrites internal constructor(
 
     override suspend fun scrobble(profileId: Int, action: TrackingScrobbleAction, event: TrackingScrobbleEvent) {
         val scope = scope(profileId)
-        val target = resolve(event.media) ?: return
-        val episode = event.media.episode
+        val media = TrackingAnimeIdMapper.toImdbReference(event.media)
+        val target = resolve(media) ?: return
+        val episode = media.episode
         if (!target.isMovie && episode == null) return
         val body = buildJsonObject {
             if (target.isMovie) {
@@ -94,7 +96,7 @@ class WeTrakrTrackingWrites internal constructor(
         val wholeShows = linkedMapOf<String, Long?>()
         val episodes = linkedMapOf<String, MutableList<WeTrakrEpisodeWrite>>()
         var notFound = 0
-        items.forEach { item ->
+        TrackingAnimeIdMapper.toImdbHistoryItems(items).forEach { item ->
             val target = resolve(item.media)
             if (target == null) {
                 notFound += 1
@@ -147,7 +149,7 @@ class WeTrakrTrackingWrites internal constructor(
         val wholeShows = mutableSetOf<String>()
         val episodes = linkedMapOf<String, MutableList<WeTrakrEpisodeWrite>>()
         var notFound = 0
-        items.forEach { media ->
+        TrackingAnimeIdMapper.toImdbReferences(items).forEach { media ->
             val target = resolve(media)
             if (target == null) {
                 notFound += 1

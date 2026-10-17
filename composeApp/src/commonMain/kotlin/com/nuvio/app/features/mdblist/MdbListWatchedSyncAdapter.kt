@@ -1,5 +1,6 @@
 package com.nuvio.app.features.mdblist
 
+import com.nuvio.app.features.tracking.TrackingAnimeIdMapper
 import com.nuvio.app.features.tracking.TrackingHistoryItem
 import com.nuvio.app.features.tracking.TrackingProviderId
 import com.nuvio.app.features.tracking.TrackingRefreshIntent
@@ -39,12 +40,12 @@ class MdbListWatchedSyncAdapter(
     }.distinctUntilChanged()
 
     override suspend fun push(profileId: Int, items: Collection<WatchedItem>) {
-        val result = history.add(scope(profileId), items.map { TrackingHistoryItem(it.reference(), it.markedAtEpochMs) })
+        val result = history.add(scope(profileId), TrackingAnimeIdMapper.toImdbHistoryItems(items.map { TrackingHistoryItem(it.reference(), it.markedAtEpochMs) }))
         check(result.isComplete) { "MDBList could not match ${result.notFoundCount} watched items" }
     }
 
     override suspend fun delete(profileId: Int, items: Collection<WatchedItem>) {
-        val result = history.remove(scope(profileId), items.map { it.reference() })
+        val result = history.remove(scope(profileId), TrackingAnimeIdMapper.toImdbReferences(items.map { it.reference() }))
         check(result.isComplete) { "MDBList could not match ${result.notFoundCount} watched items" }
     }
 
