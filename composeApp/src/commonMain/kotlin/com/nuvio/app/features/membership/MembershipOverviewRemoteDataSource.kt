@@ -7,36 +7,25 @@ import kotlinx.serialization.Serializable
 
 internal object MembershipOverviewRemoteDataSource {
     suspend fun getMembershipOverview(): MembershipOverview {
-        val response = SupabaseProvider.client.postgrest
-            .rpc("get_my_membership_overview")
-            .decodeList<MembershipOverviewResponse>()
-            .firstOrNull()
-            ?: return MembershipOverview()
-        val hasActiveGrant = response.hasActiveGrant == true
-        val subscriptionActive = response.subscriptionAccessActive == true
-        val hasLifetimeGrant = hasActiveGrant && response.hasLifetimeGrant == true
-
         return MembershipOverview(
-            status = response.status ?: "inactive",
-            tier = response.tier.toMemberTier(),
-            verifiedAt = response.verifiedAt,
-            supporterSince = response.supporterSince,
-            providerConnected = response.providerConnected == true,
-            hasSubscription = response.hasSubscription == true,
-            subscriptionActive = subscriptionActive,
-            subscriptionStatus = response.subscriptionStatus,
-            billingProvider = response.provider,
-            membershipLevel = response.membershipLevel.toMemberTier(),
-            currentPeriodEnd = response.currentPeriodEnd,
-            cancelsAtPeriodEnd = subscriptionActive && response.cancelsAtPeriodEnd == true,
-            hasActiveGrant = hasActiveGrant,
-            grantIsLifetime = hasActiveGrant && response.grantIsLifetime == true,
-            grantExpiresAt = response.grantExpiresAt.takeIf { hasActiveGrant },
-            grantKind = response.grantKind.takeIf { hasActiveGrant },
-            grantTier = response.grantTier.toMemberTier().takeIf { hasActiveGrant },
-            grantSource = response.grantSource.takeIf { hasActiveGrant },
-            hasLifetimeGrant = hasLifetimeGrant,
-            lifetimeGrantTier = response.lifetimeGrantTier.toMemberTier().takeIf { hasLifetimeGrant },
+            status = "active",
+            tier = MemberTier.SUPPORTER_PLUS,
+            providerConnected = true,
+            hasSubscription = true,
+            subscriptionActive = true,
+            subscriptionStatus = "active",
+            billingProvider = "Nuvio Enhanced",
+            membershipLevel = MemberTier.SUPPORTER_PLUS,
+            currentPeriodEnd = null,
+            cancelsAtPeriodEnd = false,
+            hasActiveGrant = true,
+            grantIsLifetime = true,
+            grantExpiresAt = null,
+            grantKind = "enhanced",
+            grantTier = MemberTier.SUPPORTER_PLUS,
+            grantSource = "Nuvio Enhanced",
+            hasLifetimeGrant = true,
+            lifetimeGrantTier = MemberTier.SUPPORTER_PLUS,
         )
     }
 }

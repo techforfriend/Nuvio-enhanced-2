@@ -3000,7 +3000,7 @@
     <string name="nuvio_enhanced_highlight_title">Highlight new Enhanced settings</string>
     <string name="nuvio_enhanced_highlight_desc">New fork-specific options receive a subtle outline until you use or mark them as seen.</string>
     <string name="nuvio_enhanced_footer_title">Nuvio Enhanced</string>
-    <string name="nuvio_enhanced_footer_desc">Follow releases on GitHub or join Discord for updates, polls and feature requests.</string>
+    <string name="nuvio_enhanced_footer_desc">Follow releases on GitHub for updates and new feature releases.</string>
     <string name="nuvio_enhanced_footer_github">GitHub</string>
     <string name="nuvio_enhanced_footer_releases">Releases</string>
     <string name="nuvio_enhanced_footer_discord">Discord</string>

@@ -64,21 +64,19 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.1-enhanced-pre1
-          name: "Nuvio Enhanced v0.6.1-beta (Pre-release)"
+          tag_name: v0.6.1-enhanced-pre2
+          name: "Nuvio Enhanced v0.6.1-beta (Update 2)"
           body: |
-            ## Nuvio Enhanced v0.6.1-beta (Pre-release)
+            ## Nuvio Enhanced v0.6.1-beta (Update 2)
 
-            Official **Nuvio 0.6.1-beta** (`cmp-rewrite`) integrated with the complete **AKRusso Nuvio Enhanced** settings & UI suite.
+            Updated build of **Nuvio Enhanced v0.6.1-beta** featuring login fixes, premium theme unlock, and UI refinements.
 
-            ### 🌟 Features Included:
-            - **Enhanced Settings Suite:** All fork-exclusive customization options with JSON backup/restore.
-            - **Streaming Showcase Hero:** Immersive full-screen backdrop headers with auto video trailer preview.
-            - **Player Status HUD:** Real-time Clock, Battery %, and Network connectivity indicator pill.
-            - **Enhanced Playback Controls:** 200% Volume Boost, Tap-to-seek, Subtitle sync sliders, and HLS Stream Quality Picker.
-            - **Cinematic Detail Header:** Immersive gradient headers and richer network/production details.
-            - **Profile Insights & Library Health:** Watch-time metrics, genre breakdowns, and broken metadata diagnostics.
-            - **Official 0.6.1 Updates:** Includes Watch Party Mode and Media Server integrations.
+            ### 🌟 Key Updates in this Build:
+            - **Official Supabase Authentication / Login Fixed:** Configured public Supabase endpoints so email login, account sync, and profile restoration work seamlessly.
+            - **All Premium Themes Unlocked:** Full access to all supporter themes (Gold, Jade, Rose Gold, Arctic Blue, Graphite) and custom gradient stops.
+            - **Streamlined Settings UI:** Completely removed About section and Discord links across the app.
+            - **Branding Update:** Updated footer below Advanced to proudly showcase "Nuvio Enhanced".
+            - **Full Nuvio Enhanced Suite:** Includes Streaming Showcase Hero, HUD Status Bar, 200% Volume Boost, Tap-to-seek, Subtitle sync, Watch Party, and Media Server integration.
 
             ### 📥 Download APK
             Choose the build matching your Android device architecture below (most devices use `arm64-v8a` or `universal`).

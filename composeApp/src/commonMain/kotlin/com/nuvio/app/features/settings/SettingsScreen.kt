@@ -1168,7 +1168,7 @@ private fun TabletSettingsScreen(
                                 showAccountSection = activeCategory == SettingsCategory.Account,
                                 showEnhancedSection = activeCategory == SettingsCategory.Enhanced,
                                 showGeneralSection = activeCategory == SettingsCategory.General,
-                                showAboutSection = activeCategory == SettingsCategory.About,
+                                showAboutSection = false,
                                 showAdvancedSection = activeCategory == SettingsCategory.Advanced,
                                 showSupportersContributorsPage = AppFeaturePolicy.supportersContributorsPageEnabled,
                             )

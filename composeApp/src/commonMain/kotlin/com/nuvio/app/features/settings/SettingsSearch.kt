@@ -93,7 +93,6 @@ internal fun settingsSearchEntries(
     val accountCategory = stringResource(SettingsCategory.Account.labelRes)
     val generalCategory = stringResource(SettingsCategory.General.labelRes)
     val enhancedCategory = stringResource(SettingsCategory.Enhanced.labelRes)
-    val aboutCategory = stringResource(SettingsCategory.About.labelRes)
     val advancedCategory = stringResource(SettingsCategory.Advanced.labelRes)
 
     val accountPage = stringResource(Res.string.compose_settings_page_account)
@@ -278,72 +277,6 @@ internal fun settingsSearchEntries(
         description = stringResource(Res.string.compose_settings_root_notifications_description),
         icon = Icons.Rounded.Notifications,
     )
-    if (supportersContributorsPageEnabled) {
-        addPage(
-            page = SettingsPage.SupportersContributors,
-            key = "supporters",
-            title = supportersPage,
-            description = stringResource(Res.string.about_supporters_contributors_subtitle),
-            category = aboutCategory,
-            icon = Icons.Rounded.Favorite,
-        )
-    }
-    addPage(
-        page = SettingsPage.LicensesAttributions,
-        key = "licenses-attributions",
-        title = licensesPage,
-        description = stringResource(Res.string.about_licenses_attributions_subtitle),
-        category = aboutCategory,
-        icon = Icons.Rounded.Info,
-    )
-    listOf(
-        PlaybackSearchRow("nuvio-license", stringResource(Res.string.settings_licenses_attributions_nuvio_title), stringResource(Res.string.settings_licenses_attributions_nuvio_license)),
-        PlaybackSearchRow("tmdb-attribution", stringResource(Res.string.settings_licenses_attributions_tmdb_title), stringResource(Res.string.settings_licenses_attributions_tmdb_body)),
-        PlaybackSearchRow("trakt-attribution", stringResource(Res.string.settings_licenses_attributions_trakt_title), stringResource(Res.string.settings_licenses_attributions_trakt_body)),
-        PlaybackSearchRow("simkl-attribution", stringResource(Res.string.settings_licenses_attributions_simkl_title), stringResource(Res.string.settings_licenses_attributions_simkl_body)),
-        PlaybackSearchRow("premiumize-attribution", stringResource(Res.string.settings_licenses_attributions_premiumize_title), stringResource(Res.string.settings_licenses_attributions_premiumize_body)),
-        PlaybackSearchRow("torbox-attribution", stringResource(Res.string.settings_licenses_attributions_torbox_title), stringResource(Res.string.settings_licenses_attributions_torbox_body)),
-        PlaybackSearchRow("mdblist-attribution", stringResource(Res.string.settings_licenses_attributions_mdblist_title), stringResource(Res.string.settings_licenses_attributions_mdblist_body)),
-        PlaybackSearchRow("introdb-attribution", stringResource(Res.string.settings_licenses_attributions_introdb_title), stringResource(Res.string.settings_licenses_attributions_introdb_body)),
-        PlaybackSearchRow("imdb-datasets", stringResource(Res.string.settings_licenses_attributions_imdb_title), stringResource(Res.string.settings_licenses_attributions_imdb_body)),
-        PlaybackSearchRow(
-            if (isIos) "mpvkit-license" else "exoplayer-license",
-            if (isIos) {
-                stringResource(Res.string.settings_licenses_attributions_mpvkit_title)
-            } else {
-                stringResource(Res.string.settings_licenses_attributions_exoplayer_title)
-            },
-            if (isIos) {
-                stringResource(Res.string.settings_licenses_attributions_mpvkit_license)
-            } else {
-                stringResource(Res.string.settings_licenses_attributions_exoplayer_license)
-            },
-        ),
-    ).forEach { row ->
-        addRow(
-            page = SettingsPage.LicensesAttributions,
-            key = row.key,
-            title = row.title,
-            description = row.description,
-            pageLabel = licensesPage,
-            section = stringResource(Res.string.compose_settings_root_about_section),
-            category = aboutCategory,
-            icon = Icons.Rounded.Info,
-        )
-    }
-    if (checkForUpdatesAvailable) {
-        add(
-            key = "check-updates",
-            title = stringResource(Res.string.compose_settings_root_check_updates_title),
-            description = stringResource(Res.string.compose_settings_root_check_updates_description),
-            page = if (supportersContributorsPageEnabled) supportersPage else licensesPage,
-            section = stringResource(Res.string.compose_settings_root_about_section),
-            category = aboutCategory,
-            icon = Icons.Rounded.CloudDownload,
-            target = SettingsSearchTarget.CheckForUpdates,
-        )
-    }
-
     addRow(
         page = SettingsPage.Account,
         key = "account-status",

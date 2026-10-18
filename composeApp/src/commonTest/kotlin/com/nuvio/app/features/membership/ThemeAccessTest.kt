@@ -8,46 +8,39 @@ import kotlin.test.assertTrue
 
 class ThemeAccessTest {
     @Test
-    fun memberWithoutSavedThemeDefaultsToGold() {
-        val entitlements = CosmeticEntitlements(setOf(CosmeticEntitlement.GOLD_THEME))
-
-        assertEquals(AppTheme.GOLD, resolveAppTheme(null, entitlements))
+    fun memberWithoutSavedThemeDefaultsToWhite() {
+        assertEquals(AppTheme.WHITE, resolveAppTheme(null, CosmeticEntitlements.None))
     }
 
     @Test
-    fun unavailableSupporterThemeFallsBackToWhite() {
-        assertEquals(
-            AppTheme.WHITE,
-            resolveAppTheme(AppTheme.JADE, CosmeticEntitlements.None),
-        )
-    }
+    fun supporterThemesAreAlwaysAvailable() {
+        val themes = availableAppThemes(CosmeticEntitlements.None)
 
-    @Test
-    fun availableThemesKeepStandardThemesAndEntitledSupporterThemes() {
-        val entitlements = CosmeticEntitlements(setOf(CosmeticEntitlement.ROSE_GOLD_THEME))
-        val themes = availableAppThemes(entitlements)
-
-        assertEquals(AppTheme.ROSE_GOLD, themes.first())
+        assertTrue(AppTheme.GOLD in themes)
+        assertTrue(AppTheme.JADE in themes)
+        assertTrue(AppTheme.ROSE_GOLD in themes)
+        assertTrue(AppTheme.ARCTIC_BLUE in themes)
+        assertTrue(AppTheme.GRAPHITE in themes)
         assertTrue(AppTheme.WHITE in themes)
-        assertTrue(AppTheme.CRIMSON in themes)
-        assertTrue(AppTheme.GOLD !in themes)
+        assertTrue(AppTheme.CUSTOM in themes)
     }
 
     @Test
     fun customThemesAreAvailableWithoutMembership() {
         val themes = availableAppThemes(CosmeticEntitlements.None)
 
-        assertEquals(AppTheme.CUSTOM, themes.first())
+        assertEquals(AppTheme.GOLD, themes.first())
         assertEquals(AppTheme.CUSTOM, resolveAppTheme(AppTheme.CUSTOM, CosmeticEntitlements.None))
         assertEquals(AppTheme.WHITE, resolveAppTheme(null, CosmeticEntitlements.None))
     }
 
     @Test
-    fun savedGradientUsesItsMainColorAfterMembershipLossAndReturnsOnRenewal() {
+    fun gradientColorsAreAlwaysPreserved() {
         val saved = CustomThemeColors(0x112233, 0x445566, 0x778899)
 
-        assertEquals(CustomThemeColors.solid(0x445566), resolveCustomThemeColors(saved, null))
+        assertEquals(saved, resolveCustomThemeColors(saved, null))
         assertEquals(saved, resolveCustomThemeColors(saved, MemberTier.SUPPORTER))
+        assertEquals(saved, resolveCustomThemeColors(saved, MemberTier.SUPPORTER_PLUS))
         assertEquals("#112233,#445566,#778899", saved.encode())
     }
 
@@ -67,15 +60,5 @@ class ThemeAccessTest {
         (listOf(null) + MemberTier.entries).forEach { tier ->
             assertEquals(colors, resolveCustomThemeColors(colors, tier))
         }
-    }
-
-    @Test
-    fun customThemeFollowsEntitledPresetsAndPrecedesStandardThemes() {
-        val themes = availableAppThemes(
-            CosmeticEntitlements(setOf(CosmeticEntitlement.GOLD_THEME)),
-        )
-
-        assertEquals(listOf(AppTheme.GOLD, AppTheme.CUSTOM, AppTheme.WHITE), themes.take(3))
-        assertEquals(themes.size, themes.distinct().size)
     }
 }

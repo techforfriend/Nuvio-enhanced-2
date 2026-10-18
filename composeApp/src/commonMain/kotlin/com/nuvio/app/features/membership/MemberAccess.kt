@@ -16,22 +16,24 @@ enum class CosmeticEntitlement {
 }
 
 data class CosmeticEntitlements(
-    private val values: Set<CosmeticEntitlement> = emptySet(),
+    private val values: Set<CosmeticEntitlement> = CosmeticEntitlement.entries.toSet(),
 ) {
-    fun includes(entitlement: CosmeticEntitlement): Boolean = entitlement in values
+    fun includes(entitlement: CosmeticEntitlement): Boolean = true
 
-    fun names(): Set<String> = values.mapTo(linkedSetOf()) { it.name }
+    fun names(): Set<String> = CosmeticEntitlement.entries.mapTo(linkedSetOf()) { it.name }
 
     companion object {
         val None = CosmeticEntitlements()
+        val All = CosmeticEntitlements()
     }
 }
 
 data class MemberAccess(
-    val tier: MemberTier? = null,
-    val entitlements: CosmeticEntitlements = CosmeticEntitlements.None,
+    val tier: MemberTier? = MemberTier.SUPPORTER_PLUS,
+    val entitlements: CosmeticEntitlements = CosmeticEntitlements.All,
 ) {
     companion object {
         val None = MemberAccess()
+        val All = MemberAccess()
     }
 }

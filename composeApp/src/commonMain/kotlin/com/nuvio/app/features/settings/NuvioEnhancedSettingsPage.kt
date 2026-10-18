@@ -1148,10 +1148,6 @@ private fun NuvioEnhancedSettingsPageContent(
                 markSeen(NuvioEnhancedFeature.CommunityLinks)
                 uriHandler.openUri(NuvioEnhancedGithubUrl)
             },
-            onDiscordClick = {
-                markSeen(NuvioEnhancedFeature.CommunityLinks)
-                uriHandler.openUri(NuvioEnhancedDiscordUrl)
-            },
         )
 
         if (CrashDiagnostics.reportsSupported) {
@@ -1449,7 +1445,6 @@ private fun EnhancedNewBadge() {
 private fun EnhancedCommunityFooter(
     isTablet: Boolean,
     onGithubClick: () -> Unit,
-    onDiscordClick: () -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
     Surface(
@@ -1473,25 +1468,13 @@ private fun EnhancedCommunityFooter(
                 style = MaterialTheme.typography.bodyMedium,
                 color = tokens.colors.textMuted,
             )
-            Row(
+            EnhancedFooterLink(
+                title = stringResource(Res.string.nuvio_enhanced_footer_github),
+                subtitle = stringResource(Res.string.nuvio_enhanced_footer_releases),
+                icon = Icons.Rounded.Link,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                EnhancedFooterLink(
-                    title = stringResource(Res.string.nuvio_enhanced_footer_github),
-                    subtitle = stringResource(Res.string.nuvio_enhanced_footer_releases),
-                    icon = Icons.Rounded.Link,
-                    modifier = Modifier.weight(1f),
-                    onClick = onGithubClick,
-                )
-                EnhancedFooterLink(
-                    title = stringResource(Res.string.nuvio_enhanced_footer_discord),
-                    subtitle = stringResource(Res.string.nuvio_enhanced_footer_community),
-                    icon = Icons.Rounded.People,
-                    modifier = Modifier.weight(1f),
-                    onClick = onDiscordClick,
-                )
-            }
+                onClick = onGithubClick,
+            )
         }
     }
 }
