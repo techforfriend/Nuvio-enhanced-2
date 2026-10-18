@@ -1,0 +1,519 @@
+package com.nuvio.app.features.settings
+
+import com.nuvio.app.features.home.HomeReleaseRadarCategory
+import com.nuvio.app.features.home.HomeReleaseRadarItem
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
+internal data class NuvioEnhancedSettingsUiState(
+    val enhancedHomeFeaturesEnabled: Boolean = true,
+    val nuvioConciergeEnabled: Boolean = true,
+    val smartResumeEnabled: Boolean = true,
+    val releaseRadarHomeSignalsEnabled: Boolean = true,
+    val profileStatsEnabled: Boolean = true,
+    val liveTvEnabled: Boolean = true,
+    val streamSourcePinningEnabled: Boolean = false,
+    val backgroundStreamPrefetchEnabled: Boolean = false,
+    val nuvioReadEnabled: Boolean = false,
+    val cinematicDetailHeaderEnabled: Boolean = false,
+    val cinematicHeaderContentMode: CinematicHeaderContentMode = CinematicHeaderContentMode.Productions,
+    val heroDisplayMode: NuvioHeroDisplayMode = NuvioHeroDisplayMode.Balanced,
+    val heroArtworkSource: NuvioHeroArtworkSource = NuvioHeroArtworkSource.Backdrop,
+    val posterArtHeroEnabled: Boolean = false,
+    val streamingShowcaseHeroEnabled: Boolean = false,
+    val streamingShowcaseVideoPreviewEnabled: Boolean = true,
+    val streamingShowcaseVideoPreviewSoundEnabled: Boolean = true,
+    val compactHeroMetadata: Boolean = true,
+    val showHeroRatings: Boolean = true,
+    val ratingsAboveMetadata: Boolean = false,
+    val showHeroOverview: Boolean = false,
+    val showHeroDetailsButton: Boolean = true,
+    val originalNuvioHeroBannerEnabled: Boolean = false,
+    val heroRefreshHapticsEnabled: Boolean = true,
+    val smartShelvesEnabled: Boolean = false,
+    val releaseRadarDigestEnabled: Boolean = false,
+    val quietHomeModeEnabled: Boolean = false,
+    val libraryHealthEnabled: Boolean = false,
+    val statusBarVisible: Boolean = true,
+    val playerStatusOverlayEnabled: Boolean = false,
+    val subtitleSelectorStyle: NuvioSubtitleSelectorStyle = NuvioSubtitleSelectorStyle.Enhanced,
+    val audioSelectorStyle: NuvioAudioSelectorStyle = NuvioAudioSelectorStyle.Enhanced,
+    val nextEpisodeButtonEnabled: Boolean = false,
+    val showContinueWatchingReadyBadge: Boolean = true,
+    val releaseRadarLibraryOnly: Boolean = true,
+    val releaseRadarWindowDays: Int = 30,
+    val releaseRadarContentFilter: NuvioReleaseRadarContentFilter = NuvioReleaseRadarContentFilter.All,
+    val featureHighlightsEnabled: Boolean = true,
+    val discordWelcomeSeen: Boolean = false,
+    val seenFeatureIds: Set<String> = emptySet(),
+) {
+    fun isNew(feature: NuvioEnhancedFeature): Boolean =
+        featureHighlightsEnabled && feature.id !in seenFeatureIds
+
+    val hasNewFeatures: Boolean
+        get() = featureHighlightsEnabled && NuvioEnhancedFeature.entries.any {
+            it.showInEnhancedSettings && it.id !in seenFeatureIds
+        }
+}
+
+internal enum class NuvioHeroDisplayMode {
+    Cinematic,
+    Balanced,
+    InfoRich,
+}
+
+internal enum class NuvioHeroArtworkSource {
+    Backdrop,
+    Poster,
+}
+
+internal enum class CinematicHeaderContentMode {
+    Productions,
+    WhereToWatch,
+    Hidden,
+}
+
+internal enum class NuvioReleaseRadarContentFilter {
+    All,
+    Episodes,
+    Movies,
+}
+
+internal enum class NuvioSubtitleSelectorStyle {
+    Enhanced,
+    Nuvio,
+}
+
+internal enum class NuvioAudioSelectorStyle {
+    Enhanced,
+    Nuvio,
+}
+
+internal enum class NuvioEnhancedFeature(
+    val id: String,
+    val showInEnhancedSettings: Boolean = true,
+) {
+    HomeExperienceControls("home_experience_controls"),
+    HeroControlsV2("hero_controls_v2"),
+    DetailPresentationControlsV2("detail_presentation_controls_v2"),
+    NuvioRead("nuvio_read_v1"),
+    CinematicDetailHeader("cinematic_detail_header_v1"),
+    SmartResume2("smart_resume_2"),
+    BackupImport("backup_import"),
+    FeatureHighlights("feature_highlights"),
+    LiveTvControls("live_tv_controls"),
+    ContactSupport("contact_support"),
+    HeroExperienceControls("hero_experience_controls"),
+    ReleaseRadarFilters("release_radar_filters"),
+    DetailExperienceControls("detail_experience_controls"),
+    PlayerStatusOverlay("player_status_overlay"),
+    SubtitleSyncMenu("subtitle_sync_menu_v3"),
+    SubtitleSelectorStyle("subtitle_selector_style_v1"),
+    AudioSelectorStyle("audio_selector_style_v1"),
+    NextEpisodeButton("next_episode_button_v1"),
+    PlayerTimeOverlay("player_time_overlay_v3"),
+    PersistentEpisodeShuffle("persistent_episode_shuffle_v3"),
+    StatusBarVisibility("status_bar_visibility"),
+    NetworkControls("network_controls"),
+    CommunityLinks("community_links"),
+    PremiumLabs("premium_labs"),
+    SmartShelfComposer("smart_shelf_composer"),
+    ReleaseRadarDigest("release_radar_digest"),
+    QuietHomeMode("quiet_home_mode"),
+    LibraryHealth("library_health"),
+    StreamSourcePinning("stream_source_pinning"),
+    BackgroundStreamPrefetch("background_stream_prefetch"),
+    ContentWarnings("content_warnings"),
+    AnimeTracking("anime_tracking_v1", showInEnhancedSettings = false),
+}
+
+private val latestReleaseFeatureIds = setOf(
+    NuvioEnhancedFeature.HeroControlsV2.id,
+    NuvioEnhancedFeature.DetailPresentationControlsV2.id,
+    NuvioEnhancedFeature.NuvioRead.id,
+    NuvioEnhancedFeature.CinematicDetailHeader.id,
+    NuvioEnhancedFeature.AnimeTracking.id,
+)
+
+private val previouslyReleasedFeatureIds = NuvioEnhancedFeature.entries
+    .mapTo(mutableSetOf()) { it.id }
+    .apply { removeAll(latestReleaseFeatureIds) }
+
+@Serializable
+private data class StoredNuvioEnhancedSettings(
+    val enhancedHomeFeaturesEnabled: Boolean = true,
+    val nuvioConciergeEnabled: Boolean = true,
+    val smartResumeEnabled: Boolean = true,
+    val releaseRadarHomeSignalsEnabled: Boolean = true,
+    val profileStatsEnabled: Boolean = true,
+    val liveTvEnabled: Boolean = true,
+    val streamSourcePinningEnabled: Boolean = false,
+    val backgroundStreamPrefetchEnabled: Boolean = false,
+    val nuvioReadEnabled: Boolean = false,
+    val cinematicDetailHeaderEnabled: Boolean = false,
+    val cinematicHeaderContentMode: CinematicHeaderContentMode = CinematicHeaderContentMode.Productions,
+    val heroDisplayMode: NuvioHeroDisplayMode = NuvioHeroDisplayMode.Balanced,
+    val heroArtworkSource: NuvioHeroArtworkSource = NuvioHeroArtworkSource.Backdrop,
+    val posterArtHeroEnabled: Boolean = false,
+    val streamingShowcaseHeroEnabled: Boolean = false,
+    val streamingShowcaseVideoPreviewEnabled: Boolean = true,
+    val streamingShowcaseVideoPreviewSoundEnabled: Boolean = true,
+    val compactHeroMetadata: Boolean = true,
+    val showHeroRatings: Boolean = true,
+    val ratingsAboveMetadata: Boolean = false,
+    val showHeroOverview: Boolean = false,
+    val showHeroDetailsButton: Boolean = true,
+    val originalNuvioHeroBannerEnabled: Boolean = false,
+    val heroOverviewUserConfigured: Boolean = false,
+    val heroRefreshHapticsEnabled: Boolean = true,
+    val smartShelvesEnabled: Boolean = false,
+    val releaseRadarDigestEnabled: Boolean = false,
+    val quietHomeModeEnabled: Boolean = false,
+    val libraryHealthEnabled: Boolean = false,
+    val statusBarVisible: Boolean = true,
+    val playerStatusOverlayEnabled: Boolean = false,
+    val subtitleSelectorStyle: NuvioSubtitleSelectorStyle = NuvioSubtitleSelectorStyle.Enhanced,
+    val audioSelectorStyle: NuvioAudioSelectorStyle = NuvioAudioSelectorStyle.Enhanced,
+    val nextEpisodeButtonEnabled: Boolean = false,
+    val showContinueWatchingReadyBadge: Boolean = true,
+    val releaseRadarLibraryOnly: Boolean = true,
+    val releaseRadarWindowDays: Int = 30,
+    val releaseRadarContentFilter: NuvioReleaseRadarContentFilter = NuvioReleaseRadarContentFilter.All,
+    val featureHighlightsEnabled: Boolean = true,
+    val discordWelcomeSeen: Boolean = false,
+    val seenFeatureIds: Set<String> = previouslyReleasedFeatureIds,
+)
+
+internal object NuvioEnhancedSettingsRepository {
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
+
+    private val _uiState = MutableStateFlow(NuvioEnhancedSettingsUiState())
+    val uiState: StateFlow<NuvioEnhancedSettingsUiState> = _uiState.asStateFlow()
+
+    private var hasLoaded = false
+    private var stored = StoredNuvioEnhancedSettings()
+
+    fun ensureLoaded() {
+        if (hasLoaded) return
+        hasLoaded = true
+        val payload = NuvioEnhancedSettingsStorage.loadPayload().orEmpty().trim()
+        stored = if (payload.isNotEmpty()) {
+            runCatching { json.decodeFromString<StoredNuvioEnhancedSettings>(payload) }
+                .getOrDefault(StoredNuvioEnhancedSettings())
+                .let { decoded ->
+                    val normalized = decoded.copy(
+                        seenFeatureIds = decoded.seenFeatureIds + previouslyReleasedFeatureIds,
+                        nuvioReadEnabled = decoded.nuvioReadEnabled && !decoded.cinematicDetailHeaderEnabled,
+                    )
+                    if (normalized.heroOverviewUserConfigured) {
+                        normalized
+                    } else {
+                        normalized.copy(showHeroOverview = false)
+                    }
+                }
+        } else {
+            StoredNuvioEnhancedSettings()
+        }
+        publish()
+    }
+
+    fun onProfileChanged() {
+        hasLoaded = false
+        stored = StoredNuvioEnhancedSettings()
+        ensureLoaded()
+    }
+
+    fun exportPayload(): String {
+        ensureLoaded()
+        return json.encodeToString(stored)
+    }
+
+    fun replacePayload(payload: String) {
+        val decoded = payload
+            .takeIf { it.isNotBlank() }
+            ?.let { runCatching { json.decodeFromString<StoredNuvioEnhancedSettings>(it) }.getOrNull() }
+            ?: return
+        stored = decoded.copy(
+            seenFeatureIds = decoded.seenFeatureIds + previouslyReleasedFeatureIds,
+            nuvioReadEnabled = decoded.nuvioReadEnabled && !decoded.cinematicDetailHeaderEnabled,
+        )
+        hasLoaded = true
+        publish()
+        persist()
+    }
+
+    fun setEnhancedHomeFeaturesEnabled(enabled: Boolean) = update {
+        copy(enhancedHomeFeaturesEnabled = enabled)
+    }
+
+    fun setNuvioConciergeEnabled(enabled: Boolean) = update {
+        copy(nuvioConciergeEnabled = enabled)
+    }
+
+    fun setSmartResumeEnabled(enabled: Boolean) = update {
+        copy(smartResumeEnabled = enabled)
+    }
+
+    fun setReleaseRadarHomeSignalsEnabled(enabled: Boolean) = update {
+        copy(releaseRadarHomeSignalsEnabled = enabled)
+    }
+
+    fun setProfileStatsEnabled(enabled: Boolean) = update {
+        copy(profileStatsEnabled = enabled)
+    }
+
+    fun setLiveTvEnabled(enabled: Boolean) = update {
+        copy(liveTvEnabled = enabled)
+    }
+
+    fun setStreamSourcePinningEnabled(enabled: Boolean) = update {
+        copy(streamSourcePinningEnabled = enabled)
+    }
+
+    fun setBackgroundStreamPrefetchEnabled(enabled: Boolean) = update {
+        copy(backgroundStreamPrefetchEnabled = enabled)
+    }
+
+    fun setNuvioReadEnabled(enabled: Boolean) = update {
+        copy(
+            nuvioReadEnabled = enabled,
+            cinematicDetailHeaderEnabled = if (enabled) false else cinematicDetailHeaderEnabled,
+        )
+    }
+
+    fun setCinematicDetailHeaderEnabled(enabled: Boolean) = update {
+        copy(
+            cinematicDetailHeaderEnabled = enabled,
+            nuvioReadEnabled = if (enabled) false else nuvioReadEnabled,
+        )
+    }
+
+    fun setCinematicHeaderContentMode(mode: CinematicHeaderContentMode) = update {
+        copy(cinematicHeaderContentMode = mode)
+    }
+
+    fun setHeroDisplayMode(mode: NuvioHeroDisplayMode) = update {
+        copy(heroDisplayMode = mode)
+    }
+
+    fun setHeroArtworkSource(source: NuvioHeroArtworkSource) = update {
+        copy(heroArtworkSource = source)
+    }
+
+    fun setPosterArtHeroEnabled(enabled: Boolean) = update {
+        copy(
+            posterArtHeroEnabled = enabled,
+            streamingShowcaseHeroEnabled = if (enabled) false else streamingShowcaseHeroEnabled,
+        )
+    }
+
+    fun setStreamingShowcaseHeroEnabled(enabled: Boolean) = update {
+        copy(
+            streamingShowcaseHeroEnabled = enabled,
+            posterArtHeroEnabled = if (enabled) false else posterArtHeroEnabled,
+        )
+    }
+
+    fun setStreamingShowcaseVideoPreviewEnabled(enabled: Boolean) = update {
+        copy(streamingShowcaseVideoPreviewEnabled = enabled)
+    }
+
+    fun setStreamingShowcaseVideoPreviewSoundEnabled(enabled: Boolean) = update {
+        copy(streamingShowcaseVideoPreviewSoundEnabled = enabled)
+    }
+
+    fun setCompactHeroMetadata(enabled: Boolean) = update {
+        copy(compactHeroMetadata = enabled)
+    }
+
+    fun setShowHeroRatings(enabled: Boolean) = update {
+        copy(showHeroRatings = enabled)
+    }
+
+    fun setRatingsAboveMetadata(enabled: Boolean) = update {
+        copy(ratingsAboveMetadata = enabled)
+    }
+
+    fun setShowHeroOverview(enabled: Boolean) = update {
+        copy(
+            showHeroOverview = enabled,
+            heroOverviewUserConfigured = true,
+        )
+    }
+
+    fun setShowHeroDetailsButton(enabled: Boolean) = update {
+        copy(showHeroDetailsButton = enabled)
+    }
+
+    fun setOriginalNuvioHeroBannerEnabled(enabled: Boolean) = update {
+        copy(originalNuvioHeroBannerEnabled = enabled)
+    }
+
+    fun setHeroRefreshHapticsEnabled(enabled: Boolean) = update {
+        copy(heroRefreshHapticsEnabled = enabled)
+    }
+
+    fun setSmartShelvesEnabled(enabled: Boolean) = update {
+        copy(smartShelvesEnabled = enabled)
+    }
+
+    fun setReleaseRadarDigestEnabled(enabled: Boolean) = update {
+        copy(releaseRadarDigestEnabled = enabled)
+    }
+
+    fun setQuietHomeModeEnabled(enabled: Boolean) = update {
+        copy(quietHomeModeEnabled = enabled)
+    }
+
+    fun setLibraryHealthEnabled(enabled: Boolean) = update {
+        copy(libraryHealthEnabled = enabled)
+    }
+
+    fun setPlayerStatusOverlayEnabled(enabled: Boolean) = update {
+        copy(playerStatusOverlayEnabled = enabled)
+    }
+
+    fun setSubtitleSelectorStyle(style: NuvioSubtitleSelectorStyle) = update {
+        copy(subtitleSelectorStyle = style)
+    }
+
+    fun setAudioSelectorStyle(style: NuvioAudioSelectorStyle) = update {
+        copy(audioSelectorStyle = style)
+    }
+
+    fun setNextEpisodeButtonEnabled(enabled: Boolean) = update {
+        copy(nextEpisodeButtonEnabled = enabled)
+    }
+
+    fun setStatusBarVisible(visible: Boolean) = update {
+        copy(statusBarVisible = visible)
+    }
+
+    fun setShowContinueWatchingReadyBadge(enabled: Boolean) = update {
+        copy(showContinueWatchingReadyBadge = enabled)
+    }
+
+    fun setReleaseRadarLibraryOnly(enabled: Boolean) = update {
+        copy(releaseRadarLibraryOnly = enabled)
+    }
+
+    fun setReleaseRadarWindowDays(days: Int) = update {
+        copy(releaseRadarWindowDays = days.coerceIn(7, 45))
+    }
+
+    fun setReleaseRadarContentFilter(filter: NuvioReleaseRadarContentFilter) = update {
+        copy(releaseRadarContentFilter = filter)
+    }
+
+    fun setFeatureHighlightsEnabled(enabled: Boolean) = update {
+        copy(featureHighlightsEnabled = enabled)
+    }
+
+    fun markDiscordWelcomeSeen() = update {
+        copy(discordWelcomeSeen = true)
+    }
+
+    fun markFeatureSeen(feature: NuvioEnhancedFeature) {
+        ensureLoaded()
+        if (feature.id in stored.seenFeatureIds) return
+        stored = stored.copy(seenFeatureIds = stored.seenFeatureIds + feature.id)
+        publish()
+        persist()
+    }
+
+    fun markAllFeaturesSeen() {
+        ensureLoaded()
+        stored = stored.copy(seenFeatureIds = NuvioEnhancedFeature.entries.mapTo(mutableSetOf()) { it.id })
+        publish()
+        persist()
+    }
+
+    private fun update(transform: StoredNuvioEnhancedSettings.() -> StoredNuvioEnhancedSettings) {
+        ensureLoaded()
+        val updated = stored.transform()
+        if (updated == stored) return
+        stored = updated
+        publish()
+        persist()
+    }
+
+    private fun publish() {
+        _uiState.value = NuvioEnhancedSettingsUiState(
+            enhancedHomeFeaturesEnabled = stored.enhancedHomeFeaturesEnabled,
+            nuvioConciergeEnabled = stored.nuvioConciergeEnabled,
+            smartResumeEnabled = stored.smartResumeEnabled,
+            releaseRadarHomeSignalsEnabled = stored.releaseRadarHomeSignalsEnabled,
+            profileStatsEnabled = stored.profileStatsEnabled,
+            liveTvEnabled = stored.liveTvEnabled,
+            streamSourcePinningEnabled = stored.streamSourcePinningEnabled,
+            backgroundStreamPrefetchEnabled = stored.backgroundStreamPrefetchEnabled,
+            nuvioReadEnabled = stored.nuvioReadEnabled,
+            cinematicDetailHeaderEnabled = stored.cinematicDetailHeaderEnabled,
+            cinematicHeaderContentMode = stored.cinematicHeaderContentMode,
+            heroDisplayMode = stored.heroDisplayMode,
+            heroArtworkSource = stored.heroArtworkSource,
+            posterArtHeroEnabled = stored.posterArtHeroEnabled,
+            streamingShowcaseHeroEnabled = stored.streamingShowcaseHeroEnabled,
+            streamingShowcaseVideoPreviewEnabled = stored.streamingShowcaseVideoPreviewEnabled,
+            streamingShowcaseVideoPreviewSoundEnabled = stored.streamingShowcaseVideoPreviewSoundEnabled,
+            compactHeroMetadata = stored.compactHeroMetadata,
+            showHeroRatings = stored.showHeroRatings,
+            ratingsAboveMetadata = stored.ratingsAboveMetadata,
+            showHeroOverview = stored.showHeroOverview,
+            showHeroDetailsButton = stored.showHeroDetailsButton,
+            originalNuvioHeroBannerEnabled = stored.originalNuvioHeroBannerEnabled,
+            heroRefreshHapticsEnabled = stored.heroRefreshHapticsEnabled,
+            smartShelvesEnabled = stored.smartShelvesEnabled,
+            releaseRadarDigestEnabled = stored.releaseRadarDigestEnabled,
+            quietHomeModeEnabled = stored.quietHomeModeEnabled,
+            libraryHealthEnabled = stored.libraryHealthEnabled,
+            statusBarVisible = stored.statusBarVisible,
+            playerStatusOverlayEnabled = stored.playerStatusOverlayEnabled,
+            subtitleSelectorStyle = stored.subtitleSelectorStyle,
+            audioSelectorStyle = stored.audioSelectorStyle,
+            nextEpisodeButtonEnabled = stored.nextEpisodeButtonEnabled,
+            showContinueWatchingReadyBadge = stored.showContinueWatchingReadyBadge,
+            releaseRadarLibraryOnly = stored.releaseRadarLibraryOnly,
+            releaseRadarWindowDays = stored.releaseRadarWindowDays.coerceIn(7, 45),
+            releaseRadarContentFilter = stored.releaseRadarContentFilter,
+            featureHighlightsEnabled = stored.featureHighlightsEnabled,
+            discordWelcomeSeen = stored.discordWelcomeSeen,
+            seenFeatureIds = stored.seenFeatureIds,
+        )
+    }
+
+    private fun persist() {
+        NuvioEnhancedSettingsStorage.savePayload(json.encodeToString(stored))
+    }
+}
+
+internal fun List<HomeReleaseRadarItem>.filteredByNuvioEnhancedReleaseRadar(
+    settings: NuvioEnhancedSettingsUiState,
+): List<HomeReleaseRadarItem> =
+    asSequence()
+        .filter { item ->
+            val days = item.daysFromToday ?: return@filter true
+            days in 0..settings.releaseRadarWindowDays.coerceIn(7, 45)
+        }
+        .filter { item ->
+            !settings.releaseRadarLibraryOnly ||
+                item.category != HomeReleaseRadarCategory.Catalog
+        }
+        .filter { item ->
+            when (settings.releaseRadarContentFilter) {
+                NuvioReleaseRadarContentFilter.All -> true
+                NuvioReleaseRadarContentFilter.Episodes ->
+                    item.category == HomeReleaseRadarCategory.Episode ||
+                        item.category == HomeReleaseRadarCategory.NextUp
+                NuvioReleaseRadarContentFilter.Movies -> item.category == HomeReleaseRadarCategory.Movie
+            }
+        }
+        .toList()
