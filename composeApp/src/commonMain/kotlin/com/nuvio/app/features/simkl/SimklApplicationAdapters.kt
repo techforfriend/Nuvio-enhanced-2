@@ -3,6 +3,7 @@ package com.nuvio.app.features.simkl
 import co.touchlab.kermit.Logger
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.tracking.TrackingHistoryItem
+import com.nuvio.app.features.tracking.TrackingListStatus
 import com.nuvio.app.features.tracking.TrackingProviderId
 import com.nuvio.app.features.tracking.TrackingProgressProvider
 import com.nuvio.app.features.tracking.TrackingProgressSnapshot
@@ -45,8 +46,6 @@ object SimklWatchedSyncAdapter : TrackingWatchedProvider {
     }
 
     override suspend fun pullFullyWatchedSeriesKeys(profileId: Int): Set<String>? {
-        // Simkl "completed" = all episodes watched; Nuvio "completed" = all
-        // *available* episodes watched. Let local revalidation decide.
         return null
     }
 
@@ -96,13 +95,45 @@ object SimklWatchedSyncAdapter : TrackingWatchedProvider {
         check(result.isComplete) {
             "Simkl could not match ${result.notFoundCount} of ${result.attemptedCount} watched items"
         }
+        markExplicitSeriesCompleted(profileId = profileId, items = items, snapshot = snapshot)
+    }
+
+    private suspend fun markExplicitSeriesCompleted(
+        profileId: Int,
+        items: Collection<WatchedItem>,
+        snapshot: SimklSyncSnapshot,
+    ) {
+        val series = simklExplicitlyCompletedSeries(items)
+        if (series.isEmpty()) return
+        val media = series.map { item ->
+            snapshot.mediaReference(
+                contentId = item.id,
+                contentType = item.type,
+                title = item.name,
+                releaseInfo = item.releaseInfo,
+                posterUrl = item.poster,
+            )
+        }
+        runCatching {
+            SimklMutationRepository.moveToList(
+                profileId = profileId,
+                items = media,
+                destination = TrackingListStatus.COMPLETED,
+            )
+        }.onSuccess { result ->
+            if (!result.isComplete) {
+                log.w { "Simkl could not move ${result.notFoundCount} of ${result.attemptedCount} series to Completed" }
+            }
+        }.onFailure { error ->
+            if (error is CancellationException) throw error
+            log.w(error) { "Moving ${media.size} explicitly watched series to Simkl Completed failed" }
+        }
     }
 
     override suspend fun delete(profileId: Int, items: Collection<WatchedItem>) {
         if (profileId != ProfileRepository.activeProfileId || items.isEmpty()) return
         val episodeItems = items.filter { item -> item.season != null && item.episode != null }
         if (episodeItems.isEmpty()) return
-        // Optimistically mark video IDs as removed so fallback won't show them as watched
         episodeItems.forEach { item -> item.videoId?.let(SimklAnimeWatchedFallback::markOptimisticallyRemoved) }
         SimklSyncRepository.ensureLoaded()
         val snapshot = SimklSyncRepository.state.value.snapshot
@@ -135,26 +166,21 @@ data class SimklProgressUiState(
     val hiddenContentIds: Set<String> = emptySet(),
 )
 
-/**
- * What may travel to Simkl as a watched mark.
- *
- * A mark without episode coordinates describes a whole series. Simkl turns that into a show-level
- * entry and answers by marking every episode of the show watched, including episodes the user never
- * opened, which is how a single ill-timed mark wiped a full series. Only films are allowed through
- * without coordinates; a whole-series action still reports its episodes one by one (`WatchingActions`
- * marks the series and its released episodes together), which carries the same information and cannot
- * touch anything else. A mark whose type is `anime` is dropped too: the app cannot tell an anime film
- * from an anime series without more metadata, and Trakt's adapter drops both for the same reason. That
- * is the accepted trade, because a mark the user made by hand staying out of the history is cheaper
- * than a single call stamping a whole series.
- */
 internal fun simklHistoryPushItems(items: Collection<WatchedItem>): List<WatchedItem> =
     items.filterNot(WatchedItem::isWholeSeriesMark)
+
+internal fun simklExplicitlyCompletedSeries(items: Collection<WatchedItem>): List<WatchedItem> {
+    val episodeParents = items
+        .filter { item -> item.season != null && item.episode != null }
+        .mapTo(hashSetOf()) { item -> item.id }
+    return items
+        .filter { item -> item.isWholeSeriesMark() && item.id in episodeParents }
+        .distinctBy { item -> item.id }
+}
 
 private fun WatchedItem.isWholeSeriesMark(): Boolean =
     season == null && episode == null && type.trim().lowercase() !in MOVIE_LIKE_WATCHED_TYPES
 
-/** Content types that stand on their own and need no episode to be a real mark. */
 private val MOVIE_LIKE_WATCHED_TYPES = setOf("movie", "film")
 
 object SimklProgressRepository {
