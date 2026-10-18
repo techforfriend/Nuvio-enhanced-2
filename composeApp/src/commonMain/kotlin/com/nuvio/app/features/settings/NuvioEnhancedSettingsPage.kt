@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -53,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
@@ -66,10 +68,8 @@ import com.nuvio.app.core.diagnostics.CrashDiagnostics
 import com.nuvio.app.core.network.DnsOverHttpsProvider
 import com.nuvio.app.core.network.DnsOverHttpsSettingsRepository
 import com.nuvio.app.core.sync.ProfileSettingsSync
-import com.nuvio.app.core.ui.AppIconResource
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.ui.NuvioTokens
-import com.nuvio.app.core.ui.appIconPainter
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.nuvioKeyboardFocusIndicator
 import com.nuvio.app.features.details.MetaScreenSettingsRepository
@@ -798,32 +798,6 @@ private fun NuvioEnhancedSettingsPageContent(
                         NuvioEnhancedSettingsRepository.setHeroRefreshHapticsEnabled(it)
                     },
                 )
-                SettingsGroupDivider(isTablet = isTablet)
-                SettingsSwitchRow(
-                    title = stringResource(Res.string.settings_advanced_hero_auto_scroll),
-                    description = stringResource(Res.string.settings_advanced_hero_auto_scroll_description),
-                    checked = homeSettings.heroAutoScrollEnabled,
-                    enabled = heroVisualControlsEnabled,
-                    isTablet = isTablet,
-                    highlighted = isNew(NuvioEnhancedFeature.HeroExperienceControls),
-                    onCheckedChange = {
-                        markSeen(NuvioEnhancedFeature.HeroExperienceControls)
-                        HomeCatalogSettingsRepository.setHeroAutoScrollEnabled(it)
-                    },
-                )
-                SettingsGroupDivider(isTablet = isTablet)
-                SettingsSwitchRow(
-                    title = stringResource(Res.string.settings_advanced_hero_motion_preview),
-                    description = stringResource(Res.string.settings_advanced_hero_motion_preview_description),
-                    checked = homeSettings.heroMotionPreviewEnabled,
-                    enabled = heroVisualControlsEnabled,
-                    isTablet = isTablet,
-                    highlighted = isNew(NuvioEnhancedFeature.HeroExperienceControls),
-                    onCheckedChange = {
-                        markSeen(NuvioEnhancedFeature.HeroExperienceControls)
-                        HomeCatalogSettingsRepository.setHeroMotionPreviewEnabled(it)
-                    },
-                )
             }
         }
         }
@@ -902,28 +876,12 @@ private fun NuvioEnhancedSettingsPageContent(
                                 MetaEpisodeCardStyle.List,
                                 stringResource(Res.string.nuvio_enhanced_episode_cards_layout_compact_list),
                             ),
-                            EnhancedChoiceOption(
-                                MetaEpisodeCardStyle.VerticalHorizontal,
-                                stringResource(Res.string.nuvio_enhanced_episode_cards_layout_vertical),
-                            ),
                         ),
                         isTablet = isTablet,
                         highlighted = isNew(NuvioEnhancedFeature.DetailPresentationControlsV2),
                         onSelected = {
                             markSeen(NuvioEnhancedFeature.DetailPresentationControlsV2)
                             MetaScreenSettingsRepository.setEpisodeCardStyle(it)
-                        },
-                    )
-                    SettingsGroupDivider(isTablet = isTablet)
-                    SettingsSwitchRow(
-                        title = stringResource(Res.string.nuvio_enhanced_show_download_button_title),
-                        description = stringResource(Res.string.nuvio_enhanced_show_download_button_desc),
-                        checked = detailSettings.showDownloadAction,
-                        isTablet = isTablet,
-                        highlighted = isNew(NuvioEnhancedFeature.DetailPresentationControlsV2),
-                        onCheckedChange = {
-                            markSeen(NuvioEnhancedFeature.DetailPresentationControlsV2)
-                            MetaScreenSettingsRepository.setShowDownloadAction(it)
                         },
                     )
                 }
@@ -1017,32 +975,7 @@ private fun NuvioEnhancedSettingsPageContent(
                             MetaScreenSettingsRepository.setHeroTrailerPlayback(it)
                         },
                     )
-                    SettingsGroupDivider(isTablet = isTablet)
-                    SettingsSwitchRow(
-                        title = stringResource(Res.string.settings_meta_hero_trailer_sound),
-                        description = stringResource(Res.string.settings_meta_hero_trailer_sound_description),
-                        checked = detailSettings.heroTrailerSoundEnabled,
-                        enabled = detailSettings.heroTrailerPlayback,
-                        isTablet = isTablet,
-                        highlighted = isNew(NuvioEnhancedFeature.DetailExperienceControls),
-                        onCheckedChange = {
-                            markSeen(NuvioEnhancedFeature.DetailExperienceControls)
-                            MetaScreenSettingsRepository.setHeroTrailerSoundEnabled(it)
-                        },
-                    )
-                    SettingsGroupDivider(isTablet = isTablet)
                 }
-                SettingsSwitchRow(
-                    title = stringResource(Res.string.settings_meta_show_episode_ratings),
-                    description = stringResource(Res.string.settings_meta_show_episode_ratings_description),
-                    checked = detailSettings.showEpisodeRatings,
-                    isTablet = isTablet,
-                    highlighted = isNew(NuvioEnhancedFeature.DetailExperienceControls),
-                    onCheckedChange = {
-                        markSeen(NuvioEnhancedFeature.DetailExperienceControls)
-                        MetaScreenSettingsRepository.setShowEpisodeRatings(it)
-                    },
-                )
             }
         }
         }
@@ -1547,14 +1480,14 @@ private fun EnhancedCommunityFooter(
                 EnhancedFooterLink(
                     title = stringResource(Res.string.nuvio_enhanced_footer_github),
                     subtitle = stringResource(Res.string.nuvio_enhanced_footer_releases),
-                    icon = appIconPainter(AppIconResource.GithubMark),
+                    icon = Icons.Rounded.Link,
                     modifier = Modifier.weight(1f),
                     onClick = onGithubClick,
                 )
                 EnhancedFooterLink(
                     title = stringResource(Res.string.nuvio_enhanced_footer_discord),
                     subtitle = stringResource(Res.string.nuvio_enhanced_footer_community),
-                    icon = appIconPainter(AppIconResource.DiscordMark),
+                    icon = Icons.Rounded.People,
                     modifier = Modifier.weight(1f),
                     onClick = onDiscordClick,
                 )
@@ -1567,7 +1500,7 @@ private fun EnhancedCommunityFooter(
 private fun EnhancedFooterLink(
     title: String,
     subtitle: String,
-    icon: Painter,
+    icon: ImageVector,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -1598,7 +1531,7 @@ private fun EnhancedFooterLink(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        painter = icon,
+                        imageVector = icon,
                         contentDescription = title,
                         tint = tokens.colors.accent,
                     )

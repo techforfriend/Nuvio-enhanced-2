@@ -239,6 +239,7 @@ internal fun SettingsNavigationRow(
     enabled: Boolean = true,
     isTablet: Boolean,
     trailingContent: (@Composable RowScope.() -> Unit)? = null,
+    highlighted: Boolean = false,
     onClick: () -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
@@ -321,6 +322,7 @@ internal fun SettingsSwitchRow(
     enabled: Boolean = true,
     isTablet: Boolean,
     horizontalPadding: Dp = if (isTablet) 20.dp else 16.dp,
+    highlighted: Boolean = false,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio

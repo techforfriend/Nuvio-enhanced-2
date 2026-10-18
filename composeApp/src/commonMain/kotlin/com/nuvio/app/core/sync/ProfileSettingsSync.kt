@@ -179,6 +179,24 @@ object ProfileSettingsSync {
         }
     }
 
+    fun exportBackupJson(): String {
+        ensureRepositoriesLoaded()
+        return json.encodeToString(MobileProfileSettingsBlob.serializer(), exportSettingsBlob())
+    }
+
+    fun importBackupJson(payload: String): Result<Unit> =
+        runCatching {
+            val blob = json.decodeFromString<MobileProfileSettingsBlob>(payload.trim())
+            ensureRepositoriesLoaded()
+            isApplyingRemoteBlob = true
+            try {
+                applyRemoteBlob(blob)
+                skipNextPushSignature = currentObservedStateSignature()
+            } finally {
+                isApplyingRemoteBlob = false
+            }
+        }
+
     @OptIn(FlowPreview::class)
     private fun observeLocalChangesAndPush() {
         val signatureFlows = listOf(
