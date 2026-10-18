@@ -84,7 +84,7 @@ internal fun PlayerTimelineDetails(
             )
             Text(
                 text = epTitle,
-                style = MaterialTheme.nuvioTypeScale.headlineSm.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 color = Color.White,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -92,7 +92,7 @@ internal fun PlayerTimelineDetails(
         } else {
             Text(
                 text = title,
-                style = MaterialTheme.nuvioTypeScale.headlineSm.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 color = Color.White,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
