@@ -423,7 +423,8 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
         exit = fadeOut(),
     ) {
         val displayedPositionMs = scrubbingPositionMs ?: playbackSnapshot.positionMs
-        val pipAvailable = isIos && playerController?.isPictureInPictureSupported() == true
+        val pipAvailable = isIos && playerSettingsUiState.miniPlayerEnabled &&
+            playerController?.isPictureInPictureSupported() == true
         PlayerControlsShell(
             title = title,
             streamTitle = activeStreamTitle,

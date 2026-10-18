@@ -1313,7 +1313,7 @@
     <string name="settings_playback_preload_next_episode">Preload Next Episode Sources</string>
     <string name="settings_playback_preload_next_episode_description">Start searching for sources in the background before the next episode button appears.</string>
     <string name="settings_playback_mini_player">Mini Player</string>
-    <string name="settings_playback_mini_player_description">Leaving the player keeps playback going in a small floating window. Tap it to return to full screen.</string>
+    <string name="settings_playback_mini_player_description">Shows the mini player button in the player so you can keep watching in a floating window while you browse. Picture in Picture when leaving the app works either way.</string>
     <string name="settings_playback_private_viewing">Private Viewing</string>
     <string name="settings_playback_private_viewing_description">Don\'t save watch progress, Continue Watching or watched status, and don\'t sync playback to connected trackers.</string>
     <string name="mini_player_play">Play</string>

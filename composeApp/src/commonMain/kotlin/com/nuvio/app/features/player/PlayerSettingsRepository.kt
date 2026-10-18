@@ -97,7 +97,7 @@ data class PlayerSettingsUiState(
     val nextEpisodeThresholdPercent: Float = 99f,
     val nextEpisodeThresholdMinutesBeforeEnd: Float = 2f,
     val preloadNextEpisodeSources: Boolean = false,
-    val miniPlayerEnabled: Boolean = false,
+    val miniPlayerEnabled: Boolean = true,
     val privateViewingEnabled: Boolean = false,
     val useLibass: Boolean = false,
     val libassRenderType: String = "CUES",
@@ -187,7 +187,7 @@ object PlayerSettingsRepository {
     private var nextEpisodeThresholdPercent = 99f
     private var nextEpisodeThresholdMinutesBeforeEnd = 2f
     private var preloadNextEpisodeSources = false
-    private var miniPlayerEnabled = false
+    private var miniPlayerEnabled = true
     private var privateViewingEnabled = false
     private var useLibass = false
     private var libassRenderType = "CUES"
@@ -282,7 +282,7 @@ object PlayerSettingsRepository {
         nextEpisodeThresholdPercent = 99f
         nextEpisodeThresholdMinutesBeforeEnd = 2f
         preloadNextEpisodeSources = false
-        miniPlayerEnabled = false
+        miniPlayerEnabled = true
         privateViewingEnabled = false
         useLibass = false
         libassRenderType = "CUES"
@@ -434,7 +434,7 @@ object PlayerSettingsRepository {
         nextEpisodeThresholdPercent = PlayerSettingsStorage.loadNextEpisodeThresholdPercent() ?: 99f
         nextEpisodeThresholdMinutesBeforeEnd = PlayerSettingsStorage.loadNextEpisodeThresholdMinutesBeforeEnd() ?: 2f
         preloadNextEpisodeSources = PlayerSettingsStorage.loadPreloadNextEpisodeSources() ?: false
-        miniPlayerEnabled = PlayerSettingsStorage.loadMiniPlayerEnabled() ?: false
+        miniPlayerEnabled = PlayerSettingsStorage.loadMiniPlayerEnabled() ?: true
         privateViewingEnabled = PlayerSettingsStorage.loadPrivateViewingEnabled() ?: false
         useLibass = PlayerSettingsStorage.loadUseLibass() ?: false
         libassRenderType = PlayerSettingsStorage.loadLibassRenderType() ?: "CUES"
