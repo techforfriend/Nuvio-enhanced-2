@@ -22,6 +22,7 @@ import com.nuvio.app.features.p2p.formatP2pMegabytes
 import com.nuvio.app.features.p2p.formatP2pSpeed
 import com.nuvio.app.features.player.skip.internalSkipAction
 import com.nuvio.app.features.servers.ServerStreams
+import com.nuvio.app.features.settings.NuvioEnhancedSettingsRepository
 import com.nuvio.app.features.streams.streamAddonInstanceId
 import com.nuvio.app.isIos
 import kotlinx.coroutines.launch
@@ -274,6 +275,10 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
     val isInPip = rememberIsInPictureInPicture()
     val partyState by PartyRepository.state.collectAsStateWithLifecycle()
     val partyActive = partyState.party != null
+    val enhancedSettings by remember {
+        NuvioEnhancedSettingsRepository.ensureLoaded()
+        NuvioEnhancedSettingsRepository.uiState
+    }.collectAsStateWithLifecycle()
     AnimatedVisibility(
         visible = (controlsVisible || showParentalGuide) && !playerControlsLocked && !isInPip,
         enter = fadeIn(),
@@ -296,7 +301,10 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             onRuntimeClick = { showRemainingTime = !showRemainingTime },
             releaseInfo = metaUiState.meta?.takeIf { it.id == parentMetaId }?.releaseInfo,
             hideDetails = activeSkipInterval != null && !skipIntervalDismissed,
-            onNextEpisodeClick = if (nextEpisodeInfo?.hasAired == true && !nextEpisodeAutoPlaySearching && nextEpisodeAutoPlayCountdown == null) {
+            onNextEpisodeClick = if (
+                (nextEpisodeInfo?.hasAired == true && !nextEpisodeAutoPlaySearching && nextEpisodeAutoPlayCountdown == null) ||
+                (isEpisode && enhancedSettings.nextEpisodeButtonEnabled && nextEpisodeInfo != null)
+            ) {
                 {
                     if (!partyBlocksControl()) playNextEpisode()
                 }

@@ -56,6 +56,7 @@ import com.nuvio.app.features.home.components.HomeSkeletonHero
 import com.nuvio.app.features.home.components.HomeSkeletonRow
 import com.nuvio.app.features.home.components.HomeContinueWatchingSectionBottomPadding
 import com.nuvio.app.features.home.components.ContinueWatchingLayout
+import com.nuvio.app.features.settings.NuvioEnhancedSettingsRepository
 import com.nuvio.app.features.tracking.TrackingSettingsRepository
 import com.nuvio.app.features.tracking.WatchProgressSource
 import com.nuvio.app.features.watched.WatchedItem
@@ -165,6 +166,10 @@ fun HomeScreen(
     val trackingSettingsUiState by remember {
         TrackingSettingsRepository.ensureLoaded()
         TrackingSettingsRepository.uiState
+    }.collectAsStateWithLifecycle()
+    val enhancedSettings by remember {
+        NuvioEnhancedSettingsRepository.ensureLoaded()
+        NuvioEnhancedSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
     var observedOfflineState by remember { mutableStateOf(false) }
 
@@ -1011,6 +1016,11 @@ fun HomeScreen(
                                 mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
                                 listState = homeListState,
                                 stretchPx = { heroStretchState.stretchPx },
+                                showOverview = enhancedSettings.showHeroOverview && !enhancedSettings.quietHomeModeEnabled,
+                                showRatings = enhancedSettings.showHeroRatings,
+                                showHeroDetailsButton = enhancedSettings.showHeroDetailsButton,
+                                posterArtHeroEnabled = enhancedSettings.posterArtHeroEnabled,
+                                heroArtworkSource = enhancedSettings.heroArtworkSource,
                                 onItemClick = onPosterClick,
                             )
 

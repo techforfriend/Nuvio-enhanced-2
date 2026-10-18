@@ -54,6 +54,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.Color
+import com.nuvio.app.features.settings.NuvioHeroArtworkSource
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.heroStretchHeight
 import com.nuvio.app.core.ui.ScreenActivityEffect
@@ -99,6 +104,11 @@ fun HomeHeroSection(
     mobileBelowSectionHeightHint: Dp? = null,
     listState: LazyListState? = null,
     stretchPx: () -> Float = { 0f },
+    showOverview: Boolean = false,
+    showRatings: Boolean = true,
+    showHeroDetailsButton: Boolean = true,
+    posterArtHeroEnabled: Boolean = false,
+    heroArtworkSource: NuvioHeroArtworkSource = NuvioHeroArtworkSource.Backdrop,
     onItemClick: ((MetaPreview) -> Unit)? = null,
 ) {
     if (items.isEmpty()) return
@@ -215,9 +225,15 @@ fun HomeHeroSection(
                         .heroStretchZoom(stretchPx),
                 ) {
                     visiblePages.forEach { layer ->
+                        val item = items[layer.itemIndex]
+                        val artworkUrl = if (posterArtHeroEnabled || heroArtworkSource == NuvioHeroArtworkSource.Poster) {
+                            item.poster ?: item.banner
+                        } else {
+                            item.banner ?: item.poster
+                        }
                         AsyncImage(
-                            model = items[layer.itemIndex].banner ?: items[layer.itemIndex].poster,
-                            contentDescription = items[layer.itemIndex].name,
+                            model = artworkUrl,
+                            contentDescription = item.name,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .graphicsLayer {
@@ -286,18 +302,21 @@ fun HomeHeroSection(
                                 modifier = Modifier.graphicsLayer {
                                     alpha = layer.visibility
                                     translationX = -layer.offset * heroWidthPx * HERO_CONTENT_PARALLAX
+                                    translationY = 0f
                                 },
                             ) {
                                 HeroContentBlock(
                                     item = items[layer.itemIndex],
                                     layout = layout,
+                                    showOverview = showOverview,
+                                    showRatings = showRatings,
                                     onItemClick = onItemClick,
                                 )
                             }
                         }
                     }
 
-                    if (!layout.isTablet) {
+                    if (!layout.isTablet && showHeroDetailsButton) {
                         Spacer(modifier = Modifier.height(14.dp))
                         Surface(
                             modifier = Modifier
@@ -401,6 +420,8 @@ fun HomeHeroReservedSpace(
 private fun HeroContentBlock(
     item: MetaPreview,
     layout: HomeHeroLayout,
+    showOverview: Boolean,
+    showRatings: Boolean,
     onItemClick: ((MetaPreview) -> Unit)?,
 ) {
     var logoLoadError by remember(item.type, item.id, item.logo) {
@@ -457,6 +478,26 @@ private fun HeroContentBlock(
             },
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (showRatings && !item.imdbRating.isNullOrBlank()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Star,
+                        contentDescription = null,
+                        tint = Color(0xFFFFD700),
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text(
+                        text = item.imdbRating,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color(0xFFFFD700),
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                HeroMetaDot()
+            }
             HeroMetaText(text = item.type.replaceFirstChar(Char::uppercase))
             item.genres.firstOrNull()?.let { genre ->
                 HeroMetaDot()
@@ -466,6 +507,23 @@ private fun HeroContentBlock(
                 HeroMetaDot()
                 HeroMetaText(text = formatReleaseDateForDisplay(info))
             }
+        }
+
+        if (showOverview && !item.description.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = item.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
+                textAlign = if (layout.isTablet) TextAlign.Start else TextAlign.Center,
+                maxLines = if (layout.isTablet) 3 else 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = onItemClick != null) {
+                        onItemClick?.invoke(item)
+                    },
+            )
         }
     }
 }

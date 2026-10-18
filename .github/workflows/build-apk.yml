@@ -64,19 +64,21 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.1-enhanced-pre2
-          name: "Nuvio Enhanced v0.6.1-beta (Update 2)"
+          tag_name: v0.6.1-enhanced-pre3
+          name: "Nuvio Enhanced v0.6.1-beta (Update 3 - Feature Activation)"
           body: |
-            ## Nuvio Enhanced v0.6.1-beta (Update 2)
+            ## Nuvio Enhanced v0.6.1-beta (Update 3)
 
-            Updated build of **Nuvio Enhanced v0.6.1-beta** featuring login fixes, premium theme unlock, and UI refinements.
+            Updated release of **Nuvio Enhanced v0.6.1-beta** with active UI hooks for all Nuvio Enhanced settings.
 
-            ### 🌟 Key Updates in this Build:
-            - **Official Supabase Authentication / Login Fixed:** Configured public Supabase endpoints so email login, account sync, and profile restoration work seamlessly.
-            - **All Premium Themes Unlocked:** Full access to all supporter themes (Gold, Jade, Rose Gold, Arctic Blue, Graphite) and custom gradient stops.
-            - **Streamlined Settings UI:** Completely removed About section and Discord links across the app.
-            - **Branding Update:** Updated footer below Advanced to proudly showcase "Nuvio Enhanced".
-            - **Full Nuvio Enhanced Suite:** Includes Streaming Showcase Hero, HUD Status Bar, 200% Volume Boost, Tap-to-seek, Subtitle sync, Watch Party, and Media Server integration.
+            ### 🌟 Key Updates in Update 3:
+            - **Player Device Status HUD Active:** Toggling "Player status overlay" now renders the top status HUD displaying network connection (Wi-Fi/LTE), current time, battery percentage with charging indicator, and estimated completion time.
+            - **Player Clock & End-Time Overlay:** Toggling "Player time" now displays current wall clock time and projected finish time overlay.
+            - **Persistent Next Episode Button:** Toggling "Next episode button" keeps the next episode button readily available during series playback.
+            - **Home Hero Customization Active:** Home screen hero banner now actively respects "Show hero overview", "Show hero ratings" (IMDb star rating), "Show details button", and artwork mode toggles.
+            - **Supabase Login & Authentication Working:** Official API and Supabase endpoints connected.
+            - **All Premium Themes & Gradients Unlocked:** Gold, Jade, Rose Gold, Arctic Blue, Graphite, and full multi-color gradient editor unlocked out of the box.
+            - **Clean UI:** Discord and About section removed, branding updated to "Nuvio Enhanced".
 
             ### 📥 Download APK
             Choose the build matching your Android device architecture below (most devices use `arm64-v8a` or `universal`).

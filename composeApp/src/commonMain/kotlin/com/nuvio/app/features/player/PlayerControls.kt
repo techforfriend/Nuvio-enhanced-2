@@ -27,6 +27,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.rounded.AccessTime
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Groups
@@ -34,6 +38,12 @@ import androidx.compose.material.icons.rounded.Forward10
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Replay10
+import androidx.compose.material.icons.rounded.SignalCellularAlt
+import androidx.compose.material.icons.rounded.Wifi
+import androidx.compose.material.icons.rounded.WifiOff
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.features.settings.NuvioEnhancedSettingsRepository
+import kotlin.math.roundToLong
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -219,6 +229,38 @@ internal fun PlayerControlsShell(
                     onAnimationComplete = onParentalGuideAnimationComplete,
                     contentPadding = PaddingValues(horizontal = metrics.horizontalPadding, vertical = metrics.verticalPadding),
                     modifier = Modifier.align(Alignment.TopStart),
+                )
+            }
+
+            val enhancedSettings by remember {
+                NuvioEnhancedSettingsRepository.ensureLoaded()
+                NuvioEnhancedSettingsRepository.uiState
+            }.collectAsStateWithLifecycle()
+
+            if (enhancedSettings.playerStatusOverlayEnabled) {
+                val deviceStatus = rememberPlayerDeviceStatus()
+                PlayerDeviceStatusOverlay(
+                    status = deviceStatus,
+                    playbackSnapshot = playbackSnapshot,
+                    metrics = metrics,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Top))
+                        .padding(top = metrics.verticalPadding / 4),
+                )
+            }
+
+            if (enhancedSettings.playerClockEndTimeEnabled && !enhancedSettings.playerStatusOverlayEnabled) {
+                PlayerClockEndTimeOverlay(
+                    playbackSnapshot = playbackSnapshot,
+                    modifier = Modifier
+                        .align(if (useLegacyLayout) Alignment.TopEnd else Alignment.TopStart)
+                        .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Top))
+                        .padding(
+                            start = if (useLegacyLayout) 0.dp else metrics.horizontalPadding,
+                            end = if (useLegacyLayout) metrics.horizontalPadding else 0.dp,
+                            top = metrics.verticalPadding / 4,
+                        ),
                 )
             }
 
@@ -956,3 +998,217 @@ private fun PlayerActionPillButton(
         )
     }
 }
+
+@Composable
+private fun PlayerDeviceStatusOverlay(
+    status: PlayerDeviceStatus,
+    playbackSnapshot: PlayerPlaybackSnapshot,
+    metrics: PlayerLayoutMetrics,
+    modifier: Modifier = Modifier,
+) {
+    val typeScale = MaterialTheme.nuvioTypeScale
+    val remainingLabel = playerFinishRemainingLabel(playbackSnapshot)
+    val finishClockLabel = playerFinishClockLabel(status.timeLabel, playbackSnapshot)
+    Surface(
+        modifier = modifier.widthIn(min = 220.dp, max = 460.dp),
+        shape = RoundedCornerShape(999.dp),
+        color = Color.Black.copy(alpha = 0.34f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            horizontalArrangement = Arrangement.spacedBy(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PlayerDeviceStatusItem(
+                icon = when (status.networkType) {
+                    PlayerDeviceNetworkType.Wifi -> Icons.Rounded.Wifi
+                    PlayerDeviceNetworkType.Cellular -> Icons.Rounded.SignalCellularAlt
+                    PlayerDeviceNetworkType.Offline -> Icons.Rounded.WifiOff
+                    PlayerDeviceNetworkType.Unknown -> Icons.Rounded.Wifi
+                },
+                text = when (status.networkType) {
+                    PlayerDeviceNetworkType.Wifi -> "Wi-Fi"
+                    PlayerDeviceNetworkType.Cellular -> "LTE"
+                    PlayerDeviceNetworkType.Offline -> "Offline"
+                    PlayerDeviceNetworkType.Unknown -> "Net"
+                },
+                metrics = metrics,
+            )
+            Text(
+                text = status.timeLabel,
+                style = typeScale.labelSm.copy(
+                    fontSize = metrics.metadataSize,
+                    lineHeight = metrics.metadataSize * 1.2f,
+                    fontWeight = FontWeight.SemiBold,
+                ),
+                color = Color.White.copy(alpha = 0.92f),
+                maxLines = 1,
+            )
+            PlayerBatteryStatusItem(
+                percent = status.batteryPercent,
+                charging = status.batteryCharging,
+                metrics = metrics,
+            )
+            if (remainingLabel != null) {
+                PlayerDeviceStatusItem(
+                    icon = Icons.Rounded.AccessTime,
+                    text = finishClockLabel?.let { finishClock ->
+                        stringResource(Res.string.player_status_ends_at, finishClock, remainingLabel)
+                    } ?: stringResource(Res.string.player_status_time_left, remainingLabel),
+                    metrics = metrics,
+                )
+            }
+        }
+    }
+}
+
+private fun playerFinishClockLabel(
+    currentTimeLabel: String,
+    snapshot: PlayerPlaybackSnapshot,
+): String? {
+    val durationMs = snapshot.durationMs.takeIf { it > 0L } ?: return null
+    val remainingMs = (durationMs - snapshot.positionMs).coerceAtLeast(0L)
+    if (remainingMs <= 0L) return null
+    val speed = snapshot.playbackSpeed.takeIf { it > 0.05f } ?: 1f
+    val adjustedMinutes = ((remainingMs / speed) / 60_000f).roundToLong().coerceAtLeast(1L)
+    val clockMatch = Regex("""(\d{1,2})\D+(\d{2})""").find(currentTimeLabel) ?: return null
+    val hour = clockMatch.groupValues.getOrNull(1)?.toIntOrNull() ?: return null
+    val minute = clockMatch.groupValues.getOrNull(2)?.toIntOrNull() ?: return null
+    val totalMinutes = ((hour * 60L + minute + adjustedMinutes) % (24L * 60L)).let { value ->
+        if (value < 0L) value + 24L * 60L else value
+    }
+    val finishHour = (totalMinutes / 60L).toInt()
+    val finishMinute = (totalMinutes % 60L).toInt()
+    return "${finishHour.toString().padStart(2, '0')}:${finishMinute.toString().padStart(2, '0')}"
+}
+
+private fun playerFinishRemainingLabel(snapshot: PlayerPlaybackSnapshot): String? {
+    val durationMs = snapshot.durationMs.takeIf { it > 0L } ?: return null
+    val remainingMs = (durationMs - snapshot.positionMs).coerceAtLeast(0L)
+    if (remainingMs <= 0L) return null
+    val speed = snapshot.playbackSpeed.takeIf { it > 0.05f } ?: 1f
+    val adjustedMinutes = ((remainingMs / speed) / 60_000f).roundToLong().coerceAtLeast(1L)
+    val hours = adjustedMinutes / 60L
+    val minutes = adjustedMinutes % 60L
+    return when {
+        hours <= 0L -> "${minutes}m"
+        minutes <= 0L -> "${hours}h"
+        else -> "${hours}h ${minutes}m"
+    }
+}
+
+@Composable
+private fun PlayerDeviceStatusItem(
+    icon: ImageVector,
+    text: String,
+    metrics: PlayerLayoutMetrics,
+) {
+    val typeScale = MaterialTheme.nuvioTypeScale
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.88f),
+            modifier = Modifier.size(metrics.headerIconSize * 0.74f),
+        )
+        Text(
+            text = text,
+            style = typeScale.labelSm.copy(
+                fontSize = metrics.metadataSize,
+                lineHeight = metrics.metadataSize * 1.2f,
+                fontWeight = FontWeight.SemiBold,
+            ),
+            color = Color.White.copy(alpha = 0.9f),
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun PlayerBatteryStatusItem(
+    percent: Int?,
+    charging: Boolean,
+    metrics: PlayerLayoutMetrics,
+) {
+    val typeScale = MaterialTheme.nuvioTypeScale
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PlayerBatteryGlyph(
+            percent = percent,
+            charging = charging,
+            metrics = metrics,
+        )
+        Text(
+            text = percent?.let { "$it%" } ?: "--",
+            style = typeScale.labelSm.copy(
+                fontSize = metrics.metadataSize,
+                lineHeight = metrics.metadataSize * 1.2f,
+                fontWeight = FontWeight.SemiBold,
+            ),
+            color = Color.White.copy(alpha = 0.9f),
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun PlayerBatteryGlyph(
+    percent: Int?,
+    charging: Boolean,
+    metrics: PlayerLayoutMetrics,
+) {
+    val level = percent?.coerceIn(0, 100)
+    val fillFraction = (level ?: 0) / 100f
+    val activeColor = if (charging) {
+        Color(0xFF8CFFB3)
+    } else {
+        Color.White.copy(alpha = 0.9f)
+    }
+    val outlineColor = Color.White.copy(alpha = 0.72f)
+    val bodyWidth = metrics.headerIconSize * 0.86f
+    val bodyHeight = metrics.headerIconSize * 0.46f
+    val capWidth = metrics.headerIconSize * 0.08f
+    val capHeight = metrics.headerIconSize * 0.24f
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(1.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = bodyWidth, height = bodyHeight)
+                .clip(RoundedCornerShape(3.dp))
+                .border(
+                    width = 1.2.dp,
+                    color = outlineColor,
+                    shape = RoundedCornerShape(3.dp),
+                )
+                .padding(2.dp),
+        ) {
+            if (level != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(fillFraction)
+                        .clip(RoundedCornerShape(1.5.dp))
+                        .background(activeColor),
+                )
+            }
+        }
+        Box(
+            modifier = Modifier
+                .size(width = capWidth, height = capHeight)
+                .clip(RoundedCornerShape(topEnd = 1.5.dp, bottomEnd = 1.5.dp))
+                .background(outlineColor),
+        )
+    }
+}
+
