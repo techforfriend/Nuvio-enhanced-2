@@ -80,9 +80,9 @@ object ThemeSettingsRepository {
         _customThemeSecondColor.value = ThemeSettingsStorage.loadCustomThemeSecondColor()
             .toThemeColor(ThemeAccentColor.CYAN.color)
         _customThemeColors.value = CustomThemeColors(
-            first = _customThemeFirstColor.value.toArgbLong(),
-            second = _customThemeSecondColor.value.toArgbLong(),
-            isGradient = true,
+            first = _customThemeFirstColor.value.toRgbInt(),
+            second = _customThemeSecondColor.value.toRgbInt(),
+            third = _customThemeSecondColor.value.toRgbInt(),
         )
         NativeTabBridge.publishAccentColor(theme.nativeTabAccentHex(_customThemeFirstColor.value))
         _amoledEnabled.value = ThemeSettingsStorage.loadAmoledEnabled() ?: false
@@ -112,9 +112,9 @@ object ThemeSettingsRepository {
         _customThemeFirstColor.value = color
         ThemeSettingsStorage.saveCustomThemeFirstColor(color.toThemeHex())
         _customThemeColors.value = CustomThemeColors(
-            first = color.toArgbLong(),
-            second = _customThemeSecondColor.value.toArgbLong(),
-            isGradient = true,
+            first = color.toRgbInt(),
+            second = _customThemeSecondColor.value.toRgbInt(),
+            third = _customThemeSecondColor.value.toRgbInt(),
         )
         if (_selectedTheme.value == AppTheme.CUSTOM) {
             NativeTabBridge.publishAccentColor(AppTheme.CUSTOM.nativeTabAccentHex(color))
@@ -127,17 +127,17 @@ object ThemeSettingsRepository {
         _customThemeSecondColor.value = color
         ThemeSettingsStorage.saveCustomThemeSecondColor(color.toThemeHex())
         _customThemeColors.value = CustomThemeColors(
-            first = _customThemeFirstColor.value.toArgbLong(),
-            second = color.toArgbLong(),
-            isGradient = true,
+            first = _customThemeFirstColor.value.toRgbInt(),
+            second = color.toRgbInt(),
+            third = color.toRgbInt(),
         )
     }
 
     fun setCustomTheme(colors: CustomThemeColors) {
         ensureLoaded()
         _customThemeColors.value = colors
-        val first = Color(colors.first or 0xFF000000.toInt())
-        val second = Color(colors.second or 0xFF000000.toInt())
+        val first = Color((colors.first and 0xFFFFFF) or 0xFF000000.toInt())
+        val second = Color((colors.second and 0xFFFFFF) or 0xFF000000.toInt())
         setCustomThemeFirstColor(first)
         setCustomThemeSecondColor(second)
         setTheme(AppTheme.CUSTOM)
@@ -188,15 +188,11 @@ object ThemeSettingsRepository {
     }
 }
 
-private fun Color.toArgbLong(): Long {
-    val a = (alpha * 255.0f + 0.5f).toInt()
-    val r = (red * 255.0f + 0.5f).toInt()
-    val g = (green * 255.0f + 0.5f).toInt()
-    val b = (blue * 255.0f + 0.5f).toInt()
-    return ((a.toLong() and 0xFF) shl 24) or
-        ((r.toLong() and 0xFF) shl 16) or
-        ((g.toLong() and 0xFF) shl 8) or
-        (b.toLong() and 0xFF)
+private fun Color.toRgbInt(): Int {
+    val r = (red * 255.0f + 0.5f).toInt().coerceIn(0, 255)
+    val g = (green * 255.0f + 0.5f).toInt().coerceIn(0, 255)
+    val b = (blue * 255.0f + 0.5f).toInt().coerceIn(0, 255)
+    return (r shl 16) or (g shl 8) or b
 }
 
 private fun AppTheme.nativeTabAccentHex(customFirst: Color = ThemeAccentColor.PINK.color): String =

@@ -40,10 +40,6 @@ internal fun rememberActionAccentStyle(enabled: Boolean = true): ActionAccentSty
     )
 }
 
-fun ThemeColorPalette.accentBrush(): Brush =
-    if (accentGradient.size >= 2) Brush.linearGradient(accentGradient)
-    else SolidColor(accentGradient.firstOrNull() ?: secondary)
-
 fun Modifier.gradientMask(brush: Brush): Modifier =
     graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
         .drawWithCache {
