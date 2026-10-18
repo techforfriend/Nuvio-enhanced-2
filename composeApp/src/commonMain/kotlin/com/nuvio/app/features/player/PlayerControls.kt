@@ -204,6 +204,8 @@ internal fun PlayerControlsShell(
                     onOpenInExternalPlayer = onOpenInExternalPlayer,
                     onPartyClick = onPartyClick,
                     partyActive = partyActive,
+                    randomNextEpisodeMode = randomNextEpisodeMode,
+                    onRandomNextEpisodeModeToggle = onRandomNextEpisodeModeToggle,
                     onBack = onBack,
                     modifier = Modifier
                         .align(Alignment.TopStart)
@@ -223,6 +225,8 @@ internal fun PlayerControlsShell(
                         onBack = onBack,
                         onPartyClick = onPartyClick,
                         partyActive = partyActive,
+                        randomNextEpisodeMode = randomNextEpisodeMode,
+                        onRandomNextEpisodeModeToggle = onRandomNextEpisodeModeToggle,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Top))
@@ -398,6 +402,8 @@ private fun PlayerHeader(
     onOpenInExternalPlayer: (() -> Unit)?,
     onPartyClick: (() -> Unit)?,
     partyActive: Boolean,
+    randomNextEpisodeMode: Boolean = false,
+    onRandomNextEpisodeModeToggle: (() -> Unit)? = null,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {

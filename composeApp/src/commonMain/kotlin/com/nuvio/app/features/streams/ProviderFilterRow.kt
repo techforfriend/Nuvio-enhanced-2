@@ -85,6 +85,7 @@ internal fun ProviderFilterRow(
     refreshChip: @Composable (Boolean, () -> Unit) -> Unit = { isLoading, onClick ->
         RefreshChip(isLoading = isLoading, onClick = onClick)
     },
+    filterChip: (@Composable (AddonStreamGroup?, Boolean, () -> Unit) -> Unit)? = null,
 ) {
     val addonGroups = groups
         .filter { it.streams.isNotEmpty() || it.isLoading }
@@ -108,28 +109,35 @@ internal fun ProviderFilterRow(
         if (onRefresh != null) {
             refreshChip(isRefreshing, onRefresh)
         }
-        FilterChip(
-            label = stringResource(Res.string.collections_tab_all),
-            isSelected = selectedFilter == null,
-            isPinned = false,
-            onLongClick = null,
-            onClick = { onFilterSelected(null) },
-        )
-        addonGroups.forEach { group ->
-            val isPinned = group.addonId in pinnedSourceIdSet
+        if (filterChip != null) {
+            filterChip(null, selectedFilter == null) { onFilterSelected(null) }
+            addonGroups.forEach { group ->
+                filterChip(group, selectedFilter == group.addonId) { onFilterSelected(group.addonId) }
+            }
+        } else {
             FilterChip(
-                label = group.addonName,
-                isSelected = selectedFilter == group.addonId,
-                isPinned = isPinned,
-                onLongClick = if (sourcePinningEnabled) {
-                    if (isPinned) {
-                        { onSourceUnpinRequested?.invoke(group) }
-                    } else {
-                        { onSourcePinRequested?.invoke(group) }
-                    }
-                } else null,
-                onClick = { onFilterSelected(group.addonId) },
+                label = stringResource(Res.string.collections_tab_all),
+                isSelected = selectedFilter == null,
+                isPinned = false,
+                onLongClick = null,
+                onClick = { onFilterSelected(null) },
             )
+            addonGroups.forEach { group ->
+                val isPinned = group.addonId in pinnedSourceIdSet
+                FilterChip(
+                    label = group.addonName,
+                    isSelected = selectedFilter == group.addonId,
+                    isPinned = isPinned,
+                    onLongClick = if (sourcePinningEnabled) {
+                        if (isPinned) {
+                            { onSourceUnpinRequested?.invoke(group) }
+                        } else {
+                            { onSourcePinRequested?.invoke(group) }
+                        }
+                    } else null,
+                    onClick = { onFilterSelected(group.addonId) },
+                )
+            }
         }
     }
 }
