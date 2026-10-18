@@ -471,13 +471,13 @@ private fun NuvioEnhancedSettingsPageContent(
                     SettingsSwitchRow(
                         title = stringResource(Res.string.nuvio_enhanced_subtitle_sync_title),
                         description = stringResource(Res.string.nuvio_enhanced_subtitle_sync_desc),
-                        checked = playerSettings.subtitleSyncMenuEnabled,
+                        checked = settings.subtitleSyncMenuEnabled,
                         enabled = settings.enhancedHomeFeaturesEnabled,
                         isTablet = isTablet,
                         highlighted = isNew(NuvioEnhancedFeature.SubtitleSyncMenu),
                         onCheckedChange = {
                             markSeen(NuvioEnhancedFeature.SubtitleSyncMenu)
-                            PlayerSettingsRepository.setSubtitleSyncMenuEnabled(it)
+                            NuvioEnhancedSettingsRepository.setSubtitleSyncMenuEnabled(it)
                         },
                     )
                     SettingsGroupDivider(isTablet = isTablet)
@@ -534,13 +534,13 @@ private fun NuvioEnhancedSettingsPageContent(
                     SettingsSwitchRow(
                         title = stringResource(Res.string.nuvio_enhanced_player_clock_title),
                         description = stringResource(Res.string.nuvio_enhanced_player_clock_desc),
-                        checked = playerSettings.playerClockEndTimeEnabled,
+                        checked = settings.playerClockEndTimeEnabled,
                         enabled = settings.enhancedHomeFeaturesEnabled,
                         isTablet = isTablet,
                         highlighted = isNew(NuvioEnhancedFeature.PlayerTimeOverlay),
                         onCheckedChange = {
                             markSeen(NuvioEnhancedFeature.PlayerTimeOverlay)
-                            PlayerSettingsRepository.setPlayerClockEndTimeEnabled(it)
+                            NuvioEnhancedSettingsRepository.setPlayerClockEndTimeEnabled(it)
                         },
                     )
                     SettingsGroupDivider(isTablet = isTablet)
@@ -549,13 +549,13 @@ private fun NuvioEnhancedSettingsPageContent(
                     SettingsSwitchRow(
                         title = stringResource(Res.string.settings_playback_random_next_episode),
                         description = stringResource(Res.string.settings_playback_random_next_episode_description),
-                        checked = playerSettings.randomNextEpisodeEnabled,
+                        checked = settings.randomNextEpisodeEnabled,
                         enabled = settings.enhancedHomeFeaturesEnabled,
                         isTablet = isTablet,
                         highlighted = isNew(NuvioEnhancedFeature.PersistentEpisodeShuffle),
                         onCheckedChange = {
                             markSeen(NuvioEnhancedFeature.PersistentEpisodeShuffle)
-                            PlayerSettingsRepository.setRandomNextEpisodeEnabled(it)
+                            NuvioEnhancedSettingsRepository.setRandomNextEpisodeEnabled(it)
                         },
                     )
                     }
@@ -581,12 +581,12 @@ private fun NuvioEnhancedSettingsPageContent(
                         SettingsSwitchRow(
                             title = stringResource(Res.string.settings_playback_android_memory_safe_buffer),
                             description = stringResource(Res.string.settings_playback_android_memory_safe_buffer_description),
-                            checked = playerSettings.androidMemorySafeBufferEnabled,
+                            checked = settings.androidMemorySafeBufferEnabled,
                             enabled = !playerSettings.externalPlayerEnabled &&
                                 playerSettings.androidPlaybackEngine != AndroidPlaybackEngine.Libmpv,
                             isTablet = isTablet,
                             highlighted = isNew(NuvioEnhancedFeature.PlayerStatusOverlay),
-                            onCheckedChange = PlayerSettingsRepository::setAndroidMemorySafeBufferEnabled,
+                            onCheckedChange = NuvioEnhancedSettingsRepository::setAndroidMemorySafeBufferEnabled,
                         )
                     }
                 }

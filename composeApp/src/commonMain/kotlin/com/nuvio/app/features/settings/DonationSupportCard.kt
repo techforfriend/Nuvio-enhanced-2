@@ -45,17 +45,17 @@ internal fun DonationSupportCard(
 ) {
     val tokens = MaterialTheme.nuvio
     val uriHandler = LocalUriHandler.current
-    val donateUrl = remember { CommunityConfig.DONATIONS_DONATE_URL.trim() }
-    val accentColors = memberBrandWordmarkColors(MaterialTheme.appTheme)
+    val donateUrl = remember { CommunityConfig.DONATIONS_DONATE_URL.trim().removeSuffix("/") }
+    val accentColors = listOf(tokens.colors.accent, tokens.colors.accent.copy(alpha = 0.6f))
     val backgroundBrush = remember(accentColors) {
         Brush.linearGradient(
-            accentColors.mapIndexed { index, color ->
-                color.copy(alpha = if (index == 0) 0.20f else 0.10f)
-            },
+            listOf(accentColors[0].copy(alpha = 0.20f), accentColors[1].copy(alpha = 0.10f))
         )
     }
     val borderBrush = remember(accentColors) {
-        Brush.linearGradient(accentColors.map { it.copy(alpha = 0.55f) })
+        Brush.linearGradient(
+            listOf(accentColors[0].copy(alpha = 0.55f), accentColors[1].copy(alpha = 0.55f))
+        )
     }
     val shape = RoundedCornerShape(NuvioTokens.Radius.xl)
 

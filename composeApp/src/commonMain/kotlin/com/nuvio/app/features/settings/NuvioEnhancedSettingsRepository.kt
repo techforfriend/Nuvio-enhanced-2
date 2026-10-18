@@ -43,6 +43,10 @@ internal data class NuvioEnhancedSettingsUiState(
     val playerStatusOverlayEnabled: Boolean = false,
     val subtitleSelectorStyle: NuvioSubtitleSelectorStyle = NuvioSubtitleSelectorStyle.Enhanced,
     val audioSelectorStyle: NuvioAudioSelectorStyle = NuvioAudioSelectorStyle.Enhanced,
+    val subtitleSyncMenuEnabled: Boolean = false,
+    val playerClockEndTimeEnabled: Boolean = false,
+    val randomNextEpisodeEnabled: Boolean = false,
+    val androidMemorySafeBufferEnabled: Boolean = false,
     val nextEpisodeButtonEnabled: Boolean = false,
     val showContinueWatchingReadyBadge: Boolean = true,
     val releaseRadarLibraryOnly: Boolean = true,
@@ -179,6 +183,10 @@ private data class StoredNuvioEnhancedSettings(
     val playerStatusOverlayEnabled: Boolean = false,
     val subtitleSelectorStyle: NuvioSubtitleSelectorStyle = NuvioSubtitleSelectorStyle.Enhanced,
     val audioSelectorStyle: NuvioAudioSelectorStyle = NuvioAudioSelectorStyle.Enhanced,
+    val subtitleSyncMenuEnabled: Boolean = false,
+    val playerClockEndTimeEnabled: Boolean = false,
+    val randomNextEpisodeEnabled: Boolean = false,
+    val androidMemorySafeBufferEnabled: Boolean = false,
     val nextEpisodeButtonEnabled: Boolean = false,
     val showContinueWatchingReadyBadge: Boolean = true,
     val releaseRadarLibraryOnly: Boolean = true,
@@ -389,6 +397,22 @@ internal object NuvioEnhancedSettingsRepository {
         copy(audioSelectorStyle = style)
     }
 
+    fun setSubtitleSyncMenuEnabled(enabled: Boolean) = update {
+        copy(subtitleSyncMenuEnabled = enabled)
+    }
+
+    fun setPlayerClockEndTimeEnabled(enabled: Boolean) = update {
+        copy(playerClockEndTimeEnabled = enabled)
+    }
+
+    fun setRandomNextEpisodeEnabled(enabled: Boolean) = update {
+        copy(randomNextEpisodeEnabled = enabled)
+    }
+
+    fun setAndroidMemorySafeBufferEnabled(enabled: Boolean) = update {
+        copy(androidMemorySafeBufferEnabled = enabled)
+    }
+
     fun setNextEpisodeButtonEnabled(enabled: Boolean) = update {
         copy(nextEpisodeButtonEnabled = enabled)
     }
@@ -479,6 +503,10 @@ internal object NuvioEnhancedSettingsRepository {
             playerStatusOverlayEnabled = stored.playerStatusOverlayEnabled,
             subtitleSelectorStyle = stored.subtitleSelectorStyle,
             audioSelectorStyle = stored.audioSelectorStyle,
+            subtitleSyncMenuEnabled = stored.subtitleSyncMenuEnabled,
+            playerClockEndTimeEnabled = stored.playerClockEndTimeEnabled,
+            randomNextEpisodeEnabled = stored.randomNextEpisodeEnabled,
+            androidMemorySafeBufferEnabled = stored.androidMemorySafeBufferEnabled,
             nextEpisodeButtonEnabled = stored.nextEpisodeButtonEnabled,
             showContinueWatchingReadyBadge = stored.showContinueWatchingReadyBadge,
             releaseRadarLibraryOnly = stored.releaseRadarLibraryOnly,

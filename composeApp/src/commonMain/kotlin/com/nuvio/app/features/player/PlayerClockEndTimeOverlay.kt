@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nuvio.app.core.ui.isTvLayoutProfileEnabled
 import kotlinx.coroutines.delay
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.player_clock_ends_at
@@ -31,7 +30,7 @@ internal fun PlayerClockEndTimeOverlay(playbackSnapshot: PlayerPlaybackSnapshot,
     val duration = playbackSnapshot.durationMs.takeIf { it > 0L } ?: return
     val speed = playbackSnapshot.playbackSpeed.takeIf { it > 0f } ?: 1f
     val remainingMs = ((duration - playbackSnapshot.positionMs).coerceAtLeast(0L) / speed).roundToLong()
-    val useTvLayout = isTvLayoutProfileEnabled()
+    val useTvLayout = false
     val shape = RoundedCornerShape(if (useTvLayout) 18.dp else 12.dp)
     var clock by remember(remainingMs) { mutableStateOf(PlayerWallClock.snapshotForRemaining(remainingMs)) }
     LaunchedEffect(remainingMs) {
