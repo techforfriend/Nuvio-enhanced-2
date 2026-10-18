@@ -92,7 +92,6 @@ import com.nuvio.app.core.ui.nuvioSafeBottomPadding
 import com.nuvio.app.core.ui.rememberHeroStretchState
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Download
 import com.nuvio.app.features.details.components.DetailActions
 import com.nuvio.app.features.details.components.DetailSecondaryAction
