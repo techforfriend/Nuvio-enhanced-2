@@ -197,13 +197,12 @@ internal fun LazyListScope.metaScreenSettingsContent(
                             title = stringResource(Res.string.settings_hero_trailer_start_delay),
                             description = stringResource(Res.string.settings_hero_trailer_start_delay_description),
                             value = uiState.heroTrailerStartDelaySeconds,
-                            valueText = if (uiState.heroTrailerStartDelaySeconds <= 0) {
-                                stringResource(Res.string.settings_hero_trailer_start_delay_instant)
-                            } else {
-                                stringResource(
-                                    Res.string.settings_hero_trailer_start_delay_value,
-                                    uiState.heroTrailerStartDelaySeconds,
-                                )
+                            formatValue = { seconds ->
+                                if (seconds <= 0) {
+                                    stringResource(Res.string.settings_hero_trailer_start_delay_instant)
+                                } else {
+                                    stringResource(Res.string.settings_hero_trailer_start_delay_value, seconds)
+                                }
                             },
                             valueRange = MetaScreenSettingsRepository.MIN_HERO_TRAILER_START_DELAY_SECONDS..
                                 MetaScreenSettingsRepository.MAX_HERO_TRAILER_START_DELAY_SECONDS,

@@ -151,13 +151,12 @@ internal fun LazyListScope.homescreenSettingsContent(
                             title = stringResource(Res.string.settings_hero_trailer_start_delay),
                             description = stringResource(Res.string.settings_hero_trailer_start_delay_description),
                             value = heroTrailerStartDelaySeconds,
-                            valueText = if (heroTrailerStartDelaySeconds <= 0) {
-                                stringResource(Res.string.settings_hero_trailer_start_delay_instant)
-                            } else {
-                                stringResource(
-                                    Res.string.settings_hero_trailer_start_delay_value,
-                                    heroTrailerStartDelaySeconds,
-                                )
+                            formatValue = { seconds ->
+                                if (seconds <= 0) {
+                                    stringResource(Res.string.settings_hero_trailer_start_delay_instant)
+                                } else {
+                                    stringResource(Res.string.settings_hero_trailer_start_delay_value, seconds)
+                                }
                             },
                             valueRange = HomeCatalogSettingsRepository.MIN_HERO_TRAILER_START_DELAY_SECONDS..
                                 HomeCatalogSettingsRepository.MAX_HERO_TRAILER_START_DELAY_SECONDS,
