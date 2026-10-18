@@ -249,38 +249,22 @@ internal fun Modifier.playerSurfaceDragGestures(
         }
     }
 
-private const val PlayerPinchOutThreshold = 1.18f
-private const val PlayerPinchInThreshold = 0.85f
-
 internal fun Modifier.playerSurfacePinchGestures(
     playbackGesturesEnabled: Boolean,
     playerControlsLockedState: State<Boolean>,
     touchGesturesEnabledState: State<Boolean>,
-    onPinchState: State<(zoomIn: Boolean) -> Unit>,
+    onPinchZoomState: State<(zoomFactor: Float) -> Unit>,
 ): Modifier =
     pointerInput(playbackGesturesEnabled) {
         if (!playbackGesturesEnabled) return@pointerInput
         awaitEachGesture {
             awaitFirstDown(requireUnconsumed = false)
-            var zoom = 1f
-            var handled = false
             do {
                 val event = awaitPointerEvent()
                 val multiTouch = event.changes.count { it.pressed } > 1
                 if (multiTouch && !playerControlsLockedState.value && touchGesturesEnabledState.value) {
-                    if (!handled) {
-                        zoom *= event.calculateZoom()
-                        when {
-                            zoom >= PlayerPinchOutThreshold -> {
-                                handled = true
-                                onPinchState.value(true)
-                            }
-                            zoom <= PlayerPinchInThreshold -> {
-                                handled = true
-                                onPinchState.value(false)
-                            }
-                        }
-                    }
+                    val zoom = event.calculateZoom()
+                    if (zoom != 1f) onPinchZoomState.value(zoom)
                     event.changes.forEach { it.consume() }
                 }
             } while (event.changes.any { it.pressed })

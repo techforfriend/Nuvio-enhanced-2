@@ -1010,6 +1010,13 @@ private fun ExoPlayerSurface(
                     exoPlayer.setPlaybackSpeed(speed)
                 }
 
+                override fun setVideoZoom(scale: Float) {
+                    playerViewRef?.videoSurfaceView?.apply {
+                        scaleX = scale
+                        scaleY = scale
+                    }
+                }
+
                 override fun updateNowPlayingMetadata(info: PlayerNowPlayingInfo) {
                     nowPlayingController.updateMetadata(info)
                 }
@@ -2057,6 +2064,11 @@ private class NuvioLibmpvView(
                 val target = speed.coerceIn(0.25f, 4f)
                 InAppLogger.info("MPV/Android", "control speed=$target")
                 executeMpv { mpv.setPropertyDouble("speed", target.toDouble()) }
+            }
+
+            override fun setVideoZoom(scale: Float) {
+                val zoom = kotlin.math.ln(scale.coerceIn(0.25f, 4f).toDouble()) / kotlin.math.ln(2.0)
+                executeMpv { mpv.setPropertyDouble("video-zoom", zoom) }
             }
 
             override fun updateNowPlayingMetadata(info: PlayerNowPlayingInfo) {

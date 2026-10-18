@@ -63,6 +63,7 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
     func retry() { playerVC?.retryPlayback() }
     func isPictureInPictureSupported() -> Bool { playerVC?.isPictureInPictureSupported() ?? false }
     func startPictureInPicture() { playerVC?.startPictureInPicture() }
+    func setVideoZoom(scale: Double) { playerVC?.setVideoZoom(scale) }
     func setExperimentalSinglePrimaryPictureInPictureEnabled(enabled: Bool) {
         experimentalSinglePrimaryPictureInPictureEnabled = enabled
     }
@@ -398,6 +399,7 @@ final class MPVPlayerViewController: UIViewController {
     private var lastSubtitleStyle: SubtitleStyleSettings?
     private var lastAudioOutput: String?
     private var lastResizeMode: Int?
+    private var lastVideoZoom: Double?
     private var lastSubtitleDelayMs: Int?
     private var lastVolume: Float?
     private var lastMuted: Bool?
@@ -1255,6 +1257,7 @@ final class MPVPlayerViewController: UIViewController {
         }
         if let audioOutput = lastAudioOutput { setStringProperty("ao", audioOutput) }
         if let mode = lastResizeMode { setResize(mode) }
+        if let zoom = lastVideoZoom { setVideoZoom(zoom) }
         if let delay = lastSubtitleDelayMs { setSubtitleDelayMs(delay) }
         if let style = lastSubtitleStyle {
             applySubtitleStyle(
@@ -1395,6 +1398,13 @@ final class MPVPlayerViewController: UIViewController {
         lastMuted = muted
         guard mpv != nil else { return }
         setFlag("mute", muted)
+    }
+
+    func setVideoZoom(_ scale: Double) {
+        let clamped = min(max(scale, 0.25), 4.0)
+        lastVideoZoom = clamped
+        guard mpv != nil else { return }
+        setDoubleProperty("video-zoom", log2(clamped))
     }
 
     func setResize(_ mode: Int) {

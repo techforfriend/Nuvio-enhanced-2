@@ -266,20 +266,15 @@ internal fun PlayerScreenRuntime.handleDoubleTapSeek(direction: PlayerSeekDirect
 }
 
 internal fun PlayerScreenRuntime.cycleResizeMode() {
-    applyResizeMode(resizeMode.next())
-    controlsVisible = true
-}
-
-internal fun PlayerScreenRuntime.pinchResizeMode(zoomIn: Boolean) {
-    val nextMode = if (zoomIn) resizeMode.pinchedOut() else resizeMode.pinchedIn()
-    if (nextMode == resizeMode) return
-    applyResizeMode(nextMode)
-}
-
-private fun PlayerScreenRuntime.applyResizeMode(nextMode: PlayerResizeMode) {
+    val nextMode = resizeMode.next()
     resizeMode = nextMode
     lastSyncedSettingsResizeMode = nextMode
     PlayerSettingsRepository.setResizeMode(nextMode)
+    rawVideoZoom = 1f
+    if (videoZoom != 1f) {
+        videoZoom = 1f
+        playerController?.setVideoZoom(1f)
+    }
     showGestureMessage(
         when (nextMode) {
             PlayerResizeMode.Fit -> resizeModeFitLabel
@@ -287,6 +282,21 @@ private fun PlayerScreenRuntime.applyResizeMode(nextMode: PlayerResizeMode) {
             PlayerResizeMode.Zoom -> resizeModeZoomLabel
         },
     )
+    controlsVisible = true
+}
+
+internal const val PlayerMinVideoZoom = 0.8f
+internal const val PlayerMaxVideoZoom = 2.0f
+private const val PlayerVideoZoomSnapRange = 0.04f
+
+internal fun PlayerScreenRuntime.pinchVideoZoom(zoomFactor: Float) {
+    if (zoomFactor <= 0f || zoomFactor == 1f) return
+    rawVideoZoom = (rawVideoZoom * zoomFactor).coerceIn(PlayerMinVideoZoom, PlayerMaxVideoZoom)
+    val next = if (abs(rawVideoZoom - 1f) < PlayerVideoZoomSnapRange) 1f else rawVideoZoom
+    if (next == videoZoom) return
+    videoZoom = next
+    playerController?.setVideoZoom(next)
+    showGestureMessage("${(next * 100f).roundToInt()}%")
 }
 
 internal fun PlayerScreenRuntime.setPlaybackSpeedFromPicker(speed: Float) {

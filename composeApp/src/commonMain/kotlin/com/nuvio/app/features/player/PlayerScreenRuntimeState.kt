@@ -148,6 +148,8 @@ internal class PlayerScreenRuntime(
     var activeInitialProgressFraction by mutableStateOf(initialProgressFraction)
     var shouldPlay by mutableStateOf(true)
     var resizeMode by mutableStateOf(playerSettingsUiState.resizeMode)
+    var videoZoom by mutableStateOf(1f)
+    var rawVideoZoom: Float = 1f
     var layoutSize by mutableStateOf(IntSize.Zero)
     var playbackSnapshot by mutableStateOf(PlayerPlaybackSnapshot())
     var playbackSnapshotKey by mutableStateOf<PlaybackKey?>(null)

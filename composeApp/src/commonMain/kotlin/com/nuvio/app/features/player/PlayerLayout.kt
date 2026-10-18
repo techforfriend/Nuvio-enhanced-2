@@ -141,12 +141,6 @@ internal fun PlayerResizeMode.next(): PlayerResizeMode =
         PlayerResizeMode.Zoom -> PlayerResizeMode.Fit
     }
 
-internal fun PlayerResizeMode.pinchedOut(): PlayerResizeMode =
-    PlayerResizeMode.entries.getOrElse(ordinal + 1) { this }
-
-internal fun PlayerResizeMode.pinchedIn(): PlayerResizeMode =
-    PlayerResizeMode.entries.getOrElse(ordinal - 1) { this }
-
 internal val PlayerResizeMode.labelRes: StringResource
     get() = when (this) {
         PlayerResizeMode.Fit -> Res.string.compose_player_resize_fit

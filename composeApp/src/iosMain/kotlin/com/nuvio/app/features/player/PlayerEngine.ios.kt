@@ -145,6 +145,10 @@ actual fun PlatformPlayerSurface(
                 bridge.startPictureInPicture()
             }
 
+            override fun setVideoZoom(scale: Float) {
+                bridge.setVideoZoom(scale.toDouble())
+            }
+
             override fun configureIosVideoOutput(settings: PlayerSettingsUiState) {
                 bridge.applyIosVideoOutputSettings(settings)
             }

@@ -137,7 +137,10 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         }
     }
     val gestureCallbacks = rememberSurfaceGestureCallbacks()
-    val onPinchResize = rememberUpdatedState<(Boolean) -> Unit> { zoomIn -> pinchResizeMode(zoomIn) }
+    val onPinchZoom = rememberUpdatedState<(Float) -> Unit> { factor -> pinchVideoZoom(factor) }
+    LaunchedEffect(playerController) {
+        if (videoZoom != 1f) playerController?.setVideoZoom(videoZoom)
+    }
     val playbackGesturesEnabled = initialLoadCompleted && errorMessage == null
 
     LaunchedEffect(activeSourceUrl, activeSourceAudioUrl, activeSourceHeaders, activeTorrentInfoHash) {
@@ -262,7 +265,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
                 playbackGesturesEnabled = playbackGesturesEnabled,
                 playerControlsLockedState = gestureCallbacks.playerControlsLocked,
                 touchGesturesEnabledState = gestureCallbacks.touchGesturesEnabled,
-                onPinchState = onPinchResize,
+                onPinchZoomState = onPinchZoom,
             ),
     ) {
         val playerSurfaceSourceUrl = if (isP2pPlaybackActive) p2pResolvedSourceUrl else activePlaybackSourceUrl
