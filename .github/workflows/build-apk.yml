@@ -10,6 +10,9 @@ concurrency:
   group: build-apk-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Android APK
@@ -33,8 +36,9 @@ jobs:
         with:
           gradle-version: wrapper
 
-      - name: Configure Gradle Memory
+      - name: Prepare build environment
         run: |
+          touch local.properties
           mkdir -p ~/.gradle
           echo "org.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=1536m" >> ~/.gradle/gradle.properties
           echo "org.gradle.configuration-cache=false" >> ~/.gradle/gradle.properties
@@ -55,3 +59,31 @@ jobs:
           name: NuvioEnhanced-APKs
           path: build-apks/*.apk
           retention-days: 14
+
+      - name: Publish GitHub Pre-Release
+        uses: softprops/action-gh-release@v2
+        if: success()
+        with:
+          tag_name: v0.6.1-enhanced-pre1
+          name: "Nuvio Enhanced v0.6.1-beta (Pre-release)"
+          body: |
+            ## Nuvio Enhanced v0.6.1-beta (Pre-release)
+
+            Official **Nuvio 0.6.1-beta** (`cmp-rewrite`) integrated with the complete **AKRusso Nuvio Enhanced** settings & UI suite.
+
+            ### 🌟 Features Included:
+            - **Enhanced Settings Suite:** All fork-exclusive customization options with JSON backup/restore.
+            - **Streaming Showcase Hero:** Immersive full-screen backdrop headers with auto video trailer preview.
+            - **Player Status HUD:** Real-time Clock, Battery %, and Network connectivity indicator pill.
+            - **Enhanced Playback Controls:** 200% Volume Boost, Tap-to-seek, Subtitle sync sliders, and HLS Stream Quality Picker.
+            - **Cinematic Detail Header:** Immersive gradient headers and richer network/production details.
+            - **Profile Insights & Library Health:** Watch-time metrics, genre breakdowns, and broken metadata diagnostics.
+            - **Official 0.6.1 Updates:** Includes Watch Party Mode and Media Server integrations.
+
+            ### 📥 Download APK
+            Choose the build matching your Android device architecture below (most devices use `arm64-v8a` or `universal`).
+          draft: false
+          prerelease: true
+          files: build-apks/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
