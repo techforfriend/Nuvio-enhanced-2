@@ -171,6 +171,7 @@ object ProfileRepository {
             PluginRepository.onProfileChanged(profileIndex)
         }
         ThemeSettingsRepository.onProfileChanged()
+        com.nuvio.app.features.settings.NuvioEnhancedSettingsRepository.onProfileChanged()
         PosterCardStyleRepository.onProfileChanged()
         CardDepthStyleRepository.onProfileChanged()
         PlayerSettingsRepository.onProfileChanged()

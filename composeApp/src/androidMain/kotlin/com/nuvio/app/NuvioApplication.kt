@@ -21,6 +21,11 @@ import com.nuvio.app.core.poster.CustomPosterFallbackInterceptor
  */
 class NuvioApplication : Application(), SingletonImageLoader.Factory {
 
+    override fun onCreate() {
+        super.onCreate()
+        com.nuvio.app.features.settings.NuvioEnhancedSettingsStorage.initialize(this)
+    }
+
     override fun newImageLoader(context: android.content.Context): ImageLoader {
         return ImageLoader.Builder(context)
             .crossfade(true)

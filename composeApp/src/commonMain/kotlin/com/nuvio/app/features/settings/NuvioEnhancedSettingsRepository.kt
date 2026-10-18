@@ -209,28 +209,40 @@ internal object NuvioEnhancedSettingsRepository {
     private var hasLoaded = false
     private var stored = StoredNuvioEnhancedSettings()
 
+    init {
+        ensureLoaded()
+    }
+
+    fun reload() {
+        hasLoaded = false
+        ensureLoaded()
+    }
+
     fun ensureLoaded() {
         if (hasLoaded) return
-        hasLoaded = true
-        val payload = NuvioEnhancedSettingsStorage.loadPayload().orEmpty().trim()
-        stored = if (payload.isNotEmpty()) {
-            runCatching { json.decodeFromString<StoredNuvioEnhancedSettings>(payload) }
-                .getOrDefault(StoredNuvioEnhancedSettings())
-                .let { decoded ->
-                    val normalized = decoded.copy(
-                        seenFeatureIds = decoded.seenFeatureIds + previouslyReleasedFeatureIds,
-                        nuvioReadEnabled = decoded.nuvioReadEnabled && !decoded.cinematicDetailHeaderEnabled,
-                    )
-                    if (normalized.heroOverviewUserConfigured) {
-                        normalized
-                    } else {
-                        normalized.copy(showHeroOverview = false)
+        val rawPayload = NuvioEnhancedSettingsStorage.loadPayload()
+        val payload = rawPayload?.trim()
+        if (payload != null) {
+            hasLoaded = true
+            stored = if (payload.isNotEmpty()) {
+                runCatching { json.decodeFromString<StoredNuvioEnhancedSettings>(payload) }
+                    .getOrDefault(StoredNuvioEnhancedSettings())
+                    .let { decoded ->
+                        val normalized = decoded.copy(
+                            seenFeatureIds = decoded.seenFeatureIds + previouslyReleasedFeatureIds,
+                            nuvioReadEnabled = decoded.nuvioReadEnabled && !decoded.cinematicDetailHeaderEnabled,
+                        )
+                        if (normalized.heroOverviewUserConfigured) {
+                            normalized
+                        } else {
+                            normalized.copy(showHeroOverview = false)
+                        }
                     }
-                }
-        } else {
-            StoredNuvioEnhancedSettings()
+            } else {
+                StoredNuvioEnhancedSettings()
+            }
+            publish()
         }
-        publish()
     }
 
     fun onProfileChanged() {
