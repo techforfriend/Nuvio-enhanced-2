@@ -68,52 +68,45 @@ internal fun PlayerTimelineDetails(
     isPlaying: Boolean,
     metrics: PlayerLayoutMetrics,
 ) {
+    val typeScale = MaterialTheme.nuvioTypeScale
     Column(Modifier.padding(horizontal = PlayerTimelineContentInset)) {
+        Text(
+            text = title,
+            style = typeScale.titleLg.copy(
+                fontSize = metrics.titleSize,
+                lineHeight = metrics.titleSize * 1.16f,
+                fontWeight = FontWeight.SemiBold,
+            ),
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         if (seasonNumber != null && episodeNumber != null) {
-            val epTitle = localizedEpisodeTitle(
-                seasonNumber = seasonNumber,
-                episodeNumber = episodeNumber,
-                rawEpisodeTitle = episodeTitle,
-            )
+            val episodeCode = stringResource(Res.string.compose_player_episode_code_full, seasonNumber, episodeNumber)
+            val displayEpisodeTitle = localizedEpisodeTitle(episodeTitle, episodeNumber)
             Text(
-                text = title,
-                style = MaterialTheme.nuvioTypeScale.bodyMd.copy(fontWeight = FontWeight.SemiBold),
-                color = Color.White.copy(alpha = 0.72f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = epTitle,
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                color = Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        } else {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                color = Color.White,
+                text = if (displayEpisodeTitle.isNullOrBlank()) episodeCode else "$episodeCode • $displayEpisodeTitle",
+                style = typeScale.bodyMd.copy(fontSize = metrics.episodeInfoSize),
+                color = Color.White.copy(alpha = 0.9f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        val subLine = buildString {
-            if (!releaseInfo.isNullOrBlank()) append(releaseInfo)
-            if (streamTitle.isNotBlank()) {
-                if (isNotEmpty()) append(" • ")
-                append(streamTitle)
-            }
-            if (providerName.isNotBlank()) {
-                if (isNotEmpty()) append(" • ")
-                append(providerName)
-            }
-        }
-        if (subLine.isNotBlank()) {
+        if (!releaseInfo.isNullOrBlank()) {
             Text(
-                text = subLine,
-                style = MaterialTheme.nuvioTypeScale.labelSm,
-                color = Color.White.copy(alpha = 0.55f),
+                text = releaseInfo,
+                style = typeScale.labelSm.copy(fontSize = metrics.metadataSize),
+                color = Color.White.copy(alpha = 0.68f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        val source = streamTitle.ifBlank { providerName }.replace("\n", " · ")
+        if (!isPlaying && source.isNotBlank()) {
+            Text(
+                text = stringResource(Res.string.compose_player_via, source),
+                style = typeScale.labelSm.copy(fontSize = metrics.metadataSize),
+                color = Color.White.copy(alpha = 0.68f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
