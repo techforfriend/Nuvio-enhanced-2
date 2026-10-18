@@ -897,6 +897,18 @@ private fun NuvioEnhancedSettingsPageContent(
                             MetaScreenSettingsRepository.setEpisodeCardStyle(it)
                         },
                     )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_show_download_button_title),
+                        description = stringResource(Res.string.nuvio_enhanced_show_download_button_desc),
+                        checked = detailSettings.showDownloadAction,
+                        isTablet = isTablet,
+                        highlighted = isNew(NuvioEnhancedFeature.DetailPresentationControlsV2),
+                        onCheckedChange = {
+                            markSeen(NuvioEnhancedFeature.DetailPresentationControlsV2)
+                            MetaScreenSettingsRepository.setShowDownloadAction(it)
+                        },
+                    )
                 }
             }
         }

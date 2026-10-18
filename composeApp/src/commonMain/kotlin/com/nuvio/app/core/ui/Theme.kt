@@ -196,13 +196,30 @@ private val NuvioRippleConfiguration = RippleConfiguration(
 fun NuvioTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     appTheme: AppTheme = AppTheme.WHITE,
+    customFirst: Color = ThemeAccentColor.PINK.color,
+    customSecond: Color = ThemeAccentColor.CYAN.color,
     amoled: Boolean = false,
     customThemeColors: CustomThemeColors = CustomThemeColors.Default,
     content: @Composable () -> Unit,
 ) {
-    val palette = remember(appTheme, customThemeColors) {
-        ThemeColors.getColorPalette(appTheme, customThemeColors)
+    val effectiveFirst = if (appTheme == AppTheme.CUSTOM && customThemeColors != CustomThemeColors.Default) {
+        Color(customThemeColors.first or 0xFF000000.toInt())
+    } else {
+        customFirst
     }
+    val effectiveSecond = if (appTheme == AppTheme.CUSTOM && customThemeColors != CustomThemeColors.Default) {
+        Color(customThemeColors.second or 0xFF000000.toInt())
+    } else {
+        customSecond
+    }
+    val palette = remember(appTheme, effectiveFirst, effectiveSecond, customThemeColors) {
+        if (appTheme.isEnhanced) {
+            ThemeColors.getColorPalette(appTheme, effectiveFirst, effectiveSecond)
+        } else {
+            ThemeColors.getColorPalette(appTheme, customThemeColors)
+        }
+    }
+    val animatedVisuals = rememberAnimatedThemeVisuals(appTheme, effectiveFirst, effectiveSecond)
     val colorScheme = buildColorScheme(palette, amoled = amoled)
     val tokens = defaultNuvioThemeTokens(palette, amoled = amoled, colorScheme = colorScheme)
 
@@ -217,6 +234,7 @@ fun NuvioTheme(
         LocalRippleConfiguration provides NuvioRippleConfiguration,
         LocalAppTheme provides appTheme,
         LocalThemePalette provides palette,
+        LocalAnimatedThemeVisuals provides animatedVisuals,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

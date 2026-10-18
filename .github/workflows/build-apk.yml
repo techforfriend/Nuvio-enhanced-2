@@ -64,23 +64,26 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.1-enhanced-pre5
-          name: "Nuvio Enhanced v0.6.1-beta (Update 5 - Icons, Package com.nuvio.enhanced & UI Polish)"
+          tag_name: v0.6.1-enhanced-pre6
+          name: "Nuvio Enhanced v0.6.1-beta (Update 6 - Settings Wiring, Download Button & Gradient Themes)"
           body: |
-            ## Nuvio Enhanced v0.6.1-beta (Update 5)
+            ## Nuvio Enhanced v0.6.1-beta (Update 6)
 
-            Major update bringing custom launcher icons from AKRusso, custom package name, refined App Experience, and complete removal of donation/diagnostics options.
+            Major update fixing all Nuvio Enhanced home and hero settings options, adding the missing download button to details, and fully integrating animated gradient themes with custom UI component styling.
 
-            ### 🌟 What's New & Fixed in Update 5:
-            1. **Added AKRusso Custom App Icons (12 Total):** Restored all alternate launcher icons from AKRusso Nuvio — Enhanced, Monochrome, Neon, Gear, Chrome, Aurora, Emerald, and more with live launcher activity switching.
-            2. **Package Name Changed:** Set package name / Application ID to `com.nuvio.enhanced` cleanly separating Nuvio Enhanced from stock Nuvio.
-            3. **App Display Name:** App name is now officially `Nuvio Enhanced` throughout the launcher and Android system.
-            4. **Removed GitHub Footer Link:** Eliminated the Nuvio Enhanced GitHub community link and banner from Settings.
-            5. **Fixed App Experience Settings:**
-               - **Status Bar Visibility:** Real-time Android system status bar toggle (`show/hide`) now fully functional.
-               - **App Icon Switcher:** Integrated App Icon selector directly inside App Experience settings with live icon preview thumbnail.
-            6. **Removed Ko-fi Donation Box:** Completely removed the "Donate on Ko-fi" box from Nuvio Enhanced settings.
-            7. **Diagnostics Cleaned Up:** Completely removed Diagnostics / Sentry crash reports from Advanced Settings and Search.
+            ### 🌟 What's New & Fixed in Update 6:
+            1. **All Nuvio Enhanced Settings Fully Functional:**
+               - Hero display modes, Poster Art Hero, and Streaming Showcase Hero options now correctly apply to the home screen.
+               - Video preview and sound toggles are active and respected.
+               - Nuvio Concierge and Smart Shelves sections properly display on home when enabled.
+               - Continue Watching "Ready to Watch" smart signal badges wired.
+            2. **Download Button Feature Added:**
+               - Added "Show download button" switch in Nuvio Enhanced settings under Details Screen.
+               - Added dedicated Download action button in Movie and Series detail screens.
+            3. **Animated Gradient Themes & UI Theming:**
+               - Restored Enhanced Themes: Messenger, Amethyst, Blossom, Lagoon, Sunset, and Custom.
+               - Custom theme dual-color HSV and hex color picker.
+               - Dynamic animated theme accents applied across the app (Netflix Info button on hero, Play CTA buttons, action buttons, progress bars, and selection chips).
 
             ### 📥 Download APK
             Choose the build matching your Android device architecture below (most devices use `arm64-v8a` or `universal`).

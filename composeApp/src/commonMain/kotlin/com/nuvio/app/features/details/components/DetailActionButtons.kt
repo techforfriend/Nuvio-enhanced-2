@@ -35,6 +35,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -45,6 +47,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.AppIconResource
 import com.nuvio.app.core.ui.appIconPainter
+import com.nuvio.app.core.ui.rememberAnimatedAccentBrush
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_play
 import nuvio.composeapp.generated.resources.details_actions_menu_label
@@ -83,6 +86,7 @@ fun DetailActionButtons(
     val iconButtonSize = buttonHeight
     val playShape = RoundedCornerShape(40.dp)
     val hapticFeedback = LocalHapticFeedback.current
+    val playBrush = rememberAnimatedAccentBrush()
     var actionsExpanded by remember { mutableStateOf(false) }
     val menuProgress by animateFloatAsState(
         targetValue = if (actionsExpanded) 1f else 0f,
@@ -107,10 +111,18 @@ fun DetailActionButtons(
             Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .height(buttonHeight),
+                    .height(buttonHeight)
+                    .clip(playShape)
+                    .then(
+                        if (playBrush != null) {
+                            Modifier.background(playBrush, playShape)
+                        } else {
+                            Modifier
+                        },
+                    ),
                 shape = playShape,
-                color = if (playEnabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (playEnabled) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                color = if (playBrush != null) Color.Transparent else if (playEnabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (playBrush != null) MaterialTheme.colorScheme.onPrimary else if (playEnabled) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
             ) {
                 Row(
                     modifier = Modifier
@@ -203,15 +215,17 @@ fun DetailActionButtons(
 
             if (hasSecondaryActions) {
                 Surface(
-                    modifier = Modifier.size(iconButtonSize),
+                    modifier = Modifier
+                        .size(iconButtonSize)
+                        .clip(CircleShape),
                     shape = CircleShape,
                     color = if (actionsExpanded) {
-                        MaterialTheme.colorScheme.onBackground
+                        MaterialTheme.colorScheme.primary
                     } else {
                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f)
                     },
                     contentColor = if (actionsExpanded) {
-                        MaterialTheme.colorScheme.background
+                        MaterialTheme.colorScheme.onPrimary
                     } else {
                         MaterialTheme.colorScheme.onSurface
                     },
@@ -250,6 +264,7 @@ fun DetailActions(
     isWatched: Boolean,
     isTablet: Boolean,
     shuffleEnabled: Boolean,
+    downloadAction: DetailSecondaryAction? = null,
     onPlayClick: () -> Unit,
     onPlayLongClick: (() -> Unit)?,
     onShuffleClick: (() -> Unit)?,
@@ -270,6 +285,7 @@ fun DetailActions(
         playEnabled = playEnabled,
         pinnedAction = shuffleAction?.takeIf { shuffleEnabled },
         secondaryActions = buildList {
+            downloadAction?.let(::add)
             if (!shuffleEnabled) shuffleAction?.let(::add)
             add(
                 DetailSecondaryAction(
@@ -307,23 +323,26 @@ private fun DetailIconAction(
     onLongClick: (() -> Unit)? = null,
 ) {
     Surface(
-        modifier = modifier.graphicsLayer {
-            alpha = progress
-            scaleX = 0.86f + (0.14f * progress)
-            scaleY = 0.86f + (0.14f * progress)
-        },
+        modifier = modifier
+            .graphicsLayer {
+                alpha = progress
+                scaleX = 0.86f + (0.14f * progress)
+                scaleY = 0.86f + (0.14f * progress)
+            }
+            .clip(CircleShape),
         shape = CircleShape,
         color = if (active) {
-            MaterialTheme.colorScheme.onBackground
+            MaterialTheme.colorScheme.primary
         } else {
             MaterialTheme.colorScheme.surfaceVariant
         },
         contentColor = if (active) {
-            MaterialTheme.colorScheme.background
+            MaterialTheme.colorScheme.onPrimary
         } else {
             MaterialTheme.colorScheme.onSurface
         },
         tonalElevation = 6.dp,
+        shadowElevation = 8.dp,
     ) {
         Box(
             modifier = Modifier
