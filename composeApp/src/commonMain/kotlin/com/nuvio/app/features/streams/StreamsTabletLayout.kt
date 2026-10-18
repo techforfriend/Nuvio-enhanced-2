@@ -69,6 +69,10 @@ internal fun TabletStreamsLayout(
     resumeProgressFraction: Float?,
     onStreamSelected: (stream: StreamItem, resumePositionMs: Long?, resumeProgressFraction: Float?) -> Unit,
     onStreamLongPress: (StreamItem) -> Unit,
+    pinnedSourceIds: List<String> = emptyList(),
+    sourcePinningEnabled: Boolean = false,
+    onSourcePinRequested: (AddonStreamGroup) -> Unit = {},
+    onSourceUnpinRequested: (AddonStreamGroup) -> Unit = {},
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -198,6 +202,10 @@ internal fun TabletStreamsLayout(
                         ProviderFilterRow(
                             groups = uiState.groups,
                             selectedFilter = uiState.selectedFilter,
+                            pinnedSourceIds = pinnedSourceIds,
+                            sourcePinningEnabled = sourcePinningEnabled,
+                            onSourcePinRequested = onSourcePinRequested,
+                            onSourceUnpinRequested = onSourceUnpinRequested,
                             onFilterSelected = { addonId -> StreamsRepository.selectFilter(addonId) },
                             onRefresh = onRefresh,
                         )
@@ -211,6 +219,7 @@ internal fun TabletStreamsLayout(
                             uiState = uiState,
                             debridEnabled = debridEnabled,
                             appendInstantServiceToDefaultName = appendInstantServiceToDefaultName,
+                            pinnedSourceIds = pinnedSourceIds,
                             onStreamSelected = onStreamSelected,
                             onStreamLongPress = onStreamLongPress,
                             resumePositionMs = resumePositionMs,

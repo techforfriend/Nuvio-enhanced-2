@@ -38,6 +38,8 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.ThemeColorPalette
+import com.nuvio.app.core.ui.ThemeColors
 import com.nuvio.app.features.membership.ProfileBackgroundCatalogItem
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.profile_background_custom
@@ -100,6 +102,27 @@ internal fun ProfileBackgroundPicker(
                 )
             }
         }
+        builtInThemePresets.forEach { preset ->
+            ProfileBackgroundItem(
+                label = preset.name,
+                isSelected = selectedBackgroundUrl == null && selectedBackgroundId == preset.id,
+                onClick = { onSelectionChange(preset.id, null) },
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    preset.palette.secondary.copy(alpha = 0.75f),
+                                    preset.palette.secondaryVariant.copy(alpha = 0.40f),
+                                    preset.palette.background,
+                                ),
+                            ),
+                        ),
+                )
+            }
+        }
         backgrounds.forEach { background ->
             ProfileBackgroundItem(
                 label = background.displayName,
@@ -116,6 +139,25 @@ internal fun ProfileBackgroundPicker(
         }
     }
 }
+
+private data class ThemeBackgroundPreset(
+    val id: String,
+    val name: String,
+    val palette: ThemeColorPalette,
+)
+
+private val builtInThemePresets = listOf(
+    ThemeBackgroundPreset("preset:messenger", "Messenger", ThemeColors.Messenger),
+    ThemeBackgroundPreset("preset:amethyst", "Amethyst", ThemeColors.Amethyst),
+    ThemeBackgroundPreset("preset:blossom", "Blossom", ThemeColors.Blossom),
+    ThemeBackgroundPreset("preset:lagoon", "Lagoon", ThemeColors.Lagoon),
+    ThemeBackgroundPreset("preset:sunset", "Sunset", ThemeColors.Sunset),
+    ThemeBackgroundPreset("preset:gold", "Gold", ThemeColors.Gold),
+    ThemeBackgroundPreset("preset:jade", "Jade", ThemeColors.Jade),
+    ThemeBackgroundPreset("preset:rose_gold", "Rose Gold", ThemeColors.RoseGold),
+    ThemeBackgroundPreset("preset:arctic_blue", "Arctic Blue", ThemeColors.ArcticBlue),
+    ThemeBackgroundPreset("preset:graphite", "Graphite", ThemeColors.Graphite),
+)
 
 @Composable
 private fun ProfileBackgroundItem(

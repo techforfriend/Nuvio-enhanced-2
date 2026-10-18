@@ -2,22 +2,70 @@ package com.nuvio.app.features.player.skip
 
 import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.watching.domain.isShortPlaceholderDuration
+import kotlin.random.Random
 
 object PlayerNextEpisodeRules {
+
+    private const val RANDOM_HISTORY_LIMIT = 24
+    private val recentRandomEpisodesByKey = mutableMapOf<String, ArrayDeque<String>>()
+
+    private fun MetaVideo.randomEpisodeKey(): String =
+        id?.takeIf { it.isNotBlank() } ?: "s${season}e${episode}"
 
     fun resolveNextEpisode(
         videos: List<MetaVideo>,
         currentSeason: Int?,
         currentEpisode: Int?,
+        randomMode: Boolean = false,
+        randomHistoryKey: String? = null,
     ): MetaVideo? {
-        if (currentSeason == null || currentEpisode == null) return null
         val sortedEpisodes = videos
             .filter { it.season != null && it.episode != null }
             .sortedWith(
                 compareBy<MetaVideo> { it.season ?: Int.MAX_VALUE }
                     .thenBy { it.episode ?: Int.MAX_VALUE }
             )
+        if (sortedEpisodes.isEmpty()) return null
 
+        if (randomMode) {
+            val regularEpisodes = sortedEpisodes.filter { episode ->
+                val season = episode.season ?: return@filter false
+                val episodeNumber = episode.episode ?: return@filter false
+                season > 0 && episodeNumber > 0 && episode.available
+            }
+            val airedCandidates = regularEpisodes.filter { hasEpisodeAired(it.released) }.ifEmpty { regularEpisodes }
+            val candidates = airedCandidates
+                .filterNot { episode ->
+                    currentSeason != null && currentEpisode != null &&
+                        episode.season == currentSeason && episode.episode == currentEpisode
+                }
+                .ifEmpty { airedCandidates.ifEmpty { regularEpisodes } }
+
+            if (candidates.size == 1) return candidates.first()
+            val historyKey = randomHistoryKey?.takeIf { it.isNotBlank() } ?: "global"
+            val recent = recentRandomEpisodesByKey.getOrPut(historyKey) { ArrayDeque() }
+            val freshCandidates = candidates
+                .filterNot { episode ->
+                    recent.contains(episode.randomEpisodeKey())
+                }
+                .ifEmpty { candidates }
+
+            val episodesBySeason = freshCandidates.groupBy { it.season }
+            val seasons = episodesBySeason.keys.filterNotNull().let { availableSeasons ->
+                availableSeasons.filter { it != currentSeason }.ifEmpty { availableSeasons }
+            }
+            if (seasons.isEmpty()) return null
+            val selectedSeason = seasons.random()
+            val seasonEpisodes = episodesBySeason.getValue(selectedSeason)
+            val selected = seasonEpisodes[Random.nextInt(seasonEpisodes.size)]
+            recent.addLast(selected.randomEpisodeKey())
+            while (recent.size > RANDOM_HISTORY_LIMIT) {
+                recent.removeFirst()
+            }
+            return selected
+        }
+
+        if (currentSeason == null || currentEpisode == null) return null
         val currentIndex = sortedEpisodes.indexOfFirst {
             it.season == currentSeason && it.episode == currentEpisode
         }

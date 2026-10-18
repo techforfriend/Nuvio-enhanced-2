@@ -479,6 +479,18 @@ private fun NuvioEnhancedSettingsPageContent(
                             },
                         )
                         SettingsGroupDivider(isTablet = isTablet)
+                        SettingsSwitchRow(
+                            title = stringResource(Res.string.nuvio_enhanced_seek_preview_title),
+                            description = stringResource(Res.string.nuvio_enhanced_seek_preview_desc),
+                            checked = settings.seekPreviewEnabled,
+                            isTablet = isTablet,
+                            highlighted = isNew(NuvioEnhancedFeature.SeekPreview),
+                            onCheckedChange = {
+                                markSeen(NuvioEnhancedFeature.SeekPreview)
+                                NuvioEnhancedSettingsRepository.setSeekPreviewEnabled(it)
+                            },
+                        )
+                        SettingsGroupDivider(isTablet = isTablet)
                     }
                     if (selectedCategory != EnhancedSettingsCategory.New || isNew(NuvioEnhancedFeature.SubtitleSyncMenu)) {
                     SettingsSwitchRow(

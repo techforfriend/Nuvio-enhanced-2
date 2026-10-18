@@ -41,6 +41,7 @@ internal data class NuvioEnhancedSettingsUiState(
     val libraryHealthEnabled: Boolean = false,
     val statusBarVisible: Boolean = true,
     val playerStatusOverlayEnabled: Boolean = false,
+    val seekPreviewEnabled: Boolean = false,
     val subtitleSelectorStyle: NuvioSubtitleSelectorStyle = NuvioSubtitleSelectorStyle.Enhanced,
     val audioSelectorStyle: NuvioAudioSelectorStyle = NuvioAudioSelectorStyle.Enhanced,
     val subtitleSyncMenuEnabled: Boolean = false,
@@ -116,6 +117,7 @@ internal enum class NuvioEnhancedFeature(
     ReleaseRadarFilters("release_radar_filters"),
     DetailExperienceControls("detail_experience_controls"),
     PlayerStatusOverlay("player_status_overlay"),
+    SeekPreview("seek_preview"),
     SubtitleSyncMenu("subtitle_sync_menu_v3"),
     SubtitleSelectorStyle("subtitle_selector_style_v1"),
     AudioSelectorStyle("audio_selector_style_v1"),
@@ -182,6 +184,7 @@ private data class StoredNuvioEnhancedSettings(
     val libraryHealthEnabled: Boolean = false,
     val statusBarVisible: Boolean = true,
     val playerStatusOverlayEnabled: Boolean = false,
+    val seekPreviewEnabled: Boolean = false,
     val subtitleSelectorStyle: NuvioSubtitleSelectorStyle = NuvioSubtitleSelectorStyle.Enhanced,
     val audioSelectorStyle: NuvioAudioSelectorStyle = NuvioAudioSelectorStyle.Enhanced,
     val subtitleSyncMenuEnabled: Boolean = false,
@@ -402,6 +405,10 @@ internal object NuvioEnhancedSettingsRepository {
         copy(playerStatusOverlayEnabled = enabled)
     }
 
+    fun setSeekPreviewEnabled(enabled: Boolean) = update {
+        copy(seekPreviewEnabled = enabled)
+    }
+
     fun setSubtitleSelectorStyle(style: NuvioSubtitleSelectorStyle) = update {
         copy(subtitleSelectorStyle = style)
     }
@@ -514,6 +521,7 @@ internal object NuvioEnhancedSettingsRepository {
             libraryHealthEnabled = stored.libraryHealthEnabled,
             statusBarVisible = stored.statusBarVisible,
             playerStatusOverlayEnabled = stored.playerStatusOverlayEnabled,
+            seekPreviewEnabled = stored.seekPreviewEnabled,
             subtitleSelectorStyle = stored.subtitleSelectorStyle,
             audioSelectorStyle = stored.audioSelectorStyle,
             subtitleSyncMenuEnabled = stored.subtitleSyncMenuEnabled,

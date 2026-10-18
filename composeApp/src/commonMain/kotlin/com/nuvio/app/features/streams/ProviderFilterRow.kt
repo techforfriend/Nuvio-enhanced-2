@@ -7,8 +7,11 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -23,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -36,9 +40,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,11 +54,29 @@ import nuvio.composeapp.generated.resources.streams_refresh
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
+internal fun List<AddonStreamGroup>.withPinnedGroupsFirst(pinnedSourceIds: List<String>): List<AddonStreamGroup> {
+    if (pinnedSourceIds.isEmpty()) return this
+    val pinnedOrder = pinnedSourceIds
+        .mapIndexed { index, sourceId -> sourceId to index }
+        .toMap()
+    return withIndex()
+        .sortedWith(
+            compareBy<IndexedValue<AddonStreamGroup>> { indexedGroup ->
+                pinnedOrder[indexedGroup.value.addonId] ?: Int.MAX_VALUE
+            }.thenBy { indexedGroup -> indexedGroup.index },
+        )
+        .map { indexedGroup -> indexedGroup.value }
+}
+
 @Composable
 internal fun ProviderFilterRow(
     groups: List<AddonStreamGroup>,
     selectedFilter: String?,
     onFilterSelected: (String?) -> Unit,
+    pinnedSourceIds: List<String> = emptyList(),
+    sourcePinningEnabled: Boolean = false,
+    onSourcePinRequested: ((AddonStreamGroup) -> Unit)? = null,
+    onSourceUnpinRequested: ((AddonStreamGroup) -> Unit)? = null,
     onRefresh: (() -> Unit)? = null,
     isRefreshing: Boolean = groups.any { it.isLoading },
     modifier: Modifier = Modifier,
@@ -61,15 +85,12 @@ internal fun ProviderFilterRow(
     refreshChip: @Composable (Boolean, () -> Unit) -> Unit = { isLoading, onClick ->
         RefreshChip(isLoading = isLoading, onClick = onClick)
     },
-    filterChip: @Composable (AddonStreamGroup?, Boolean, () -> Unit) -> Unit = { group, isSelected, onClick ->
-        FilterChip(
-            label = group?.addonName ?: stringResource(Res.string.collections_tab_all),
-            isSelected = isSelected,
-            onClick = onClick,
-        )
-    },
 ) {
-    val addonGroups = groups.filter { it.streams.isNotEmpty() || it.isLoading }
+    val addonGroups = groups
+        .filter { it.streams.isNotEmpty() || it.isLoading }
+        .withPinnedGroupsFirst(pinnedSourceIds)
+    val pinnedSourceIdSet = remember(pinnedSourceIds) { pinnedSourceIds.toSet() }
+
     LaunchedEffect(addonGroups, selectedFilter) {
         if (selectedFilter != null && addonGroups.none { it.addonId == selectedFilter }) {
             onFilterSelected(null)
@@ -87,9 +108,28 @@ internal fun ProviderFilterRow(
         if (onRefresh != null) {
             refreshChip(isRefreshing, onRefresh)
         }
-        filterChip(null, selectedFilter == null) { onFilterSelected(null) }
+        FilterChip(
+            label = stringResource(Res.string.collections_tab_all),
+            isSelected = selectedFilter == null,
+            isPinned = false,
+            onLongClick = null,
+            onClick = { onFilterSelected(null) },
+        )
         addonGroups.forEach { group ->
-            filterChip(group, selectedFilter == group.addonId) { onFilterSelected(group.addonId) }
+            val isPinned = group.addonId in pinnedSourceIdSet
+            FilterChip(
+                label = group.addonName,
+                isSelected = selectedFilter == group.addonId,
+                isPinned = isPinned,
+                onLongClick = if (sourcePinningEnabled) {
+                    if (isPinned) {
+                        { onSourceUnpinRequested?.invoke(group) }
+                    } else {
+                        { onSourcePinRequested?.invoke(group) }
+                    }
+                } else null,
+                onClick = { onFilterSelected(group.addonId) },
+            )
         }
     }
 }
@@ -135,6 +175,7 @@ private fun RefreshChip(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FilterChip(
     label: String? = null,
@@ -142,6 +183,8 @@ private fun FilterChip(
     contentDescription: String? = null,
     iconModifier: Modifier = Modifier,
     isSelected: Boolean,
+    isPinned: Boolean = false,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -169,6 +212,16 @@ private fun FilterChip(
         animationSpec = tween(durationMillis = 180),
         label = "filter_chip_content",
     )
+    val shape = RoundedCornerShape(16.dp)
+    val borderColor by animateColorAsState(
+        targetValue = if (isPinned && !isSelected) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+        } else {
+            Color.Transparent
+        },
+        animationSpec = tween(durationMillis = 180),
+        label = "filter_chip_border",
+    )
     Box(
         modifier = Modifier
             .graphicsLayer {
@@ -176,12 +229,14 @@ private fun FilterChip(
                 scaleY = scale
             }
             .height(36.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(shape)
             .background(containerColor)
-            .clickable(
+            .border(width = 1.dp, color = borderColor, shape = shape)
+            .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick,
+                onLongClick = onLongClick,
             )
             .padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center,
@@ -198,13 +253,22 @@ private fun FilterChip(
                     modifier = Modifier.size(20.dp).then(iconModifier),
                 )
             }
+            if (isPinned) {
+                Icon(
+                    imageVector = Icons.Rounded.PushPin,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
             if (label != null) {
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontSize = 14.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                        fontWeight = if (isSelected || isPinned) FontWeight.Bold else FontWeight.SemiBold,
                         letterSpacing = 0.1.sp,
+                        textDecoration = if (isPinned) TextDecoration.Underline else TextDecoration.None,
                     ),
                     color = contentColor,
                     maxLines = 1,

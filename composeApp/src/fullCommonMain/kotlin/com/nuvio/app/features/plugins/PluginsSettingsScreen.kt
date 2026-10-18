@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Extension
+import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.HorizontalDivider
@@ -19,6 +20,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import com.nuvio.app.features.settings.NuvioEnhancedSettingsRepository
+import com.nuvio.app.features.streams.StreamSourcePreferencesRepository
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -98,6 +101,23 @@ fun PluginsSettingsPageContent(
 
     var configuringScraper by remember { mutableStateOf<PluginScraper?>(null) }
     var configuringLayout by remember { mutableStateOf<String?>(null) }
+
+    val enhancedSettings by remember {
+        NuvioEnhancedSettingsRepository.ensureLoaded()
+        NuvioEnhancedSettingsRepository.uiState
+    }.collectAsStateWithLifecycle()
+    val sourcePreferences by remember {
+        StreamSourcePreferencesRepository.ensureLoaded()
+        StreamSourcePreferencesRepository.uiState
+    }.collectAsStateWithLifecycle()
+    val sourcePinningEnabled = enhancedSettings.streamSourcePinningEnabled
+    val pinnedSourceIds = remember(sourcePreferences.pinnedSources, sourcePinningEnabled) {
+        sourcePreferences.pinnedSources
+            .map { source -> source.id }
+            .takeIf { sourcePinningEnabled }
+            ?.toSet()
+            .orEmpty()
+    }
 
     val sortedRepos = remember(uiState.repositories) {
         uiState.repositories.sortedBy { it.name.lowercase() }
@@ -295,6 +315,25 @@ fun PluginsSettingsPageContent(
                             )
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (sourcePinningEnabled) {
+                                val repoSourceId = "plugin-repo:${repo.manifestUrl.lowercase()}"
+                                val isPinned = repoSourceId in pinnedSourceIds
+                                IconButton(
+                                    onClick = {
+                                        if (isPinned) {
+                                            StreamSourcePreferencesRepository.unpinSource(repoSourceId)
+                                        } else {
+                                            StreamSourcePreferencesRepository.pinSource(repoSourceId, repo.name)
+                                        }
+                                    },
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.PushPin,
+                                        contentDescription = null,
+                                        tint = if (isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
                             NuvioIconActionButton(
                                 icon = Icons.Rounded.Refresh,
                                 contentDescription = stringResource(Res.string.plugins_cd_refresh_repo),
@@ -391,6 +430,25 @@ fun PluginsSettingsPageContent(
                             }
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (sourcePinningEnabled) {
+                                val scraperSourceId = "plugin:${scraper.id}"
+                                val isPinned = scraperSourceId in pinnedSourceIds
+                                IconButton(
+                                    onClick = {
+                                        if (isPinned) {
+                                            StreamSourcePreferencesRepository.unpinSource(scraperSourceId)
+                                        } else {
+                                            StreamSourcePreferencesRepository.pinSource(scraperSourceId, scraper.name)
+                                        }
+                                    },
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.PushPin,
+                                        contentDescription = null,
+                                        tint = if (isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
                             if (scraper.hasSettings) {
                                 IconButton(onClick = {
                                     coroutineScope.launch {
