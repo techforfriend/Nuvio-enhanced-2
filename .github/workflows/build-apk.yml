@@ -91,7 +91,7 @@ jobs:
                - Displays current device clock and calculated video end time with active theme accent styling.
 
             ### 📥 Download APK
-            Choose the build matching your Android device architecture below (most devices use `arm64-v8a` or `universal`).
+            Optimized exclusively for 64-bit ARM Android devices (`arm64-v8a`).
           draft: false
           prerelease: true
           files: build-apks/*.apk
