@@ -48,6 +48,7 @@ import com.nuvio.app.features.party.PartyAction
 import com.nuvio.app.core.sync.AppForegroundMonitor
 import com.nuvio.app.core.sync.AppVisibility
 import com.nuvio.app.core.ui.NuvioToastController
+import com.nuvio.app.features.party.PartyChat
 import com.nuvio.app.features.party.PartyCorrection
 import com.nuvio.app.features.party.PartyEvent
 import com.nuvio.app.features.party.PartyMedia
@@ -60,6 +61,7 @@ import com.nuvio.app.features.party.PartySource
 import com.nuvio.app.features.party.PartyStream
 import com.nuvio.app.features.party.isShareableStreamUrl
 import com.nuvio.app.features.party.PartySync
+import com.nuvio.app.features.party.UnreadBadge
 import com.nuvio.app.features.party.messageRes
 import com.nuvio.app.features.party.partyMediaKey
 import kotlinx.coroutines.delay
@@ -98,6 +100,12 @@ internal fun PlayerScreenRuntime.partyBlocksControl(): Boolean {
     if (!isPartyControlLocked) return false
     scope.launch { showGestureMessage(getString(Res.string.party_host_only_note)) }
     return true
+}
+
+internal fun PlayerScreenRuntime.openPartyPanel() {
+    if (PartyChat.unread.value > 0) showPartyChat = true
+    showPartyPanel = true
+    controlsVisible = false
 }
 
 internal fun PlayerScreenRuntime.toggleOwnPlayback() {
@@ -228,6 +236,7 @@ private fun PlayerScreenRuntime.handlePartyMediaChange(media: PartyMedia) {
             return
         }
     }
+    showPartyChat = false
     showPartyPanel = true
 }
 
@@ -491,6 +500,7 @@ private fun PlayerScreenRuntime.clearPartyNudge(playback: PartyPlayback? = Party
 internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
     val partyState by PartyRepository.state.collectAsStateWithLifecycle()
     val playback by PartyRepository.playback.collectAsStateWithLifecycle()
+    val unread by PartyChat.unread.collectAsStateWithLifecycle()
     var notice by remember { mutableStateOf<PartyNotice?>(null) }
     LaunchedEffect(Unit) {
         PartyRepository.notices.collectLatest { next ->
@@ -512,6 +522,7 @@ internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
                 visible = (controlsVisible || waitingNames.isNotEmpty() || !party.connected || noticeText != null || (partyBehind && !shouldPlay)) &&
                     !playerControlsLocked && !showPartyPanel,
                 members = party.members,
+                unread = unread,
                 message = when {
                     !party.connected -> stringResource(Res.string.party_reconnecting)
                     waitingNames.isNotEmpty() -> stringResource(Res.string.party_waiting_for, waitingNames.joinToString())
@@ -521,7 +532,7 @@ internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
                     partyBehind -> partyBehindMs?.let { stringResource(Res.string.party_behind, formatPlaybackTime(it)) }
                     else -> null
                 },
-                onClick = { showPartyPanel = true },
+                onClick = { openPartyPanel() },
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Top))
@@ -531,6 +542,8 @@ internal fun BoxScope.RenderParty(runtime: PlayerScreenRuntime) {
         PartyPanel(
             visible = showPartyPanel,
             state = partyState,
+            showChat = showPartyChat,
+            onShowChatChange = { showPartyChat = it },
             playerMedia = currentPartyMedia(),
             isSupported = PartyRepository.available.collectAsStateWithLifecycle().value,
             canStart = PartyRepository.canUse,
@@ -584,6 +597,7 @@ private fun ActiveParty.waitingNames(): List<String> =
 private fun PartyStatusPill(
     visible: Boolean,
     members: List<PartyMember>,
+    unread: Int,
     message: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -608,6 +622,7 @@ private fun PartyStatusPill(
                 size = 28.dp,
                 ringColor = Color.Black.copy(alpha = 0.5f),
             )
+            UnreadBadge(count = unread, icon = true)
             AnimatedContent(
                 targetState = message,
                 transitionSpec = {
