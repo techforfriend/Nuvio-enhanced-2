@@ -123,6 +123,7 @@ internal enum class NuvioEnhancedFeature(
     PlayerTimeOverlay("player_time_overlay_v3"),
     PersistentEpisodeShuffle("persistent_episode_shuffle_v3"),
     StatusBarVisibility("status_bar_visibility"),
+    AppIconPicker("app_icon_picker"),
     NetworkControls("network_controls"),
     CommunityLinks("community_links"),
     PremiumLabs("premium_labs"),

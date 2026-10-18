@@ -179,6 +179,7 @@ open class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        AppSystemUiController.unbind(this)
         EpisodeReleaseNotificationPlatform.unbindActivity(this)
         val receiver = pipRemoteActionReceiver
         if (receiver != null) {
@@ -203,10 +204,5 @@ open class MainActivity : AppCompatActivity() {
         val appUrl = (intent?.dataString ?: intent?.getStringExtra(LinkActivity.EXTRA_LINK))?.trim().orEmpty()
         if (appUrl.isBlank()) return
         handleAppUrl(appUrl)
-    }
-
-    override fun onDestroy() {
-        AppSystemUiController.unbind(this)
-        super.onDestroy()
     }
 }
