@@ -125,7 +125,7 @@ internal fun Modifier.nuvioExcludeFromKeyboardFocus(): Modifier =
     focusProperties { canFocus = false }
 
 @Composable
-internal expect fun isKeyboardNavigationAvailable(): Boolean
+internal fun isKeyboardNavigationAvailable(): Boolean = false
 
 internal fun shouldStartInKeyboardInputMode(
     hasHardwareKeyboard: Boolean,
