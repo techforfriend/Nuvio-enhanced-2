@@ -24,7 +24,6 @@ import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesRepositor
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_settings_page_account
 import nuvio.composeapp.generated.resources.compose_settings_page_addons
-import nuvio.composeapp.generated.resources.compose_settings_page_cloudstream
 import nuvio.composeapp.generated.resources.compose_settings_page_continue_watching
 import nuvio.composeapp.generated.resources.compose_settings_page_homescreen
 import nuvio.composeapp.generated.resources.compose_settings_page_meta_screen
@@ -188,27 +187,6 @@ fun PluginsSettingsScreen(
     }
 }
 
-@Composable
-fun CloudStreamSettingsScreen(
-    onBack: () -> Unit,
-) {
-    if (!AppFeaturePolicy.pluginsEnabled) {
-        AddonsSettingsScreen(onBack = onBack)
-        return
-    }
-
-    NuvioScreen(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        stickyHeader {
-            NuvioScreenHeader(
-                title = stringResource(Res.string.compose_settings_page_cloudstream),
-                onBack = onBack,
-            )
-        }
-        cloudStreamSettingsContent()
-    }
-}
 
 @Composable
 fun AccountSettingsScreen(

@@ -25,7 +25,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
@@ -151,10 +150,9 @@ internal fun LazyListScope.settingsRootContent(
     if (showEnhancedSection) {
         item {
             val uriHandler = LocalUriHandler.current
-            val enhancedSettings by remember {
+            remember {
                 NuvioEnhancedSettingsRepository.ensureLoaded()
-                NuvioEnhancedSettingsRepository.uiState
-            }.collectAsStateWithLifecycle()
+            }
             SettingsSection(
                 title = stringResource(Res.string.settings_nuvio_enhanced_section),
                 isTablet = isTablet,
@@ -165,7 +163,6 @@ internal fun LazyListScope.settingsRootContent(
                         description = stringResource(Res.string.settings_nuvio_enhanced_description),
                         icon = Icons.Rounded.AutoAwesome,
                         isTablet = isTablet,
-                        highlighted = enhancedSettings.hasNewFeatures,
                         onClick = onNuvioEnhancedClick,
                     )
                     SettingsGroupDivider(isTablet = isTablet)
