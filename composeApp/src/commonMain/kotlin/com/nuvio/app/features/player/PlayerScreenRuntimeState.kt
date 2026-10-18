@@ -198,6 +198,7 @@ internal class PlayerScreenRuntime(
     var showVideoSettingsModal by mutableStateOf(false)
     var showStreamInfo by mutableStateOf(false)
     var showPartyPanel by mutableStateOf(false)
+    var showPartyChat by mutableStateOf(false)
     var partyBehind by mutableStateOf(false)
     var partyBehindMs by mutableStateOf<Long?>(null)
     var partyRateNudge: Float? = null
