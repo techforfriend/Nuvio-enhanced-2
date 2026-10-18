@@ -9,6 +9,24 @@ data class LocalCrashReport(
     val contextSummary: String = "",
 )
 
+internal object RuntimeDiagnostics {
+    fun snapshotText(): String = "Runtime state: OK"
+}
+
+internal fun String.sanitizeDiagnosticText(): String = this
+
+internal fun localCrashReport(
+    id: String,
+    summary: String,
+    details: String,
+    contextSummary: String = "",
+): LocalCrashReport = LocalCrashReport(
+    id = id,
+    summary = summary,
+    details = details,
+    contextSummary = contextSummary,
+)
+
 expect object CrashDiagnostics {
     val reportsSupported: Boolean
     val pendingReport: StateFlow<LocalCrashReport?>

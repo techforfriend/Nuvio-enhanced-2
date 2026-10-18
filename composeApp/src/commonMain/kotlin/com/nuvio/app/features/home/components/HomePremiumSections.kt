@@ -903,7 +903,6 @@ private fun HomeReleaseRadarSectionContent(
             headerHorizontalPadding = sectionPadding,
             rowContentPadding = PaddingValues(horizontal = sectionPadding),
             itemSpacing = 10.dp,
-            showHeaderAccent = false,
             viewAllPillSize = NuvioViewAllPillSize.Compact,
             key = HomeReleaseRadarItem::key,
         ) { item ->

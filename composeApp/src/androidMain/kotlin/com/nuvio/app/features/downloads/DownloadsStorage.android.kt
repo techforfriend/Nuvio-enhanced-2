@@ -23,4 +23,20 @@ internal actual object DownloadsStorage {
             ?.putString(ProfileScopedKey.of(payloadKey), payload)
             ?.apply()
     }
+
+    fun loadExternalFolderUri(): String? =
+        preferences?.getString(ProfileScopedKey.of("external_folder_uri"), null)
+
+    fun saveExternalFolderUri(uri: String?) {
+        preferences
+            ?.edit()
+            ?.let { editor ->
+                if (uri == null) {
+                    editor.remove(ProfileScopedKey.of("external_folder_uri"))
+                } else {
+                    editor.putString(ProfileScopedKey.of("external_folder_uri"), uri)
+                }
+            }
+            ?.apply()
+    }
 }

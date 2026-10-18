@@ -1,8 +1,8 @@
 package com.nuvio.app.features.player
 
 data class SubtitleFontImportResult(
-    val fontName: String,
-    val filePath: String,
+    val displayName: String,
+    val path: String,
 )
 
 internal expect object SubtitleFontFileBridge {

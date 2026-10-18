@@ -92,9 +92,8 @@ internal actual object SubtitleFontFileBridge {
             temporary.delete()
             if (!destination.exists()) destinationDir.delete()
         }
-        val embeddedFamily = subtitleFontFamilyName(destination.absolutePath)
         SubtitleFontImportResult(
-            displayName = embeddedFamily ?: displayName.substringBeforeLast('.').ifBlank { displayName },
+            displayName = displayName.substringBeforeLast('.').ifBlank { displayName },
             path = destination.absolutePath,
         )
     }
