@@ -8,9 +8,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.Modifier
 
-fun ThemeColorPalette.accentBrush(): Brush =
-    if (accentGradient.size >= 2) Brush.linearGradient(accentGradient)
-    else SolidColor(accentGradient.firstOrNull() ?: secondary)
 
 fun Modifier.gradientMask(brush: Brush): Modifier =
     graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
