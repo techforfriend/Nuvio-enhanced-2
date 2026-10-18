@@ -729,8 +729,6 @@ private fun ExoPlayerSurface(
                                 "ExoPlayer/Android",
                                 "Source error recovered by MIME probe mime=$probedMime url=${InAppLogger.redactUrl(sourceUrl)}",
                             )
-                            // buildUpon keeps the existing subtitle configurations, so the fork no
-                            // longer rebuilds them (and no longer probes each subtitle URL).
                             resolvedMediaItem = resolvedMediaItem.buildUpon()
                                 .setMimeType(probedMime)
                                 .build()
@@ -1992,15 +1990,18 @@ private class NuvioLibmpvView(
         executeMpv {
             when (resizeMode) {
                 PlayerResizeMode.Fit -> {
+                    mpv.setPropertyString("keepaspect", "yes")
                     mpv.setPropertyDouble("panscan", 0.0)
                     mpv.setPropertyString("video-aspect-override", "no")
                 }
                 PlayerResizeMode.Fill -> {
-                    mpv.setPropertyDouble("panscan", 1.0)
+                    mpv.setPropertyString("keepaspect", "no")
+                    mpv.setPropertyDouble("panscan", 0.0)
                     mpv.setPropertyString("video-aspect-override", "no")
                 }
                 PlayerResizeMode.Zoom -> {
-                    mpv.setPropertyDouble("panscan", 0.5)
+                    mpv.setPropertyString("keepaspect", "yes")
+                    mpv.setPropertyDouble("panscan", 1.0)
                     mpv.setPropertyString("video-aspect-override", "no")
                 }
             }
@@ -3187,7 +3188,6 @@ private class PlayerOutputAudioProcessor(
                     val magnitude = abs(boosted)
                     if (magnitude > peak) peak = magnitude
                 }
-                // Instant attack, smooth release: never exceed the ceiling, recover gradually.
                 if (peak * limiterGain > LIMITER_CEILING) {
                     limiterGain = LIMITER_CEILING / peak
                 } else {

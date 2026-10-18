@@ -1400,16 +1400,17 @@ final class MPVPlayerViewController: UIViewController {
     func setResize(_ mode: Int) {
         lastResizeMode = mode
         guard mpv != nil else { return }
+        setStringProperty("video-unscaled", "no")
         switch mode {
-        case 1: // Fill
-            setStringProperty("panscan", "1.0")
-            setStringProperty("video-unscaled", "no")
-        case 2: // Zoom
-            setStringProperty("panscan", "1.0")
-            setStringProperty("video-unscaled", "no")
-        default: // Fit
+        case 1: // Fill: stretch to the screen without cropping (ignores the aspect ratio)
+            setStringProperty("keepaspect", "no")
             setStringProperty("panscan", "0.0")
-            setStringProperty("video-unscaled", "no")
+        case 2: // Zoom: enlarge with the aspect ratio kept until the black bars are gone
+            setStringProperty("keepaspect", "yes")
+            setStringProperty("panscan", "1.0")
+        default: // Fit
+            setStringProperty("keepaspect", "yes")
+            setStringProperty("panscan", "0.0")
         }
     }
 

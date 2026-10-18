@@ -266,7 +266,17 @@ internal fun PlayerScreenRuntime.handleDoubleTapSeek(direction: PlayerSeekDirect
 }
 
 internal fun PlayerScreenRuntime.cycleResizeMode() {
-    val nextMode = resizeMode.next()
+    applyResizeMode(resizeMode.next())
+    controlsVisible = true
+}
+
+internal fun PlayerScreenRuntime.pinchResizeMode(zoomIn: Boolean) {
+    val nextMode = if (zoomIn) resizeMode.pinchedOut() else resizeMode.pinchedIn()
+    if (nextMode == resizeMode) return
+    applyResizeMode(nextMode)
+}
+
+private fun PlayerScreenRuntime.applyResizeMode(nextMode: PlayerResizeMode) {
     resizeMode = nextMode
     lastSyncedSettingsResizeMode = nextMode
     PlayerSettingsRepository.setResizeMode(nextMode)
@@ -277,7 +287,6 @@ internal fun PlayerScreenRuntime.cycleResizeMode() {
             PlayerResizeMode.Zoom -> resizeModeZoomLabel
         },
     )
-    controlsVisible = true
 }
 
 internal fun PlayerScreenRuntime.setPlaybackSpeedFromPicker(speed: Float) {
