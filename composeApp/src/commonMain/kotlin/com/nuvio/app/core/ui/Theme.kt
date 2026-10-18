@@ -202,24 +202,10 @@ fun NuvioTheme(
     customThemeColors: CustomThemeColors = CustomThemeColors.Default,
     content: @Composable () -> Unit,
 ) {
-    val effectiveFirst = if (appTheme == AppTheme.CUSTOM && customThemeColors != CustomThemeColors.Default) {
-        Color(customThemeColors.first or 0xFF000000.toInt())
-    } else {
-        customFirst
+    val palette = remember(appTheme, customFirst, customSecond) {
+        ThemeColors.getColorPalette(appTheme, customFirst, customSecond)
     }
-    val effectiveSecond = if (appTheme == AppTheme.CUSTOM && customThemeColors != CustomThemeColors.Default) {
-        Color(customThemeColors.second or 0xFF000000.toInt())
-    } else {
-        customSecond
-    }
-    val palette = remember(appTheme, effectiveFirst, effectiveSecond, customThemeColors) {
-        if (appTheme.isEnhanced) {
-            ThemeColors.getColorPalette(appTheme, effectiveFirst, effectiveSecond)
-        } else {
-            ThemeColors.getColorPalette(appTheme, customThemeColors)
-        }
-    }
-    val animatedVisuals = rememberAnimatedThemeVisuals(appTheme, effectiveFirst, effectiveSecond)
+    val animatedVisuals = rememberAnimatedThemeVisuals(appTheme, customFirst, customSecond)
     val colorScheme = buildColorScheme(palette, amoled = amoled)
     val tokens = defaultNuvioThemeTokens(palette, amoled = amoled, colorScheme = colorScheme)
 

@@ -98,14 +98,22 @@ internal fun AppEnvironment(content: @Composable () -> Unit) {
         ThemeSettingsRepository.amoledEnabled
     }.collectAsStateWithLifecycle()
 
-    val customThemeColors by ThemeSettingsRepository.customThemeColors.collectAsStateWithLifecycle()
+    val customThemeFirstColor by remember { ThemeSettingsRepository.customThemeFirstColor }
+        .collectAsStateWithLifecycle()
+    val customThemeSecondColor by remember { ThemeSettingsRepository.customThemeSecondColor }
+        .collectAsStateWithLifecycle()
     val enhancedSettings by com.nuvio.app.features.settings.NuvioEnhancedSettingsRepository.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(enhancedSettings.statusBarVisible) {
         com.nuvio.app.core.ui.AppSystemUiController.setStatusBarVisible(enhancedSettings.statusBarVisible)
     }
 
-    NuvioTheme(appTheme = selectedTheme, amoled = amoledEnabled, customThemeColors = customThemeColors) {
+    NuvioTheme(
+        appTheme = selectedTheme,
+        customFirst = customThemeFirstColor,
+        customSecond = customThemeSecondColor,
+        amoled = amoledEnabled,
+    ) {
         content()
     }
 }

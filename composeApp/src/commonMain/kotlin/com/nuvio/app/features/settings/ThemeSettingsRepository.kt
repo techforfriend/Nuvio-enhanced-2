@@ -1,30 +1,27 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.ui.graphics.Color
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.CustomThemeColors
 import com.nuvio.app.core.ui.NativeTabBridge
+import com.nuvio.app.core.ui.ThemeAccentColor
 import com.nuvio.app.core.ui.ThemeColors
-import com.nuvio.app.features.membership.MemberAccessRepository
-import com.nuvio.app.features.membership.availableAppThemes
-import com.nuvio.app.features.membership.resolveAppTheme
-import com.nuvio.app.features.membership.resolveCustomThemeColors
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import com.nuvio.app.core.ui.toThemeColor
+import com.nuvio.app.core.ui.toThemeHex
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 object ThemeSettingsRepository {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val _selectedThemePreference = MutableStateFlow<AppTheme?>(null)
-    val selectedThemePreference: StateFlow<AppTheme?> = _selectedThemePreference.asStateFlow()
     private val _selectedTheme = MutableStateFlow(AppTheme.WHITE)
     val selectedTheme: StateFlow<AppTheme> = _selectedTheme.asStateFlow()
 
-    private val _customThemePreference = MutableStateFlow(CustomThemeColors.Default)
-    val customThemePreference: StateFlow<CustomThemeColors> = _customThemePreference.asStateFlow()
+    private val _customThemeFirstColor = MutableStateFlow(ThemeAccentColor.PINK.color)
+    val customThemeFirstColor: StateFlow<Color> = _customThemeFirstColor.asStateFlow()
+
+    private val _customThemeSecondColor = MutableStateFlow(ThemeAccentColor.CYAN.color)
+    val customThemeSecondColor: StateFlow<Color> = _customThemeSecondColor.asStateFlow()
+
     private val _customThemeColors = MutableStateFlow(CustomThemeColors.solid(CustomThemeColors.Default.second))
     val customThemeColors: StateFlow<CustomThemeColors> = _customThemeColors.asStateFlow()
 
@@ -33,6 +30,9 @@ object ThemeSettingsRepository {
 
     private val _liquidGlassNativeTabBarEnabled = MutableStateFlow(false)
     val liquidGlassNativeTabBarEnabled: StateFlow<Boolean> = _liquidGlassNativeTabBarEnabled.asStateFlow()
+
+    private val _liquidGlassAutoHideOnScrollEnabled = MutableStateFlow(false)
+    val liquidGlassAutoHideOnScrollEnabled: StateFlow<Boolean> = _liquidGlassAutoHideOnScrollEnabled.asStateFlow()
 
     private val _selectedAppLanguage = MutableStateFlow(AppLanguage.DEVICE)
     val selectedAppLanguage: StateFlow<AppLanguage> = _selectedAppLanguage.asStateFlow()
@@ -44,10 +44,8 @@ object ThemeSettingsRepository {
     val navBarGlowEnabled: StateFlow<Boolean> = _navBarGlowEnabled.asStateFlow()
 
     private var hasLoaded = false
-    private var observesMembership = false
 
     fun ensureLoaded() {
-        observeMembership()
         if (hasLoaded) return
         loadFromDisk()
     }
@@ -58,13 +56,14 @@ object ThemeSettingsRepository {
 
     fun clearLocalState() {
         hasLoaded = false
-        _selectedThemePreference.value = null
         _selectedTheme.value = AppTheme.WHITE
-        _customThemePreference.value = CustomThemeColors.Default
+        _customThemeFirstColor.value = ThemeAccentColor.PINK.color
+        _customThemeSecondColor.value = ThemeAccentColor.CYAN.color
         _customThemeColors.value = CustomThemeColors.solid(CustomThemeColors.Default.second)
         _amoledEnabled.value = false
         _liquidGlassNativeTabBarEnabled.value = false
-        NativeTabBridge.publishAccentColor(ThemeColors.White.nativeAccentHex)
+        _liquidGlassAutoHideOnScrollEnabled.value = false
+        NativeTabBridge.publishAccentColor(AppTheme.WHITE.nativeTabAccentHex())
         NativeTabBridge.publishLiquidGlassEnabled(false)
         _selectedAppLanguage.value = AppLanguage.DEVICE
         _navBarGlowEnabled.value = true
@@ -74,21 +73,23 @@ object ThemeSettingsRepository {
     private fun loadFromDisk() {
         hasLoaded = true
         val stored = ThemeSettingsStorage.loadSelectedTheme()
-        val theme = if (stored != null) {
-            try {
-                AppTheme.valueOf(stored)
-            } catch (_: IllegalArgumentException) {
-                null
-            }
-        } else {
-            null
-        }
-        _selectedThemePreference.value = theme
-        _customThemePreference.value = CustomThemeColors.decode(ThemeSettingsStorage.loadCustomThemeColors())
-        applyEffectiveTheme()
+        val theme = stored.toAppTheme()
+        _selectedTheme.value = theme
+        _customThemeFirstColor.value = ThemeSettingsStorage.loadCustomThemeFirstColor()
+            .toThemeColor(ThemeAccentColor.PINK.color)
+        _customThemeSecondColor.value = ThemeSettingsStorage.loadCustomThemeSecondColor()
+            .toThemeColor(ThemeAccentColor.CYAN.color)
+        _customThemeColors.value = CustomThemeColors(
+            first = _customThemeFirstColor.value.toArgbLong(),
+            second = _customThemeSecondColor.value.toArgbLong(),
+            isGradient = true,
+        )
+        NativeTabBridge.publishAccentColor(theme.nativeTabAccentHex(_customThemeFirstColor.value))
         _amoledEnabled.value = ThemeSettingsStorage.loadAmoledEnabled() ?: false
         val liquidGlassEnabled = ThemeSettingsStorage.loadLiquidGlassNativeTabBarEnabled() ?: false
         _liquidGlassNativeTabBarEnabled.value = liquidGlassEnabled
+        _liquidGlassAutoHideOnScrollEnabled.value =
+            ThemeSettingsStorage.loadLiquidGlassAutoHideOnScrollEnabled() ?: false
         NativeTabBridge.publishLiquidGlassEnabled(liquidGlassEnabled)
         val appLanguage = AppLanguage.fromCode(ThemeSettingsStorage.loadSelectedAppLanguage())
         ThemeSettingsStorage.applySelectedAppLanguage(appLanguage.code)
@@ -99,23 +100,47 @@ object ThemeSettingsRepository {
 
     fun setTheme(theme: AppTheme) {
         ensureLoaded()
-        val access = MemberAccessRepository.access.value
-        if (theme !in availableAppThemes(access.entitlements)) return
-        if (_selectedThemePreference.value == theme) return
-        _selectedThemePreference.value = theme
+        if (_selectedTheme.value == theme) return
+        _selectedTheme.value = theme
         ThemeSettingsStorage.saveSelectedTheme(theme.name)
-        applyEffectiveTheme()
+        NativeTabBridge.publishAccentColor(theme.nativeTabAccentHex(_customThemeFirstColor.value))
+    }
+
+    fun setCustomThemeFirstColor(color: Color) {
+        ensureLoaded()
+        if (_customThemeFirstColor.value == color) return
+        _customThemeFirstColor.value = color
+        ThemeSettingsStorage.saveCustomThemeFirstColor(color.toThemeHex())
+        _customThemeColors.value = CustomThemeColors(
+            first = color.toArgbLong(),
+            second = _customThemeSecondColor.value.toArgbLong(),
+            isGradient = true,
+        )
+        if (_selectedTheme.value == AppTheme.CUSTOM) {
+            NativeTabBridge.publishAccentColor(AppTheme.CUSTOM.nativeTabAccentHex(color))
+        }
+    }
+
+    fun setCustomThemeSecondColor(color: Color) {
+        ensureLoaded()
+        if (_customThemeSecondColor.value == color) return
+        _customThemeSecondColor.value = color
+        ThemeSettingsStorage.saveCustomThemeSecondColor(color.toThemeHex())
+        _customThemeColors.value = CustomThemeColors(
+            first = _customThemeFirstColor.value.toArgbLong(),
+            second = color.toArgbLong(),
+            isGradient = true,
+        )
     }
 
     fun setCustomTheme(colors: CustomThemeColors) {
         ensureLoaded()
-        val access = MemberAccessRepository.access.value
-        val selectedColors = resolveCustomThemeColors(colors, access.tier)
-        ThemeSettingsStorage.saveCustomThemeColors(selectedColors.encode())
-        ThemeSettingsStorage.saveSelectedTheme(AppTheme.CUSTOM.name)
-        _customThemePreference.value = selectedColors
-        _selectedThemePreference.value = AppTheme.CUSTOM
-        applyEffectiveTheme()
+        _customThemeColors.value = colors
+        val first = Color(colors.first or 0xFF000000.toInt())
+        val second = Color(colors.second or 0xFF000000.toInt())
+        setCustomThemeFirstColor(first)
+        setCustomThemeSecondColor(second)
+        setTheme(AppTheme.CUSTOM)
     }
 
     fun setAmoled(enabled: Boolean) {
@@ -131,6 +156,13 @@ object ThemeSettingsRepository {
         _liquidGlassNativeTabBarEnabled.value = enabled
         ThemeSettingsStorage.saveLiquidGlassNativeTabBarEnabled(enabled)
         NativeTabBridge.publishLiquidGlassEnabled(enabled)
+    }
+
+    fun setLiquidGlassAutoHideOnScroll(enabled: Boolean) {
+        ensureLoaded()
+        if (_liquidGlassAutoHideOnScrollEnabled.value == enabled) return
+        _liquidGlassAutoHideOnScrollEnabled.value = enabled
+        ThemeSettingsStorage.saveLiquidGlassAutoHideOnScrollEnabled(enabled)
     }
 
     fun setAppLanguage(language: AppLanguage) {
@@ -154,28 +186,27 @@ object ThemeSettingsRepository {
         _navBarGlowEnabled.value = enabled
         ThemeSettingsStorage.saveNavBarGlowEnabled(enabled)
     }
+}
 
-    private fun observeMembership() {
-        if (observesMembership) return
-        observesMembership = true
-        MemberAccessRepository.ensureStarted()
-        scope.launch {
-            MemberAccessRepository.access.collect {
-                if (hasLoaded) applyEffectiveTheme()
-            }
-        }
-    }
+private fun Color.toArgbLong(): Long {
+    val a = (alpha * 255.0f + 0.5f).toInt()
+    val r = (red * 255.0f + 0.5f).toInt()
+    val g = (green * 255.0f + 0.5f).toInt()
+    val b = (blue * 255.0f + 0.5f).toInt()
+    return ((a.toLong() and 0xFF) shl 24) or
+        ((r.toLong() and 0xFF) shl 16) or
+        ((g.toLong() and 0xFF) shl 8) or
+        (b.toLong() and 0xFF)
+}
 
-    private fun applyEffectiveTheme() {
-        val access = MemberAccessRepository.access.value
-        val effective = resolveAppTheme(
-            selectedTheme = _selectedThemePreference.value,
-            entitlements = access.entitlements,
-        )
-        _customThemeColors.value = resolveCustomThemeColors(_customThemePreference.value, access.tier)
-        _selectedTheme.value = effective
-        NativeTabBridge.publishAccentColor(
-            ThemeColors.getColorPalette(effective, _customThemeColors.value).nativeAccentHex,
-        )
-    }
+private fun AppTheme.nativeTabAccentHex(customFirst: Color = ThemeAccentColor.PINK.color): String =
+    ThemeColors.getColorPalette(this, customFirst = customFirst).nativeAccentHex
+
+private fun String?.toAppTheme(): AppTheme = when (this) {
+    "AURORA", "LAVENDER" -> AppTheme.MESSENGER
+    "PRISM" -> AppTheme.AMETHYST
+    "NEBULA", "ORCHID" -> AppTheme.BLOSSOM
+    "OPAL", "TWILIGHT" -> AppTheme.LAGOON
+    "ULTRAVIOLET" -> AppTheme.SUNSET
+    else -> this?.let { stored -> AppTheme.entries.firstOrNull { it.name == stored } } ?: AppTheme.WHITE
 }
