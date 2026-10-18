@@ -28,10 +28,15 @@ internal actual object AppIconPlatform {
 
     fun currentLauncherIconResource(context: Context): Int {
         val option = AppIconOption.fromPlatformName(currentIconName(context))
-        val resourceName = if (option == AppIconOption.ORIGINAL) {
-            "ic_launcher"
-        } else {
-            "ic_launcher_${option.key}"
+        val resourceName = when (option) {
+            AppIconOption.ORIGINAL -> "ic_launcher"
+            AppIconOption.ENHANCED -> "ic_launcher_alt_enhanced"
+            AppIconOption.MONOCHROME -> "ic_launcher_alt_monochrome"
+            AppIconOption.NEON -> "ic_launcher_alt_neon"
+            AppIconOption.GEAR -> "ic_launcher_alt_gear"
+            AppIconOption.CHROME -> "ic_launcher_alt_chrome"
+            AppIconOption.AURORA -> "ic_launcher_alt_aurora"
+            else -> "ic_launcher_${option.key}"
         }
         return context.resources
             .getIdentifier(resourceName, "mipmap", context.packageName)

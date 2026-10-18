@@ -671,6 +671,12 @@
     <string name="settings_appearance_app_icon_emerald">Emerald</string>
     <string name="settings_appearance_app_icon_graphite">Graphite</string>
     <string name="settings_appearance_app_icon_original">Original</string>
+    <string name="settings_appearance_app_icon_enhanced">Enhanced</string>
+    <string name="settings_appearance_app_icon_monochrome">Monochrome</string>
+    <string name="settings_appearance_app_icon_neon">Neon</string>
+    <string name="settings_appearance_app_icon_gear">Gear</string>
+    <string name="settings_appearance_app_icon_chrome">Chrome</string>
+    <string name="settings_appearance_app_icon_aurora">Aurora</string>
     <string name="settings_appearance_app_icon_rose_gold">Rose Gold</string>
     <string name="settings_appearance_app_icon_sheet_title">Choose App Icon</string>
     <string name="settings_appearance_app_language">App Language</string>

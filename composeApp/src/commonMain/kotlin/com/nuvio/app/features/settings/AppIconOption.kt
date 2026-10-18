@@ -8,6 +8,10 @@ internal enum class AppIconOption(
         key = "original",
         platformName = null,
     ),
+    ENHANCED(
+        key = "enhanced",
+        platformName = "AppIconEnhanced",
+    ),
     ARCTIC_BLUE(
         key = "arctic_blue",
         platformName = "AppIconArcticBlue",
@@ -27,6 +31,26 @@ internal enum class AppIconOption(
     GRAPHITE(
         key = "graphite",
         platformName = "AppIconGraphite",
+    ),
+    MONOCHROME(
+        key = "monochrome",
+        platformName = "AppIconMonochrome",
+    ),
+    NEON(
+        key = "neon",
+        platformName = "AppIconNeon",
+    ),
+    GEAR(
+        key = "gear",
+        platformName = "AppIconGear",
+    ),
+    CHROME(
+        key = "chrome",
+        platformName = "AppIconChrome",
+    ),
+    AURORA(
+        key = "aurora",
+        platformName = "AppIconAurora",
     ),
     ;
 
