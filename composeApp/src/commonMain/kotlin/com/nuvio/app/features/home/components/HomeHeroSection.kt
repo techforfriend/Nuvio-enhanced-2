@@ -97,7 +97,7 @@ internal data class HomeHeroLayout(
 )
 
 @Composable
-fun HomeHeroSection(
+internal fun HomeHeroSection(
     items: List<MetaPreview>,
     modifier: Modifier = Modifier,
     viewportHeight: Dp? = null,
