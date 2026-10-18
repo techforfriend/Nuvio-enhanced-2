@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.Forward10
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Replay10
+import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SignalCellularAlt
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.WifiOff
@@ -98,6 +99,11 @@ internal fun PlayerControlsShell(
     episodeTitle: String?,
     playbackSnapshot: PlayerPlaybackSnapshot,
     displayedPositionMs: Long,
+    seekPreview: PlayerSeekPreview? = null,
+    seekPreviewPositionMs: Long? = null,
+    showSeekPreview: Boolean = false,
+    randomNextEpisodeMode: Boolean = false,
+    onRandomNextEpisodeModeToggle: (() -> Unit)? = null,
     metrics: PlayerLayoutMetrics,
     resizeMode: PlayerResizeMode,
     isLocked: Boolean,
@@ -336,6 +342,9 @@ internal fun PlayerControlsShell(
                     PlayerTimeline(
                         snapshot = playbackSnapshot,
                         displayedPositionMs = displayedPositionMs,
+                        seekPreview = seekPreview,
+                        seekPreviewPositionMs = seekPreviewPositionMs,
+                        showSeekPreview = showSeekPreview,
                         onScrubChange = onScrubChange,
                         onScrubFinished = {
                             onInteraction()
@@ -498,6 +507,21 @@ private fun PlayerHeader(
                             onClick = onOpenInExternalPlayer,
                         )
                     }
+                    if (onRandomNextEpisodeModeToggle != null) {
+                        PlayerHeaderIconButton(
+                            icon = Icons.Rounded.Shuffle,
+                            contentDescription = if (randomNextEpisodeMode) {
+                                stringResource(Res.string.player_random_next_enabled)
+                            } else {
+                                stringResource(Res.string.player_random_next_disabled)
+                            },
+                            buttonSize = metrics.headerIconSize + 16.dp,
+                            iconSize = metrics.headerIconSize,
+                            selected = randomNextEpisodeMode,
+                            tint = if (randomNextEpisodeMode) MaterialTheme.colorScheme.primary else Color.White,
+                            onClick = onRandomNextEpisodeModeToggle,
+                        )
+                    }
                     if (onPartyClick != null) {
                         PlayerHeaderIconButton(
                             icon = Icons.Rounded.Groups,
@@ -548,6 +572,7 @@ internal fun PlayerHeaderIconButton(
     contentDescription: String,
     buttonSize: androidx.compose.ui.unit.Dp,
     iconSize: androidx.compose.ui.unit.Dp,
+    selected: Boolean = false,
     onClick: () -> Unit,
     tint: Color = Color.White,
 ) {
@@ -555,7 +580,8 @@ internal fun PlayerHeaderIconButton(
         modifier = Modifier
             .size(buttonSize)
             .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.35f))
+            .background(if (selected) Color.White.copy(alpha = 0.2f) else Color.Black.copy(alpha = 0.35f))
+            .then(if (selected) Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.9f), CircleShape) else Modifier)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

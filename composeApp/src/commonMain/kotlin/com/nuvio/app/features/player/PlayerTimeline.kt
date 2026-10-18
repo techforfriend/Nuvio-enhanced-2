@@ -2,19 +2,29 @@ package com.nuvio.app.features.player
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -22,13 +32,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -36,12 +47,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.nuvio.app.core.i18n.localizedEpisodeTitle
 import com.nuvio.app.core.ui.accentBrush
-import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.nuvioTypeScale
+import com.nuvio.app.core.ui.themePalette
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
-import com.nuvio.app.core.i18n.localizedEpisodeTitle
 
 internal val PlayerTimelineContentInset = 2.dp
 
@@ -57,45 +68,52 @@ internal fun PlayerTimelineDetails(
     isPlaying: Boolean,
     metrics: PlayerLayoutMetrics,
 ) {
-    val typeScale = MaterialTheme.nuvioTypeScale
     Column(Modifier.padding(horizontal = PlayerTimelineContentInset)) {
-        Text(
-            text = title,
-            style = typeScale.titleLg.copy(
-                fontSize = metrics.titleSize,
-                lineHeight = metrics.titleSize * 1.16f,
-                fontWeight = FontWeight.SemiBold,
-            ),
-            color = Color.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
         if (seasonNumber != null && episodeNumber != null) {
-            val episodeCode = stringResource(Res.string.compose_player_episode_code_full, seasonNumber, episodeNumber)
-            val displayEpisodeTitle = localizedEpisodeTitle(episodeTitle, episodeNumber)
+            val epTitle = localizedEpisodeTitle(
+                seasonNumber = seasonNumber,
+                episodeNumber = episodeNumber,
+                rawEpisodeTitle = episodeTitle,
+            )
             Text(
-                text = if (displayEpisodeTitle.isNullOrBlank()) episodeCode else "$episodeCode • $displayEpisodeTitle",
-                style = typeScale.bodyMd.copy(fontSize = metrics.episodeInfoSize),
-                color = Color.White.copy(alpha = 0.9f),
+                text = title,
+                style = MaterialTheme.nuvioTypeScale.bodyMd.copy(fontWeight = FontWeight.SemiBold),
+                color = Color.White.copy(alpha = 0.72f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = epTitle,
+                style = MaterialTheme.nuvioTypeScale.headlineSm.copy(fontWeight = FontWeight.Bold),
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        } else {
+            Text(
+                text = title,
+                style = MaterialTheme.nuvioTypeScale.headlineSm.copy(fontWeight = FontWeight.Bold),
+                color = Color.White,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        if (!releaseInfo.isNullOrBlank()) {
-            Text(
-                text = releaseInfo,
-                style = typeScale.labelSm.copy(fontSize = metrics.metadataSize),
-                color = Color.White.copy(alpha = 0.68f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+        val subLine = buildString {
+            if (!releaseInfo.isNullOrBlank()) append(releaseInfo)
+            if (streamTitle.isNotBlank()) {
+                if (isNotEmpty()) append(" • ")
+                append(streamTitle)
+            }
+            if (providerName.isNotBlank()) {
+                if (isNotEmpty()) append(" • ")
+                append(providerName)
+            }
         }
-        val source = streamTitle.ifBlank { providerName }.replace("\n", " · ")
-        if (!isPlaying && source.isNotBlank()) {
+        if (subLine.isNotBlank()) {
             Text(
-                text = stringResource(Res.string.compose_player_via, source),
-                style = typeScale.labelSm.copy(fontSize = metrics.metadataSize),
-                color = Color.White.copy(alpha = 0.68f),
+                text = subLine,
+                style = MaterialTheme.nuvioTypeScale.labelSm,
+                color = Color.White.copy(alpha = 0.55f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -111,6 +129,9 @@ internal fun PlayerTimeline(
     onScrubChange: (Long) -> Unit,
     onScrubFinished: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    seekPreview: PlayerSeekPreview? = null,
+    seekPreviewPositionMs: Long? = null,
+    showSeekPreview: Boolean = false,
     enabled: Boolean = true,
 ) {
     val durationMs = snapshot.durationMs.coerceAtLeast(0L)
@@ -130,58 +151,126 @@ internal fun PlayerTimeline(
         label = "playerTimelineThickness",
     )
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-        Slider(
-            value = displayedPositionMs.coerceIn(0L, durationMs).toFloat(),
-            onValueChange = { value ->
-                val position = value.toLong().coerceIn(0L, durationMs)
-                scrubPosition = position
-                onScrubChange(position)
-            },
-            onValueChangeFinished = {
-                onScrubFinished((scrubPosition ?: displayedPositionMs).coerceIn(0L, durationMs))
-                scrubPosition = null
-            },
-            valueRange = 0f..rangeEnd,
-            enabled = enabled && durationMs > 0L,
-            interactionSource = interactionSource,
-            thumb = {},
-            track = { state ->
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .drawBehind {
-                            val trackHeight = trackThickness.toPx()
-                            val trackOrigin = Offset(0f, 35.dp.toPx() - trackHeight / 2)
-                            val radius = CornerRadius(trackHeight / 2)
-                            drawRoundRect(
-                                color = Color.White.copy(alpha = 0.3f),
-                                topLeft = trackOrigin,
-                                size = Size(size.width, trackHeight),
-                                cornerRadius = radius,
-                            )
-                            drawRoundRect(
-                                color = accent.copy(alpha = 0.35f),
-                                topLeft = trackOrigin,
-                                size = Size(size.width * bufferedFraction, trackHeight),
-                                cornerRadius = radius,
-                            )
-                            drawRoundRect(
-                                brush = accentBrush,
-                                topLeft = trackOrigin,
-                                size = Size(size.width * (state.value / rangeEnd).coerceIn(0f, 1f), trackHeight),
-                                cornerRadius = radius,
-                            )
-                        },
+    val previewPositionMs = seekPreviewPositionMs?.coerceIn(0L, durationMs)
+    val previewVisible = showSeekPreview && previewPositionMs != null && durationMs > 0L
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            if (previewVisible) {
+                val previewWidth = 168.dp
+                val fraction = previewPositionMs.toFloat() / durationMs.toFloat()
+                val maxOffset = (maxWidth - previewWidth).coerceAtLeast(0.dp)
+                val previewOffset = (maxWidth * fraction - previewWidth / 2).coerceIn(0.dp, maxOffset)
+                SeekPreviewCard(
+                    preview = seekPreview,
+                    positionMs = previewPositionMs,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(start = previewOffset, bottom = 8.dp),
                 )
-            },
-            modifier = modifier
-                .fillMaxWidth()
-                .height(24.dp)
-                .wrapContentHeight(Alignment.Bottom, unbounded = true)
-                .requiredHeight(48.dp)
-                .semantics { contentDescription = description },
-        )
+            }
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Slider(
+                    value = displayedPositionMs.coerceIn(0L, durationMs).toFloat(),
+                    onValueChange = { value ->
+                        val position = value.toLong().coerceIn(0L, durationMs)
+                        scrubPosition = position
+                        onScrubChange(position)
+                    },
+                    onValueChangeFinished = {
+                        onScrubFinished((scrubPosition ?: displayedPositionMs).coerceIn(0L, durationMs))
+                        scrubPosition = null
+                    },
+                    valueRange = 0f..rangeEnd,
+                    enabled = enabled && durationMs > 0L,
+                    interactionSource = interactionSource,
+                    thumb = {},
+                    track = { state ->
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .drawBehind {
+                                    val trackHeight = trackThickness.toPx()
+                                    val trackOrigin = Offset(0f, 35.dp.toPx() - trackHeight / 2)
+                                    val radius = CornerRadius(trackHeight / 2)
+                                    drawRoundRect(
+                                        color = Color.White.copy(alpha = 0.3f),
+                                        topLeft = trackOrigin,
+                                        size = Size(size.width, trackHeight),
+                                        cornerRadius = radius,
+                                    )
+                                    drawRoundRect(
+                                        color = accent.copy(alpha = 0.35f),
+                                        topLeft = trackOrigin,
+                                        size = Size(size.width * bufferedFraction, trackHeight),
+                                        cornerRadius = radius,
+                                    )
+                                    drawRoundRect(
+                                        brush = accentBrush,
+                                        topLeft = trackOrigin,
+                                        size = Size(size.width * (state.value / rangeEnd).coerceIn(0f, 1f), trackHeight),
+                                        cornerRadius = radius,
+                                    )
+                                },
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(24.dp)
+                        .wrapContentHeight(Alignment.Bottom, unbounded = true)
+                        .requiredHeight(48.dp)
+                        .semantics { contentDescription = description },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeekPreviewCard(
+    preview: PlayerSeekPreview?,
+    positionMs: Long,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .width(168.dp)
+            .height(96.dp),
+        shape = RoundedCornerShape(8.dp),
+        color = Color.Black.copy(alpha = 0.9f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.26f)),
+        shadowElevation = 8.dp,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            if (preview != null) {
+                Image(
+                    bitmap = preview.image,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.size(22.dp),
+                    strokeWidth = 2.dp,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .padding(vertical = 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = formatPlaybackTime(positionMs),
+                    style = MaterialTheme.nuvioTypeScale.labelSm.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color.White,
+                )
+            }
+        }
     }
 }

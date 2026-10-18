@@ -7,10 +7,13 @@ import kotlin.test.assertNull
 
 class ProfileBackgroundTest {
     @Test
-    fun backgroundDoesNotRenderWithoutEntitlement() {
+    fun backgroundRendersWithoutEntitlementInEnhanced() {
         val profile = NuvioProfile(profileBackgroundId = "aurora")
 
-        assertNull(resolveProfileBackground(profile, CosmeticEntitlements.None))
+        assertEquals(
+            ProfileBackgroundSelection.Catalog("aurora"),
+            resolveProfileBackground(profile, CosmeticEntitlements.None),
+        )
     }
 
     @Test

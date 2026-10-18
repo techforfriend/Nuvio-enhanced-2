@@ -64,26 +64,31 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.1-enhanced-pre6
-          name: "Nuvio Enhanced v0.6.1-beta (Update 6 - Settings Wiring, Download Button & Gradient Themes)"
+          tag_name: v0.6.1-enhanced-pre7
+          name: "Nuvio Enhanced v0.6.1-beta (Update 7 - Profile Backgrounds, Stream Pinning, Seek Previews & Shuffle)"
           body: |
-            ## Nuvio Enhanced v0.6.1-beta (Update 6)
+            ## Nuvio Enhanced v0.6.1-beta (Update 7)
 
-            Major update fixing all Nuvio Enhanced home and hero settings options, adding the missing download button to details, and fully integrating animated gradient themes with custom UI component styling.
+            Comprehensive update porting all remaining AKRusso features and completely fixing Profile Backgrounds!
 
-            ### 🌟 What's New & Fixed in Update 6:
-            1. **All Nuvio Enhanced Settings Fully Functional:**
-               - Hero display modes, Poster Art Hero, and Streaming Showcase Hero options now correctly apply to the home screen.
-               - Video preview and sound toggles are active and respected.
-               - Nuvio Concierge and Smart Shelves sections properly display on home when enabled.
-               - Continue Watching "Ready to Watch" smart signal badges wired.
-            2. **Download Button Feature Added:**
-               - Added "Show download button" switch in Nuvio Enhanced settings under Details Screen.
-               - Added dedicated Download action button in Movie and Series detail screens.
-            3. **Animated Gradient Themes & UI Theming:**
-               - Restored Enhanced Themes: Messenger, Amethyst, Blossom, Lagoon, Sunset, and Custom.
-               - Custom theme dual-color HSV and hex color picker.
-               - Dynamic animated theme accents applied across the app (Netflix Info button on hero, Play CTA buttons, action buttons, progress bars, and selection chips).
+            ### 🌟 What's New & Fixed in Update 7:
+            1. **Profile Backgrounds 100% Unlocked & Working:**
+               - Unlocked for all users without any subscription or paywall requirements.
+               - Added 10 built-in theme presets: Gold, Jade, Rose Gold, Arctic Blue, Graphite, Messenger, Amethyst, Blossom, Lagoon, Sunset.
+               - Added Custom Image URL field directly in Edit Profile.
+               - Added live visual banner preview inside Edit Profile screen so you see your background immediately while editing!
+               - Robust local offline caching and persistence ensures backgrounds never get wiped out.
+            2. **Stream Source Pinning:**
+               - Pin your favorite addons and scraper stream sources to always appear at the top.
+               - Push pin toggles available in Plugins / Addons settings and on Streams list.
+            3. **Timeline Seek Previews:**
+               - Visual thumbnail preview card appears while scrubbing the player timeline.
+               - Fully supported on both ExoPlayer and Libmpv engines.
+            4. **Persistent Episode Shuffle:**
+               - Added Shuffle toggle button in the player controls header for TV series.
+               - Picks a random aired episode across seasons when enabled.
+            5. **Themed Player Clock End-Time Overlay:**
+               - Displays current device clock and calculated video end time with active theme accent styling.
 
             ### 📥 Download APK
             Choose the build matching your Android device architecture below (most devices use `arm64-v8a` or `universal`).

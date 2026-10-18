@@ -34,7 +34,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.nuvio.app.core.ui.ThemeColors
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -77,6 +79,7 @@ fun ProfileEditScreen(
     var avatarUrl by rememberSaveable { mutableStateOf(currentProfile?.avatarUrl.orEmpty()) }
     var selectedBackgroundId by rememberSaveable { mutableStateOf(currentProfile?.profileBackgroundId) }
     var selectedBackgroundUrl by rememberSaveable { mutableStateOf(currentProfile?.profileBackgroundUrl) }
+    var customBackgroundUrlInput by rememberSaveable { mutableStateOf(currentProfile?.profileBackgroundUrl.orEmpty()) }
     var usesPrimaryAddons by rememberSaveable { mutableStateOf(currentProfile?.usesPrimaryAddons ?: false) }
     var isSaving by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -87,7 +90,7 @@ fun ProfileEditScreen(
         MemberAccessRepository.access
     }.collectAsStateWithLifecycle()
     val backgroundCatalog by ProfileBackgroundRepository.catalog.collectAsStateWithLifecycle()
-    val canChooseBackground = !isNew && memberAccess.entitlements.includes(CosmeticEntitlement.PROFILE_BACKGROUNDS)
+    val canChooseBackground = true
 
     val avatars by AvatarRepository.avatars.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) {
@@ -134,6 +137,8 @@ fun ProfileEditScreen(
                 onUsesPrimaryAddonsChange = { usesPrimaryAddons = it },
                 selectedAvatar = visibleAvatarItem,
                 customAvatarUrl = customAvatarUrl,
+                selectedBackgroundId = selectedBackgroundId,
+                selectedBackgroundUrl = selectedBackgroundUrl,
                 accentColor = previewAccent,
                 hasAvatarChoices = avatars.isNotEmpty(),
             )
@@ -182,21 +187,42 @@ fun ProfileEditScreen(
                             style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
-                        Text(
-                            text = stringResource(Res.string.profile_background_member_note),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                         ProfileBackgroundPicker(
                             backgrounds = backgroundCatalog,
                             selectedBackgroundId = selectedBackgroundId,
                             selectedBackgroundUrl = selectedBackgroundUrl,
-                            customBackgroundUrl = currentProfile?.profileBackgroundUrl,
+                            customBackgroundUrl = selectedBackgroundUrl ?: customBackgroundUrlInput.takeIf { it.isNotBlank() },
                             standardBackgroundColor = previewAccent,
                             onSelectionChange = { id, url ->
                                 selectedBackgroundId = id
                                 selectedBackgroundUrl = url
+                                if (url != null) {
+                                    customBackgroundUrlInput = url
+                                } else if (id != null) {
+                                    customBackgroundUrlInput = ""
+                                }
                             },
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = stringResource(Res.string.profile_background_custom),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        NuvioInputField(
+                            value = customBackgroundUrlInput,
+                            onValueChange = { value ->
+                                customBackgroundUrlInput = value
+                                if (value.isNotBlank()) {
+                                    selectedBackgroundId = null
+                                    selectedBackgroundUrl = value
+                                } else {
+                                    if (selectedBackgroundUrl != null && selectedBackgroundId == null) {
+                                        selectedBackgroundUrl = null
+                                    }
+                                }
+                            },
+                            placeholder = "https://example.com/background.jpg",
                         )
                     }
                 }
@@ -289,6 +315,8 @@ fun ProfileEditScreen(
                                 avatarColorHex = avatarColorHex,
                                 avatarId = if (customAvatarUrl == null) selectedAvatarId else null,
                                 avatarUrl = customAvatarUrl,
+                                profileBackgroundId = selectedBackgroundId,
+                                profileBackgroundUrl = selectedBackgroundUrl,
                                 usesPrimaryAddons = usesPrimaryAddons,
                             )
                         } else {
@@ -389,11 +417,67 @@ private fun ProfileIdentityCard(
     onUsesPrimaryAddonsChange: (Boolean) -> Unit,
     selectedAvatar: AvatarCatalogItem?,
     customAvatarUrl: String?,
+    selectedBackgroundId: String? = null,
+    selectedBackgroundUrl: String? = null,
     accentColor: Color,
     hasAvatarChoices: Boolean,
 ) {
+    val presetPalette = when (selectedBackgroundId) {
+        "preset:gold" -> ThemeColors.Gold
+        "preset:jade" -> ThemeColors.Jade
+        "preset:rose_gold" -> ThemeColors.RoseGold
+        "preset:arctic_blue" -> ThemeColors.ArcticBlue
+        "preset:graphite" -> ThemeColors.Graphite
+        "preset:messenger" -> ThemeColors.Messenger
+        "preset:amethyst" -> ThemeColors.Amethyst
+        "preset:blossom" -> ThemeColors.Blossom
+        "preset:lagoon" -> ThemeColors.Lagoon
+        "preset:sunset" -> ThemeColors.Sunset
+        else -> null
+    }
+
     NuvioSurfaceCard {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(86.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .then(
+                        if (selectedBackgroundUrl != null) {
+                            Modifier
+                        } else if (presetPalette != null) {
+                            Modifier.background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        presetPalette.secondary,
+                                        presetPalette.secondaryVariant,
+                                        presetPalette.background,
+                                    ),
+                                ),
+                            )
+                        } else {
+                            Modifier.background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        accentColor.copy(alpha = 0.4f),
+                                        accentColor.copy(alpha = 0.2f),
+                                        Color.Black.copy(alpha = 0.35f),
+                                    ),
+                                ),
+                            )
+                        }
+                    ),
+            ) {
+                if (selectedBackgroundUrl != null) {
+                    AsyncImage(
+                        model = selectedBackgroundUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
