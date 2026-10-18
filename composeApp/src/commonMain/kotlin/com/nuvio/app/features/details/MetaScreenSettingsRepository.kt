@@ -51,6 +51,7 @@ data class MetaScreenSettingsUiState(
     val posterTransitionEnabled: Boolean = false,
     val showOverallRatings: Boolean = true,
     val episodeRatingsVisibility: EpisodeRatingsVisibility = EpisodeRatingsVisibility.SHOW_ALL,
+    val showDownloadAction: Boolean = false,
 )
 
 enum class MetaScreenBackgroundMode {
@@ -137,6 +138,8 @@ private data class StoredMetaScreenSettingsPayload(
     val showOverallRatings: Boolean = true,
     @SerialName("episode_ratings_visibility")
     val episodeRatingsVisibility: String = EpisodeRatingsVisibility.SHOW_ALL.name,
+    @SerialName("show_download_action")
+    val showDownloadAction: Boolean = false,
 )
 
 private data class MetaScreenSectionDefinition(
@@ -217,6 +220,7 @@ object MetaScreenSettingsRepository {
     private var showOverallRatings: Boolean = true
     private var episodeRatingsVisibility: EpisodeRatingsVisibility = EpisodeRatingsVisibility.SHOW_ALL
     private var posterTransitionEnabled: Boolean = false
+    private var showDownloadAction: Boolean = false
     private fun localizedString(resource: StringResource): String = runBlocking { getString(resource) }
 
     fun ensureLoaded() {
@@ -239,6 +243,7 @@ object MetaScreenSettingsRepository {
                 posterTransitionEnabled = parsed.posterTransitionEnabled
                 showOverallRatings = parsed.showOverallRatings
                 episodeRatingsVisibility = EpisodeRatingsVisibility.parse(parsed.episodeRatingsVisibility)
+                showDownloadAction = parsed.showDownloadAction
                 preferences = parsed.items.mapNotNull { item ->
                     val key = runCatching { MetaScreenSectionKey.valueOf(item.key) }.getOrNull() ?: return@mapNotNull null
                     key to item
@@ -262,8 +267,16 @@ object MetaScreenSettingsRepository {
         posterTransitionEnabled = false
         showOverallRatings = true
         episodeRatingsVisibility = EpisodeRatingsVisibility.SHOW_ALL
+        showDownloadAction = false
         _uiState.value = MetaScreenSettingsUiState()
         ensureLoaded()
+    }
+
+    fun setShowDownloadAction(enabled: Boolean) {
+        ensureLoaded()
+        showDownloadAction = enabled
+        publish()
+        persist()
     }
 
     fun setCinematicBackground(enabled: Boolean) {
@@ -350,6 +363,7 @@ object MetaScreenSettingsRepository {
         posterTransitionEnabled = false
         showOverallRatings = true
         episodeRatingsVisibility = EpisodeRatingsVisibility.SHOW_ALL
+        showDownloadAction = false
         _uiState.value = MetaScreenSettingsUiState()
     }
 
@@ -364,6 +378,7 @@ object MetaScreenSettingsRepository {
         posterTransitionEnabled: Boolean = false,
         showOverallRatings: Boolean = true,
         episodeRatingsVisibility: EpisodeRatingsVisibility = EpisodeRatingsVisibility.SHOW_ALL,
+        showDownloadAction: Boolean = false,
     ) {
         ensureLoaded()
         this.backgroundMode = backgroundMode ?: MetaScreenBackgroundMode.fromLegacyCinematic(cinematicBackground)
@@ -374,6 +389,7 @@ object MetaScreenSettingsRepository {
         this.posterTransitionEnabled = posterTransitionEnabled
         this.showOverallRatings = showOverallRatings
         this.episodeRatingsVisibility = episodeRatingsVisibility
+        this.showDownloadAction = showDownloadAction
         preferences = items.associate { item ->
             item.key to StoredMetaScreenSectionPreference(
                 key = item.key.name,
@@ -404,6 +420,7 @@ object MetaScreenSettingsRepository {
         posterTransitionEnabled = false
         showOverallRatings = true
         episodeRatingsVisibility = EpisodeRatingsVisibility.SHOW_ALL
+        showDownloadAction = false
         normalizePreferences()
         publish()
         persist()
@@ -476,6 +493,7 @@ object MetaScreenSettingsRepository {
             posterTransitionEnabled = posterTransitionEnabled,
             showOverallRatings = showOverallRatings,
             episodeRatingsVisibility = episodeRatingsVisibility,
+            showDownloadAction = showDownloadAction,
         )
     }
 
@@ -493,6 +511,7 @@ object MetaScreenSettingsRepository {
                     posterTransitionEnabled = posterTransitionEnabled,
                     showOverallRatings = showOverallRatings,
                     episodeRatingsVisibility = episodeRatingsVisibility.name,
+                    showDownloadAction = showDownloadAction,
                 ),
             ),
         )

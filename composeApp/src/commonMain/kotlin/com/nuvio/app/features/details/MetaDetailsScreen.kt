@@ -92,7 +92,11 @@ import com.nuvio.app.core.ui.nuvioSafeBottomPadding
 import com.nuvio.app.core.ui.rememberHeroStretchState
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Download
 import com.nuvio.app.features.details.components.DetailActions
+import com.nuvio.app.features.details.components.DetailSecondaryAction
+import nuvio.composeapp.generated.resources.streams_download_file
 import com.nuvio.app.features.details.components.CommentDetailSheet
 import com.nuvio.app.features.details.components.DetailAdditionalInfoSection
 import com.nuvio.app.features.details.components.DetailCastSection
@@ -1169,6 +1173,21 @@ fun MetaDetailsScreen(
                                             onHeightChanged = { heroHeightPx.intValue = it },
                                             actions = if (isSectionEnabled(MetaScreenSectionKey.ACTIONS)) {
                                                 {
+                                                    val tabletDownloadAction = if (metaScreenSettingsUiState.showDownloadAction) {
+                                                        DetailSecondaryAction(
+                                                            label = stringResource(Res.string.streams_download_file),
+                                                            icon = Icons.Rounded.Download,
+                                                            onClick = {
+                                                                if (showManualPlayOption) {
+                                                                    onPrimaryPlayLongClick?.invoke() ?: onPrimaryPlayClick()
+                                                                } else {
+                                                                    onPrimaryPlayClick()
+                                                                }
+                                                            },
+                                                        )
+                                                    } else {
+                                                        null
+                                                    }
                                                     DetailActions(
                                                         playLabel = playButtonLabel,
                                                         playEnabled = isPrimaryPlayEnabled,
@@ -1176,6 +1195,7 @@ fun MetaDetailsScreen(
                                                         isWatched = isWatched,
                                                         isTablet = true,
                                                         shuffleEnabled = shuffleSettings.enabled,
+                                                        downloadAction = tabletDownloadAction,
                                                         onPlayClick = onPrimaryPlayClick,
                                                         onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
                                                         onShuffleClick = onShuffleClick,
@@ -2292,6 +2312,21 @@ private fun ConfiguredMetaSections(
     fun RenderSection(key: MetaScreenSectionKey, showHeader: Boolean = true) {
         when (key) {
             MetaScreenSectionKey.ACTIONS -> {
+                val downloadAction = if (settings.showDownloadAction) {
+                    DetailSecondaryAction(
+                        label = stringResource(Res.string.streams_download_file),
+                        icon = Icons.Rounded.Download,
+                        onClick = {
+                            if (showManualPlayOption) {
+                                onPrimaryPlayLongClick?.invoke() ?: onPrimaryPlayClick()
+                            } else {
+                                onPrimaryPlayClick()
+                            }
+                        },
+                    )
+                } else {
+                    null
+                }
                 DetailActions(
                     playLabel = playButtonLabel,
                     playEnabled = isPrimaryPlayEnabled,
@@ -2299,6 +2334,7 @@ private fun ConfiguredMetaSections(
                     isWatched = isWatched,
                     isTablet = isTablet,
                     shuffleEnabled = shuffleEnabled,
+                    downloadAction = downloadAction,
                     onPlayClick = onPrimaryPlayClick,
                     onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
                     onShuffleClick = onShuffleClick,
