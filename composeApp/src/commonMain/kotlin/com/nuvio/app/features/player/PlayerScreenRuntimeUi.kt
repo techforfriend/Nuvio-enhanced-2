@@ -433,6 +433,8 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
         exit = fadeOut(),
     ) {
         val displayedPositionMs = scrubbingPositionMs ?: playbackSnapshot.positionMs
+        val orientationToggleSupported = rememberPlayerOrientationToggleSupported()
+        val portraitPlayback by PlayerOrientationPreference.portrait.collectAsStateWithLifecycle()
         val pipAvailable = isIos && playerSettingsUiState.miniPlayerEnabled &&
             playerController?.isPictureInPictureSupported() == true
         PlayerControlsShell(
@@ -525,6 +527,13 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
                 }
                 else -> null
             },
+            onOrientationToggleClick = if (orientationToggleSupported) {
+                {
+                    PlayerOrientationPreference.toggle()
+                    controlsActivityTick += 1
+                }
+            } else null,
+            isPortraitPlayback = portraitPlayback,
             onInfoClick = {
                 val selectedQuality = playerQualityState.selectedVariantFor(selectedPlayerQualityId)
                 InAppLogger.info(
