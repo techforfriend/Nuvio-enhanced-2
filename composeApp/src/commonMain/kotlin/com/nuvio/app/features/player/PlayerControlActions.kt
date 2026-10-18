@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SwapHoriz
@@ -63,9 +64,23 @@ internal fun PlayerToolbar(
     modifier: Modifier = Modifier,
     onPartyClick: (() -> Unit)? = null,
     partyActive: Boolean = false,
+    randomNextEpisodeMode: Boolean = false,
+    onRandomNextEpisodeModeToggle: (() -> Unit)? = null,
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
+        if (onRandomNextEpisodeModeToggle != null) {
+            PlayerAction(
+                description = if (randomNextEpisodeMode) {
+                    stringResource(Res.string.player_random_next_enabled)
+                } else {
+                    stringResource(Res.string.player_random_next_disabled)
+                },
+                icon = Icons.Rounded.Shuffle,
+                onClick = onRandomNextEpisodeModeToggle,
+                tint = if (randomNextEpisodeMode) MaterialTheme.colorScheme.primary else Color.White,
+            )
+        }
         if (onPartyClick != null) {
             PlayerAction(
                 description = stringResource(Res.string.party_title),
