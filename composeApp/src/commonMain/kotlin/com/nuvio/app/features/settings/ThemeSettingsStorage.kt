@@ -27,6 +27,10 @@ internal expect object ThemeSettingsStorage {
     fun saveNavBarPosition(positionKey: String)
     fun loadNavBarGlowEnabled(): Boolean?
     fun saveNavBarGlowEnabled(enabled: Boolean)
+    fun loadNavBarGlass(): String?
+    fun saveNavBarGlass(value: String)
+    fun loadLiquidGlassEffectsEnabled(): Boolean?
+    fun saveLiquidGlassEffectsEnabled(enabled: Boolean)
     fun exportToSyncPayload(): JsonObject
     fun replaceFromSyncPayload(payload: JsonObject)
 }
