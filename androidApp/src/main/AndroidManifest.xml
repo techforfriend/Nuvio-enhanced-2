@@ -180,6 +180,96 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name="com.nuvio.app.launcher.AppIconEnhanced"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_alt_enhanced"
+            android:label="@string/app_name"
+            android:supportsPictureInPicture="true"
+            android:theme="@style/Theme.Nuvio.Splash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.nuvio.app.launcher.AppIconMonochrome"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_alt_monochrome"
+            android:label="@string/app_name"
+            android:supportsPictureInPicture="true"
+            android:theme="@style/Theme.Nuvio.Splash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.nuvio.app.launcher.AppIconNeon"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_alt_neon"
+            android:label="@string/app_name"
+            android:supportsPictureInPicture="true"
+            android:theme="@style/Theme.Nuvio.Splash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.nuvio.app.launcher.AppIconGear"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_alt_gear"
+            android:label="@string/app_name"
+            android:supportsPictureInPicture="true"
+            android:theme="@style/Theme.Nuvio.Splash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.nuvio.app.launcher.AppIconChrome"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_alt_chrome"
+            android:label="@string/app_name"
+            android:supportsPictureInPicture="true"
+            android:theme="@style/Theme.Nuvio.Splash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.nuvio.app.launcher.AppIconAurora"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_alt_aurora"
+            android:label="@string/app_name"
+            android:supportsPictureInPicture="true"
+            android:theme="@style/Theme.Nuvio.Splash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name="com.nuvio.app.features.player.PlayerNowPlayingService"
             android:exported="false"

@@ -48,8 +48,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -92,7 +94,6 @@ import nuvio.composeapp.generated.resources.settings_meta_show_episode_ratings_d
 import nuvio.composeapp.generated.resources.settings_nuvio_enhanced_title
 import org.jetbrains.compose.resources.stringResource
 
-private const val NuvioEnhancedGithubUrl = "https://github.com/AKRusso/NuvioMobile-Enhanced"
 internal const val NuvioEnhancedDiscordUrl = "https://discord.gg/at8xffxuRU"
 
 private enum class EnhancedSettingsCategory {
@@ -146,6 +147,12 @@ private fun NuvioEnhancedSettingsPageContent(
     var showImportDialog by remember { mutableStateOf(false) }
     var importPayload by remember { mutableStateOf("") }
     var importError by remember { mutableStateOf<String?>(null) }
+    val appIconScope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        AppIconRepository.ensureLoaded()
+    }
+    val appIconState by AppIconRepository.state.collectAsStateWithLifecycle()
+    var showAppIconPicker by remember { mutableStateOf(false) }
     val hasNewFeatures = settings.isNew(NuvioEnhancedFeature.SubtitleSyncMenu) ||
         settings.isNew(NuvioEnhancedFeature.SubtitleSelectorStyle) ||
         settings.isNew(NuvioEnhancedFeature.AudioSelectorStyle) ||
@@ -207,8 +214,6 @@ private fun NuvioEnhancedSettingsPageContent(
     Column(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.nuvio.spacing.listGap),
     ) {
-        DonationSupportCard()
-
         SettingsSection(
             title = stringResource(Res.string.settings_nuvio_enhanced_title),
             isTablet = isTablet,
@@ -376,36 +381,44 @@ private fun NuvioEnhancedSettingsPageContent(
         if (selectedCategory == EnhancedSettingsCategory.All ||
             selectedCategory == EnhancedSettingsCategory.System
         ) {
-        SettingsSection(
-            title = stringResource(Res.string.nuvio_enhanced_section_app_experience),
-            isTablet = isTablet,
-        ) {
-            SettingsGroup(isTablet = isTablet) {
-                SettingsSwitchRow(
-                    title = stringResource(Res.string.nuvio_enhanced_status_bar_title),
-                    description = stringResource(Res.string.nuvio_enhanced_status_bar_desc),
-                    checked = settings.statusBarVisible,
-                    isTablet = isTablet,
-                    highlighted = isNew(NuvioEnhancedFeature.StatusBarVisibility),
-                    onCheckedChange = {
-                        markSeen(NuvioEnhancedFeature.StatusBarVisibility)
-                        NuvioEnhancedSettingsRepository.setStatusBarVisible(it)
-                    },
-                )
-                SettingsGroupDivider(isTablet = isTablet)
-                SettingsSwitchRow(
-                    title = stringResource(Res.string.nuvio_enhanced_live_tv_title),
-                    description = stringResource(Res.string.nuvio_enhanced_live_tv_desc),
-                    checked = settings.liveTvEnabled,
-                    isTablet = isTablet,
-                    highlighted = isNew(NuvioEnhancedFeature.LiveTvControls),
-                    onCheckedChange = {
-                        markSeen(NuvioEnhancedFeature.LiveTvControls)
-                        NuvioEnhancedSettingsRepository.setLiveTvEnabled(it)
-                    },
-                )
+            SettingsSection(
+                title = stringResource(Res.string.nuvio_enhanced_section_app_experience),
+                isTablet = isTablet,
+            ) {
+                SettingsGroup(isTablet = isTablet) {
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_status_bar_title),
+                        description = stringResource(Res.string.nuvio_enhanced_status_bar_desc),
+                        checked = settings.statusBarVisible,
+                        isTablet = isTablet,
+                        highlighted = isNew(NuvioEnhancedFeature.StatusBarVisibility),
+                        onCheckedChange = {
+                            markSeen(NuvioEnhancedFeature.StatusBarVisibility)
+                            NuvioEnhancedSettingsRepository.setStatusBarVisible(it)
+                        },
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.settings_appearance_app_icon),
+                        description = stringResource(appIconState.selected.labelResource),
+                        enabled = appIconState.pending == null,
+                        isTablet = isTablet,
+                        highlighted = isNew(NuvioEnhancedFeature.AppIconPicker),
+                        trailingContent = {
+                            AppIconThumbnail(
+                                icon = appIconState.selected,
+                                modifier = Modifier.size(if (isTablet) 44.dp else 40.dp),
+                                cornerRadius = if (isTablet) 11.dp else 10.dp,
+                            )
+                        },
+                        onClick = {
+                            markSeen(NuvioEnhancedFeature.AppIconPicker)
+                            AppIconRepository.clearFailure()
+                            showAppIconPicker = true
+                        },
+                    )
+                }
             }
-        }
         }
 
         if (selectedCategory == EnhancedSettingsCategory.New ||
@@ -1142,14 +1155,6 @@ private fun NuvioEnhancedSettingsPageContent(
             }
         }
 
-        EnhancedCommunityFooter(
-            isTablet = isTablet,
-            onGithubClick = {
-                markSeen(NuvioEnhancedFeature.CommunityLinks)
-                uriHandler.openUri(NuvioEnhancedGithubUrl)
-            },
-        )
-
         if (CrashDiagnostics.reportsSupported) {
             SettingsSection(
                 title = stringResource(Res.string.nuvio_enhanced_section_diagnostics),
@@ -1216,6 +1221,22 @@ private fun NuvioEnhancedSettingsPageContent(
             },
             onImport = {
                 importBackupPayload(importPayload)
+            },
+        )
+    }
+
+    if (showAppIconPicker) {
+        AppIconPicker(
+            isTablet = isTablet,
+            state = appIconState,
+            onSelected = { icon ->
+                appIconScope.launch {
+                    AppIconRepository.select(icon)
+                }
+            },
+            onDismiss = {
+                AppIconRepository.clearFailure()
+                showAppIconPicker = false
             },
         )
     }
@@ -1438,106 +1459,6 @@ private fun EnhancedNewBadge() {
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Black,
         )
-    }
-}
-
-@Composable
-private fun EnhancedCommunityFooter(
-    isTablet: Boolean,
-    onGithubClick: () -> Unit,
-) {
-    val tokens = MaterialTheme.nuvio
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = tokens.colors.surface.copy(alpha = 0.72f),
-        shape = if (isTablet) RoundedCornerShape(NuvioTokens.Radius.xl) else tokens.shapes.compactCard,
-        border = BorderStroke(tokens.borders.hairline, tokens.colors.borderSubtle),
-    ) {
-        Column(
-            modifier = Modifier.padding(if (isTablet) 20.dp else 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Text(
-                text = stringResource(Res.string.nuvio_enhanced_footer_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = tokens.colors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = stringResource(Res.string.nuvio_enhanced_footer_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = tokens.colors.textMuted,
-            )
-            EnhancedFooterLink(
-                title = stringResource(Res.string.nuvio_enhanced_footer_github),
-                subtitle = stringResource(Res.string.nuvio_enhanced_footer_releases),
-                icon = Icons.Rounded.Link,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onGithubClick,
-            )
-        }
-    }
-}
-
-@Composable
-private fun EnhancedFooterLink(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    val tokens = MaterialTheme.nuvio
-    Surface(
-        modifier = modifier
-            .heightIn(min = 72.dp)
-            .clickable(onClick = onClick),
-        color = tokens.colors.accent.copy(alpha = 0.10f),
-        shape = RoundedCornerShape(NuvioTokens.Radius.lg),
-        border = BorderStroke(tokens.borders.hairline, tokens.colors.accent.copy(alpha = 0.28f)),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(
-                modifier = Modifier.size(34.dp),
-                color = tokens.colors.accent.copy(alpha = 0.16f),
-                shape = RoundedCornerShape(NuvioTokens.Radius.md),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = title,
-                        tint = tokens.colors.accent,
-                    )
-                }
-            }
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = tokens.colors.textPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = tokens.colors.textMuted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
     }
 }
 

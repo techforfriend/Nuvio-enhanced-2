@@ -64,18 +64,23 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.1-enhanced-pre4
-          name: "Nuvio Enhanced v0.6.1-beta (Update 4 - Settings Fix & Permanent Signing)"
+          tag_name: v0.6.1-enhanced-pre5
+          name: "Nuvio Enhanced v0.6.1-beta (Update 5 - Icons, Package com.nuvio.enhanced & UI Polish)"
           body: |
-            ## Nuvio Enhanced v0.6.1-beta (Update 4)
+            ## Nuvio Enhanced v0.6.1-beta (Update 5)
 
-            Critical update addressing settings persistence across app restarts and permanent release signing for seamless future updates.
+            Major update bringing custom launcher icons from AKRusso, custom package name, refined App Experience, and complete removal of donation/diagnostics options.
 
-            ### 🌟 Key Fixes in Update 4:
-            - **Settings Persistence Fixed:** Enhanced settings toggles (Player HUD, Next Episode button, Clock overlay, Hero controls, etc.) now properly persist across app restarts and profile switches using multi-layer SharedPreferences storage with immediate disk flush.
-            - **Deterministic Release Keystore Added:** Embedded a dedicated release signing key in the build pipeline. All APKs from this release onwards share the exact same cryptographic signature.
-            - **Seamless Future Updates:** Eliminates "App not installed as package conflicts with an existing package" errors for all subsequent releases. (Note: Since previous builds used ephemeral debug keys, uninstall any existing build once before installing Update 4; all future updates after this will install directly in 1-click!).
-            - **All Enhanced Features Working:** Player status overlay (battery, network, clock, end-time), Next Episode persistent skip button, IMDb star ratings, and customizable hero showcase.
+            ### 🌟 What's New & Fixed in Update 5:
+            1. **Added AKRusso Custom App Icons (12 Total):** Restored all alternate launcher icons from AKRusso Nuvio — Enhanced, Monochrome, Neon, Gear, Chrome, Aurora, Emerald, and more with live launcher activity switching.
+            2. **Package Name Changed:** Set package name / Application ID to `com.nuvio.enhanced` cleanly separating Nuvio Enhanced from stock Nuvio.
+            3. **App Display Name:** App name is now officially `Nuvio Enhanced` throughout the launcher and Android system.
+            4. **Removed GitHub Footer Link:** Eliminated the Nuvio Enhanced GitHub community link and banner from Settings.
+            5. **Fixed App Experience Settings:**
+               - **Status Bar Visibility:** Real-time Android system status bar toggle (`show/hide`) now fully functional.
+               - **App Icon Switcher:** Integrated App Icon selector directly inside App Experience settings with live icon preview thumbnail.
+            6. **Removed Ko-fi Donation Box:** Completely removed the "Donate on Ko-fi" box from Nuvio Enhanced settings.
+            7. **Diagnostics Cleaned Up:** Completely removed Diagnostics / Sentry crash reports from Advanced Settings and Search.
 
             ### 📥 Download APK
             Choose the build matching your Android device architecture below (most devices use `arm64-v8a` or `universal`).

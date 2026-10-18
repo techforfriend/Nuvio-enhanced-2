@@ -21,8 +21,8 @@ class AppIconOptionTest {
     }
 
     @Test
-    fun shortlistedCatalogueContainsSixIcons() {
-        assertEquals(6, AppIconOption.entries.size)
+    fun shortlistedCatalogueContainsTwelveIcons() {
+        assertEquals(12, AppIconOption.entries.size)
     }
 
     @Test

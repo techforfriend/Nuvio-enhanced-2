@@ -98,6 +98,11 @@ internal fun AppEnvironment(content: @Composable () -> Unit) {
     }.collectAsStateWithLifecycle()
 
     val customThemeColors by ThemeSettingsRepository.customThemeColors.collectAsStateWithLifecycle()
+    val enhancedSettings by com.nuvio.app.features.settings.NuvioEnhancedSettingsRepository.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(enhancedSettings.statusBarVisible) {
+        com.nuvio.app.core.ui.AppSystemUiController.setStatusBarVisible(enhancedSettings.statusBarVisible)
+    }
 
     NuvioTheme(appTheme = selectedTheme, amoled = amoledEnabled, customThemeColors = customThemeColors) {
         content()
