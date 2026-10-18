@@ -24,14 +24,22 @@ val localProps = Properties().apply {
     val propsFile = rootProject.file("local.properties")
     if (propsFile.exists()) propsFile.inputStream().use { load(it) }
 }
-val releaseStoreFile = localProps.getProperty("NUVIO_RELEASE_STORE_FILE")?.takeIf { it.isNotBlank() }
-val releaseStorePassword = localProps.getProperty("NUVIO_RELEASE_STORE_PASSWORD")?.takeIf { it.isNotBlank() }
-val releaseKeyAlias = localProps.getProperty("NUVIO_RELEASE_KEY_ALIAS")?.takeIf { it.isNotBlank() }
-val releaseKeyPassword = localProps.getProperty("NUVIO_RELEASE_KEY_PASSWORD")?.takeIf { it.isNotBlank() }
-val releaseKeystore = releaseStoreFile?.let(rootProject::file)
 fun envOrLocalProperty(key: String): String? =
     providers.environmentVariable(key).orNull?.trim()?.takeIf { it.isNotBlank() }
         ?: localProps.getProperty(key)?.trim()?.takeIf { it.isNotBlank() }
+
+val defaultKeystore = rootProject.file("keystore/nuvio-enhanced.jks")
+val hasDefaultKeystore = defaultKeystore.exists()
+
+val releaseStoreFile = envOrLocalProperty("NUVIO_RELEASE_STORE_FILE")
+val releaseStorePassword = envOrLocalProperty("NUVIO_RELEASE_STORE_PASSWORD")
+    ?: if (hasDefaultKeystore) "nuvioenhanced" else null
+val releaseKeyAlias = envOrLocalProperty("NUVIO_RELEASE_KEY_ALIAS")
+    ?: if (hasDefaultKeystore) "nuvioenhanced" else null
+val releaseKeyPassword = envOrLocalProperty("NUVIO_RELEASE_KEY_PASSWORD")
+    ?: if (hasDefaultKeystore) "nuvioenhanced" else null
+val releaseKeystore = releaseStoreFile?.let(rootProject::file)
+    ?: if (hasDefaultKeystore) defaultKeystore else null
 
 val sentryAuthToken = envOrLocalProperty("SENTRY_AUTH_TOKEN")
 val sentryOrg = envOrLocalProperty("SENTRY_ORG")

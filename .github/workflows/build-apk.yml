@@ -64,21 +64,18 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.1-enhanced-pre3
-          name: "Nuvio Enhanced v0.6.1-beta (Update 3 - Feature Activation)"
+          tag_name: v0.6.1-enhanced-pre4
+          name: "Nuvio Enhanced v0.6.1-beta (Update 4 - Settings Fix & Permanent Signing)"
           body: |
-            ## Nuvio Enhanced v0.6.1-beta (Update 3)
+            ## Nuvio Enhanced v0.6.1-beta (Update 4)
 
-            Updated release of **Nuvio Enhanced v0.6.1-beta** with active UI hooks for all Nuvio Enhanced settings.
+            Critical update addressing settings persistence across app restarts and permanent release signing for seamless future updates.
 
-            ### 🌟 Key Updates in Update 3:
-            - **Player Device Status HUD Active:** Toggling "Player status overlay" now renders the top status HUD displaying network connection (Wi-Fi/LTE), current time, battery percentage with charging indicator, and estimated completion time.
-            - **Player Clock & End-Time Overlay:** Toggling "Player time" now displays current wall clock time and projected finish time overlay.
-            - **Persistent Next Episode Button:** Toggling "Next episode button" keeps the next episode button readily available during series playback.
-            - **Home Hero Customization Active:** Home screen hero banner now actively respects "Show hero overview", "Show hero ratings" (IMDb star rating), "Show details button", and artwork mode toggles.
-            - **Supabase Login & Authentication Working:** Official API and Supabase endpoints connected.
-            - **All Premium Themes & Gradients Unlocked:** Gold, Jade, Rose Gold, Arctic Blue, Graphite, and full multi-color gradient editor unlocked out of the box.
-            - **Clean UI:** Discord and About section removed, branding updated to "Nuvio Enhanced".
+            ### 🌟 Key Fixes in Update 4:
+            - **Settings Persistence Fixed:** Enhanced settings toggles (Player HUD, Next Episode button, Clock overlay, Hero controls, etc.) now properly persist across app restarts and profile switches using multi-layer SharedPreferences storage with immediate disk flush.
+            - **Deterministic Release Keystore Added:** Embedded a dedicated release signing key in the build pipeline. All APKs from this release onwards share the exact same cryptographic signature.
+            - **Seamless Future Updates:** Eliminates "App not installed as package conflicts with an existing package" errors for all subsequent releases. (Note: Since previous builds used ephemeral debug keys, uninstall any existing build once before installing Update 4; all future updates after this will install directly in 1-click!).
+            - **All Enhanced Features Working:** Player status overlay (battery, network, clock, end-time), Next Episode persistent skip button, IMDb star ratings, and customizable hero showcase.
 
             ### 📥 Download APK
             Choose the build matching your Android device architecture below (most devices use `arm64-v8a` or `universal`).
