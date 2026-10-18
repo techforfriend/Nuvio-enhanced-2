@@ -34,7 +34,12 @@ import kotlin.math.roundToInt
 actual fun LockPlayerToLandscape() {
     val activity = LocalContext.current.findActivity() ?: return
     if (!activity.shouldForceLandscapePlayer()) return
-    val portrait by PlayerOrientationPreference.portrait.collectAsState()
+    val portrait = PlayerOrientationPreference.portrait.collectAsState().value
+    val target = if (portrait) {
+        ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+    } else {
+        ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+    }
 
     DisposableEffect(activity) {
         val previousOrientation = activity.requestedOrientation
@@ -45,11 +50,6 @@ actual fun LockPlayerToLandscape() {
         }
     }
     SideEffect {
-        val target = if (portrait) {
-            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        } else {
-            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        }
         if (activity.requestedOrientation != target) activity.requestedOrientation = target
     }
 }
