@@ -17,6 +17,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -42,31 +43,16 @@ class ThemeSettingsStorageTest {
     }
 
     @Test
-    fun liquidGlassPreferenceSurvivesReloadAndSync() {
+    fun liquidGlassPreferenceSurvivesReloadAndStaysOutOfSync() {
         ThemeSettingsStorage.saveNavBarLiquidGlassEnabled(true)
         ThemeSettingsStorage.initialize(RuntimeEnvironment.getApplication())
         assertEquals(true, ThemeSettingsStorage.loadNavBarLiquidGlassEnabled())
 
         val payload = ThemeSettingsStorage.exportToSyncPayload()
-        assertEquals(true, payload.decodeSyncBoolean("nav_bar_liquid_glass_enabled"))
-
-        ThemeSettingsStorage.saveNavBarLiquidGlassEnabled(false)
-        ThemeSettingsStorage.replaceFromSyncPayload(payload)
-        assertEquals(true, ThemeSettingsStorage.loadNavBarLiquidGlassEnabled())
-    }
-
-    @Test
-    fun olderPayloadClearsOnlyTheCurrentProfilesLiquidGlassPreference() {
-        val preferences = RuntimeEnvironment.getApplication()
-            .getSharedPreferences("nuvio_theme_settings", Context.MODE_PRIVATE)
-        val otherProfileKey = ProfileScopedKey.of("nav_bar_liquid_glass_enabled", 99)
-        preferences.edit().putBoolean(otherProfileKey, false).commit()
-        ThemeSettingsStorage.saveNavBarLiquidGlassEnabled(true)
+        assertTrue(payload.keys.none { "liquid_glass" in it && "nav_bar" in it })
 
         ThemeSettingsStorage.replaceFromSyncPayload(buildJsonObject {})
-
-        assertNull(ThemeSettingsStorage.loadNavBarLiquidGlassEnabled())
-        assertEquals(false, preferences.getBoolean(otherProfileKey, true))
+        assertEquals(true, ThemeSettingsStorage.loadNavBarLiquidGlassEnabled())
     }
 
     @Test
@@ -85,7 +71,7 @@ class ThemeSettingsStorageTest {
 
 
     @Test
-    fun liquidGlassEffectSettingsRoundTripThroughStorageAndSync() {
+    fun liquidGlassEffectSettingsSurviveReloadAndStayOutOfSync() {
         val bar = """{"cornerRadiusPercent":44.0,"blurRadiusDp":12.0}"""
         val lens = """{"cornerRadiusPercent":28.0,"refractionAmountDp":19.0}"""
 
@@ -95,86 +81,26 @@ class ThemeSettingsStorageTest {
 
         assertEquals(bar, ThemeSettingsStorage.loadNavBarLiquidGlassBarEffects())
         assertEquals(lens, ThemeSettingsStorage.loadNavBarLiquidGlassSelectionEffects())
+        assertTrue(ThemeSettingsStorage.exportToSyncPayload().keys.none { "effects" in it })
 
-        val payload = ThemeSettingsStorage.exportToSyncPayload()
-        assertEquals(bar, payload.decodeSyncString("nav_bar_liquid_glass_bar_effects"))
-        assertEquals(lens, payload.decodeSyncString("nav_bar_liquid_glass_selection_effects"))
-
-        ThemeSettingsStorage.saveNavBarLiquidGlassBarEffects("{}")
-        ThemeSettingsStorage.saveNavBarLiquidGlassSelectionEffects("{}")
-        ThemeSettingsStorage.replaceFromSyncPayload(payload)
-
+        ThemeSettingsStorage.replaceFromSyncPayload(buildJsonObject {})
         assertEquals(bar, ThemeSettingsStorage.loadNavBarLiquidGlassBarEffects())
         assertEquals(lens, ThemeSettingsStorage.loadNavBarLiquidGlassSelectionEffects())
     }
 
     @Test
-    fun replacingOlderSyncPayloadClearsOnlyCurrentProfilesGlassEffectSettings() {
-        val preferences = RuntimeEnvironment.getApplication()
-            .getSharedPreferences("nuvio_theme_settings", Context.MODE_PRIVATE)
-        val otherProfileBarKey = ProfileScopedKey.of("nav_bar_liquid_glass_bar_effects", 99)
-        val otherProfileLensKey = ProfileScopedKey.of("nav_bar_liquid_glass_selection_effects", 99)
-        preferences.edit()
-            .putString(otherProfileBarKey, """{"blurRadiusDp":3}""")
-            .putString(otherProfileLensKey, """{"refractionAmountDp":8}""")
-            .commit()
-        ThemeSettingsStorage.saveNavBarLiquidGlassBarEffects("""{"blurRadiusDp":9}""")
-        ThemeSettingsStorage.saveNavBarLiquidGlassSelectionEffects("""{"refractionAmountDp":10}""")
-
-        ThemeSettingsStorage.replaceFromSyncPayload(buildJsonObject {})
-
-        assertNull(ThemeSettingsStorage.loadNavBarLiquidGlassBarEffects())
-        assertNull(ThemeSettingsStorage.loadNavBarLiquidGlassSelectionEffects())
-        assertEquals("""{"blurRadiusDp":3}""", preferences.getString(otherProfileBarKey, null))
-        assertEquals("""{"refractionAmountDp":8}""", preferences.getString(otherProfileLensKey, null))
-    }
-
-    @Test
-    fun defaultNavigationIconColorRoundTripsThroughProfileSync() {
+    fun defaultNavigationIconColorSurvivesReloadAndStaysOutOfSync() {
         ThemeSettingsStorage.saveNavBarDefaultIconColorEnabled(true)
         ThemeSettingsStorage.saveNavBarDefaultIconColor("#F141F5")
         ThemeSettingsStorage.initialize(RuntimeEnvironment.getApplication())
 
-        val payload = ThemeSettingsStorage.exportToSyncPayload()
-        assertEquals(true, payload.decodeSyncBoolean("nav_bar_default_icon_color_enabled"))
-        assertEquals("#F141F5", payload.decodeSyncString("nav_bar_default_icon_color"))
+        assertTrue(ThemeSettingsStorage.exportToSyncPayload().keys.none { "icon_color" in it })
 
-        ThemeSettingsStorage.saveNavBarDefaultIconColorEnabled(false)
-        ThemeSettingsStorage.saveNavBarDefaultIconColor("#123456")
-        ThemeSettingsStorage.replaceFromSyncPayload(payload)
-
+        ThemeSettingsStorage.replaceFromSyncPayload(buildJsonObject {
+            put("nav_bar_default_icon_color", encodeSyncString("#123456"))
+        })
         assertEquals(true, ThemeSettingsStorage.loadNavBarDefaultIconColorEnabled())
         assertEquals("#F141F5", ThemeSettingsStorage.loadNavBarDefaultIconColor())
-    }
-
-    @Test
-    fun olderPayloadClearsOnlyCurrentProfilesDefaultNavigationIconColor() {
-        val preferences = RuntimeEnvironment.getApplication()
-            .getSharedPreferences("nuvio_theme_settings", Context.MODE_PRIVATE)
-        val otherProfileEnabledKey = ProfileScopedKey.of("nav_bar_default_icon_color_enabled", 99)
-        val otherProfileColorKey = ProfileScopedKey.of("nav_bar_default_icon_color", 99)
-        preferences.edit()
-            .putBoolean(otherProfileEnabledKey, false)
-            .putString(otherProfileColorKey, "#445566")
-            .commit()
-
-        ThemeSettingsStorage.saveNavBarDefaultIconColorEnabled(true)
-        ThemeSettingsStorage.saveNavBarDefaultIconColor("#F141F5")
-        ThemeSettingsStorage.replaceFromSyncPayload(buildJsonObject {})
-
-        assertNull(ThemeSettingsStorage.loadNavBarDefaultIconColorEnabled())
-        assertNull(ThemeSettingsStorage.loadNavBarDefaultIconColor())
-        assertEquals(false, preferences.getBoolean(otherProfileEnabledKey, true))
-        assertEquals("#445566", preferences.getString(otherProfileColorKey, null))
-    }
-
-    @Test
-    fun invalidSyncedDefaultNavigationIconColorIsNotPersisted() {
-        ThemeSettingsStorage.replaceFromSyncPayload(buildJsonObject {
-            put("nav_bar_default_icon_color", encodeSyncString("#NOTHEX"))
-        })
-
-        assertNull(ThemeSettingsStorage.loadNavBarDefaultIconColor())
     }
 
     @Test

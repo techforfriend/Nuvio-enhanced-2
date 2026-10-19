@@ -71,7 +71,7 @@ class ThemeSettingsRepositoryTest {
 
         ThemeSettingsStorage.replaceFromSyncPayload(kotlinx.serialization.json.buildJsonObject {})
         ThemeSettingsRepository.onProfileChanged()
-        assertEquals(false, ThemeSettingsRepository.navBarLiquidGlassEnabled.value)
+        assertEquals(true, ThemeSettingsRepository.navBarLiquidGlassEnabled.value)
     }
 
     @Test
