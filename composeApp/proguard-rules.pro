@@ -64,3 +64,5 @@
 -dontwarn org.openjsse.**
 
 -keep class com.nuvio.app.features.player.PlayerCastOptionsProvider { *; }
+
+-keep class com.nuvio.app.features.player.aiostreams.AssSurface { *; }

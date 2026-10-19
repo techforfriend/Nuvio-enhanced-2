@@ -1259,6 +1259,8 @@
     <string name="settings_playback_duration_hours">%1$d hours</string>
     <string name="settings_playback_enable_libass">Use libass for ASS/SSA subtitles</string>
     <string name="settings_playback_enable_libass_description">Experimental: advanced ASS/SSA rendering (styles, positioning, animations)</string>
+    <string name="settings_playback_enable_libmpv_ass">Use libmpv&apos;s libass for ASS/SSA subtitles</string>
+    <string name="settings_playback_enable_libmpv_ass_description">Experimental: draws ASS/SSA with the libass bundled in libmpv on a frame-synced overlay, replacing ExoPlayer&apos;s ASS rendering</string>
     <string name="settings_playback_external_player">External Player</string>
     <string name="settings_playback_external_player_app">External Player App</string>
     <string name="settings_playback_external_player_description_android">Open new playback with Android&apos;s default video app or system chooser.</string>

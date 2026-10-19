@@ -774,6 +774,15 @@ private fun PlaybackSettingsSection(
                             onClick = { showLibassRenderTypeDialog = true },
                         )
                     }
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_playback_enable_libmpv_ass),
+                        description = stringResource(Res.string.settings_playback_enable_libmpv_ass_description),
+                        checked = autoPlayPlayerSettings.useLibmpvAss,
+                        enabled = subtitleRenderingEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = PlayerSettingsRepository::setUseLibmpvAss,
+                    )
                 }
             }
         }
