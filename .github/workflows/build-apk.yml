@@ -64,19 +64,24 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.1-enhanced-pre10
-          name: "Nuvio Enhanced v0.6.1-beta (Update 10 - CloudStream Storage & Runtime Initialization Fix)"
+          tag_name: v0.6.1-enhanced-pre11
+          name: "Nuvio Enhanced v0.6.1-beta (Update 11 - CloudStream Home Integration & Provider Switcher)"
           body: |
-            ## Nuvio Enhanced v0.6.1-beta (Update 10)
+            ## Nuvio Enhanced v0.6.1-beta (Update 11)
 
-            Hotfix update fixing CloudStream plugin storage and Android runtime initialization:
+            Major CloudStream extension update integrating CloudStream catalogs directly onto the Home Screen with a dedicated provider switcher:
 
-            ### 🔧 Fixes in Update 10:
-            1. **CloudStream Storage Initialization:**
-               - Fixed `CloudStream storage is not initialized` error during `.cs3` plugin installation.
-               - Added early initialization in `NuvioApplication.onCreate` and `MainActivity.onCreate`.
-               - Implemented automatic fallback context recovery via `ActivityThread.currentApplication()` in `CloudStreamPlatformStorage` and `CloudStreamPlatformRuntime` to prevent any uninitialized storage state across background coroutines and configuration changes.
-            2. **Pure ARM64 Optimized:**
+            ### 🚀 Features & Fixes in Update 11:
+            1. **CloudStream Home Screen Catalogs:**
+               - CloudStream extensions (such as Bollyflix, CineStream, etc.) now populate the Home Screen with categories even when no Stremio addons are installed.
+               - Prevents the empty "No content sources" error card when CloudStream providers are active.
+            2. **Floating CS3 Provider Switcher:**
+               - Added quick-access floating button (`CS3`) on the Home Screen.
+               - Allows switching instantly between "All extensions" or specific providers (Bollyflix, CineStream, etc.) with active selection indicator.
+            3. **CloudStream Catalog & Details Integration:**
+               - Clicking CloudStream items on Home opens full details and streams directly.
+               - Added `CatalogTarget.CloudStream` support in `CatalogRepository` for full catalog browsing.
+            4. **Pure ARM64 Optimized:**
                - Built exclusively for 64-bit ARM Android devices (`arm64-v8a`).
           draft: false
           prerelease: true

@@ -8,6 +8,8 @@ import com.nuvio.app.features.collection.catalogRouteKey
 import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.servers.ServerCatalog
 import com.nuvio.app.features.servers.serverMessage
+import com.nuvio.app.features.cloudstream.CloudStreamRepository
+import com.nuvio.app.features.cloudstream.toMetaPreview
 import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.home.filterReleasedItems
 import com.nuvio.app.features.trakt.TraktPublicListSourceResolver
@@ -151,6 +153,28 @@ object CatalogRepository {
                     )
 
                     is CatalogTarget.Server -> ServerCatalog.page(target, skip = requestedSkip)
+
+                    is CatalogTarget.CloudStream -> {
+                        val pageNumber = requestedSkip.takeIf { it > 0 } ?: 1
+                        val items = if (!target.searchQuery.isNullOrBlank()) {
+                            CloudStreamRepository.search(target.searchQuery, target.providerId)
+                                .firstOrNull()
+                                ?.getOrThrow()
+                                .orEmpty()
+                                .map { it.toMetaPreview() }
+                        } else {
+                            CloudStreamRepository.getMainPage(target.providerId, pageNumber).getOrThrow()
+                                .firstOrNull { it.first == target.categoryName }
+                                ?.second
+                                .orEmpty()
+                                .map { it.toMetaPreview() }
+                        }
+                        CatalogPage(
+                            items = items,
+                            rawItemCount = items.size,
+                            nextSkip = null,
+                        )
+                    }
 
                     is CatalogTarget.Library -> error(getString(Res.string.catalog_load_failed))
                 }.withUnreleasedFilter(request.hideUnreleasedContent)

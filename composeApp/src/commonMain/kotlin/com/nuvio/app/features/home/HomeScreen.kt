@@ -4,12 +4,22 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.gestures.stopScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,11 +27,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.features.cloudstream.CloudStreamPluginItem
+import com.nuvio.app.features.cloudstream.CloudStreamRepository
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
 import com.nuvio.app.core.network.NetworkCondition
@@ -179,6 +194,22 @@ fun HomeScreen(
         NuvioEnhancedSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
     var observedOfflineState by remember { mutableStateOf(false) }
+    var cloudStreamProviderMenuExpanded by remember { mutableStateOf(false) }
+    val cloudStreamUiState by CloudStreamRepository.uiState.collectAsStateWithLifecycle()
+    val runnableCloudStreamProviders = remember(cloudStreamUiState.registryRevision) {
+        cloudStreamUiState.plugins
+            .filter(CloudStreamPluginItem::isRunnable)
+            .sortedBy { it.metadata.name.lowercase() }
+    }
+    val selectedCloudStreamProviderId by HomeRepository.selectedCloudStreamProviderId.collectAsStateWithLifecycle()
+
+    LaunchedEffect(runnableCloudStreamProviders, selectedCloudStreamProviderId) {
+        if (selectedCloudStreamProviderId != null &&
+            runnableCloudStreamProviders.none { it.metadata.id.value == selectedCloudStreamProviderId }
+        ) {
+            HomeRepository.setSelectedCloudStreamProvider(null)
+        }
+    }
 
     ScreenActivityEffect(scrollToTopRequests) { active ->
         if (!active) return@ScreenActivityEffect
@@ -900,7 +931,7 @@ fun HomeScreen(
         }
     }
 
-    val hasActiveAddons = enabledAddons.any { it.manifest != null }
+    val hasActiveAddons = enabledAddons.any { it.manifest != null } || runnableCloudStreamProviders.isNotEmpty()
     val serversUiState by remember {
         ServerRepository.ensureLoaded()
         ServerRepository.uiState
@@ -925,6 +956,10 @@ fun HomeScreen(
     }
     val sectionsMap = remember(homeUiState.sections) {
         homeUiState.sections.associateBy(HomeCatalogSection::key)
+    }
+    val cloudStreamHomeSections = remember(homeUiState.sections) {
+        homeUiState.sections
+            .filter { it.key.startsWith("cloudstream:") && it.items.isNotEmpty() }
     }
     val enabledHomeItems = remember(homeSettingsUiState.items) {
         homeSettingsUiState.items.filter { it.enabled }
@@ -1214,6 +1249,26 @@ fun HomeScreen(
                         }
                     }
 
+                    cloudStreamHomeSections.forEach { section ->
+                        item(key = section.key, contentType = "catalog") {
+                            HomeCatalogRowSection(
+                                section = section,
+                                entries = section.items.take(HOME_CATALOG_PREVIEW_LIMIT),
+                                modifier = Modifier.padding(bottom = 12.dp),
+                                sectionPadding = homeSectionPadding,
+                                onViewAllClick = if (section.canOpenCatalog(HOME_CATALOG_PREVIEW_LIMIT)) {
+                                    onCatalogClick?.let { { it(section) } }
+                                } else {
+                                    null
+                                },
+                                watchedKeys = watchedUiState.watchedKeys,
+                                fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                                onPosterClick = onPosterClick,
+                                onPosterLongClick = onPosterLongClick,
+                            )
+                        }
+                    }
+
                     keyedEnabledHomeItems.forEach { keyedSettingsItem ->
                         val settingsItem = keyedSettingsItem.value
                         if (settingsItem.isCollection) {
@@ -1252,6 +1307,85 @@ fun HomeScreen(
                             }
                         }
                     }
+                }
+            }
+        }
+
+        if (runnableCloudStreamProviders.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(
+                        end = 16.dp,
+                        bottom = nativeBottomNavigationOverlayHeight + 16.dp,
+                    ),
+            ) {
+                DropdownMenu(
+                    expanded = cloudStreamProviderMenuExpanded,
+                    onDismissRequest = { cloudStreamProviderMenuExpanded = false },
+                ) {
+                    val isAllSelected = selectedCloudStreamProviderId == null
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = if (isAllSelected) "All extensions ✓" else "All extensions",
+                                fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Normal,
+                            )
+                        },
+                        onClick = {
+                            cloudStreamProviderMenuExpanded = false
+                            HomeRepository.setSelectedCloudStreamProvider(null)
+                        },
+                    )
+                    runnableCloudStreamProviders.forEach { provider ->
+                        val isSelected = provider.metadata.id.value == selectedCloudStreamProviderId
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = if (isSelected) "${provider.metadata.name} ✓" else provider.metadata.name,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                )
+                            },
+                            onClick = {
+                                cloudStreamProviderMenuExpanded = false
+                                HomeRepository.setSelectedCloudStreamProvider(provider.metadata.id.value)
+                            },
+                        )
+                    }
+                }
+                val selectedCloudStreamProvider = runnableCloudStreamProviders.firstOrNull {
+                    it.metadata.id.value == selectedCloudStreamProviderId
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.90f),
+                        )
+                        .border(
+                            width = if (selectedCloudStreamProvider != null) 1.5.dp else 1.dp,
+                            color = if (selectedCloudStreamProvider != null) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.30f)
+                            },
+                            shape = CircleShape,
+                        )
+                        .clickable { cloudStreamProviderMenuExpanded = true },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "CS3",
+                        color = if (selectedCloudStreamProvider != null) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.94f)
+                        },
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
             }
         }
