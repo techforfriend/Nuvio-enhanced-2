@@ -34,6 +34,7 @@ fun HomeSkeletonHero(
     modifier: Modifier = Modifier,
     viewportHeight: Dp? = null,
     mobileBelowSectionHeightHint: Dp? = null,
+    posterArtHeroEnabled: Boolean = false,
 ) {
     BoxWithConstraints(
         modifier = modifier
@@ -45,12 +46,21 @@ fun HomeSkeletonHero(
             viewportHeightDp = viewportHeight?.value,
             mobileBelowSectionHeightHintDp = mobileBelowSectionHeightHint?.value,
         )
+        val heroHeight = if (posterArtHeroEnabled) {
+            posterArtHeroHeight(
+                maxWidthDp = maxWidth.value,
+                viewportHeightDp = viewportHeight?.value,
+                layout = layout,
+            )
+        } else {
+            layout.heroHeight
+        }
         val containerWidth = maxWidth
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(layout.heroHeight)
+                .height(heroHeight)
                 .skeleton(RectangleShape),
         ) {
             Box(

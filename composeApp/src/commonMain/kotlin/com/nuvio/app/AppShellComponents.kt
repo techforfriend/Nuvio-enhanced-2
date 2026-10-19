@@ -197,6 +197,8 @@ internal fun AppTabHost(
                     onTestUpdateBannerClick = actions.onTestUpdateBannerClick,
                     onCollectionsClick = actions.onCollectionsSettingsClick,
                     onWatchPartyClick = actions.onWatchPartySettingsClick,
+                    onPosterClick = actions.onPosterClick,
+                    onContinueWatchingItemClick = actions.onContinueWatchingClick,
                 )
             }
         }

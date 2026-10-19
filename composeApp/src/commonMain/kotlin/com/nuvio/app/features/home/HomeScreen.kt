@@ -49,6 +49,8 @@ import com.nuvio.app.features.details.SeriesPrimaryAction
 import com.nuvio.app.features.details.seriesPrimaryAction
 import com.nuvio.app.features.home.components.HomeCatalogRowSection
 import com.nuvio.app.features.home.components.HomeContinueWatchingSection
+import com.nuvio.app.features.home.components.HomeConciergeSection
+import com.nuvio.app.features.home.buildHomeConciergeState
 import com.nuvio.app.features.home.components.HomeEmptyStateCard
 import com.nuvio.app.features.home.components.HomeHeroReservedSpace
 import com.nuvio.app.features.home.components.HomeHeroSection
@@ -549,6 +551,31 @@ fun HomeScreen(
         )
     }
     val hasContinueWatchingRows = continueWatchingItems.isNotEmpty() || upcomingItems.isNotEmpty()
+    val homeConciergeState = remember(
+        activeProfileId,
+        profileState.activeProfile?.name,
+        continueWatchingItems,
+        libraryUiState.items,
+        homeUiState.sections,
+        enhancedSettings,
+    ) {
+        if (!enhancedSettings.enhancedHomeFeaturesEnabled || !enhancedSettings.nuvioConciergeEnabled) {
+            null
+        } else {
+            runCatching {
+                buildHomeConciergeState(
+                    profileName = profileState.activeProfile?.name ?: "Profile",
+                    continueWatchingItems = continueWatchingItems,
+                    releaseRadarItems = emptyList(),
+                    libraryItems = libraryUiState.items,
+                    catalogSections = homeUiState.sections,
+                    smartResumeEnabled = enhancedSettings.smartResumeEnabled,
+                    releaseRadarEnabled = enhancedSettings.releaseRadarHomeSignalsEnabled,
+                    profileStatsEnabled = enhancedSettings.profileStatsEnabled,
+                )
+            }.getOrNull()
+        }
+    }
 
     ScreenActivityEffect(activeProfileId, continueWatchingItems.isNotEmpty(), hasUserScrolledContinueWatching) { active ->
         if (!active) return@ScreenActivityEffect
@@ -1007,6 +1034,7 @@ fun HomeScreen(
                                 modifier = Modifier,
                                 viewportHeight = maxHeight,
                                 mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
+                                posterArtHeroEnabled = enhancedSettings.posterArtHeroEnabled,
                             )
 
                             homeUiState.heroItems.isNotEmpty() -> HomeHeroSection(
@@ -1045,6 +1073,7 @@ fun HomeScreen(
                         layout = continueWatchingLayout,
                         continueWatchingListState = continueWatchingListState,
                         upcomingListState = upcomingListState,
+                        showReadyBadge = enhancedSettings.showContinueWatchingReadyBadge,
                         onItemClick = onContinueWatchingClick,
                         onItemLongPress = onContinueWatchingLongPress,
                         disintegrationRequest = continueWatchingDisintegrationRequest,
@@ -1070,6 +1099,7 @@ fun HomeScreen(
                         layout = continueWatchingLayout,
                         continueWatchingListState = continueWatchingListState,
                         upcomingListState = upcomingListState,
+                        showReadyBadge = enhancedSettings.showContinueWatchingReadyBadge,
                         onItemClick = onContinueWatchingClick,
                         onItemLongPress = onContinueWatchingLongPress,
                         disintegrationRequest = continueWatchingDisintegrationRequest,
@@ -1161,10 +1191,23 @@ fun HomeScreen(
                         layout = continueWatchingLayout,
                         continueWatchingListState = continueWatchingListState,
                         upcomingListState = upcomingListState,
+                        showReadyBadge = enhancedSettings.showContinueWatchingReadyBadge,
                         onItemClick = onContinueWatchingClick,
                         onItemLongPress = onContinueWatchingLongPress,
                         disintegrationRequest = continueWatchingDisintegrationRequest,
                     )
+
+                    if (homeConciergeState != null) {
+                        item(key = "home_concierge_section", contentType = "concierge") {
+                            HomeConciergeSection(
+                                state = homeConciergeState,
+                                sectionPadding = homeSectionPadding,
+                                onPosterClick = onPosterClick,
+                                onContinueWatchingClick = onContinueWatchingClick,
+                                modifier = Modifier.padding(bottom = 14.dp),
+                            )
+                        }
+                    }
 
                     keyedEnabledHomeItems.forEach { keyedSettingsItem ->
                         val settingsItem = keyedSettingsItem.value
@@ -1219,6 +1262,7 @@ private fun LazyListScope.homeContinueWatchingSections(
     layout: ContinueWatchingLayout,
     continueWatchingListState: LazyListState,
     upcomingListState: LazyListState,
+    showReadyBadge: Boolean = true,
     onItemClick: ((ContinueWatchingItem) -> Unit)?,
     onItemLongPress: ((ContinueWatchingItem) -> Unit)?,
     disintegrationRequest: DisintegrationRequest<String>?,
@@ -1233,6 +1277,7 @@ private fun LazyListScope.homeContinueWatchingSections(
                 style = preferences.style,
                 useEpisodeThumbnails = preferences.useEpisodeThumbnails,
                 blurNextUp = preferences.blurNextUp,
+                showReadyBadge = showReadyBadge,
                 modifier = Modifier.padding(bottom = HomeContinueWatchingSectionBottomPadding),
                 sectionPadding = sectionPadding,
                 layout = layout,
@@ -1252,6 +1297,7 @@ private fun LazyListScope.homeContinueWatchingSections(
                 style = preferences.style,
                 useEpisodeThumbnails = preferences.useEpisodeThumbnails,
                 blurNextUp = preferences.blurNextUp,
+                showReadyBadge = showReadyBadge,
                 modifier = Modifier.padding(bottom = HomeContinueWatchingSectionBottomPadding),
                 title = stringResource(Res.string.upcoming_section_title),
                 sectionPadding = sectionPadding,

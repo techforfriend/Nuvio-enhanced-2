@@ -60,6 +60,9 @@ import com.nuvio.app.features.details.MetaScreenSettingsRepository
 import com.nuvio.app.features.details.MetaScreenSettingsUiState
 import com.nuvio.app.core.ui.PosterCardStyleRepository
 import com.nuvio.app.core.ui.PosterCardStyleUiState
+import com.nuvio.app.features.home.MetaPreview
+import com.nuvio.app.features.watchprogress.ContinueWatchingItem
+import com.nuvio.app.features.details.FavoritePerson
 import com.nuvio.app.features.collection.CollectionRepository
 import com.nuvio.app.features.addons.enabledAddons
 import com.nuvio.app.features.addons.firstEnabledManifestError
@@ -151,6 +154,10 @@ fun SettingsScreen(
     onTestUpdateBannerClick: (() -> Unit)? = null,
     onCollectionsClick: () -> Unit = {},
     onWatchPartyClick: () -> Unit = {},
+    onEditProfile: (() -> Unit)? = null,
+    onPosterClick: ((MetaPreview) -> Unit)? = null,
+    onContinueWatchingItemClick: ((ContinueWatchingItem) -> Unit)? = null,
+    onFavoritePersonClick: ((FavoritePerson) -> Unit)? = null,
 ) {
     BoxWithConstraints(
         modifier = modifier.fillMaxSize(),
@@ -724,7 +731,11 @@ private fun MobileSettingsScreen(
                             onCheckForUpdatesClick = onCheckForUpdatesClick,
                             onTestUpdateBannerClick = onTestUpdateBannerClick,
                             onAccountClick = onAccountClick,
-                            onSwitchProfileClick = onSwitchProfile,
+                            onSwitchProfileClick = if (onSwitchProfile != null) {
+                                { onPageChange(SettingsPage.Profile) }
+                            } else {
+                                null
+                            },
                             onWatchPartyClick = watchPartyRowClick,
                             showSupportersContributorsPage = AppFeaturePolicy.supportersContributorsPageEnabled,
                         )
@@ -735,6 +746,19 @@ private fun MobileSettingsScreen(
                 )
                 SettingsPage.Account -> accountSettingsContent(
                     isTablet = false,
+                )
+                SettingsPage.Profile -> profileInsightsContent(
+                    isTablet = false,
+                    onSwitchProfile = onSwitchProfile,
+                    onEditProfile = onEditProfile,
+                    onPosterClick = onPosterClick,
+                    onContinueWatchingClick = onContinueWatchingItemClick,
+                    onFavoritePersonClick = onFavoritePersonClick,
+                    onFavoritePeopleViewAllClick = { onPageChange(SettingsPage.FavoriteActors) },
+                )
+                SettingsPage.FavoriteActors -> favoritePeopleContent(
+                    isTablet = false,
+                    onFavoritePersonClick = onFavoritePersonClick,
                 )
                 SettingsPage.SupportersContributors -> {
                     if (AppFeaturePolicy.supportersContributorsPageEnabled) {
@@ -1163,7 +1187,11 @@ private fun TabletSettingsScreen(
                                 onCheckForUpdatesClick = onCheckForUpdatesClick,
                                 onTestUpdateBannerClick = onTestUpdateBannerClick,
                                 onAccountClick = { openInlinePage(SettingsPage.Account) },
-                                onSwitchProfileClick = onSwitchProfile,
+                                onSwitchProfileClick = if (onSwitchProfile != null) {
+                                    { openInlinePage(SettingsPage.Profile) }
+                                } else {
+                                    null
+                                },
                                 onWatchPartyClick = watchPartyRowClick,
                                 showAccountSection = activeCategory == SettingsCategory.Account,
                                 showEnhancedSection = activeCategory == SettingsCategory.Enhanced,
@@ -1179,6 +1207,19 @@ private fun TabletSettingsScreen(
                     )
                     SettingsPage.Account -> accountSettingsContent(
                         isTablet = true,
+                    )
+                    SettingsPage.Profile -> profileInsightsContent(
+                        isTablet = true,
+                        onSwitchProfile = onSwitchProfile,
+                        onEditProfile = onEditProfile,
+                        onPosterClick = onPosterClick,
+                        onContinueWatchingClick = onContinueWatchingItemClick,
+                        onFavoritePersonClick = onFavoritePersonClick,
+                        onFavoritePeopleViewAllClick = { openInlinePage(SettingsPage.FavoriteActors) },
+                    )
+                    SettingsPage.FavoriteActors -> favoritePeopleContent(
+                        isTablet = true,
+                        onFavoritePersonClick = onFavoritePersonClick,
                     )
                     SettingsPage.SupportersContributors -> {
                         if (AppFeaturePolicy.supportersContributorsPageEnabled) {
