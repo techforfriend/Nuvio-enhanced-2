@@ -45,3 +45,17 @@ expect suspend fun httpRequestRaw(
     /** When present, sends these bytes verbatim instead of UTF-8 encoding [body]. */
     bodyBytes: ByteArray? = null,
 ): RawHttpResponse
+
+suspend fun httpGetBytesWithHeaders(
+    url: String,
+    headers: Map<String, String> = emptyMap(),
+    maxResponseBodyBytes: Int = 50 * 1024 * 1024,
+): ByteArray = httpRequestRaw(
+    method = "GET",
+    url = url,
+    headers = headers,
+    body = "",
+    followRedirects = true,
+    maxResponseBodyBytes = maxResponseBodyBytes,
+).bodyBytes
+
