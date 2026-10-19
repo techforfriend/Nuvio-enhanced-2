@@ -86,6 +86,7 @@ import com.nuvio.app.features.addons.AddAddonResult
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.addons.enabledAddons
 import com.nuvio.app.features.addons.isWaitingForFirstEnabledManifest
+import com.nuvio.app.features.cloudstream.CloudStreamRepository
 import com.nuvio.app.features.catalog.CatalogTarget
 import com.nuvio.app.features.cloud.CloudLibraryContentType
 import com.nuvio.app.features.cloud.CloudLibraryFile
@@ -379,8 +380,10 @@ internal fun MainAppContent(
     var networkToastBaselineReady by rememberSaveable { mutableStateOf(false) }
     var lastNetworkToastCondition by rememberSaveable { mutableStateOf(NetworkCondition.Unknown.name) }
     var watchSourceReconnectPending by remember { mutableStateOf(false) }
-    val homeCatalogRefreshKey = remember(addonsUiState.addons) {
-        buildAddonCatalogRefreshSignature(addonsUiState.addons)
+    val cloudStreamUiState by CloudStreamRepository.uiState.collectAsStateWithLifecycle()
+    val homeCatalogRefreshKey = remember(addonsUiState.addons, cloudStreamUiState.registryRevision) {
+        buildAddonCatalogRefreshSignature(addonsUiState.addons) +
+            ":cloudstream:${cloudStreamUiState.registryRevision}:${cloudStreamUiState.plugins.count { it.isRunnable }}"
     }
 
     val serversUiState by remember {
