@@ -19,6 +19,8 @@ interface NuvioPlayerBridge {
     fun pause()
     fun seekTo(positionMs: Long)
     fun seekBy(offsetMs: Long)
+    fun setSystemControlHandler(handler: PlayerSystemControlHandler?)
+    fun getKeepsPlaybackInBackground(): Boolean
     fun retry()
     fun isPictureInPictureSupported(): Boolean
     fun startPictureInPicture()

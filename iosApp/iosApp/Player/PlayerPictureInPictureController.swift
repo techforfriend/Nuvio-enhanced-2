@@ -391,7 +391,7 @@ final class PlayerPictureInPictureController: NSObject,
     }
 
     func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, setPlaying playing: Bool) {
-        if playing { owner?.playPlayback() } else { owner?.pausePlayback() }
+        owner?.requestSystemPlaying(playing)
         updatePlaybackState()
     }
 
@@ -411,7 +411,7 @@ final class PlayerPictureInPictureController: NSObject,
     func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
                                    skipByInterval skipInterval: CMTime, completion completionHandler: @escaping () -> Void) {
         if let owner, owner.durationMs > 0 {
-            owner.seekByMs(Int64(CMTimeGetSeconds(skipInterval) * 1000))
+            owner.requestSystemSeekBy(Int64(CMTimeGetSeconds(skipInterval) * 1000))
         }
         updatePlaybackState()
         completionHandler()

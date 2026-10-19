@@ -31,16 +31,21 @@ class MetalLayer: CAMetalLayer {
         let observer = presentationObserver?.generation == generation ? presentationObserver : nil
         if observer != nil { presentationObserver = nil }
         pictureInPictureLock.unlock()
-        guard let observer else { return }
-        drawable.addPresentedHandler { [weak self] presented in
-            let time = presented.presentedTime
-            DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                self.pictureInPictureLock.lock()
-                let current = self.presentationGeneration == generation
-                self.pictureInPictureLock.unlock()
-                if current { observer.callback(time) }
+        if let observer {
+            let notify: (TimeInterval) -> Void = { [weak self] time in
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    self.pictureInPictureLock.lock()
+                    let current = self.presentationGeneration == generation
+                    self.pictureInPictureLock.unlock()
+                    if current { observer.callback(time) }
+                }
             }
+#if targetEnvironment(simulator)
+            notify(CACurrentMediaTime())
+#else
+            drawable.addPresentedHandler { notify($0.presentedTime) }
+#endif
         }
     }
 
