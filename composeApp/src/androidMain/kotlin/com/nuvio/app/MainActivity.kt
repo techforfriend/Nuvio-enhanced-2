@@ -100,6 +100,8 @@ open class MainActivity : AppCompatActivity() {
         SyncClientIdentityStorage.initialize(applicationContext)
         AddonHttpClientProvider.initialize(applicationContext)
         AddonStorage.initialize(applicationContext)
+        com.nuvio.app.features.cloudstream.CloudStreamPlatformStorage.initialize(this)
+        com.nuvio.app.features.cloudstream.CloudStreamPlatformRuntime.initialize(applicationContext)
         AuthStorage.initialize(applicationContext)
         ServerConfigurationStorage.initialize(applicationContext)
         LibraryStorage.initialize(applicationContext)

@@ -64,24 +64,20 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.1-enhanced-pre9
-          name: "Nuvio Enhanced v0.6.1-beta (Update 9 - Full CloudStream (.cs3) Integration)"
+          tag_name: v0.6.1-enhanced-pre10
+          name: "Nuvio Enhanced v0.6.1-beta (Update 10 - CloudStream Storage & Runtime Initialization Fix)"
           body: |
-            ## Nuvio Enhanced v0.6.1-beta (Update 9)
+            ## Nuvio Enhanced v0.6.1-beta (Update 10)
 
-            Major update introducing full production-grade CloudStream (`.cs3`) extension compatibility and repository management directly inside Nuvio Enhanced, built strictly for 64-bit ARM (`arm64-v8a`)!
+            Hotfix update fixing CloudStream plugin storage and Android runtime initialization:
 
-            ### 🚀 What's New & Upgraded in Update 9:
-            1. **Full CloudStream (.cs3) Engine Integration:**
-               - **CloudStream Repository Management:** Add, update, and manage official and third-party CloudStream repository URLs directly under `Settings > Content Discovery > CloudStream / CS3`.
-               - **Plugin Catalog & Downloader:** Browse, download, inspect, and toggle `.cs3` plugins with SHA-256 verification and version tracking.
-               - **Native Compatibility Shim & Runtime:** Complete Android bridge ABI implementing `CloudStreamApp`, `PluginManager`, `RepositoryManager`, `DataStore`, `RequestsHelper`, `CloudflareKiller`, and `DdosGuardKiller`.
-               - **Unified Stream Resolver:** CloudStream providers seamlessly run alongside Stremio Addons, Local Plugins, and Media Server Streams (Jellyfin/Plex/Emby) with isolated parallel timeouts and coroutine safety.
-               - **Search Route Indexing & KickTr Fallback:** Intelligent TMDB / IMDb / title matching for fast source discovery across anime, movies, and TV shows.
-            2. **All 18 Themes Fully Unlocked & Preserved:**
-               - Classic, Supporter, and Animated Enhanced themes with dynamic Hero Poster theming, accent gradients, and custom player styles.
-            3. **Strictly ARM64 Optimized:**
-               - Built exclusively for 64-bit ARM Android devices (`arm64-v8a`) for maximum speed, native LSE atomics, and lowest memory footprint.
+            ### 🔧 Fixes in Update 10:
+            1. **CloudStream Storage Initialization:**
+               - Fixed `CloudStream storage is not initialized` error during `.cs3` plugin installation.
+               - Added early initialization in `NuvioApplication.onCreate` and `MainActivity.onCreate`.
+               - Implemented automatic fallback context recovery via `ActivityThread.currentApplication()` in `CloudStreamPlatformStorage` and `CloudStreamPlatformRuntime` to prevent any uninitialized storage state across background coroutines and configuration changes.
+            2. **Pure ARM64 Optimized:**
+               - Built exclusively for 64-bit ARM Android devices (`arm64-v8a`).
           draft: false
           prerelease: true
           files: build-apks/*.apk
