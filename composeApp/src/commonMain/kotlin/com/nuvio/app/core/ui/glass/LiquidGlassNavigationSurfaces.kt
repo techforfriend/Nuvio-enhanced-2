@@ -101,8 +101,9 @@ private class RemeasureOnKeyChangeNode(
 }
 
 /**
- * Adapts Kyant0's LiquidBottomTabs surface effects to Nuvio's existing pill geometry:
- * vibrancy, background blur, full-capsule refraction, and a theme-aware translucent tint.
+ * The navigation bar's glass, adapted from Kyant0's LiquidBottomTabs to Nuvio's pill geometry:
+ * vibrancy, background blur, capsule refraction and a theme-aware tint. [settings] holds the
+ * numbers (already filtered by the material), [style] the vibrancy/highlight/shadow flags.
  * Nuvio's existing JellyMotion and glow remain responsible for navigation interaction.
  */
 @Composable
@@ -111,6 +112,7 @@ internal fun LiquidGlassFrostedBar(
     modifier: Modifier,
     glowStrength: Float,
     settings: LiquidGlassEffectSettings = LiquidGlassEffectDefaults.floatingBar,
+    style: LiquidGlassStyle = LiquidGlassStyle.Default,
     includeRefraction: Boolean = true,
 ) {
     val safeSettings = settings.sanitized(
@@ -132,7 +134,7 @@ internal fun LiquidGlassFrostedBar(
                 backdrop = backdrop,
                 shape = { cornerShape },
                 effects = {
-                    vibrancy()
+                    if (style.vibrancy) vibrancy()
                     if (safeSettings.blurRadiusDp > 0f) {
                         blur(safeSettings.blurRadiusDp.dp.toPx())
                     }
@@ -145,6 +147,8 @@ internal fun LiquidGlassFrostedBar(
                         )
                     }
                 },
+                highlight = if (style.edgeHighlight) DefaultGlassHighlight else null,
+                shadow = if (style.shadow) DefaultGlassShadow else null,
                 onDrawSurface = {
                     // The optional layerBackdrop captures this rendered child separately, so
                     // draw the tint with capsule geometry instead of relying on an outer clip.

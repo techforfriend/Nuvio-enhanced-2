@@ -1,7 +1,9 @@
 package com.nuvio.app.core.ui
 
 import com.nuvio.app.core.ui.jelly.JellyMotion
-import com.nuvio.app.core.ui.glass.LiquidGlassSettings
+import com.nuvio.app.core.ui.glass.LiquidGlassEffectDefaults
+import com.nuvio.app.core.ui.glass.LiquidGlassMaterial
+import com.nuvio.app.core.ui.glass.LiquidGlassStyle
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -17,35 +19,35 @@ class FloatingNavigationBarRtlTest {
     }
 
     @Test
-    fun `navigation glass remains eligible when global glass is disabled`() {
-        val previousGlobalValue = LiquidGlassSettings.enabled
-        try {
-            LiquidGlassSettings.enabled = false
-            assertTrue(isNavigationGlassEligible())
-        } finally {
-            LiquidGlassSettings.enabled = previousGlobalValue
-        }
-
-        assertFalse(isNavigationGlassEligible(navBarEnabled = false))
-        assertFalse(isNavigationGlassEligible(hasBackdrop = false))
-        assertFalse(isNavigationGlassEligible(glassAvailable = false))
-        assertFalse(isNavigationGlassEligible(refractionSupported = false))
-        assertFalse(isNavigationGlassEligible(runtimeShaderSupported = false))
+    fun `material decides navigation glass and devices fall back by capability`() {
+        val liquid = LiquidGlassStyle.Default
+        assertEquals(NavigationGlassMode(bar = true, barRefraction = true, selectionLens = true), mode(liquid))
+        assertEquals(NavigationGlassMode(bar = true, barRefraction = false, selectionLens = false), mode(liquid, refraction = false))
+        val off = NavigationGlassMode(bar = false, barRefraction = false, selectionLens = false)
+        assertEquals(off, mode(liquid, glass = false))
+        assertEquals(off, mode(liquid, backdrop = false))
+        assertEquals(off, mode(liquid.copy(material = LiquidGlassMaterial.SOLID)))
+        assertEquals(NavigationGlassMode(bar = true, barRefraction = false, selectionLens = true), mode(liquid.copy(material = LiquidGlassMaterial.FROSTED)))
+        assertFalse(mode(liquid.copy(selectionLens = false)).selectionLens)
     }
 
-    private fun isNavigationGlassEligible(
-        navBarEnabled: Boolean = true,
-        hasBackdrop: Boolean = true,
-        glassAvailable: Boolean = true,
-        refractionSupported: Boolean = true,
-        runtimeShaderSupported: Boolean = true,
-    ): Boolean = shouldEnableNavigationLiquidGlass(
-        navBarEnabled = navBarEnabled,
-        hasBackdrop = hasBackdrop,
-        glassAvailable = glassAvailable,
-        refractionSupported = refractionSupported,
-        runtimeShaderSupported = runtimeShaderSupported,
-    )
+    @Test
+    fun `material filters bar effects`() {
+        val bar = LiquidGlassEffectDefaults.floatingBar
+        val clear = bar.forNavigationMaterial(LiquidGlassStyle(material = LiquidGlassMaterial.CLEAR), refraction = true)
+        assertEquals(0f, clear.blurRadiusDp)
+        assertEquals(bar.refractionHeightDp, clear.refractionHeightDp)
+        val frosted = bar.forNavigationMaterial(LiquidGlassStyle(material = LiquidGlassMaterial.FROSTED), refraction = false)
+        assertEquals(bar.blurRadiusDp, frosted.blurRadiusDp)
+        assertEquals(0f, frosted.refractionAmountDp)
+    }
+
+    private fun mode(
+        style: LiquidGlassStyle,
+        backdrop: Boolean = true,
+        glass: Boolean = true,
+        refraction: Boolean = true,
+    ) = resolveNavigationGlass(style, backdrop, hasSelection = true, glassSupported = glass, refractionSupported = refraction)
 
     @Test
     fun `visualNavIndex maps LTR destinations to identity positions`() {
