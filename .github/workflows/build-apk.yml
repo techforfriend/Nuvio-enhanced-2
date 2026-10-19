@@ -64,24 +64,22 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.1-enhanced-pre11
-          name: "Nuvio Enhanced v0.6.1-beta (Update 11 - CloudStream Home Integration & Provider Switcher)"
+          tag_name: v0.6.1-enhanced-pre12
+          name: "Nuvio Enhanced v0.6.1-beta (Update 12 - CloudStream Runtime ProGuard & Dex Class Loading Fix)"
           body: |
-            ## Nuvio Enhanced v0.6.1-beta (Update 11)
+            ## Nuvio Enhanced v0.6.1-beta (Update 12)
 
-            Major CloudStream extension update integrating CloudStream catalogs directly onto the Home Screen with a dedicated provider switcher:
+            Critical stability update fixing CloudStream extension dynamic Dex loading, R8/ProGuard preservation, and provider execution:
 
-            ### 🚀 Features & Fixes in Update 11:
-            1. **CloudStream Home Screen Catalogs:**
-               - CloudStream extensions (such as Bollyflix, CineStream, etc.) now populate the Home Screen with categories even when no Stremio addons are installed.
-               - Prevents the empty "No content sources" error card when CloudStream providers are active.
-            2. **Floating CS3 Provider Switcher:**
-               - Added quick-access floating button (`CS3`) on the Home Screen.
-               - Allows switching instantly between "All extensions" or specific providers (Bollyflix, CineStream, etc.) with active selection indicator.
-            3. **CloudStream Catalog & Details Integration:**
-               - Clicking CloudStream items on Home opens full details and streams directly.
-               - Added `CatalogTarget.CloudStream` support in `CatalogRepository` for full catalog browsing.
-            4. **Pure ARM64 Optimized:**
+            ### 🚀 Features & Fixes in Update 12:
+            1. **CloudStream Runtime ProGuard / R8 Fix:**
+               - Added comprehensive R8 keep rules for `com.lagradost.**`, `com.fasterxml.jackson.**`, `org.jsoup.**`, `org.mozilla.javascript.**`, `com.uwetrottmann.tmdb2.**`, `me.xdrop.fuzzywuzzy.**`, `dev.whyoleg.cryptography.**`, `org.schabi.newpipe.extractor.**`, `okhttp3.**`, and `okio.**`.
+               - Completely eliminates `ClassNotFoundException: Didn't find class "com.megix.Bollyflix" on path: DexPathList...` when loading CloudStream `.cs3` plugins in release builds.
+            2. **Enhanced Dynamic Extension Reliability:**
+               - All CloudStream third-party plugins (Bollyflix, CineStream, MegaRepo, etc.) now properly resolve runtime base classes (`Plugin`, `MainAPI`, NiceHttp, Jackson, Jsoup, Rhino) without ART linker failures.
+            3. **Increased Provider Fetch Window:**
+               - Expanded provider preview timeout to 10s to ensure slower or Cloudflare-protected catalogs load reliably on home startup.
+            4. **ARM64 Pure Architecture:**
                - Built exclusively for 64-bit ARM Android devices (`arm64-v8a`).
           draft: false
           prerelease: true
