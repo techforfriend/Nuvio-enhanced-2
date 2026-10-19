@@ -64,34 +64,25 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.1-enhanced-pre7
-          name: "Nuvio Enhanced v0.6.1-beta (Update 7 - Profile Backgrounds, Stream Pinning, Seek Previews & Shuffle)"
+          tag_name: v0.6.1-enhanced-pre8
+          name: "Nuvio Enhanced v0.6.1-beta (Update 8 - Nuvio Experience & Hero Poster Theming)"
           body: |
-            ## Nuvio Enhanced v0.6.1-beta (Update 7)
+            ## Nuvio Enhanced v0.6.1-beta (Update 8)
 
-            Comprehensive update porting all remaining AKRusso features and completely fixing Profile Backgrounds!
+            Comprehensive update delivering full Nuvio Experience intelligence controls and complete Home Screen Hero Poster theming across all 18 themes!
 
-            ### 🌟 What's New & Fixed in Update 7:
-            1. **Profile Backgrounds 100% Unlocked & Working:**
-               - Unlocked for all users without any subscription or paywall requirements.
-               - Added 10 built-in theme presets: Gold, Jade, Rose Gold, Arctic Blue, Graphite, Messenger, Amethyst, Blossom, Lagoon, Sunset.
-               - Added Custom Image URL field directly in Edit Profile.
-               - Added live visual banner preview inside Edit Profile screen so you see your background immediately while editing!
-               - Robust local offline caching and persistence ensures backgrounds never get wiped out.
-            2. **Stream Source Pinning:**
-               - Pin your favorite addons and scraper stream sources to always appear at the top.
-               - Push pin toggles available in Plugins / Addons settings and on Streams list.
-            3. **Timeline Seek Previews:**
-               - Visual thumbnail preview card appears while scrubbing the player timeline.
-               - Fully supported on both ExoPlayer and Libmpv engines.
-            4. **Persistent Episode Shuffle:**
-               - Added Shuffle toggle button in the player controls header for TV series.
-               - Picks a random aired episode across seasons when enabled.
-            5. **Themed Player Clock End-Time Overlay:**
-               - Displays current device clock and calculated video end time with active theme accent styling.
-
-            ### 📥 Download APK
-            Optimized exclusively for 64-bit ARM Android devices (`arm64-v8a`).
+            ### 🌟 What's New & Fixed in Update 8:
+            1. **Nuvio Experience Intelligence Fully Working:**
+               - **Profile Insights & Concierge:** Tapping on the active profile in Settings now opens the full Profile Insights dashboard (Hero banner, Taste Profile DNA, Taste Balance Leaning, Overview Stats grid, Favorite People rail, and Nuvio Concierge).
+               - **Home Concierge Section:** When Nuvio Concierge is toggled in Nuvio Experience settings, the intelligent Concierge card with Smart Resume signals, release radar, and stats appears directly on the Home Screen.
+               - **Continue Watching Ready Badges:** "Show Ready Badge" toggle now renders smart signal pills ("Next episode ready", "New season ready", "Resume-ready", "Almost there", "Quick finish") on all continue watching cards.
+               - **Favorite People Management:** Add, pin, and manage favorite actors/directors with full inline carousel and dedicated view page.
+            2. **Home Screen Hero Poster Theming 100% Fixed:**
+               - **Action Accent on Hero CTA:** "View Details" button now dynamically uses the active theme's accent gradient or solid brush (`actionAccent.brush`) and contrast text color (`actionAccent.contentColor`) for all 18 themes (Classic, Supporter, Animated Enhanced).
+               - **Themed Page Indicator Dots:** Active indicator dot now illuminates with the theme's animated line brush or accent palette.
+               - **Poster Art Hero Dimensions & Background Fade:** Seamlessly fades into the active theme's background color with correct aspect ratio and zero layout jumping during loading.
+            3. **ARM64 Optimized:**
+               - Built exclusively for 64-bit ARM Android devices (`arm64-v8a`).
           draft: false
           prerelease: true
           files: build-apks/*.apk

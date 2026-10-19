@@ -22,9 +22,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import com.nuvio.app.core.ui.rememberActionAccentStyle
 import com.nuvio.app.features.shuffle.ShuffleBadge
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -78,6 +81,7 @@ import com.nuvio.app.core.i18n.localizedEpisodeTitle
 private val ContinueWatchingStatusBadgeShape = RoundedCornerShape(4.dp)
 private val ContinueWatchingNewEpisodeBadgeColor = Color(0xFF1D4ED8)
 private val ContinueWatchingNewSeasonBadgeColor = Color(0xFFB45309)
+private val ContinueWatchingSmartSignalShape = RoundedCornerShape(999.dp)
 private const val ContinueWatchingLandscapeCardScale = 1.2f
 internal val HomeContinueWatchingSectionBottomPadding = 12.dp
 
@@ -273,6 +277,7 @@ internal fun HomeContinueWatchingSection(
     dataSourceKey: WatchProgressSource,
     useEpisodeThumbnails: Boolean = true,
     blurNextUp: Boolean = false,
+    showReadyBadge: Boolean = true,
     modifier: Modifier = Modifier,
     title: String? = null,
     sectionPadding: Dp? = null,
@@ -291,6 +296,7 @@ internal fun HomeContinueWatchingSection(
             style = style,
             useEpisodeThumbnails = useEpisodeThumbnails,
             blurNextUp = blurNextUp,
+            showReadyBadge = showReadyBadge,
             modifier = modifier.fillMaxWidth(),
             title = title,
             sectionPadding = sectionPadding,
@@ -308,6 +314,7 @@ internal fun HomeContinueWatchingSection(
                 style = style,
                 useEpisodeThumbnails = useEpisodeThumbnails,
                 blurNextUp = blurNextUp,
+                showReadyBadge = showReadyBadge,
                 modifier = Modifier.fillMaxWidth(),
                 title = title,
                 sectionPadding = homeSectionHorizontalPaddingForWidth(maxWidth.value),
@@ -328,6 +335,7 @@ private fun HomeContinueWatchingSectionContent(
     style: ContinueWatchingSectionStyle,
     useEpisodeThumbnails: Boolean,
     blurNextUp: Boolean,
+    showReadyBadge: Boolean = true,
     modifier: Modifier,
     title: String?,
     sectionPadding: Dp,
@@ -368,6 +376,7 @@ private fun HomeContinueWatchingSectionContent(
                         item = item,
                         useEpisodeThumbnails = useEpisodeThumbnails,
                         blurNextUp = blurNextUp,
+                        showReadyBadge = showReadyBadge,
                         onClick = onClick,
                         onLongClick = onLongClick,
                     )
@@ -376,6 +385,7 @@ private fun HomeContinueWatchingSectionContent(
                         layout = layout,
                         useEpisodeThumbnails = useEpisodeThumbnails,
                         blurNextUp = blurNextUp,
+                        showReadyBadge = showReadyBadge,
                         onClick = onClick,
                         onLongClick = onLongClick,
                     )
@@ -384,6 +394,7 @@ private fun HomeContinueWatchingSectionContent(
                         layout = layout,
                         useEpisodeThumbnails = useEpisodeThumbnails,
                         blurNextUp = blurNextUp,
+                        showReadyBadge = showReadyBadge,
                         onClick = onClick,
                         onLongClick = onLongClick,
                     )
@@ -673,6 +684,7 @@ private fun ContinueWatchingCard(
     item: ContinueWatchingItem,
     useEpisodeThumbnails: Boolean,
     blurNextUp: Boolean,
+    showReadyBadge: Boolean = true,
     onClick: (() -> Unit)?,
     onLongClick: (() -> Unit)?,
 ) {
@@ -762,6 +774,14 @@ private fun ContinueWatchingCard(
             )
         }
         if (item.shufflePlayback) ShuffleBadge(Modifier.align(Alignment.TopStart).padding(8.dp))
+        if (showReadyBadge) {
+            ContinueWatchingSmartSignalPill(
+                text = item.localizedSmartSignal(),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(if (item.shufflePlayback) PaddingValues(start = 44.dp, top = cardMetrics.badgeInset) else PaddingValues(cardMetrics.badgeInset)),
+            )
+        }
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
@@ -891,6 +911,7 @@ private fun ContinueWatchingWideCard(
     layout: ContinueWatchingLayout,
     useEpisodeThumbnails: Boolean,
     blurNextUp: Boolean,
+    showReadyBadge: Boolean = true,
     onClick: (() -> Unit)?,
     onLongClick: (() -> Unit)?,
 ) {
@@ -954,6 +975,12 @@ private fun ContinueWatchingWideCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                     if (item.shufflePlayback) ShuffleBadge()
+                    if (showReadyBadge) {
+                        ContinueWatchingSmartSignalPill(
+                            text = item.localizedSmartSignal(),
+                            compact = true,
+                        )
+                    }
                     if (item.progressFraction <= 0f && item.seasonNumber != null && item.episodeNumber != null) {
                         val todayIsoDate = CurrentDateProvider.todayIsoDate()
                         val badgeText = when {
@@ -1025,6 +1052,7 @@ private fun ContinueWatchingPosterCard(
     layout: ContinueWatchingLayout,
     useEpisodeThumbnails: Boolean,
     blurNextUp: Boolean,
+    showReadyBadge: Boolean = true,
     onClick: (() -> Unit)?,
     onLongClick: (() -> Unit)?,
 ) {
@@ -1072,6 +1100,15 @@ private fun ContinueWatchingPosterCard(
                 )
             }
             if (item.shufflePlayback) ShuffleBadge(Modifier.align(Alignment.TopStart).padding(8.dp))
+            if (showReadyBadge) {
+                ContinueWatchingSmartSignalPill(
+                    text = item.localizedSmartSignal(),
+                    compact = true,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(if (item.shufflePlayback) PaddingValues(start = 44.dp, top = 8.dp) else PaddingValues(8.dp)),
+                )
+            }
             if (item.progressFraction <= 0f && item.seasonNumber != null && item.episodeNumber != null) {
                 Box(
                     modifier = Modifier
@@ -1319,3 +1356,51 @@ internal fun rememberContinueWatchingLayout(
         )
     }
 }
+
+@Composable
+private fun ContinueWatchingSmartSignalPill(
+    text: String,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+) {
+    Row(
+        modifier = modifier
+            .clip(ContinueWatchingSmartSignalShape)
+            .background(Color.Black.copy(alpha = 0.40f))
+            .border(1.dp, Color.White.copy(alpha = 0.14f), ContinueWatchingSmartSignalShape)
+            .padding(
+                horizontal = if (compact) 8.dp else 9.dp,
+                vertical = if (compact) 5.dp else 6.dp,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.AutoAwesome,
+            contentDescription = null,
+            modifier = Modifier.size(if (compact) 12.dp else 13.dp),
+            tint = Color.White.copy(alpha = 0.92f),
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontSize = if (compact) 9.sp else 10.sp,
+                fontWeight = FontWeight.SemiBold,
+            ),
+            color = Color.White.copy(alpha = 0.92f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun ContinueWatchingItem.localizedSmartSignal(compactAirDateText: String? = null): String =
+    when {
+        isReleaseAlert && isNewSeasonRelease -> stringResource(Res.string.home_continue_watching_signal_new_season)
+        isReleaseAlert -> stringResource(Res.string.home_continue_watching_signal_new_episode)
+        isNextUp && compactAirDateText != null -> stringResource(Res.string.home_continue_watching_signal_scheduled)
+        isNextUp -> stringResource(Res.string.home_continue_watching_signal_next_ready)
+        progressFraction >= 0.70f -> stringResource(Res.string.home_continue_watching_signal_almost_there)
+        else -> stringResource(Res.string.home_continue_watching_signal_resume_ready)
+    }

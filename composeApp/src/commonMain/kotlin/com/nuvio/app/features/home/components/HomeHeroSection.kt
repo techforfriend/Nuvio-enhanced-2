@@ -60,7 +60,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.Color
 import com.nuvio.app.features.settings.NuvioHeroArtworkSource
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
-import com.nuvio.app.core.ui.rememberAnimatedAccentBrush
+import com.nuvio.app.core.ui.rememberActionAccentStyle
+import com.nuvio.app.core.ui.rememberAnimatedLineBrush
 import com.nuvio.app.core.ui.heroStretchHeight
 import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.heroStretchZoom
@@ -85,6 +86,26 @@ private const val HERO_AUTO_SCROLL_INTERVAL_MS = 8_000L
 private const val MOBILE_HERO_VIEWPORT_RATIO = 0.82f
 private const val MOBILE_HERO_MIN_HEIGHT_DP = 360f
 private const val MOBILE_HERO_MAX_HEIGHT_DP = 760f
+private const val POSTER_ART_HERO_VIEWPORT_RATIO = 0.80f
+private const val POSTER_ART_HERO_MIN_HEIGHT_DP = 520f
+private const val POSTER_ART_HERO_MAX_HEIGHT_DP = 690f
+
+internal fun posterArtHeroHeight(
+    maxWidthDp: Float,
+    viewportHeightDp: Float?,
+    layout: HomeHeroLayout,
+): Dp {
+    val viewportDrivenHeight = viewportHeightDp?.let { (it * POSTER_ART_HERO_VIEWPORT_RATIO).dp }
+    val widthFallbackHeight = if (layout.isTablet) {
+        (maxWidthDp * 0.56f).dp
+    } else {
+        (maxWidthDp * 1.52f).dp
+    }
+    val baseHeight = viewportDrivenHeight ?: widthFallbackHeight
+    val minHeight = if (layout.isTablet) 520.dp else POSTER_ART_HERO_MIN_HEIGHT_DP.dp
+
+    return baseHeight.coerceIn(minHeight, POSTER_ART_HERO_MAX_HEIGHT_DP.dp)
+}
 
 internal data class HomeHeroLayout(
     val isTablet: Boolean,
@@ -126,7 +147,8 @@ internal fun HomeHeroSection(
     }
     val coroutineScope = rememberCoroutineScope()
     val autoScrollPage = pagerState.settledPage
-    val heroAccentBrush = rememberAnimatedAccentBrush()
+    val actionAccent = rememberActionAccentStyle()
+    val lineBrush = rememberAnimatedLineBrush()
     val heroButtonShape = RoundedCornerShape(40.dp)
 
     LaunchedEffect(pagerState) {
@@ -166,8 +188,18 @@ internal fun HomeHeroSection(
             viewportHeightDp = viewportHeight?.value,
             mobileBelowSectionHeightHintDp = mobileBelowSectionHeightHint?.value,
         )
+        val isPosterMode = posterArtHeroEnabled || heroArtworkSource == NuvioHeroArtworkSource.Poster
+        val activeHeroHeight = if (isPosterMode) {
+            posterArtHeroHeight(
+                maxWidthDp = maxWidth.value,
+                viewportHeightDp = viewportHeight?.value,
+                layout = layout,
+            )
+        } else {
+            layout.heroHeight
+        }
         val heroWidthPx = with(LocalDensity.current) { maxWidth.toPx() }
-        val heroHeightPx = with(LocalDensity.current) { layout.heroHeight.toPx() }
+        val heroHeightPx = with(LocalDensity.current) { activeHeroHeight.toPx() }
         val scrollOffsetPx by remember(listState, heroHeightPx) {
             derivedStateOf {
                 when {
@@ -206,7 +238,7 @@ internal fun HomeHeroSection(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heroStretchHeight(layout.heroHeight, stretchPx),
+                .heroStretchHeight(activeHeroHeight, stretchPx),
         ) {
             HorizontalPager(
                 state = pagerState,
@@ -224,7 +256,7 @@ internal fun HomeHeroSection(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(layout.heroHeight)
+                        .height(activeHeroHeight)
                         .heroStretchZoom(stretchPx),
                 ) {
                     visiblePages.forEach { layer ->
@@ -269,15 +301,21 @@ internal fun HomeHeroSection(
                         ),
                 )
 
+                val effectiveBottomFadeHeight = if (isPosterMode) {
+                    (activeHeroHeight * 0.45f).coerceAtLeast(260.dp)
+                } else {
+                    layout.bottomFadeHeight
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(layout.bottomFadeHeight)
+                        .height(effectiveBottomFadeHeight)
                         .align(Alignment.BottomCenter)
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
                                     MaterialTheme.colorScheme.background.copy(alpha = 0f),
+                                    MaterialTheme.colorScheme.background.copy(alpha = 0.60f),
                                     MaterialTheme.colorScheme.background,
                                 ),
                             ),
@@ -324,18 +362,12 @@ internal fun HomeHeroSection(
                         Surface(
                             modifier = Modifier
                                 .clip(heroButtonShape)
-                                .then(
-                                    if (heroAccentBrush != null) {
-                                        Modifier.background(heroAccentBrush, heroButtonShape)
-                                    } else {
-                                        Modifier
-                                    },
-                                )
+                                .background(actionAccent.brush, heroButtonShape)
                                 .clickable(enabled = onItemClick != null) {
                                     onItemClick?.invoke(currentItem)
                                 },
-                            color = if (heroAccentBrush != null) Color.Transparent else MaterialTheme.colorScheme.onBackground,
-                            contentColor = if (heroAccentBrush != null) Color.White else MaterialTheme.colorScheme.background,
+                            color = Color.Transparent,
+                            contentColor = actionAccent.contentColor,
                             shape = heroButtonShape,
                         ) {
                             Text(
@@ -367,7 +399,13 @@ internal fun HomeHeroSection(
                                             }
                                         }
                                         .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.onBackground)
+                                        .then(
+                                            if (activeFraction > 0.5f) {
+                                                Modifier.background(lineBrush ?: actionAccent.brush)
+                                            } else {
+                                                Modifier.background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f))
+                                            }
+                                        )
                                         .graphicsLayer {
                                             alpha = 0.35f + (0.57f * activeFraction)
                                         }
