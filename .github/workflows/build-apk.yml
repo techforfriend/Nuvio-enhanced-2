@@ -60,31 +60,35 @@ jobs:
           path: build-apks/*.apk
           retention-days: 14
 
-      - name: Publish GitHub Pre-Release
+      - name: Publish GitHub Stable Release
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.1-enhanced-pre14
-          name: "Nuvio Enhanced v0.6.1-beta (Update 14 - Playback Availability & Link Stream Fix)"
+          tag_name: v0.6.1-enhanced-stable
+          name: "Nuvio Enhanced v0.6.1 Stable Release"
           body: |
-            ## Nuvio Enhanced v0.6.1-beta (Update 14)
+            ## Nuvio Enhanced v0.6.1 Stable Release
+            **by RAJA JI**
 
-            Critical update fixing Playback Availability and direct streaming for CloudStream content:
+            🎉 **Official Stable Release of Nuvio Enhanced v0.6.1!**
 
-            ### 🚀 Features & Fixes in Update 14:
-            1. **Playback Availability Resolution:**
-               - Fixed "Playback unavailable" disabled Play button on the Details screen.
-               - `PlaybackAvailability` now natively checks CloudStream routes (`parseCloudStreamRouteId`) and active CloudStream providers.
-            2. **Playback Unavailable Toast Fixed:**
-               - Eliminated the `"Playback isn't available for this title with your current setup."` toast when attempting to play CloudStream titles.
-               - `canStream` now properly evaluates `parentMetaId` alongside `videoId`.
-            3. **Direct CloudStream Auto-Play & Link Extraction:**
-               - StreamsRepository now auto-selects and auto-plays extracted CloudStream links without UI freeze.
-               - Increased provider link extraction timeout to 35 seconds to allow multi-extractor scraping to complete reliably.
-            4. **ARM64 Pure Architecture:**
-               - Built exclusively for 64-bit ARM Android devices (`arm64-v8a`).
+            This stable release brings full CloudStream 3 provider integration, 18 customized themes, Jellyfin/Plex native streaming, and complete bug fixes across playback, metadata, and UI.
+
+            ### 🌟 Key Features & Highlights:
+            1. **Full CloudStream 3 Engine Integration:**
+               - Run native CloudStream 3 `.cs3` plugin repositories and extensions.
+               - CloudStream home catalogues, multi-provider search, and complete Details screen metadata (posters, backdrops, cast, genres, seasons & episodes).
+               - Direct link extraction with subtitle parsing and multi-quality HLS / MP4 playback.
+            2. **Playback Availability & Direct Auto-Play:**
+               - Seamless streaming with no "Playback unavailable" blocks or setup errors.
+               - Smooth auto-play transition directly into the video player.
+            3. **Enhanced Customization & Personalization:**
+               - 18 themes including Dracula, Catppuccin Mocha, Nord, Cyberpunk, AMOLED Black, Monokai Pro, Tokyo Night, Sunset Glow, and dynamic hero poster theming.
+               - Nuvio Experience enhancements and stream source pinning.
+            4. **Pure ARM64 Architecture:**
+               - Built and optimized exclusively for 64-bit ARM Android devices (`arm64-v8a`) for peak performance and minimal resource overhead.
           draft: false
-          prerelease: true
+          prerelease: false
           files: build-apks/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
