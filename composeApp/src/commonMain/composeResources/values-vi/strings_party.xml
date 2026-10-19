@@ -73,4 +73,12 @@
     <string name="party_share_description">Bạn bè có thể phát liên kết của bạn thay vì tự chọn nguồn. Liên kết có thể bao gồm mã khóa debrid của bạn.</string>
     <string name="party_share_unavailable">Không thể chia sẻ luồng phát này.</string>
     <string name="party_shared_by">Chia sẻ bởi %1$s</string>
+    <string name="party_tab_party">Phòng</string>
+    <string name="party_tab_chat">Trò chuyện</string>
+    <string name="party_chat_empty_title">Chưa có tin nhắn nào</string>
+    <string name="party_chat_empty_message">Chỉ những người trong phòng này mới có thể thấy cuộc trò chuyện.</string>
+    <string name="party_chat_placeholder">Tin nhắn</string>
+    <string name="party_chat_send">Gửi</string>
+    <string name="party_chat_not_sent">Không gửi được. Nhấn để thử lại</string>
+    <string name="party_chat_new_messages">Tin nhắn mới</string>
 </resources>
