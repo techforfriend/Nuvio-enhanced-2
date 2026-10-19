@@ -188,6 +188,13 @@ object ProfileSettingsSync {
             ThemeSettingsRepository.amoledEnabled.map { "amoled" },
             ThemeSettingsRepository.liquidGlassNativeTabBarEnabled.map { "liquid_glass_tab_bar" },
             ThemeSettingsRepository.navBarGlowEnabled.map { "nav_bar_glow_enabled" },
+            ThemeSettingsRepository.navBarDefaultIconColorEnabled.map { "nav_bar_default_icon_color_enabled" },
+            // Color changes are drafts while the picker is open; serialize the settings blob only on commit.
+            ThemeSettingsRepository.navBarDefaultIconColorRevision.map { "nav_bar_default_icon_color_committed" },
+            ThemeSettingsRepository.navBarLiquidGlassEnabled.map { "nav_bar_liquid_glass_enabled" },
+            // Draft StateFlows update on every slider frame; observe only the persistence revision so
+            // profile-sync never serializes the full settings blob while someone is dragging a slider.
+            ThemeSettingsRepository.navBarLiquidGlassEffectsRevision.map { "nav_bar_liquid_glass_effects_committed" },
             PosterCardStyleRepository.uiState.map { "poster_card_style" },
             CustomPosterUrlRepository.pattern.map { "custom_poster_url" },
             CustomPosterUrlRepository.enabledScreens.map { "custom_poster_screens" },

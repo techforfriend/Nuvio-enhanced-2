@@ -2426,4 +2426,7 @@
     <string name="stream_info_subtitle_source_embedded">Ενσωματωμένο</string>
     <string name="stream_info_player_engine">Μηχανή αναπαραγωγής</string>
     <string name="stream_info_server">Διακομιστής</string>
+<string name="settings_nav_bar_liquid_glass">Υλικό Liquid Glass</string>
+<string name="settings_nav_bar_liquid_glass_description">Προσθέτει διάθλαση και θόλωση στην αιωρούμενη γραμμή πλοήγησης.</string>
+<string name="settings_nav_bar_liquid_glass_unsupported_description">Απαιτείται Android 13 ή νεότερο. Σε αυτήν τη συσκευή θα παραμείνει το υπάρχον γυάλινο στυλ.</string>
 </resources>

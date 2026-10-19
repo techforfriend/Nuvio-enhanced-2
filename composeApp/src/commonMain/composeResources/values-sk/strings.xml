@@ -2410,4 +2410,7 @@
     <string name="stream_info_subtitle_source_addon">Doplnok</string>
     <string name="stream_info_subtitle_source_embedded">Vstavané</string>
     <string name="stream_info_player_engine">Engine prehrávača</string>
+<string name="settings_nav_bar_liquid_glass">Materiál Liquid Glass</string>
+<string name="settings_nav_bar_liquid_glass_description">Pridá lom svetla a rozmazanie na plávajúcu navigačnú lištu.</string>
+<string name="settings_nav_bar_liquid_glass_unsupported_description">Vyžaduje Android 13 alebo novší. Toto zariadenie ponechá existujúci sklenený štýl.</string>
 </resources>

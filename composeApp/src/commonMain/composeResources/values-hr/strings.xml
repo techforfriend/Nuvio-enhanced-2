@@ -2411,4 +2411,7 @@
     <string name="movie_status_rumored">Govorka se</string>
     <string name="movie_status_in_production">U produkciji</string>
     <string name="movie_status_post_production">Postprodukcija</string>
+<string name="settings_nav_bar_liquid_glass">Materijal Liquid Glass</string>
+<string name="settings_nav_bar_liquid_glass_description">Dodaje lom svjetlosti i zamućenje plutajućoj navigacijskoj traci.</string>
+<string name="settings_nav_bar_liquid_glass_unsupported_description">Potreban je Android 13 ili noviji. Ovaj uređaj zadržat će postojeći stil stakla.</string>
 </resources>

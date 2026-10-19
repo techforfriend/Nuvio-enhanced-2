@@ -2325,4 +2325,7 @@ Du bruker denne funksjonen helt på eget ansvar. P2P kan deaktiveres når som he
     <string name="movie_status_rumored">Ryktet</string>
     <string name="movie_status_in_production">I produksjon</string>
     <string name="movie_status_post_production">Postproduksjon</string>
+<string name="settings_nav_bar_liquid_glass">Liquid Glass-materiale</string>
+<string name="settings_nav_bar_liquid_glass_description">Legger til lysbrytning og uskarphet på den flytende navigasjonslinjen.</string>
+<string name="settings_nav_bar_liquid_glass_unsupported_description">Krever Android 13 eller nyere. Denne enheten beholder den eksisterende glassstilen.</string>
 </resources>

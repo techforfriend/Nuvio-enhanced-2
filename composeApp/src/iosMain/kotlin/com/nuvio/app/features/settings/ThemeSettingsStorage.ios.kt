@@ -5,6 +5,8 @@ import com.nuvio.app.core.sync.decodeSyncString
 import com.nuvio.app.core.sync.encodeSyncBoolean
 import com.nuvio.app.core.sync.encodeSyncString
 import com.nuvio.app.core.storage.ProfileScopedKey
+import com.nuvio.app.core.ui.formatHexColor
+import com.nuvio.app.core.ui.parseHexColor
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -31,11 +33,21 @@ actual object ThemeSettingsStorage {
     private const val localTabletTabBarBehaviorKey = "enhanced_local_tablet_tab_bar_behavior"
     private const val tabletTabBarBehaviorDefault = "off"
     private const val navBarGlowEnabledKey = "nav_bar_glow_enabled"
+    private const val navBarDefaultIconColorEnabledKey = "nav_bar_default_icon_color_enabled"
+    private const val navBarDefaultIconColorKey = "nav_bar_default_icon_color"
+    private const val navBarLiquidGlassEnabledKey = "nav_bar_liquid_glass_enabled"
+    private const val navBarLiquidGlassBarEffectsKey = "nav_bar_liquid_glass_bar_effects"
+    private const val navBarLiquidGlassSelectionEffectsKey = "nav_bar_liquid_glass_selection_effects"
     private val profileScopedSyncKeys = listOf(
         selectedThemeKey,
         customThemeColorsKey,
         amoledEnabledKey,
         navBarGlowEnabledKey,
+        navBarDefaultIconColorEnabledKey,
+        navBarDefaultIconColorKey,
+        navBarLiquidGlassEnabledKey,
+        navBarLiquidGlassBarEffectsKey,
+        navBarLiquidGlassSelectionEffectsKey,
         liquidGlassNativeTabBarEnabledKey,
         navBarStyleKey,
         navBarPositionKey,
@@ -79,8 +91,54 @@ actual object ThemeSettingsStorage {
         }
     }
 
+    actual fun loadNavBarDefaultIconColorEnabled(): Boolean? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(navBarDefaultIconColorEnabledKey)
+        return if (defaults.objectForKey(key) != null) {
+            defaults.boolForKey(key)
+        } else {
+            null
+        }
+    }
+
+    actual fun saveNavBarDefaultIconColorEnabled(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(
+            enabled,
+            forKey = ProfileScopedKey.of(navBarDefaultIconColorEnabledKey),
+        )
+    }
+
+    actual fun loadNavBarDefaultIconColor(): String? = loadRawString(navBarDefaultIconColorKey)
+
+    actual fun saveNavBarDefaultIconColor(color: String) {
+        saveRawString(navBarDefaultIconColorKey, color)
+    }
+
     actual fun saveNavBarGlowEnabled(enabled: Boolean) {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(navBarGlowEnabledKey))
+    }
+
+    actual fun loadNavBarLiquidGlassEnabled(): Boolean? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(navBarLiquidGlassEnabledKey)
+        return if (defaults.objectForKey(key) != null) defaults.boolForKey(key) else null
+    }
+
+    actual fun saveNavBarLiquidGlassEnabled(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(navBarLiquidGlassEnabledKey))
+    }
+
+    actual fun loadNavBarLiquidGlassBarEffects(): String? = loadRawString(navBarLiquidGlassBarEffectsKey)
+
+    actual fun saveNavBarLiquidGlassBarEffects(settings: String) {
+        saveRawString(navBarLiquidGlassBarEffectsKey, settings)
+    }
+
+    actual fun loadNavBarLiquidGlassSelectionEffects(): String? =
+        loadRawString(navBarLiquidGlassSelectionEffectsKey)
+
+    actual fun saveNavBarLiquidGlassSelectionEffects(settings: String) {
+        saveRawString(navBarLiquidGlassSelectionEffectsKey, settings)
     }
 
     actual fun loadLiquidGlassNativeTabBarEnabled(): Boolean? {
@@ -230,6 +288,15 @@ actual object ThemeSettingsStorage {
         loadSelectedTheme()?.let { put(selectedThemeKey, encodeSyncString(it)) }
         loadCustomThemeColors()?.let { put(customThemeColorsKey, encodeSyncString(it)) }
         loadNavBarGlowEnabled()?.let { put(navBarGlowEnabledKey, encodeSyncBoolean(it)) }
+        loadNavBarDefaultIconColorEnabled()?.let {
+            put(navBarDefaultIconColorEnabledKey, encodeSyncBoolean(it))
+        }
+        loadNavBarDefaultIconColor()?.let { put(navBarDefaultIconColorKey, encodeSyncString(it)) }
+        loadNavBarLiquidGlassEnabled()?.let { put(navBarLiquidGlassEnabledKey, encodeSyncBoolean(it)) }
+        loadNavBarLiquidGlassBarEffects()?.let { put(navBarLiquidGlassBarEffectsKey, encodeSyncString(it)) }
+        loadNavBarLiquidGlassSelectionEffects()?.let {
+            put(navBarLiquidGlassSelectionEffectsKey, encodeSyncString(it))
+        }
         loadAmoledEnabled()?.let { put(amoledEnabledKey, encodeSyncBoolean(it)) }
         loadLiquidGlassNativeTabBarEnabled()?.let { put(liquidGlassNativeTabBarEnabledKey, encodeSyncBoolean(it)) }
         loadRawString(navBarStyleKey)?.let { put(navBarStyleKey, encodeSyncString(it)) }
@@ -244,6 +311,15 @@ actual object ThemeSettingsStorage {
         payload.decodeSyncString(selectedThemeKey)?.let(::saveSelectedTheme)
         payload.decodeSyncString(customThemeColorsKey)?.let(::saveCustomThemeColors)
         payload.decodeSyncBoolean(navBarGlowEnabledKey)?.let(::saveNavBarGlowEnabled)
+        payload.decodeSyncBoolean(navBarDefaultIconColorEnabledKey)
+            ?.let(::saveNavBarDefaultIconColorEnabled)
+        payload.decodeSyncString(navBarDefaultIconColorKey)
+            ?.let(::parseHexColor)
+            ?.let(::formatHexColor)
+            ?.let(::saveNavBarDefaultIconColor)
+        payload.decodeSyncBoolean(navBarLiquidGlassEnabledKey)?.let(::saveNavBarLiquidGlassEnabled)
+        payload.decodeSyncString(navBarLiquidGlassBarEffectsKey)?.let(::saveNavBarLiquidGlassBarEffects)
+        payload.decodeSyncString(navBarLiquidGlassSelectionEffectsKey)?.let(::saveNavBarLiquidGlassSelectionEffects)
         payload.decodeSyncBoolean(amoledEnabledKey)?.let(::saveAmoledEnabled)
         payload.decodeSyncBoolean(liquidGlassNativeTabBarEnabledKey)?.let(::saveLiquidGlassNativeTabBarEnabled)
         payload.decodeSyncString(navBarStyleKey)?.let { saveRawString(navBarStyleKey, it) }

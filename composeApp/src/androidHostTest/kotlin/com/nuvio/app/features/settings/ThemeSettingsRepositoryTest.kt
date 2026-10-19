@@ -5,6 +5,8 @@ import android.content.Context
 import com.nuvio.app.core.sync.decodeSyncString
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.CustomThemeColors
+import com.nuvio.app.core.ui.glass.LiquidGlassEffectDefaults
+import com.nuvio.app.core.ui.glass.decodeLiquidGlassEffectSettings
 import com.nuvio.app.features.membership.MemberAccessRepository
 import com.nuvio.app.features.membership.MemberAssetStorage
 import org.junit.runner.RunWith
@@ -51,6 +53,210 @@ class ThemeSettingsRepositoryTest {
         ThemeSettingsStorage.replaceFromSyncPayload(kotlinx.serialization.json.buildJsonObject {})
         ThemeSettingsRepository.onProfileChanged()
         assertEquals(true, ThemeSettingsRepository.navBarGlowEnabled.value)
+    }
+
+    @Test
+    fun liquidGlassMaterialDefaultsOffAndRetainsItsPreferenceAcrossReloads() {
+        ThemeSettingsRepository.ensureLoaded()
+        assertEquals(false, ThemeSettingsRepository.navBarLiquidGlassEnabled.value)
+
+        ThemeSettingsRepository.setNavBarLiquidGlassEnabled(true)
+        ThemeSettingsRepository.setNavBarStyle(NavBarStyle.CLASSIC)
+        ThemeSettingsRepository.setNavBarStyle(NavBarStyle.COMPACT)
+        ThemeSettingsRepository.clearLocalState()
+        ThemeSettingsRepository.ensureLoaded()
+
+        assertEquals(true, ThemeSettingsRepository.navBarLiquidGlassEnabled.value)
+        assertEquals(NavBarStyle.COMPACT, ThemeSettingsRepository.navBarStyle.value)
+
+        ThemeSettingsStorage.replaceFromSyncPayload(kotlinx.serialization.json.buildJsonObject {})
+        ThemeSettingsRepository.onProfileChanged()
+        assertEquals(false, ThemeSettingsRepository.navBarLiquidGlassEnabled.value)
+    }
+
+    @Test
+    fun liquidGlassEffectDraftsPersistOnlyWhenCommittedAndReload() {
+        ThemeSettingsRepository.ensureLoaded()
+        val persistedRevision = ThemeSettingsRepository.navBarLiquidGlassEffectsRevision.value
+        val bar = LiquidGlassEffectDefaults.floatingBar.copy(
+            blurRadiusDp = 17f,
+            tintOpacity = 0.7f,
+        )
+        val lens = LiquidGlassEffectDefaults.selectionLens.copy(
+            cornerRadiusPercent = 23f,
+            chromaticAberration = false,
+        )
+
+        val defaultLens = ThemeSettingsRepository.navBarLiquidGlassSelectionEffects.value
+        ThemeSettingsRepository.updateNavBarLiquidGlassBarEffects(bar)
+        assertEquals(defaultLens, ThemeSettingsRepository.navBarLiquidGlassSelectionEffects.value)
+
+        ThemeSettingsRepository.updateNavBarLiquidGlassSelectionEffects(lens)
+        assertEquals(bar, ThemeSettingsRepository.navBarLiquidGlassBarEffects.value)
+
+        assertEquals(null, ThemeSettingsStorage.loadNavBarLiquidGlassBarEffects())
+        assertEquals(null, ThemeSettingsStorage.loadNavBarLiquidGlassSelectionEffects())
+        assertEquals(persistedRevision, ThemeSettingsRepository.navBarLiquidGlassEffectsRevision.value)
+
+        ThemeSettingsRepository.saveNavBarLiquidGlassEffectSettings()
+
+        assertEquals(persistedRevision + 1L, ThemeSettingsRepository.navBarLiquidGlassEffectsRevision.value)
+        assertEquals(
+            bar,
+            decodeLiquidGlassEffectSettings(
+                ThemeSettingsStorage.loadNavBarLiquidGlassBarEffects(),
+                LiquidGlassEffectDefaults.floatingBar,
+                LiquidGlassEffectDefaults.floatingBarLimits,
+            ),
+        )
+        assertEquals(
+            lens,
+            decodeLiquidGlassEffectSettings(
+                ThemeSettingsStorage.loadNavBarLiquidGlassSelectionEffects(),
+                LiquidGlassEffectDefaults.selectionLens,
+                LiquidGlassEffectDefaults.selectionLensLimits,
+            ),
+        )
+
+        ThemeSettingsRepository.clearLocalState()
+        ThemeSettingsRepository.ensureLoaded()
+        assertEquals(bar, ThemeSettingsRepository.navBarLiquidGlassBarEffects.value)
+        assertEquals(lens, ThemeSettingsRepository.navBarLiquidGlassSelectionEffects.value)
+    }
+
+    @Test
+    fun savingUnchangedLiquidGlassEffectsIsIdempotent() {
+        ThemeSettingsRepository.ensureLoaded()
+        val revision = ThemeSettingsRepository.navBarLiquidGlassEffectsRevision.value
+
+        assertEquals(null, ThemeSettingsStorage.loadNavBarLiquidGlassBarEffects())
+        assertEquals(null, ThemeSettingsStorage.loadNavBarLiquidGlassSelectionEffects())
+
+        // Dismissing the sheet without editing either group must not persist defaults or trigger sync.
+        ThemeSettingsRepository.saveNavBarLiquidGlassEffectSettings()
+        assertEquals(null, ThemeSettingsStorage.loadNavBarLiquidGlassBarEffects())
+        assertEquals(null, ThemeSettingsStorage.loadNavBarLiquidGlassSelectionEffects())
+        assertEquals(revision, ThemeSettingsRepository.navBarLiquidGlassEffectsRevision.value)
+
+        // A changed group commits once; dismissing again with identical values is a no-op.
+        ThemeSettingsRepository.updateNavBarLiquidGlassBarEffects(
+            LiquidGlassEffectDefaults.floatingBar.copy(blurRadiusDp = 6f),
+        )
+        ThemeSettingsRepository.saveNavBarLiquidGlassEffectSettings()
+        val committedRevision = revision + 1L
+        assertEquals(committedRevision, ThemeSettingsRepository.navBarLiquidGlassEffectsRevision.value)
+        assertEquals(null, ThemeSettingsStorage.loadNavBarLiquidGlassSelectionEffects())
+
+        ThemeSettingsRepository.saveNavBarLiquidGlassEffectSettings()
+        assertEquals(committedRevision, ThemeSettingsRepository.navBarLiquidGlassEffectsRevision.value)
+    }
+
+    @Test
+    fun selectedLensBackdropEffectsDefaultOnAndPersistIndependently() {
+        ThemeSettingsRepository.ensureLoaded()
+        val loadedDefaults = ThemeSettingsRepository.navBarLiquidGlassSelectionEffects.value
+        assertEquals(50f, loadedDefaults.cornerRadiusPercent)
+        assertEquals(1f, loadedDefaults.blurRadiusDp)
+        assertEquals(6f, loadedDefaults.refractionHeightDp)
+        assertEquals(11f, loadedDefaults.refractionAmountDp)
+        assertEquals(0f, loadedDefaults.tintOpacity)
+        assertEquals(true, loadedDefaults.chromaticAberration)
+        assertEquals(true, loadedDefaults.depthEffect)
+        assertEquals(true, loadedDefaults.affectTabIcons)
+        assertEquals(true, loadedDefaults.affectFloatingBar)
+
+        // A custom theme must be unaffected by selected-lens-only settings.
+        ThemeSettingsRepository.setCustomTheme(CustomThemeColors.solid(0x2255AA))
+        val themePreferenceBefore = ThemeSettingsRepository.selectedThemePreference.value
+        val effectiveThemeBefore = ThemeSettingsRepository.selectedTheme.value
+        val themeColorsBefore = ThemeSettingsRepository.customThemeColors.value
+
+        val defaults = LiquidGlassEffectDefaults.selectionLens
+        assertEquals(
+            true,
+            decodeLiquidGlassEffectSettings(
+                """{"refractionAmountDp":10}""",
+                defaults,
+                LiquidGlassEffectDefaults.selectionLensLimits,
+            ).affectTabIcons,
+        )
+        assertEquals(
+            true,
+            decodeLiquidGlassEffectSettings(
+                """{"refractionAmountDp":10}""",
+                defaults,
+                LiquidGlassEffectDefaults.selectionLensLimits,
+            ).affectFloatingBar,
+        )
+
+        val configurations = listOf(
+            defaults.copy(affectTabIcons = false, affectFloatingBar = true),
+            defaults.copy(affectTabIcons = true, affectFloatingBar = false),
+            defaults.copy(affectTabIcons = true, affectFloatingBar = true),
+        )
+        configurations.forEach { settings ->
+            ThemeSettingsRepository.updateNavBarLiquidGlassSelectionEffects(settings)
+            assertEquals(themePreferenceBefore, ThemeSettingsRepository.selectedThemePreference.value)
+            assertEquals(effectiveThemeBefore, ThemeSettingsRepository.selectedTheme.value)
+            assertEquals(themeColorsBefore, ThemeSettingsRepository.customThemeColors.value)
+
+            ThemeSettingsRepository.saveNavBarLiquidGlassEffectSettings()
+            ThemeSettingsRepository.clearLocalState()
+            ThemeSettingsRepository.ensureLoaded()
+            assertEquals(settings, ThemeSettingsRepository.navBarLiquidGlassSelectionEffects.value)
+            assertEquals(themePreferenceBefore, ThemeSettingsRepository.selectedThemePreference.value)
+            assertEquals(effectiveThemeBefore, ThemeSettingsRepository.selectedTheme.value)
+            assertEquals(themeColorsBefore, ThemeSettingsRepository.customThemeColors.value)
+        }
+    }
+
+    @Test
+    fun defaultNavigationIconColorIsProfileScopedAndDoesNotChangeThemeColors() {
+        ThemeSettingsRepository.ensureLoaded()
+        assertEquals(false, ThemeSettingsRepository.navBarDefaultIconColorEnabled.value)
+        // Must match NuvioTokens.textMuted so enabling the override does not change grey by default.
+        assertEquals(0x969CA3, ThemeSettingsRepository.navBarDefaultIconColor.value)
+
+        val colors = CustomThemeColors.solid(0x2255AA)
+        ThemeSettingsRepository.setCustomTheme(colors)
+        val selectedThemeBefore = ThemeSettingsRepository.selectedTheme.value
+        val preferenceBefore = ThemeSettingsRepository.selectedThemePreference.value
+        val themeColorsBefore = ThemeSettingsRepository.customThemeColors.value
+
+        ThemeSettingsRepository.setNavBarDefaultIconColorEnabled(true)
+        ThemeSettingsRepository.updateNavBarDefaultIconColor(0xF141F5)
+
+        // The color is a draft until the sheet exits; both theme preference and palette stay intact.
+        assertEquals(null, ThemeSettingsStorage.loadNavBarDefaultIconColor())
+        assertEquals(selectedThemeBefore, ThemeSettingsRepository.selectedTheme.value)
+        assertEquals(preferenceBefore, ThemeSettingsRepository.selectedThemePreference.value)
+        assertEquals(themeColorsBefore, ThemeSettingsRepository.customThemeColors.value)
+
+        ThemeSettingsRepository.saveNavBarDefaultIconColorSettings()
+        assertEquals("#F141F5", ThemeSettingsStorage.loadNavBarDefaultIconColor())
+
+        ThemeSettingsRepository.clearLocalState()
+        ThemeSettingsRepository.ensureLoaded()
+        assertEquals(true, ThemeSettingsRepository.navBarDefaultIconColorEnabled.value)
+        assertEquals(0xF141F5, ThemeSettingsRepository.navBarDefaultIconColor.value)
+        assertEquals(preferenceBefore, ThemeSettingsRepository.selectedThemePreference.value)
+        assertEquals(themeColorsBefore, ThemeSettingsRepository.customThemeColors.value)
+    }
+
+    @Test
+    fun defaultNavigationIconColorDraftsPersistOnlyWhenCommitted() {
+        ThemeSettingsRepository.ensureLoaded()
+        val revision = ThemeSettingsRepository.navBarDefaultIconColorRevision.value
+
+        ThemeSettingsRepository.updateNavBarDefaultIconColor(0x123456)
+
+        assertEquals(null, ThemeSettingsStorage.loadNavBarDefaultIconColor())
+        assertEquals(revision, ThemeSettingsRepository.navBarDefaultIconColorRevision.value)
+
+        ThemeSettingsRepository.saveNavBarDefaultIconColorSettings()
+
+        assertEquals("#123456", ThemeSettingsStorage.loadNavBarDefaultIconColor())
+        assertEquals(revision + 1L, ThemeSettingsRepository.navBarDefaultIconColorRevision.value)
     }
 
     @Test

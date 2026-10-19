@@ -1,9 +1,11 @@
 package com.nuvio.app.core.ui
 
 import com.nuvio.app.core.ui.jelly.JellyMotion
+import com.nuvio.app.core.ui.glass.LiquidGlassSettings
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class FloatingNavigationBarRtlTest {
@@ -13,6 +15,37 @@ class FloatingNavigationBarRtlTest {
             motion.advance(1.0 / 60)
         }
     }
+
+    @Test
+    fun `navigation glass remains eligible when global glass is disabled`() {
+        val previousGlobalValue = LiquidGlassSettings.enabled
+        try {
+            LiquidGlassSettings.enabled = false
+            assertTrue(isNavigationGlassEligible())
+        } finally {
+            LiquidGlassSettings.enabled = previousGlobalValue
+        }
+
+        assertFalse(isNavigationGlassEligible(navBarEnabled = false))
+        assertFalse(isNavigationGlassEligible(hasBackdrop = false))
+        assertFalse(isNavigationGlassEligible(glassAvailable = false))
+        assertFalse(isNavigationGlassEligible(refractionSupported = false))
+        assertFalse(isNavigationGlassEligible(runtimeShaderSupported = false))
+    }
+
+    private fun isNavigationGlassEligible(
+        navBarEnabled: Boolean = true,
+        hasBackdrop: Boolean = true,
+        glassAvailable: Boolean = true,
+        refractionSupported: Boolean = true,
+        runtimeShaderSupported: Boolean = true,
+    ): Boolean = shouldEnableNavigationLiquidGlass(
+        navBarEnabled = navBarEnabled,
+        hasBackdrop = hasBackdrop,
+        glassAvailable = glassAvailable,
+        refractionSupported = refractionSupported,
+        runtimeShaderSupported = runtimeShaderSupported,
+    )
 
     @Test
     fun `visualNavIndex maps LTR destinations to identity positions`() {
@@ -184,4 +217,79 @@ class FloatingNavigationBarRtlTest {
         assertEquals(3, rightVisual)
         assertEquals(3, logicalNavIndex(rightVisual, count, isRtl))
     }
+    @Test
+    fun `selection lens offset follows visual slots in LTR and mirrored RTL`() {
+        val count = 4
+        val tabWidth = 78f
+        val inset = 4f
+
+        for (position in 0 until count) {
+            assertEquals(
+                inset + tabWidth * position,
+                liquidGlassSelectionTranslationX(
+                    position = position.toFloat(),
+                    count = count,
+                    tabWidthPx = tabWidth,
+                    insetPx = inset,
+                    isRtl = false,
+                ),
+                0.001f,
+                "LTR visual slot $position",
+            )
+            assertEquals(
+                -inset - tabWidth * (count - 1 - position),
+                liquidGlassSelectionTranslationX(
+                    position = position.toFloat(),
+                    count = count,
+                    tabWidthPx = tabWidth,
+                    insetPx = inset,
+                    isRtl = true,
+                ),
+                0.001f,
+                "RTL visual slot $position",
+            )
+        }
+
+        assertEquals(
+            -inset - tabWidth * 0.5f,
+            liquidGlassSelectionTranslationX(
+                position = 2.5f,
+                count = count,
+                tabWidthPx = tabWidth,
+                insetPx = inset,
+                isRtl = true,
+            ),
+            0.001f,
+            "RTL lens should interpolate between visual slots",
+        )
+
+        // The selected lens remains inside the same parent graphics layer as the bar,
+        // which applies motion.frame.panelOffset to both. Keep this helper local to the slot
+        // so the parent offset is inherited once rather than added a second time.
+        assertEquals(
+            inset + tabWidth * 1.5f,
+            liquidGlassSelectionTranslationX(
+                position = 1.5f,
+                count = count,
+                tabWidthPx = tabWidth,
+                insetPx = inset,
+                isRtl = false,
+            ),
+            0.001f,
+            "LTR lens slot offset must not duplicate the parent panel offset",
+        )
+        assertEquals(
+            -inset - tabWidth * (count - 1 - 1.5f),
+            liquidGlassSelectionTranslationX(
+                position = 1.5f,
+                count = count,
+                tabWidthPx = tabWidth,
+                insetPx = inset,
+                isRtl = true,
+            ),
+            0.001f,
+            "RTL lens slot offset must not duplicate the parent panel offset",
+        )
+    }
+
 }

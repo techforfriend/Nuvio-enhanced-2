@@ -2472,4 +2472,7 @@
         <item quantity="one">%1$dটি সিজন</item>
         <item quantity="other">%1$dটি সিজন</item>
     </plurals>
-    </resources>
+<string name="settings_nav_bar_liquid_glass">Liquid Glass উপাদান</string>
+<string name="settings_nav_bar_liquid_glass_description">ভাসমান নেভিগেশন বারে আলো প্রতিসরণ ও ঝাপসা প্রভাব যোগ করে।</string>
+<string name="settings_nav_bar_liquid_glass_unsupported_description">Android 13 বা পরবর্তী সংস্করণ প্রয়োজন। এই ডিভাইসে বর্তমান গ্লাস স্টাইলই থাকবে।</string>
+</resources>

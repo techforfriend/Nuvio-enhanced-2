@@ -2334,4 +2334,7 @@
     <string name="stream_info_subtitle_source_addon">Dodatek</string>
     <string name="stream_info_subtitle_source_embedded">Wbudowane</string>
     <string name="stream_info_player_engine">Silnik odtwarzacza</string>
+<string name="settings_nav_bar_liquid_glass">Materiał Liquid Glass</string>
+<string name="settings_nav_bar_liquid_glass_description">Dodaje załamanie światła i rozmycie do pływającego paska nawigacji.</string>
+<string name="settings_nav_bar_liquid_glass_unsupported_description">Wymaga Androida 13 lub nowszego. Na tym urządzeniu pozostanie obecny styl szkła.</string>
 </resources>

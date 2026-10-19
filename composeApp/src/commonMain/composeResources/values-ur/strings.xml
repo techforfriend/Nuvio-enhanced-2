@@ -2371,4 +2371,7 @@
     <string name="movie_status_rumored">افواہ</string>
     <string name="movie_status_in_production">زیرِ تیاری</string>
     <string name="movie_status_post_production">بعد از تیاری</string>
+<string name="settings_nav_bar_liquid_glass">Liquid Glass میٹیریل</string>
+<string name="settings_nav_bar_liquid_glass_description">فلوٹنگ نیویگیشن بار میں روشنی کے انعطاف اور دھندلاہٹ کا اثر شامل کرتا ہے۔</string>
+<string name="settings_nav_bar_liquid_glass_unsupported_description">اس کے لیے Android 13 یا بعد کا ورژن درکار ہے۔ اس ڈیوائس پر موجودہ گلاس اسٹائل برقرار رہے گا۔</string>
 </resources>

@@ -2459,4 +2459,7 @@
     <string name="stream_info_subtitle_source_embedded">Nhúng</string>
     <string name="stream_info_player_engine">Lõi trình phát</string>
     <string name="stream_info_server">Máy chủ</string>
+<string name="settings_nav_bar_liquid_glass">Chất liệu Liquid Glass</string>
+<string name="settings_nav_bar_liquid_glass_description">Thêm hiệu ứng khúc xạ và làm mờ cho thanh điều hướng nổi.</string>
+<string name="settings_nav_bar_liquid_glass_unsupported_description">Yêu cầu Android 13 trở lên. Thiết bị này sẽ tiếp tục dùng kiểu kính hiện tại.</string>
 </resources>
