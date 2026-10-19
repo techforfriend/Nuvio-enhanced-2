@@ -459,6 +459,10 @@ fun SettingsScreen(
                         onTestUpdateBannerClick = onTestUpdateBannerClick,
                         onCollectionsClick = onCollectionsClick,
                         onWatchPartyClick = onWatchPartyClick,
+                        onEditProfile = onEditProfile,
+                        onPosterClick = onPosterClick,
+                        onContinueWatchingItemClick = onContinueWatchingItemClick,
+                        onFavoritePersonClick = onFavoritePersonClick,
                     )
                 } else {
                     MobileSettingsScreen(
@@ -532,6 +536,10 @@ fun SettingsScreen(
                         onTestUpdateBannerClick = onTestUpdateBannerClick,
                         onCollectionsClick = onCollectionsClick,
                         onWatchPartyClick = onWatchPartyClick,
+                        onEditProfile = onEditProfile,
+                        onPosterClick = onPosterClick,
+                        onContinueWatchingItemClick = onContinueWatchingItemClick,
+                        onFavoritePersonClick = onFavoritePersonClick,
                     )
                 }
             }
@@ -611,6 +619,10 @@ private fun MobileSettingsScreen(
     onTestUpdateBannerClick: (() -> Unit)? = null,
     onCollectionsClick: () -> Unit = {},
     onWatchPartyClick: () -> Unit = {},
+    onEditProfile: (() -> Unit)? = null,
+    onPosterClick: ((MetaPreview) -> Unit)? = null,
+    onContinueWatchingItemClick: ((ContinueWatchingItem) -> Unit)? = null,
+    onFavoritePersonClick: ((FavoritePerson) -> Unit)? = null,
 ) {
     val saveableStateHolder = rememberSaveableStateHolder()
     saveableStateHolder.SaveableStateProvider(page.name) {
@@ -1009,6 +1021,10 @@ private fun TabletSettingsScreen(
     onTestUpdateBannerClick: (() -> Unit)? = null,
     onCollectionsClick: () -> Unit = {},
     onWatchPartyClick: () -> Unit = {},
+    onEditProfile: (() -> Unit)? = null,
+    onPosterClick: ((MetaPreview) -> Unit)? = null,
+    onContinueWatchingItemClick: ((ContinueWatchingItem) -> Unit)? = null,
+    onFavoritePersonClick: ((FavoritePerson) -> Unit)? = null,
 ) {
     var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.General.name) }
     val activeCategory = SettingsCategory.valueOf(selectedCategory)

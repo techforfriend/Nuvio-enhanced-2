@@ -111,4 +111,5 @@ fun profileAvatarImageUrl(profile: NuvioProfile, avatar: AvatarCatalogItem?): St
         ?: avatar?.let(::avatarImageUrl)
 
 fun profileBackgroundImageUrl(profile: NuvioProfile): String? =
-    profile.backgroundUrl?.trim()?.takeIf { it.isValidAvatarUrl() }
+    profile.profileBackgroundUrl?.trim()?.takeIf { it.isValidAvatarUrl() }
+
