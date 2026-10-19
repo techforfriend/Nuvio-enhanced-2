@@ -3,11 +3,9 @@ package com.nuvio.app.features.settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
-import com.kyant.backdrop.isRuntimeShaderSupported
 import com.nuvio.app.core.ui.glass.LiquidGlassMaterial
 import com.nuvio.app.core.ui.glass.LiquidGlassStyle
 import com.nuvio.app.core.ui.glass.isLiquidGlassSupported
-import com.nuvio.app.core.ui.glass.isLiquidGlassAvailable
 import com.nuvio.app.core.ui.glass.isLiquidRefractionSupported
 import org.jetbrains.compose.resources.StringResource
 import androidx.compose.foundation.layout.Arrangement
@@ -63,6 +61,7 @@ import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.core.ui.floatingNavigationGlowSupported
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.glass.LiquidGlassEffectDefaults
+import com.nuvio.app.core.ui.glass.LiquidGlassEffectLimits
 import com.nuvio.app.core.ui.glass.LiquidGlassEffectSettings
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -98,8 +97,6 @@ internal fun NavigationBarSettingsSheet(
     defaultIconColor: Int,
     onDefaultIconColorChanged: (Int) -> Unit,
     onSaveDefaultIconColor: () -> Unit,
-    liquidGlassEnabled: Boolean,
-    onLiquidGlassChanged: (Boolean) -> Unit,
     floatingBarEffects: LiquidGlassEffectSettings,
     onFloatingBarEffectsChanged: (LiquidGlassEffectSettings) -> Unit,
     selectionLensEffects: LiquidGlassEffectSettings,
@@ -111,7 +108,6 @@ internal fun NavigationBarSettingsSheet(
     onPositionSelected: (NavBarPosition) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val liquidGlassSupported = isLiquidGlassAvailable() && isLiquidRefractionSupported() && isRuntimeShaderSupported()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val dismiss: () -> Unit = {
@@ -136,7 +132,6 @@ internal fun NavigationBarSettingsSheet(
                     selectedStyle = selectedStyle,
                     isTablet = isTablet,
                     glowEnabled = glowEnabled,
-                    liquidGlassEnabled = liquidGlassEnabled,
                     selectedPosition = selectedPosition,
                     tabletLayout = tabletLayout,
                     floatingBarEffects = floatingBarEffects,
@@ -276,205 +271,15 @@ internal fun NavigationBarSettingsSheet(
                 }
             }
             item {
-                AnimatedVisibility(selectedStyle != NavBarStyle.CLASSIC) {
-                    Column {
-                        NuvioBottomSheetDivider()
-                        SettingsSwitchRow(
-                            title = stringResource(Res.string.settings_nav_bar_liquid_glass),
-                            description = stringResource(
-                                if (liquidGlassSupported) {
-                                    Res.string.settings_nav_bar_liquid_glass_description
-                                } else {
-                                    Res.string.settings_nav_bar_liquid_glass_unsupported_description
-                                },
-                            ),
-                            checked = liquidGlassEnabled,
-                            enabled = liquidGlassSupported,
-                            isTablet = isTablet,
-                            onCheckedChange = onLiquidGlassChanged,
-                        )
-                    }
-                }
-            }
-            item {
-                AnimatedVisibility(
-                    visible = selectedStyle != NavBarStyle.CLASSIC && liquidGlassSupported && liquidGlassEnabled,
-                ) {
-                    Column {
-                        NuvioBottomSheetDivider()
-                        LiquidGlassEffectGroupHeader(
-                            title = stringResource(Res.string.settings_nav_bar_liquid_glass_floating_bar),
-                            resetDescription = stringResource(Res.string.settings_nav_bar_liquid_glass_reset_bar),
-                            isTablet = isTablet,
-                            onReset = {
-                                onFloatingBarEffectsChanged(LiquidGlassEffectDefaults.floatingBar)
-                            },
-                        )
-                        LiquidGlassEffectSlider(
-                            title = stringResource(Res.string.settings_nav_bar_glass_corner_radius),
-                            value = floatingBarEffects.cornerRadiusPercent,
-                            valueRange = 0f..50f,
-                            steps = 49,
-                            valueLabel = "${floatingBarEffects.cornerRadiusPercent.roundToInt()}%",
-                            isTablet = isTablet,
-                            onValueChange = { onFloatingBarEffectsChanged(floatingBarEffects.copy(cornerRadiusPercent = it)) },
-                        )
-                        LiquidGlassEffectSlider(
-                            title = stringResource(Res.string.settings_nav_bar_glass_blur_radius),
-                            value = floatingBarEffects.blurRadiusDp,
-                            valueRange = 0f..LiquidGlassEffectDefaults.floatingBarLimits.maxBlurRadiusDp,
-                            steps = 31,
-                            valueLabel = "${floatingBarEffects.blurRadiusDp.roundToInt()} dp",
-                            isTablet = isTablet,
-                            onValueChange = { onFloatingBarEffectsChanged(floatingBarEffects.copy(blurRadiusDp = it)) },
-                        )
-                        LiquidGlassEffectSlider(
-                            title = stringResource(Res.string.settings_nav_bar_glass_refraction_height),
-                            value = floatingBarEffects.refractionHeightDp,
-                            valueRange = 0f..LiquidGlassEffectDefaults.floatingBarLimits.maxRefractionHeightDp,
-                            steps = 47,
-                            valueLabel = "${floatingBarEffects.refractionHeightDp.roundToInt()} dp",
-                            isTablet = isTablet,
-                            onValueChange = { onFloatingBarEffectsChanged(floatingBarEffects.copy(refractionHeightDp = it)) },
-                        )
-                        LiquidGlassEffectSlider(
-                            title = stringResource(Res.string.settings_nav_bar_glass_refraction_amount),
-                            value = floatingBarEffects.refractionAmountDp,
-                            valueRange = 0f..LiquidGlassEffectDefaults.floatingBarLimits.maxRefractionAmountDp,
-                            steps = 47,
-                            valueLabel = "${floatingBarEffects.refractionAmountDp.roundToInt()} dp",
-                            isTablet = isTablet,
-                            onValueChange = { onFloatingBarEffectsChanged(floatingBarEffects.copy(refractionAmountDp = it)) },
-                        )
-                        LiquidGlassEffectSlider(
-                            title = stringResource(Res.string.settings_nav_bar_glass_tint_opacity),
-                            value = floatingBarEffects.tintOpacity,
-                            valueRange = 0f..1f,
-                            steps = 19,
-                            valueLabel = "${(floatingBarEffects.tintOpacity * 100f).roundToInt()}%",
-                            isTablet = isTablet,
-                            onValueChange = { onFloatingBarEffectsChanged(floatingBarEffects.copy(tintOpacity = it)) },
-                        )
-                        SettingsSwitchRow(
-                            title = stringResource(Res.string.settings_nav_bar_glass_chromatic_aberration),
-                            description = stringResource(Res.string.settings_nav_bar_glass_chromatic_aberration_description),
-                            checked = floatingBarEffects.chromaticAberration,
-                            isTablet = isTablet,
-                            onCheckedChange = {
-                                onFloatingBarEffectsChanged(floatingBarEffects.copy(chromaticAberration = it))
-                            },
-                        )
-                        SettingsSwitchRow(
-                            title = stringResource(Res.string.settings_nav_bar_glass_depth_effect),
-                            description = stringResource(Res.string.settings_nav_bar_glass_depth_effect_description),
-                            checked = floatingBarEffects.depthEffect,
-                            isTablet = isTablet,
-                            onCheckedChange = {
-                                onFloatingBarEffectsChanged(floatingBarEffects.copy(depthEffect = it))
-                            },
-                        )
-
-                        NuvioBottomSheetDivider()
-                        LiquidGlassEffectGroupHeader(
-                            title = stringResource(Res.string.settings_nav_bar_liquid_glass_selection_lens),
-                            resetDescription = stringResource(Res.string.settings_nav_bar_liquid_glass_reset_lens),
-                            isTablet = isTablet,
-                            onReset = {
-                                onSelectionLensEffectsChanged(LiquidGlassEffectDefaults.selectionLens)
-                            },
-                        )
-                        LiquidGlassEffectSlider(
-                            title = stringResource(Res.string.settings_nav_bar_glass_corner_radius),
-                            value = selectionLensEffects.cornerRadiusPercent,
-                            valueRange = 0f..50f,
-                            steps = 49,
-                            valueLabel = "${selectionLensEffects.cornerRadiusPercent.roundToInt()}%",
-                            isTablet = isTablet,
-                            onValueChange = { onSelectionLensEffectsChanged(selectionLensEffects.copy(cornerRadiusPercent = it)) },
-                        )
-                        LiquidGlassEffectSlider(
-                            title = stringResource(Res.string.settings_nav_bar_glass_blur_radius),
-                            value = selectionLensEffects.blurRadiusDp,
-                            valueRange = 0f..LiquidGlassEffectDefaults.selectionLensLimits.maxBlurRadiusDp,
-                            steps = 23,
-                            valueLabel = "${selectionLensEffects.blurRadiusDp.roundToInt()} dp",
-                            isTablet = isTablet,
-                            onValueChange = { onSelectionLensEffectsChanged(selectionLensEffects.copy(blurRadiusDp = it)) },
-                        )
-                        LiquidGlassEffectSlider(
-                            title = stringResource(Res.string.settings_nav_bar_glass_refraction_height),
-                            value = selectionLensEffects.refractionHeightDp,
-                            valueRange = 0f..LiquidGlassEffectDefaults.selectionLensLimits.maxRefractionHeightDp,
-                            steps = 31,
-                            valueLabel = "${selectionLensEffects.refractionHeightDp.roundToInt()} dp",
-                            isTablet = isTablet,
-                            onValueChange = { onSelectionLensEffectsChanged(selectionLensEffects.copy(refractionHeightDp = it)) },
-                        )
-                        LiquidGlassEffectSlider(
-                            title = stringResource(Res.string.settings_nav_bar_glass_refraction_amount),
-                            value = selectionLensEffects.refractionAmountDp,
-                            valueRange = 0f..LiquidGlassEffectDefaults.selectionLensLimits.maxRefractionAmountDp,
-                            steps = 31,
-                            valueLabel = "${selectionLensEffects.refractionAmountDp.roundToInt()} dp",
-                            isTablet = isTablet,
-                            onValueChange = { onSelectionLensEffectsChanged(selectionLensEffects.copy(refractionAmountDp = it)) },
-                        )
-                        LiquidGlassEffectSlider(
-                            title = stringResource(Res.string.settings_nav_bar_glass_tint_opacity),
-                            value = selectionLensEffects.tintOpacity,
-                            valueRange = 0f..1f,
-                            steps = 19,
-                            valueLabel = "${(selectionLensEffects.tintOpacity * 100f).roundToInt()}%",
-                            isTablet = isTablet,
-                            onValueChange = { onSelectionLensEffectsChanged(selectionLensEffects.copy(tintOpacity = it)) },
-                        )
-                        SettingsSwitchRow(
-                            title = stringResource(Res.string.settings_nav_bar_glass_chromatic_aberration),
-                            description = stringResource(Res.string.settings_nav_bar_glass_chromatic_aberration_description),
-                            checked = selectionLensEffects.chromaticAberration,
-                            isTablet = isTablet,
-                            onCheckedChange = {
-                                onSelectionLensEffectsChanged(selectionLensEffects.copy(chromaticAberration = it))
-                            },
-                        )
-                        SettingsSwitchRow(
-                            title = stringResource(Res.string.settings_nav_bar_glass_depth_effect),
-                            description = stringResource(Res.string.settings_nav_bar_glass_depth_effect_description),
-                            checked = selectionLensEffects.depthEffect,
-                            isTablet = isTablet,
-                            onCheckedChange = {
-                                onSelectionLensEffectsChanged(selectionLensEffects.copy(depthEffect = it))
-                            },
-                        )
-                        SettingsSwitchRow(
-                            title = stringResource(Res.string.settings_nav_bar_glass_lens_affect_tab_icons),
-                            description = stringResource(Res.string.settings_nav_bar_glass_lens_affect_tab_icons_description),
-                            checked = selectionLensEffects.affectTabIcons,
-                            isTablet = isTablet,
-                            onCheckedChange = {
-                                onSelectionLensEffectsChanged(selectionLensEffects.copy(affectTabIcons = it))
-                            },
-                        )
-                        SettingsSwitchRow(
-                            title = stringResource(Res.string.settings_nav_bar_glass_lens_affect_floating_bar),
-                            description = stringResource(Res.string.settings_nav_bar_glass_lens_affect_floating_bar_description),
-                            checked = selectionLensEffects.affectFloatingBar,
-                            isTablet = isTablet,
-                            onCheckedChange = {
-                                onSelectionLensEffectsChanged(selectionLensEffects.copy(affectFloatingBar = it))
-                            },
-                        )
-                    }
-                }
-            }
-            item {
                 AnimatedVisibility(isLiquidGlassSupported() && selectedStyle != NavBarStyle.CLASSIC) {
                     NavigationBarGlassSettings(
                         style = glassStyle,
-                        isTablet = isTablet,
-                        liquidGlassSupported = liquidGlassSupported,
-                        liquidGlassEnabled = liquidGlassEnabled,
                         onStyleChanged = onGlassStyleChanged,
+                        floatingBarEffects = floatingBarEffects,
+                        onFloatingBarEffectsChanged = onFloatingBarEffectsChanged,
+                        selectionLensEffects = selectionLensEffects,
+                        onSelectionLensEffectsChanged = onSelectionLensEffectsChanged,
+                        isTablet = isTablet,
                     )
                 }
             }
@@ -498,24 +303,20 @@ private val LiquidGlassMaterial.labelRes: StringResource
         LiquidGlassMaterial.SOLID -> Res.string.settings_nav_bar_glass_material_solid
     }
 
-internal fun shouldShowLegacyNavBarGlassControls(
-    liquidGlassSupported: Boolean,
-    liquidGlassEnabled: Boolean,
-): Boolean = !liquidGlassSupported || !liquidGlassEnabled
+internal fun navBarGlassShowsLensControls(style: LiquidGlassStyle, refractionSupported: Boolean): Boolean =
+    style.usesLens && refractionSupported
 
 @Composable
 private fun NavigationBarGlassSettings(
     style: LiquidGlassStyle,
-    isTablet: Boolean,
-    liquidGlassSupported: Boolean,
-    liquidGlassEnabled: Boolean,
     onStyleChanged: (LiquidGlassStyle) -> Unit,
+    floatingBarEffects: LiquidGlassEffectSettings,
+    onFloatingBarEffectsChanged: (LiquidGlassEffectSettings) -> Unit,
+    selectionLensEffects: LiquidGlassEffectSettings,
+    onSelectionLensEffectsChanged: (LiquidGlassEffectSettings) -> Unit,
+    isTablet: Boolean,
 ) {
     val refractionSupported = isLiquidRefractionSupported()
-    val showLegacyControls = shouldShowLegacyNavBarGlassControls(
-        liquidGlassSupported = liquidGlassSupported,
-        liquidGlassEnabled = liquidGlassEnabled,
-    )
     val materials = LiquidGlassMaterial.entries.filter {
         refractionSupported || it != LiquidGlassMaterial.CLEAR
     }
@@ -528,108 +329,192 @@ private fun NavigationBarGlassSettings(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 4.dp),
         )
-        Text(
-            text = stringResource(Res.string.settings_nav_bar_glass_legacy_description),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+        materials.forEach { material ->
+            NuvioBottomSheetActionRow(
+                title = stringResource(material.labelRes),
+                onClick = { onStyleChanged(style.copy(material = material)) },
+                modifier = Modifier.semantics {
+                    role = Role.RadioButton
+                    selected = material == style.material
+                },
+                trailingContent = {
+                    if (material == style.material) {
+                        Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                },
+            )
+        }
+        SettingsSwitchRow(
+            title = stringResource(Res.string.settings_nav_bar_glass_highlight),
+            description = stringResource(Res.string.settings_nav_bar_glass_highlight_description),
+            checked = style.edgeHighlight,
+            isTablet = isTablet,
+            onCheckedChange = { onStyleChanged(style.copy(edgeHighlight = it)) },
         )
-        if (showLegacyControls) {
-            materials.forEach { material ->
-                NuvioBottomSheetActionRow(
-                    title = stringResource(material.labelRes),
-                    onClick = { onStyleChanged(style.copy(material = material)) },
-                    modifier = Modifier.semantics {
-                        role = Role.RadioButton
-                        selected = material == style.material
-                    },
-                    trailingContent = {
-                        if (material == style.material) {
-                            Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
-                        }
-                    },
-                )
-            }
-            AnimatedVisibility(style.usesBlur) {
-                SettingsSliderRow(
-                    title = stringResource(Res.string.settings_nav_bar_glass_blur),
-                    value = style.blurRadius,
-                    valueText = stringResource(Res.string.settings_nav_bar_glass_value_dp, style.blurRadius),
-                    valueRange = LiquidGlassStyle.BlurRange,
-                    step = 1,
+        AnimatedVisibility(style.usesBackdrop) {
+            Column {
+                NuvioBottomSheetDivider()
+                LiquidGlassEffectGroupHeader(
+                    title = stringResource(Res.string.settings_nav_bar_liquid_glass_floating_bar),
+                    resetDescription = stringResource(Res.string.settings_nav_bar_liquid_glass_reset_bar),
                     isTablet = isTablet,
-                    onValueChange = { onStyleChanged(style.copy(blurRadius = it)) },
-                )
-            }
-            AnimatedVisibility(style.usesLens && refractionSupported) {
-                SettingsSliderRow(
-                    title = stringResource(Res.string.settings_nav_bar_glass_refraction),
-                    value = style.refraction,
-                    valueText = stringResource(Res.string.settings_nav_bar_glass_value_dp, style.refraction),
-                    valueRange = LiquidGlassStyle.RefractionRange,
-                    step = 2,
-                    isTablet = isTablet,
-                    onValueChange = { onStyleChanged(style.copy(refraction = it)) },
-                )
-            }
-            AnimatedVisibility(style.usesBackdrop) {
-                Column {
-                    SettingsSliderRow(
-                        title = stringResource(Res.string.settings_nav_bar_glass_tint),
-                        value = style.tintPercent,
-                        valueText = stringResource(Res.string.settings_nav_bar_glass_value_percent, style.tintPercent),
-                        valueRange = LiquidGlassStyle.TintRange,
-                        step = 5,
-                        isTablet = isTablet,
-                        onValueChange = { onStyleChanged(style.copy(tintPercent = it)) },
-                    )
-                    SettingsSwitchRow(
-                        title = stringResource(Res.string.settings_nav_bar_glass_vibrancy),
-                        description = stringResource(Res.string.settings_nav_bar_glass_vibrancy_description),
-                        checked = style.vibrancy,
-                        isTablet = isTablet,
-                        onCheckedChange = { onStyleChanged(style.copy(vibrancy = it)) },
-                    )
-                    SettingsSwitchRow(
-                        title = stringResource(Res.string.settings_nav_bar_glass_shadow),
-                        description = stringResource(Res.string.settings_nav_bar_glass_shadow_description),
-                        checked = style.shadow,
-                        isTablet = isTablet,
-                        onCheckedChange = { onStyleChanged(style.copy(shadow = it)) },
-                    )
-                    if (refractionSupported) {
-                        SettingsSwitchRow(
-                            title = stringResource(Res.string.settings_nav_bar_glass_selection_lens),
-                            description = stringResource(Res.string.settings_nav_bar_glass_selection_lens_description),
-                            checked = style.selectionLens,
-                            isTablet = isTablet,
-                            onCheckedChange = { onStyleChanged(style.copy(selectionLens = it)) },
+                    onReset = {
+                        onFloatingBarEffectsChanged(LiquidGlassEffectDefaults.floatingBar)
+                        onStyleChanged(
+                            style.copy(
+                                vibrancy = LiquidGlassStyle.Default.vibrancy,
+                                shadow = LiquidGlassStyle.Default.shadow,
+                            ),
                         )
+                    },
+                )
+                LiquidGlassEffectControls(
+                    effects = floatingBarEffects,
+                    onEffectsChanged = onFloatingBarEffectsChanged,
+                    limits = LiquidGlassEffectDefaults.floatingBarLimits,
+                    showBlur = style.usesBlur,
+                    showLens = navBarGlassShowsLensControls(style, refractionSupported),
+                    isTablet = isTablet,
+                )
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_nav_bar_glass_vibrancy),
+                    description = stringResource(Res.string.settings_nav_bar_glass_vibrancy_description),
+                    checked = style.vibrancy,
+                    isTablet = isTablet,
+                    onCheckedChange = { onStyleChanged(style.copy(vibrancy = it)) },
+                )
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_nav_bar_glass_shadow),
+                    description = stringResource(Res.string.settings_nav_bar_glass_shadow_description),
+                    checked = style.shadow,
+                    isTablet = isTablet,
+                    onCheckedChange = { onStyleChanged(style.copy(shadow = it)) },
+                )
+                if (refractionSupported) {
+                    NuvioBottomSheetDivider()
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_nav_bar_glass_selection_lens),
+                        description = stringResource(Res.string.settings_nav_bar_glass_selection_lens_description),
+                        checked = style.selectionLens,
+                        isTablet = isTablet,
+                        onCheckedChange = { onStyleChanged(style.copy(selectionLens = it)) },
+                    )
+                    AnimatedVisibility(style.selectionLens) {
+                        Column {
+                            LiquidGlassEffectGroupHeader(
+                                title = stringResource(Res.string.settings_nav_bar_liquid_glass_selection_lens),
+                                resetDescription = stringResource(Res.string.settings_nav_bar_liquid_glass_reset_lens),
+                                isTablet = isTablet,
+                                onReset = { onSelectionLensEffectsChanged(LiquidGlassEffectDefaults.selectionLens) },
+                            )
+                            LiquidGlassEffectControls(
+                                effects = selectionLensEffects,
+                                onEffectsChanged = onSelectionLensEffectsChanged,
+                                limits = LiquidGlassEffectDefaults.selectionLensLimits,
+                                showBlur = true,
+                                showLens = true,
+                                isTablet = isTablet,
+                            )
+                            SettingsSwitchRow(
+                                title = stringResource(Res.string.settings_nav_bar_glass_lens_affect_tab_icons),
+                                description = stringResource(Res.string.settings_nav_bar_glass_lens_affect_tab_icons_description),
+                                checked = selectionLensEffects.affectTabIcons,
+                                isTablet = isTablet,
+                                onCheckedChange = {
+                                    onSelectionLensEffectsChanged(selectionLensEffects.copy(affectTabIcons = it))
+                                },
+                            )
+                            SettingsSwitchRow(
+                                title = stringResource(Res.string.settings_nav_bar_glass_lens_affect_floating_bar),
+                                description = stringResource(Res.string.settings_nav_bar_glass_lens_affect_floating_bar_description),
+                                checked = selectionLensEffects.affectFloatingBar,
+                                isTablet = isTablet,
+                                onCheckedChange = {
+                                    onSelectionLensEffectsChanged(selectionLensEffects.copy(affectFloatingBar = it))
+                                },
+                            )
+                        }
                     }
                 }
             }
-            AnimatedVisibility(refractionSupported && style.usesBackdrop && (style.usesLens || style.selectionLens)) {
-                SettingsSwitchRow(
-                    title = stringResource(Res.string.settings_nav_bar_glass_dispersion),
-                    description = stringResource(Res.string.settings_nav_bar_glass_dispersion_description),
-                    checked = style.chromaticAberration,
-                    isTablet = isTablet,
-                    onCheckedChange = { onStyleChanged(style.copy(chromaticAberration = it)) },
-                )
-            }
-            SettingsSwitchRow(
-                title = stringResource(Res.string.settings_nav_bar_glass_highlight),
-                description = stringResource(Res.string.settings_nav_bar_glass_highlight_description),
-                checked = style.edgeHighlight,
+        }
+    }
+}
+
+@Composable
+private fun LiquidGlassEffectControls(
+    effects: LiquidGlassEffectSettings,
+    onEffectsChanged: (LiquidGlassEffectSettings) -> Unit,
+    limits: LiquidGlassEffectLimits,
+    showBlur: Boolean,
+    showLens: Boolean,
+    isTablet: Boolean,
+) {
+    Column {
+        LiquidGlassEffectSlider(
+            title = stringResource(Res.string.settings_nav_bar_glass_corner_radius),
+            value = effects.cornerRadiusPercent,
+            valueRange = 0f..50f,
+            steps = 49,
+            valueLabel = "${effects.cornerRadiusPercent.roundToInt()}%",
+            isTablet = isTablet,
+            onValueChange = { onEffectsChanged(effects.copy(cornerRadiusPercent = it)) },
+        )
+        if (showBlur) {
+            LiquidGlassEffectSlider(
+                title = stringResource(Res.string.settings_nav_bar_glass_blur_radius),
+                value = effects.blurRadiusDp,
+                valueRange = 0f..limits.maxBlurRadiusDp,
+                steps = limits.maxBlurRadiusDp.roundToInt() - 1,
+                valueLabel = "${effects.blurRadiusDp.roundToInt()} dp",
                 isTablet = isTablet,
-                onCheckedChange = { onStyleChanged(style.copy(edgeHighlight = it)) },
+                onValueChange = { onEffectsChanged(effects.copy(blurRadiusDp = it)) },
             )
-            AnimatedVisibility(style != LiquidGlassStyle.Default) {
-                NuvioBottomSheetActionRow(
-                    title = stringResource(Res.string.settings_nav_bar_glass_reset),
-                    onClick = { onStyleChanged(LiquidGlassStyle.Default) },
-                )
-            }
+        }
+        if (showLens) {
+            LiquidGlassEffectSlider(
+                title = stringResource(Res.string.settings_nav_bar_glass_refraction_height),
+                value = effects.refractionHeightDp,
+                valueRange = 0f..limits.maxRefractionHeightDp,
+                steps = limits.maxRefractionHeightDp.roundToInt() - 1,
+                valueLabel = "${effects.refractionHeightDp.roundToInt()} dp",
+                isTablet = isTablet,
+                onValueChange = { onEffectsChanged(effects.copy(refractionHeightDp = it)) },
+            )
+            LiquidGlassEffectSlider(
+                title = stringResource(Res.string.settings_nav_bar_glass_refraction_amount),
+                value = effects.refractionAmountDp,
+                valueRange = 0f..limits.maxRefractionAmountDp,
+                steps = limits.maxRefractionAmountDp.roundToInt() - 1,
+                valueLabel = "${effects.refractionAmountDp.roundToInt()} dp",
+                isTablet = isTablet,
+                onValueChange = { onEffectsChanged(effects.copy(refractionAmountDp = it)) },
+            )
+        }
+        LiquidGlassEffectSlider(
+            title = stringResource(Res.string.settings_nav_bar_glass_tint_opacity),
+            value = effects.tintOpacity,
+            valueRange = 0f..1f,
+            steps = 19,
+            valueLabel = "${(effects.tintOpacity * 100f).roundToInt()}%",
+            isTablet = isTablet,
+            onValueChange = { onEffectsChanged(effects.copy(tintOpacity = it)) },
+        )
+        if (showLens) {
+            SettingsSwitchRow(
+                title = stringResource(Res.string.settings_nav_bar_glass_chromatic_aberration),
+                description = stringResource(Res.string.settings_nav_bar_glass_chromatic_aberration_description),
+                checked = effects.chromaticAberration,
+                isTablet = isTablet,
+                onCheckedChange = { onEffectsChanged(effects.copy(chromaticAberration = it)) },
+            )
+            SettingsSwitchRow(
+                title = stringResource(Res.string.settings_nav_bar_glass_depth_effect),
+                description = stringResource(Res.string.settings_nav_bar_glass_depth_effect_description),
+                checked = effects.depthEffect,
+                isTablet = isTablet,
+                onCheckedChange = { onEffectsChanged(effects.copy(depthEffect = it)) },
+            )
         }
     }
 }
@@ -678,7 +563,6 @@ private fun NavigationBarPreviewStickyHeader(
     selectedStyle: NavBarStyle,
     isTablet: Boolean,
     glowEnabled: Boolean,
-    liquidGlassEnabled: Boolean,
     selectedPosition: NavBarPosition,
     tabletLayout: Boolean,
     floatingBarEffects: LiquidGlassEffectSettings,
@@ -727,7 +611,6 @@ private fun NavigationBarPreviewStickyHeader(
             style = selectedStyle,
             isTablet = isTablet,
             glowEnabled = glowEnabled,
-            liquidGlassEnabled = liquidGlassEnabled,
             position = selectedPosition,
             tabletLayout = tabletLayout,
             floatingBarEffects = floatingBarEffects,

@@ -1,37 +1,17 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.core.ui.glass.LiquidGlassMaterial
+import com.nuvio.app.core.ui.glass.LiquidGlassStyle
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NavigationBarGlassSettingsVisibilityTest {
     @Test
-    fun legacyGlassControlsAreHiddenOnlyWhenTheNewMaterialIsSupportedAndEnabled() {
-        assertFalse(
-            shouldShowLegacyNavBarGlassControls(
-                liquidGlassSupported = true,
-                liquidGlassEnabled = true,
-            ),
-        )
-    }
-
-    @Test
-    fun legacyGlassControlsRemainAvailableWhenTheNewMaterialIsDisabled() {
-        assertTrue(
-            shouldShowLegacyNavBarGlassControls(
-                liquidGlassSupported = true,
-                liquidGlassEnabled = false,
-            ),
-        )
-    }
-
-    @Test
-    fun legacyGlassControlsRemainAvailableWhenTheNewMaterialIsUnsupported() {
-        assertTrue(
-            shouldShowLegacyNavBarGlassControls(
-                liquidGlassSupported = false,
-                liquidGlassEnabled = true,
-            ),
-        )
+    fun lensControlsFollowTheMaterialAndDeviceSupport() {
+        assertTrue(navBarGlassShowsLensControls(LiquidGlassStyle(LiquidGlassMaterial.LIQUID), refractionSupported = true))
+        assertTrue(navBarGlassShowsLensControls(LiquidGlassStyle(LiquidGlassMaterial.CLEAR), refractionSupported = true))
+        assertFalse(navBarGlassShowsLensControls(LiquidGlassStyle(LiquidGlassMaterial.FROSTED), refractionSupported = true))
+        assertFalse(navBarGlassShowsLensControls(LiquidGlassStyle(LiquidGlassMaterial.LIQUID), refractionSupported = false))
     }
 }
