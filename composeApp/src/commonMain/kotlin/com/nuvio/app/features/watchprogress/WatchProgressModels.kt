@@ -386,3 +386,50 @@ fun buildPlaybackVideoId(
     episodeNumber = episodeNumber,
     fallbackVideoId = fallbackVideoId,
 )
+
+fun List<WatchProgressEntry>.profileContinueWatchingEntries(limit: Int = Int.MAX_VALUE): List<WatchProgressEntry> =
+    asSequence()
+        .filter { entry -> !entry.isLiveTvProgressEntry() }
+        .filter { entry -> entry.isResumable && entry.progressFraction >= 0.02f }
+        .sortedByDescending { entry -> entry.lastUpdatedEpochMs }
+        .distinctBy { entry -> entry.profileContinueWatchingGroupKey() }
+        .take(limit)
+        .toList()
+
+private fun WatchProgressEntry.profileContinueWatchingGroupKey(): String {
+    val normalizedType = parentMetaType.trim().lowercase()
+    return if (isEpisode || normalizedType in setOf("series", "show", "tv", "tvshow")) {
+        "series:${parentMetaId.trim()}"
+    } else {
+        "item:${parentMetaType.trim().lowercase()}:${videoId.trim().ifBlank { parentMetaId.trim() }}"
+    }
+}
+
+fun WatchProgressEntry.isLiveTvProgressEntry(): Boolean =
+    contentType.isLikelyLiveTvProgressValue() ||
+        parentMetaType.isLikelyLiveTvProgressValue() ||
+        parentMetaId.isLikelyLiveTvProgressUrl() ||
+        videoId.isLikelyLiveTvProgressUrl()
+
+private fun String.isLikelyLiveTvProgressValue(): Boolean =
+    trim().lowercase() in setOf(
+        "live-tv",
+        "livetv",
+        "live_tv",
+        "channel",
+        "tv-channel",
+        "tv_channel",
+        "iptv",
+        "m3u",
+        "stalker",
+    )
+
+private fun String.isLikelyLiveTvProgressUrl(): Boolean {
+    val value = trim().lowercase()
+    return value.startsWith("http://") ||
+        value.startsWith("https://") ||
+        value.startsWith("rtmp://") ||
+        value.startsWith("rtsp://") ||
+        value.endsWith(".m3u") ||
+        value.endsWith(".m3u8")
+}

@@ -246,7 +246,7 @@ private fun ProfileInsightsBody(
         }.onFailure { error ->
             profileInsightsLog.e(error) { "Failed to build profile continue watching items profile=$activeProfileIndex" }
         }.getOrElse {
-            emptyList()
+            emptyList<ContinueWatchingItem>()
         }
     }
     val continueTitle = stringResource(Res.string.profile_insights_stat_continue)

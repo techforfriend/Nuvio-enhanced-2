@@ -58,6 +58,7 @@ import com.nuvio.app.features.home.components.HomeSkeletonHero
 import com.nuvio.app.features.home.components.HomeSkeletonRow
 import com.nuvio.app.features.home.components.HomeContinueWatchingSectionBottomPadding
 import com.nuvio.app.features.home.components.ContinueWatchingLayout
+import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.settings.NuvioEnhancedSettingsRepository
 import com.nuvio.app.features.tracking.TrackingSettingsRepository
 import com.nuvio.app.features.tracking.WatchProgressSource
@@ -164,6 +165,10 @@ fun HomeScreen(
     val watchProgressUiState by WatchProgressRepository.uiState.collectAsStateWithLifecycle()
     val effectiveWatchProgressSource = watchProgressUiState.source
     val cloudLibraryUiState by CloudLibraryRepository.uiState.collectAsStateWithLifecycle()
+    val libraryUiState by remember {
+        LibraryRepository.ensureLoaded()
+        LibraryRepository.uiState
+    }.collectAsStateWithLifecycle()
     val networkStatusUiState by NetworkStatusRepository.uiState.collectAsStateWithLifecycle()
     val trackingSettingsUiState by remember {
         TrackingSettingsRepository.ensureLoaded()
