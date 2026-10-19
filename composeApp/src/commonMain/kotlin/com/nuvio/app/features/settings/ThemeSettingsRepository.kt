@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 object ThemeSettingsRepository {
     private val _selectedTheme = MutableStateFlow(AppTheme.WHITE)
     val selectedTheme: StateFlow<AppTheme> = _selectedTheme.asStateFlow()
+    val selectedThemePreference: StateFlow<AppTheme> get() = selectedTheme
 
     private val _customThemeFirstColor = MutableStateFlow(ThemeAccentColor.PINK.color)
     val customThemeFirstColor: StateFlow<Color> = _customThemeFirstColor.asStateFlow()
@@ -24,6 +25,7 @@ object ThemeSettingsRepository {
 
     private val _customThemeColors = MutableStateFlow(CustomThemeColors.solid(CustomThemeColors.Default.second))
     val customThemeColors: StateFlow<CustomThemeColors> = _customThemeColors.asStateFlow()
+    val customThemePreference: StateFlow<CustomThemeColors> get() = customThemeColors
 
     private val _amoledEnabled = MutableStateFlow(false)
     val amoledEnabled: StateFlow<Boolean> = _amoledEnabled.asStateFlow()
