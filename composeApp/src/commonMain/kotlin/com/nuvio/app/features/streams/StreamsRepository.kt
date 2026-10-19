@@ -15,6 +15,8 @@ import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.plugins.PluginRepository
 import com.nuvio.app.features.plugins.pluginContentId
 import com.nuvio.app.features.plugins.PluginsUiState
+import com.nuvio.app.features.cloudstream.CloudStreamRepository
+import com.nuvio.app.features.cloudstream.parseCloudStreamRouteId
 import com.nuvio.app.features.servers.ServerStreams
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,15 +28,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withTimeoutOrNull
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
-import kotlinx.coroutines.launch
 
 object StreamsRepository {
     private val log = Logger.withTag("StreamsRepo")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _uiState = MutableStateFlow(StreamsUiState())
     val uiState: StateFlow<StreamsUiState> = _uiState.asStateFlow()
+
+    private val cloudStreamSemaphore = Semaphore(4)
+    private const val STREAM_PROVIDER_TIMEOUT_MS = 20_000L
 
     private var activeJob: Job? = null
     private var activeRequestKey: String? = null
@@ -48,38 +56,84 @@ object StreamsRepository {
     ): String =
         "$type::$videoId::$season::$episode::$manualSelection"
 
-    fun load(type: String, videoId: String, parentMetaId: String? = null, season: Int? = null, episode: Int? = null, manualSelection: Boolean = false) {
+    fun load(
+        type: String,
+        videoId: String,
+        parentMetaId: String? = null,
+        parentMetaType: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        manualSelection: Boolean = false,
+        searchTitle: String? = null,
+    ) {
         PluginRepository.setLocalPluginSearchPaused(false)
         load(
             type = type,
             videoId = videoId,
             parentMetaId = parentMetaId,
+            parentMetaType = parentMetaType,
             season = season,
             episode = episode,
             manualSelection = manualSelection,
+            searchTitle = searchTitle,
             forceRefresh = false,
         )
     }
 
-    fun reload(type: String, videoId: String, parentMetaId: String? = null, season: Int? = null, episode: Int? = null, manualSelection: Boolean = false) {
+    fun reload(
+        type: String,
+        videoId: String,
+        parentMetaId: String? = null,
+        parentMetaType: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        manualSelection: Boolean = false,
+        searchTitle: String? = null,
+    ) {
         PluginRepository.setLocalPluginSearchPaused(false)
         load(
             type = type,
             videoId = videoId,
             parentMetaId = parentMetaId,
+            parentMetaType = parentMetaType,
             season = season,
             episode = episode,
             manualSelection = manualSelection,
+            searchTitle = searchTitle,
             forceRefresh = true,
         )
     }
 
-    private fun load(type: String, videoId: String, parentMetaId: String?, season: Int?, episode: Int?, manualSelection: Boolean, forceRefresh: Boolean) {
+    private fun load(
+        type: String,
+        videoId: String,
+        parentMetaId: String?,
+        parentMetaType: String? = null,
+        season: Int?,
+        episode: Int?,
+        manualSelection: Boolean,
+        searchTitle: String? = null,
+        forceRefresh: Boolean,
+    ) {
         val pluginUiState = if (AppFeaturePolicy.pluginsEnabled) {
             PluginRepository.initialize()
             PluginRepository.uiState.value
         } else {
             PluginsUiState(pluginsEnabled = false)
+        }
+        val cloudStreamSearchRequest = buildCloudStreamSearchRequest(
+            type = type,
+            videoId = videoId,
+            parentMetaId = parentMetaId,
+            parentMetaType = parentMetaType,
+            season = season,
+            episode = episode,
+            searchTitle = searchTitle,
+        )
+        val cloudStreamProviderGroups = if (AppFeaturePolicy.pluginsEnabled) {
+            cloudStreamProviderGroupsForRequest(type, cloudStreamSearchRequest)
+        } else {
+            emptyList()
         }
         val requestToken = requestToken(
             type = type,
@@ -88,7 +142,7 @@ object StreamsRepository {
             episode = episode,
             manualSelection = manualSelection,
         )
-        val requestKey = "$requestToken::pluginsGrouped=${pluginUiState.groupStreamsByRepository}"
+        val requestKey = "$requestToken::pluginsGrouped=${pluginUiState.groupStreamsByRepository}::cloudTarget=${cloudStreamSearchRequest?.cacheKey.orEmpty()}"
         val currentState = _uiState.value
         if (
             !forceRefresh &&
@@ -173,7 +227,7 @@ object StreamsRepository {
             groupByRepository = pluginUiState.groupStreamsByRepository,
         )
 
-        if (installedAddons.isEmpty() && pluginProviderGroups.isEmpty() && serverSources.isEmpty()) {
+        if (installedAddons.isEmpty() && pluginProviderGroups.isEmpty() && serverSources.isEmpty() && cloudStreamProviderGroups.isEmpty()) {
             _uiState.value = StreamsUiState(
                 requestToken = requestToken,
                 isAnyLoading = false,
@@ -197,7 +251,7 @@ object StreamsRepository {
 
         log.d { "Found ${streamAddons.size} addons for stream type=$type id=$videoId" }
 
-        if (streamAddons.isEmpty() && pluginProviderGroups.isEmpty() && serverSources.isEmpty()) {
+        if (streamAddons.isEmpty() && pluginProviderGroups.isEmpty() && serverSources.isEmpty() && cloudStreamProviderGroups.isEmpty()) {
             _uiState.value = StreamsUiState(
                 requestToken = requestToken,
                 isAnyLoading = false,
@@ -217,6 +271,13 @@ object StreamsRepository {
                 isLoading = true,
             )
         } + pluginProviderGroups.map { providerGroup ->
+            AddonStreamGroup(
+                addonName = providerGroup.addonName,
+                addonId = providerGroup.addonId,
+                streams = emptyList(),
+                isLoading = true,
+            )
+        } + cloudStreamProviderGroups.map { providerGroup ->
             AddonStreamGroup(
                 addonName = providerGroup.addonName,
                 addonId = providerGroup.addonId,
@@ -244,7 +305,8 @@ object StreamsRepository {
             val pluginFirstErrorByAddonId = mutableMapOf<String, String>()
             val totalTasks = streamAddons.size +
                 pluginProviderGroups.sumOf { it.scrapers.size } +
-                serverSources.size
+                serverSources.size +
+                cloudStreamProviderGroups.size
 
             val installedAddonNames = installedAddonOrder.toSet()
             val installedAddonIds = streamAddons.map { it.addonId }.toSet()
@@ -510,6 +572,25 @@ object StreamsRepository {
                         )
                         publishCompletion(completion)
                     }
+                }
+            }
+            cloudStreamProviderGroups.forEach { providerGroup ->
+                launch {
+                    val group = withTimeoutOrNull(STREAM_PROVIDER_TIMEOUT_MS) {
+                        cloudStreamSemaphore.withPermit {
+                            resolveCloudStreamProviderStreams(
+                                providerGroup = providerGroup,
+                                request = cloudStreamSearchRequest,
+                            )
+                        }
+                    } ?: AddonStreamGroup(
+                        addonName = providerGroup.addonName,
+                        addonId = providerGroup.addonId,
+                        streams = emptyList(),
+                        isLoading = false,
+                        error = "${providerGroup.addonName} timed out",
+                    )
+                    publishCompletion(StreamLoadCompletion.Addon(group))
                 }
             }
 

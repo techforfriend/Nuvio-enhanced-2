@@ -202,9 +202,11 @@ fun StreamsScreen(
             type = type,
             videoId = videoId,
             parentMetaId = parentMetaId,
+            parentMetaType = parentMetaType,
             season = seasonNumber,
             episode = episodeNumber,
             manualSelection = manualSelection,
+            searchTitle = title,
         )
     }
 
@@ -237,9 +239,11 @@ fun StreamsScreen(
             type = type,
             videoId = videoId,
             parentMetaId = parentMetaId,
+            parentMetaType = parentMetaType,
             season = seasonNumber,
             episode = episodeNumber,
             manualSelection = manualSelection,
+            searchTitle = title,
         )
     }
 

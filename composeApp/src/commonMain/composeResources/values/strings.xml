@@ -3205,4 +3205,9 @@
     <string name="live_tv_programme_detail_status">Status</string>
     <string name="live_tv_programme_watch_live">WATCH LIVE</string>
     <string name="live_tv_programme_open_live">OPEN LIVE CHANNEL NOW</string>
+    <string name="settings_content_discovery_metadata_description">Optional TMDB enrichment. CloudStream providers work independently when this is off.</string>
+    <string name="settings_content_discovery_providers_title">CloudStream providers</string>
+    <string name="settings_content_discovery_providers_description">Add external CloudStream repositories and enable providers that can work independently of TMDB.</string>
+    <string name="compose_settings_page_cloudstream">CloudStream / CS3</string>
+    <string name="settings_content_discovery_cloudstream_description">Install CloudStream repositories and manage the providers they make available.</string>
 </resources>
