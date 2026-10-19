@@ -40,6 +40,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
+import com.nuvio.app.features.cloudstream.CloudStreamRepository
+import com.nuvio.app.features.cloudstream.parseCloudStreamRouteId
+import com.nuvio.app.features.cloudstream.toMetaDetails
 
 object MetaDetailsRepository {
     private data class CachedMetaEntry(
@@ -125,6 +128,32 @@ object MetaDetailsRepository {
         _uiState.value = MetaDetailsUiState(isLoading = true)
 
         scope.launch {
+            parseCloudStreamRouteId(id)?.let { route ->
+                val cloudMeta = withTimeoutOrNull(CLOUDSTREAM_DETAIL_TIMEOUT_MS) {
+                    CloudStreamRepository.load(route.providerId, route.data)
+                        .getOrNull()
+                        ?.toMetaDetails()
+                }
+                if (activeRequestKey != requestKey) return@launch
+                if (cloudMeta != null) {
+                    publishLoadedMeta(
+                        requestKey = requestKey,
+                        meta = cloudMeta,
+                        fallbackItemId = id,
+                        fallbackItemType = type,
+                        mdbListSettings = mdbListSettings,
+                        metaScreenSettingsFingerprint = metaScreenSettingsFingerprint,
+                    )
+                } else {
+                    log.w { "Failed to load CloudStream meta for provider=${route.providerId} data=${route.data}" }
+                    _uiState.value = MetaDetailsUiState(
+                        errorMessage = "Could not load content details",
+                    )
+                    activeRequestKey = null
+                }
+                return@launch
+            }
+
             val metaLookupId = resolveMetaLookupId(itemId = id, itemType = type)
             val manifests = findReadyMetaManifests(type = type, id = metaLookupId)
 
@@ -216,6 +245,18 @@ object MetaDetailsRepository {
                 ?.also { if (cacheResult) cachedMetaByRequestKey[requestKey] = CachedMetaEntry(baseMeta = it) }
         }
 
+        parseCloudStreamRouteId(id)?.let { route ->
+            val cloudMeta = withTimeoutOrNull(CLOUDSTREAM_DETAIL_TIMEOUT_MS) {
+                CloudStreamRepository.load(route.providerId, route.data)
+                    .getOrNull()
+                    ?.toMetaDetails()
+            }
+            if (cloudMeta != null && cacheResult) {
+                cachedMetaByRequestKey[requestKey] = CachedMetaEntry(baseMeta = cloudMeta)
+            }
+            return cloudMeta
+        }
+
         val metaLookupId = resolveMetaLookupId(itemId = id, itemType = type)
         val manifests = findReadyMetaManifests(type = type, id = metaLookupId)
 
@@ -269,6 +310,7 @@ object MetaDetailsRepository {
         }
     }
 
+    private const val CLOUDSTREAM_DETAIL_TIMEOUT_MS = 120_000L
     private const val FETCH_TIMEOUT_MS = 5_000L
     private const val METADATA_PROVIDER_READY_TIMEOUT_MS = 10_000L
     private const val TMDB_ENRICH_TIMEOUT_MS = 5_000L

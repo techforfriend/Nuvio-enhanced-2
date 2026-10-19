@@ -213,6 +213,86 @@ object StreamsRepository {
             return
         }
 
+        val cloudStreamRoute = parseCloudStreamRouteId(videoId)
+        if (cloudStreamRoute != null) {
+            CloudStreamRepository.initialize()
+            val providerItem = CloudStreamRepository.uiState.value.plugins
+                .firstOrNull { it.metadata.id.value == cloudStreamRoute.providerId }
+            val providerName = providerItem?.metadata?.name ?: "CloudStream"
+            val providerAddonId = "cloudstream:${cloudStreamRoute.providerId}"
+            _uiState.value = StreamsUiState(
+                requestToken = requestToken,
+                groups = listOf(
+                    AddonStreamGroup(
+                        addonName = providerName,
+                        addonId = providerAddonId,
+                        streams = emptyList(),
+                        isLoading = true,
+                    ),
+                ),
+                activeAddonIds = setOf(providerAddonId),
+                isAnyLoading = true,
+            )
+            activeJob = scope.launch {
+                val result = runCatching {
+                    withTimeoutOrNull(STREAM_PROVIDER_TIMEOUT_MS) {
+                        CloudStreamRepository.loadLinks(cloudStreamRoute.providerId, cloudStreamRoute.data)
+                    } ?: error("$providerName timed out")
+                }.fold(
+                    onSuccess = { it },
+                    onFailure = { Result.failure(it) },
+                )
+                if (activeRequestKey != requestKey) return@launch
+                result.fold(
+                    onSuccess = { sources ->
+                        val streams = cloudStreamSourcesToStreamItems(
+                            providerId = cloudStreamRoute.providerId,
+                            providerName = providerName,
+                            sources = sources,
+                        )
+                        val presentedGroup = StreamBadgePresentation.apply(
+                            groups = listOf(
+                                AddonStreamGroup(
+                                    addonName = providerName,
+                                    addonId = providerAddonId,
+                                    streams = streams,
+                                    isLoading = false,
+                                    error = if (streams.isEmpty()) "No links found" else null,
+                                ),
+                            ),
+                            rules = streamBadgeRules,
+                        )
+                        _uiState.value = StreamsUiState(
+                            requestToken = requestToken,
+                            groups = presentedGroup,
+                            activeAddonIds = setOf(providerAddonId),
+                            isAnyLoading = false,
+                            emptyStateReason = if (streams.isEmpty()) StreamsEmptyStateReason.NoStreamsFound else null,
+                        )
+                    },
+                    onFailure = { error ->
+                        log.w(error) { "CloudStream link resolution failed provider=${cloudStreamRoute.providerId}" }
+                        _uiState.value = StreamsUiState(
+                            requestToken = requestToken,
+                            groups = listOf(
+                                AddonStreamGroup(
+                                    addonName = providerName,
+                                    addonId = providerAddonId,
+                                    streams = emptyList(),
+                                    isLoading = false,
+                                    error = error.message ?: "CloudStream link resolution failed",
+                                ),
+                            ),
+                            activeAddonIds = setOf(providerAddonId),
+                            isAnyLoading = false,
+                            emptyStateReason = StreamsEmptyStateReason.StreamFetchFailed,
+                        )
+                    },
+                )
+            }
+            return
+        }
+
         val isNativeServerRequest = ServerStreams.isNativeRequest(videoId)
         val serverSources = ServerStreams.sources(type, videoId, season, episode, forceRefresh)
         val preferredGroupIds = serverSources.filter { it.preferred }.mapTo(mutableSetOf()) { it.addonId }
