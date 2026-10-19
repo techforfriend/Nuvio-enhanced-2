@@ -62,7 +62,7 @@ object PlayerStreamsRepository {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val cloudStreamSemaphore = Semaphore(4)
-    private const val PLAYER_STREAM_PROVIDER_TIMEOUT_MS = 20_000L
+    private const val PLAYER_STREAM_PROVIDER_TIMEOUT_MS = 35_000L
 
     // source panel
     private val _sourceState = MutableStateFlow(StreamsUiState())
@@ -274,6 +274,7 @@ object PlayerStreamsRepository {
         }
 
         val cloudStreamRoute = parseCloudStreamRouteId(videoId)
+            ?: parentMetaId?.takeIf { type == "movie" }?.let { parseCloudStreamRouteId(it) }
         if (cloudStreamRoute != null) {
             CloudStreamRepository.initialize()
             val providerItem = CloudStreamRepository.uiState.value.plugins

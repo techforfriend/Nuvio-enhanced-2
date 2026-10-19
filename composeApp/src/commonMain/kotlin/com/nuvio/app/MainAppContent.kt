@@ -997,7 +997,7 @@ internal fun MainAppContent(
                 }
             }
 
-            if (!PlaybackAvailability.current().canStream(type, videoId)) {
+            if (!PlaybackAvailability.current().canStream(type, videoId, parentMetaId)) {
                 NuvioToastController.show(playbackUnavailableMessage)
                 return
             }
@@ -1174,7 +1174,7 @@ internal fun MainAppContent(
 
         fun canSelectContinueWatchingStreams(item: ContinueWatchingItem): Boolean =
             !item.isCloudLibraryContinueWatchingItem() &&
-                playbackAvailability.canStream(item.parentMetaType, item.videoId)
+                playbackAvailability.canStream(item.parentMetaType, item.videoId, item.parentMetaId)
 
         val openContinueWatching: (ContinueWatchingItem, Boolean, Boolean) -> Unit = { item, manualSelection, startFromBeginning ->
             resumePromptItem = null
