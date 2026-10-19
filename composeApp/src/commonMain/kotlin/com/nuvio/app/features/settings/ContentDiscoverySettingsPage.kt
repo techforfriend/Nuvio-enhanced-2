@@ -20,6 +20,7 @@ import nuvio.composeapp.generated.resources.settings_content_discovery_recent_se
 import nuvio.composeapp.generated.resources.settings_content_discovery_recent_searches_description
 import nuvio.composeapp.generated.resources.compose_settings_page_cloudstream
 import nuvio.composeapp.generated.resources.settings_content_discovery_cloudstream_description
+import org.jetbrains.compose.resources.stringResource
 
 internal fun LazyListScope.contentDiscoveryContent(
     isTablet: Boolean,

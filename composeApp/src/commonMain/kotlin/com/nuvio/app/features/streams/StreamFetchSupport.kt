@@ -368,7 +368,7 @@ internal fun buildCloudStreamSearchRequest(
     val title = searchTitle?.trim()?.takeIf { it.isNotBlank() }
         ?: meta?.name?.trim()?.takeIf { it.isNotBlank() }
         ?: return null
-    val aliases = (listOfNotNull(meta?.name, searchTitle) + meta?.aliases.orEmpty())
+    val aliases = listOfNotNull(meta?.name, searchTitle)
         .cleanCloudStreamRequestAliases(primaryTitle = title)
     val year = meta?.releaseInfo.cloudStreamReleaseYear()
         ?: title.cloudStreamReleaseYear()
