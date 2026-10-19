@@ -162,3 +162,13 @@ internal fun NavigationBarPreview(
         )
     }
 }
+
+internal class NavigationPreviewScrollBounceGate {
+    private var wasAwayFromTop = false
+
+    fun onScrollabilityChanged(canScrollBackward: Boolean): Float? {
+        if (canScrollBackward == wasAwayFromTop) return null
+        wasAwayFromTop = canScrollBackward
+        return if (canScrollBackward) 1f else -1f
+    }
+}
