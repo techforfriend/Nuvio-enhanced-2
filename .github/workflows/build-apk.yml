@@ -64,27 +64,27 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.1-enhanced-pre8
-          name: "Nuvio Enhanced v0.6.1-beta (Update 8 - Nuvio Experience & Hero Poster Theming)"
+          tag_name: v0.6.1-enhanced-pre9
+          name: "Nuvio Enhanced v0.6.1-beta (Update 9 - Full CloudStream (.cs3) Integration)"
           body: |
-            ## Nuvio Enhanced v0.6.1-beta (Update 8)
+            ## Nuvio Enhanced v0.6.1-beta (Update 9)
 
-            Comprehensive update delivering full Nuvio Experience intelligence controls and complete Home Screen Hero Poster theming across all 18 themes!
+            Major update introducing full production-grade CloudStream (`.cs3`) extension compatibility and repository management directly inside Nuvio Enhanced, built strictly for 64-bit ARM (`arm64-v8a`)!
 
-            ### 🌟 What's New & Fixed in Update 8:
-            1. **Nuvio Experience Intelligence Fully Working:**
-               - **Profile Insights & Concierge:** Tapping on the active profile in Settings now opens the full Profile Insights dashboard (Hero banner, Taste Profile DNA, Taste Balance Leaning, Overview Stats grid, Favorite People rail, and Nuvio Concierge).
-               - **Home Concierge Section:** When Nuvio Concierge is toggled in Nuvio Experience settings, the intelligent Concierge card with Smart Resume signals, release radar, and stats appears directly on the Home Screen.
-               - **Continue Watching Ready Badges:** "Show Ready Badge" toggle now renders smart signal pills ("Next episode ready", "New season ready", "Resume-ready", "Almost there", "Quick finish") on all continue watching cards.
-               - **Favorite People Management:** Add, pin, and manage favorite actors/directors with full inline carousel and dedicated view page.
-            2. **Home Screen Hero Poster Theming 100% Fixed:**
-               - **Action Accent on Hero CTA:** "View Details" button now dynamically uses the active theme's accent gradient or solid brush (`actionAccent.brush`) and contrast text color (`actionAccent.contentColor`) for all 18 themes (Classic, Supporter, Animated Enhanced).
-               - **Themed Page Indicator Dots:** Active indicator dot now illuminates with the theme's animated line brush or accent palette.
-               - **Poster Art Hero Dimensions & Background Fade:** Seamlessly fades into the active theme's background color with correct aspect ratio and zero layout jumping during loading.
-            3. **ARM64 Optimized:**
-               - Built exclusively for 64-bit ARM Android devices (`arm64-v8a`).
+            ### 🚀 What's New & Upgraded in Update 9:
+            1. **Full CloudStream (.cs3) Engine Integration:**
+               - **CloudStream Repository Management:** Add, update, and manage official and third-party CloudStream repository URLs directly under `Settings > Content Discovery > CloudStream / CS3`.
+               - **Plugin Catalog & Downloader:** Browse, download, inspect, and toggle `.cs3` plugins with SHA-256 verification and version tracking.
+               - **Native Compatibility Shim & Runtime:** Complete Android bridge ABI implementing `CloudStreamApp`, `PluginManager`, `RepositoryManager`, `DataStore`, `RequestsHelper`, `CloudflareKiller`, and `DdosGuardKiller`.
+               - **Unified Stream Resolver:** CloudStream providers seamlessly run alongside Stremio Addons, Local Plugins, and Media Server Streams (Jellyfin/Plex/Emby) with isolated parallel timeouts and coroutine safety.
+               - **Search Route Indexing & KickTr Fallback:** Intelligent TMDB / IMDb / title matching for fast source discovery across anime, movies, and TV shows.
+            2. **All 18 Themes Fully Unlocked & Preserved:**
+               - Classic, Supporter, and Animated Enhanced themes with dynamic Hero Poster theming, accent gradients, and custom player styles.
+            3. **Strictly ARM64 Optimized:**
+               - Built exclusively for 64-bit ARM Android devices (`arm64-v8a`) for maximum speed, native LSE atomics, and lowest memory footprint.
           draft: false
           prerelease: true
           files: build-apks/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
