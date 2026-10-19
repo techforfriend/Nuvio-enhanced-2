@@ -73,6 +73,20 @@ internal actual object CloudStreamPlatformRuntime {
     private var activityReference: WeakReference<Activity>? = null
     private var hostInitialized = false
 
+    private fun getContext(): Context? {
+        appContext?.let { return it }
+        val fallback = runCatching {
+            val activityThreadClass = Class.forName("android.app.ActivityThread")
+            val method = activityThreadClass.getMethod("currentApplication")
+            method.invoke(null) as? Context
+        }.getOrNull()
+        if (fallback != null) {
+            initialize(fallback)
+            return fallback
+        }
+        return null
+    }
+
     actual fun initialize(context: Any?) {
         val androidContext = context as? Context ?: return
         val applicationContext = androidContext.applicationContext
@@ -119,7 +133,7 @@ internal actual object CloudStreamPlatformRuntime {
     actual suspend fun registerNativeRepository(url: String, name: String, iconUrl: String?) {
         val normalized = url.trim()
         if (normalized.isBlank()) return
-        val context = appContext ?: return
+        val context = getContext() ?: return
         // Repository registration can happen before the first plugin load. In that path
         // CloudStreamApp.context has not yet been installed by prepareHostContext(), and
         // RepositoryManager.setKey() would silently become a no-op.
@@ -166,7 +180,7 @@ internal actual object CloudStreamPlatformRuntime {
     }
 
     actual suspend fun removeNativeRepository(url: String) {
-        val context = appContext ?: return
+        val context = getContext() ?: return
         val normalized = url.trim()
         if (normalized.isBlank()) return
         runCatching {
@@ -208,7 +222,7 @@ internal actual object CloudStreamPlatformRuntime {
     }
 
     private fun loadPlugin(item: CloudStreamPluginItem): LoadedPlugin {
-        val context = requireNotNull(appContext) { "CloudStream Android runtime is not initialized" }
+        val context = requireNotNull(getContext()) { "CloudStream Android runtime is not initialized" }
         prepareHostContext(context)
         val filePath = requireNotNull(CloudStreamPlatformStorage.packagePath(item.metadata.id.storageKey)) {
             "Installed CloudStream package is missing"
@@ -420,7 +434,7 @@ internal actual object CloudStreamPlatformRuntime {
      */
     private fun applyHostCompatibilityDefaults(pluginClassName: String) {
         if (pluginClassName != CINESTREAM_PLUGIN_CLASS) return
-        val preferences = appContext?.getSharedPreferences(
+        val preferences = getContext()?.getSharedPreferences(
             com.lagradost.cloudstream3.utils.PREFERENCES_NAME,
             Context.MODE_PRIVATE,
         ) ?: return

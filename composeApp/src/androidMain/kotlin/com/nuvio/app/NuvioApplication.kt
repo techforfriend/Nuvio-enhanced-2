@@ -24,6 +24,8 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         com.nuvio.app.features.settings.NuvioEnhancedSettingsStorage.initialize(this)
+        com.nuvio.app.features.cloudstream.CloudStreamPlatformStorage.initialize(this)
+        com.nuvio.app.features.cloudstream.CloudStreamPlatformRuntime.initialize(this)
     }
 
     override fun newImageLoader(context: android.content.Context): ImageLoader {
