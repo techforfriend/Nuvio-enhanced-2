@@ -231,6 +231,18 @@ internal fun LazyListScope.settingsRootContent(
                 textAlign = TextAlign.Center,
             )
             androidx.compose.foundation.layout.Spacer(
+                modifier = Modifier.height(2.dp),
+            )
+            Text(
+                text = "by RAJA JI",
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            androidx.compose.foundation.layout.Spacer(
                 modifier = Modifier.height(4.dp),
             )
             Text(
