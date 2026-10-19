@@ -97,7 +97,6 @@ internal fun MainTabsDestination(
         val navBarGlowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
         val navBarPosition by ThemeSettingsRepository.navBarPosition.collectAsStateWithLifecycle()
         val navBarGlass by ThemeSettingsRepository.navBarGlass.collectAsStateWithLifecycle()
-        val navBarLiquidGlassEnabled by ThemeSettingsRepository.navBarLiquidGlassEnabled.collectAsStateWithLifecycle()
         val navBarDefaultIconColorEnabled by ThemeSettingsRepository.navBarDefaultIconColorEnabled.collectAsStateWithLifecycle()
         val navBarDefaultIconColor by ThemeSettingsRepository.navBarDefaultIconColor.collectAsStateWithLifecycle()
         val navBarDefaultIconColorOverride = if (navBarDefaultIconColorEnabled) {
@@ -203,7 +202,6 @@ internal fun MainTabsDestination(
                         glowEnabled = navBarGlowEnabled,
                         inlineLabels = isTabletLayout,
                         glassStyle = navBarGlass,
-                        liquidGlassEnabled = navBarLiquidGlassEnabled,
                         defaultIconColorOverride = navBarDefaultIconColorOverride,
                     )
                 }
@@ -226,7 +224,6 @@ private fun MainFloatingNavigationBar(
     glowEnabled: Boolean,
     inlineLabels: Boolean,
     glassStyle: LiquidGlassStyle,
-    liquidGlassEnabled: Boolean,
     defaultIconColorOverride: Color?,
 ) {
     val liquidGlassBarEffects by ThemeSettingsRepository.navBarLiquidGlassBarEffects.collectAsStateWithLifecycle()
@@ -240,7 +237,6 @@ private fun MainFloatingNavigationBar(
         glassStyle = glassStyle,
         contentPadding = contentPadding,
         glowEnabled = glowEnabled,
-        liquidGlassEnabled = liquidGlassEnabled,
         liquidGlassBarEffects = liquidGlassBarEffects,
         liquidGlassSelectionEffects = liquidGlassSelectionEffects,
         inlineLabels = inlineLabels,
@@ -376,7 +372,6 @@ internal fun BoxScope.SettingsRouteNavigationBar(
     val glowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
     val position by ThemeSettingsRepository.navBarPosition.collectAsStateWithLifecycle()
     val glass by ThemeSettingsRepository.navBarGlass.collectAsStateWithLifecycle()
-    val liquidGlassEnabled by ThemeSettingsRepository.navBarLiquidGlassEnabled.collectAsStateWithLifecycle()
     val liquidGlassBarEffects by ThemeSettingsRepository.navBarLiquidGlassBarEffects.collectAsStateWithLifecycle()
     val liquidGlassSelectionEffects by ThemeSettingsRepository.navBarLiquidGlassSelectionEffects.collectAsStateWithLifecycle()
     val defaultIconColorEnabled by ThemeSettingsRepository.navBarDefaultIconColorEnabled.collectAsStateWithLifecycle()
@@ -447,7 +442,6 @@ internal fun BoxScope.SettingsRouteNavigationBar(
                 glowEnabled = glowEnabled,
                 inlineLabels = isTabletLayout,
                 glassStyle = glass,
-                liquidGlassEnabled = liquidGlassEnabled,
                 liquidGlassBarEffects = liquidGlassBarEffects,
                 liquidGlassSelectionEffects = liquidGlassSelectionEffects,
                 defaultIconColorOverride = defaultIconColorOverride,

@@ -148,15 +148,7 @@ class ThemeSettingsRepositoryTest {
     fun selectedLensBackdropEffectsDefaultOnAndPersistIndependently() {
         ThemeSettingsRepository.ensureLoaded()
         val loadedDefaults = ThemeSettingsRepository.navBarLiquidGlassSelectionEffects.value
-        assertEquals(50f, loadedDefaults.cornerRadiusPercent)
-        assertEquals(1f, loadedDefaults.blurRadiusDp)
-        assertEquals(6f, loadedDefaults.refractionHeightDp)
-        assertEquals(11f, loadedDefaults.refractionAmountDp)
-        assertEquals(0f, loadedDefaults.tintOpacity)
-        assertEquals(true, loadedDefaults.chromaticAberration)
-        assertEquals(true, loadedDefaults.depthEffect)
-        assertEquals(true, loadedDefaults.affectTabIcons)
-        assertEquals(true, loadedDefaults.affectFloatingBar)
+        assertEquals(com.nuvio.app.core.ui.glass.LiquidGlassEffectDefaults.selectionLens, loadedDefaults)
 
         // A custom theme must be unaffected by selected-lens-only settings.
         ThemeSettingsRepository.setCustomTheme(CustomThemeColors.solid(0x2255AA))
