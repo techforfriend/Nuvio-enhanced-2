@@ -78,6 +78,8 @@ import androidx.media3.ui.CaptionStyleCompat
 import com.nuvio.app.features.autosync.AutoSyncExtractorsFactory
 import com.nuvio.app.features.autosync.AutoSyncPreferencesRepository
 import com.nuvio.app.features.autosync.rememberAutoSyncCoordinator
+import com.nuvio.app.features.player.aiostreams.AiostreamsAss
+import com.nuvio.app.features.player.aiostreams.AiostreamsAssEngine
 import com.nuvio.app.R
 import com.nuvio.app.core.logging.InAppLogger
 import com.nuvio.app.features.streams.normalizeStreamType
@@ -305,7 +307,11 @@ private fun ExoPlayerSurface(
     val normalizedStreamType = remember(streamType) {
         normalizeStreamType(streamType)
     }
-    val useLibass = playerSettings.useLibass
+    val useLibmpvAss = playerSettings.useLibmpvAss && AiostreamsAss.isAvailable
+    val useLibass = playerSettings.useLibass && !useLibmpvAss
+    val aiostreamsAss = remember {
+        if (useLibmpvAss) AiostreamsAssEngine(context, playerSettings.tunnelingEnabled) else null
+    }
     val libassRenderType = runCatching {
         LibassRenderType.valueOf(playerSettings.libassRenderType)
     }.getOrDefault(LibassRenderType.CUES)
@@ -368,6 +374,7 @@ private fun ExoPlayerSurface(
                     AutoSyncExtractorsFactory(factory, sourceUrl)
                 } else factory
             }
+            .let { factory -> aiostreamsAss?.extractors(factory) ?: factory }
     }
     val dataSourceFactory = remember(
         context,
@@ -412,6 +419,7 @@ private fun ExoPlayerSurface(
     fun ExoPlayer.setPlaybackMediaItem(videoMediaItem: MediaItem, startPositionMs: Long? = null) {
         if (!sourceAudioUrl.isNullOrBlank()) {
             val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory)
+            aiostreamsAss?.let { mediaSourceFactory.setSubtitleParserFactory(it.scripts()) }
             val videoSource = mediaSourceFactory.createMediaSource(videoMediaItem)
             val audioSource = mediaSourceFactory.createMediaSource(playbackMediaItemFromUrl(sourceAudioUrl))
             val mergedSource = MergingMediaSource(videoSource, audioSource)
@@ -437,6 +445,15 @@ private fun ExoPlayerSurface(
         effectiveDecoderPriority,
         initialPositionRequestKey,
     ) {
+        aiostreamsAss?.reset(
+            PlatformPlaybackDataSourceFactory.create(
+                context = context,
+                defaultRequestHeaders = sanitizedSourceHeaders,
+                defaultResponseHeaders = sanitizedSourceResponseHeaders,
+                useYoutubeChunkedPlayback = false,
+                useLongReadTimeout = isLoopbackPlaybackSource(sourceUrl),
+            ),
+        )
         val renderersFactory = SubtitleOffsetRenderersFactory(
             context = context,
             subtitleDelayUsProvider = { latestSubtitleDelayMs.value.toLong() * 1_000L },
@@ -510,6 +527,7 @@ private fun ExoPlayerSurface(
                 dataSourceFactory,
                 extractorsFactory,
             )
+            aiostreamsAss?.let { mediaSourceFactory.setSubtitleParserFactory(it.scripts()) }
 
             playerBuilder
                 .setRenderersFactory(renderersFactory)
@@ -642,7 +660,7 @@ private fun ExoPlayerSurface(
         sourceUrl = sourceUrl,
         sourceHeaders = sanitizedSourceHeaders,
         externalSubtitles = externalSubtitles,
-        useLibass = useLibass,
+        useLibass = useLibass || useLibmpvAss,
         preferredSubtitleLanguage = playerSettings.preferredSubtitleLanguage,
         onMimeTypeSelected = { selectedExternalSubtitleMimeType = it },
         onSubtitleDelayChanged = { subtitleDelayMs = it },
@@ -957,6 +975,19 @@ private fun ExoPlayerSurface(
         }
     }
 
+    DisposableEffect(aiostreamsAss) {
+        onDispose { aiostreamsAss?.release() }
+    }
+
+    DisposableEffect(exoPlayer, aiostreamsAss) {
+        aiostreamsAss?.bind(exoPlayer)
+        onDispose { aiostreamsAss?.unbind(exoPlayer) }
+    }
+
+    LaunchedEffect(aiostreamsAss, subtitleDelayMs) {
+        aiostreamsAss?.setSubtitleDelayMs(subtitleDelayMs)
+    }
+
     LaunchedEffect(exoPlayer, playWhenReady) {
         exoPlayer.playWhenReady = latestPlayWhenReady.value
         syncPlayerViewKeepScreenOn()
@@ -1110,6 +1141,7 @@ private fun ExoPlayerSurface(
                     InAppLogger.info("ExoPlayer/Android", "select subtitle track index=$index")
                     Log.d(TAG, "selectSubtitleTrack: index=$index")
                     sidecarController.stopSidecarAddonSubtitle(clearView = true)
+                    aiostreamsAss?.clearExternal()
                     if (index < 0) {
                         Log.d(TAG, "selectSubtitleTrack: disabling text tracks")
                         exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
@@ -1131,6 +1163,21 @@ private fun ExoPlayerSurface(
                     Log.d(TAG, "setSubtitleUri: url=${url.redactedForLogs()}")
                     InAppLogger.info("ExoPlayer/Android", "set external subtitle url=${InAppLogger.redactUrl(url)}")
                     subtitleSelectionJob?.cancel()
+                    if (aiostreamsAss != null && PlayerSubtitleUtils.mimeTypeFromUrl(url) == MimeTypes.TEXT_SSA) {
+                        sidecarController.stopSidecarAddonSubtitle(clearView = true)
+                        val headers = externalSubtitles.firstOrNull { it.url == url }?.headers.orEmpty()
+                        subtitleSelectionJob = coroutineScope.launch {
+                            if (aiostreamsAss.showExternal(url, headers)) {
+                                exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+                                    .buildUpon()
+                                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                                    .build()
+                            } else {
+                                InAppLogger.warn("ExoPlayer/Android", "libmpv ASS could not load url=${InAppLogger.redactUrl(url)}")
+                            }
+                        }
+                        return
+                    }
                     if (sidecarController.canAttachAddonSubtitleViaSidecar(url, useLibass)) {
                         Log.d(TAG, "setSubtitleUri: using buffer-preserving sidecar for url=${url.redactedForLogs()}")
                         val headers = externalSubtitles.firstOrNull { it.url == url }?.headers.orEmpty()
@@ -1195,6 +1242,7 @@ private fun ExoPlayerSurface(
                     InAppLogger.info("ExoPlayer/Android", "clear external subtitle")
                     subtitleSelectionJob?.cancel()
                     sidecarController.stopSidecarAddonSubtitle(clearView = true)
+                    aiostreamsAss?.clearExternal()
                     selectedExternalSubtitleMimeType = null
                     val currentPosition = exoPlayer.currentPosition
                     val wasPlaying = exoPlayer.isPlaying
@@ -1221,6 +1269,7 @@ private fun ExoPlayerSurface(
                     InAppLogger.info("ExoPlayer/Android", "clear external subtitle and select builtInIndex=$trackIndex")
                     subtitleSelectionJob?.cancel()
                     sidecarController.stopSidecarAddonSubtitle(clearView = true)
+                    aiostreamsAss?.clearExternal()
                     selectedExternalSubtitleMimeType = null
                     val currentPosition = exoPlayer.currentPosition
                     val wasPlaying = exoPlayer.isPlaying
@@ -1305,6 +1354,8 @@ private fun ExoPlayerSurface(
                     renderType = libassRenderType,
                     subtitleDelayUsProvider = { latestSubtitleDelayMs.value.toLong() * 1_000L },
                 )
+                aiostreamsAss?.attach(this)
+                aiostreamsAss?.setStyle(currentSubtitleStyle)
                 applySubtitleStyle(currentSubtitleStyle, pipSubtitleScale)
             }
         },
@@ -1321,6 +1372,8 @@ private fun ExoPlayerSurface(
                 renderType = libassRenderType,
                 subtitleDelayUsProvider = { latestSubtitleDelayMs.value.toLong() * 1_000L },
             )
+            aiostreamsAss?.attach(playerView)
+            aiostreamsAss?.setStyle(currentSubtitleStyle)
             playerView.applySubtitleStyle(currentSubtitleStyle, pipSubtitleScale)
         },
     )

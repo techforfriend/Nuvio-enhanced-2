@@ -88,6 +88,7 @@ actual object PlayerSettingsStorage {
     private const val privateViewingEnabledKey = "private_viewing_enabled"
     private const val useLibassKey = "use_libass"
     private const val libassRenderTypeKey = "libass_render_type"
+    private const val useLibmpvAssKey = "use_libmpv_ass"
     private const val iosVideoOutputPresetKey = "ios_video_output_preset"
     private const val iosToneMappingModeKey = "ios_tone_mapping_mode"
     private const val iosTargetPrimariesKey = "ios_target_primaries"
@@ -163,6 +164,7 @@ actual object PlayerSettingsStorage {
         miniPlayerEnabledKey,
         useLibassKey,
         libassRenderTypeKey,
+        useLibmpvAssKey,
         iosVideoOutputPresetKey,
         iosToneMappingModeKey,
         iosTargetPrimariesKey,
@@ -976,6 +978,10 @@ actual object PlayerSettingsStorage {
 
     actual fun saveLibassRenderType(renderType: String) {}
 
+    actual fun loadUseLibmpvAss(): Boolean? = null
+
+    actual fun saveUseLibmpvAss(enabled: Boolean) {}
+
     actual fun loadExoNativeMemoryEnabled(): Boolean? = null
 
     actual fun saveExoNativeMemoryEnabled(value: Boolean) {}
@@ -1186,6 +1192,7 @@ actual object PlayerSettingsStorage {
         loadMiniPlayerEnabled()?.let { put(miniPlayerEnabledKey, encodeSyncBoolean(it)) }
         loadUseLibass()?.let { put(useLibassKey, encodeSyncBoolean(it)) }
         loadLibassRenderType()?.let { put(libassRenderTypeKey, encodeSyncString(it)) }
+        loadUseLibmpvAss()?.let { put(useLibmpvAssKey, encodeSyncBoolean(it)) }
         loadIosVideoOutputPreset()?.let { put(iosVideoOutputPresetKey, encodeSyncString(it)) }
         loadIosToneMappingMode()?.let { put(iosToneMappingModeKey, encodeSyncString(it)) }
         loadIosTargetPrimaries()?.let { put(iosTargetPrimariesKey, encodeSyncString(it)) }
@@ -1272,6 +1279,7 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncBoolean(miniPlayerEnabledKey)?.let(::saveMiniPlayerEnabled)
         payload.decodeSyncBoolean(useLibassKey)?.let(::saveUseLibass)
         payload.decodeSyncString(libassRenderTypeKey)?.let(::saveLibassRenderType)
+        payload.decodeSyncBoolean(useLibmpvAssKey)?.let(::saveUseLibmpvAss)
         payload.decodeSyncString(iosVideoOutputPresetKey)?.let(::saveIosVideoOutputPreset)
         payload.decodeSyncString(iosToneMappingModeKey)?.let(::saveIosToneMappingMode)
         payload.decodeSyncString(iosTargetPrimariesKey)?.let(::saveIosTargetPrimaries)

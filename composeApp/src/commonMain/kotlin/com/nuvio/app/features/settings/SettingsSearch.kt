@@ -715,6 +715,7 @@ internal fun settingsSearchEntries(
             rows = listOf(
                 PlaybackSearchRow("libass", stringResource(Res.string.settings_playback_enable_libass), stringResource(Res.string.settings_playback_enable_libass_description)),
                 PlaybackSearchRow("libass-render", stringResource(Res.string.settings_playback_render_type)),
+                PlaybackSearchRow("libmpv-ass", stringResource(Res.string.settings_playback_enable_libmpv_ass), stringResource(Res.string.settings_playback_enable_libmpv_ass_description)),
             ),
         )
     }
