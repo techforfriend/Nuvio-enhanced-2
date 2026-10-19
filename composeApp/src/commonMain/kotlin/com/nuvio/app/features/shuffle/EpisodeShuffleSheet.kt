@@ -199,7 +199,7 @@ internal fun EpisodeShuffleSheet(
                         Text(stringResource(Res.string.shuffle_again), modifier = Modifier.padding(start = 8.dp))
                     }
                 } else Text(stringResource(Res.string.shuffle_only_episode), style = MaterialTheme.typography.bodySmall)
-                if (onPlayManually != null && availability.canStream(meta.type, preview.id)) {
+                if (onPlayManually != null && availability.canStream(meta.type, preview.id, meta.id)) {
                     TextButton(enabled = !starting, onClick = { play(onPlayManually) }, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(Res.string.play_manually))
                     }

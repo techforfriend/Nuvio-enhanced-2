@@ -64,20 +64,24 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.1-enhanced-pre13
-          name: "Nuvio Enhanced v0.6.1-beta (Update 13 - CloudStream Details & Direct Playback Integration)"
+          tag_name: v0.6.1-enhanced-pre14
+          name: "Nuvio Enhanced v0.6.1-beta (Update 14 - Playback Availability & Link Stream Fix)"
           body: |
-            ## Nuvio Enhanced v0.6.1-beta (Update 13)
+            ## Nuvio Enhanced v0.6.1-beta (Update 14)
 
-            Critical update integrating full CloudStream Details screen metadata and direct player stream resolution:
+            Critical update fixing Playback Availability and direct streaming for CloudStream content:
 
-            ### 🚀 Features & Fixes in Update 13:
-            1. **CloudStream Details Screen Metadata:**
-               - Fixed "No addon provides meta for this content" error when clicking CloudStream items on Home or Catalog.
-               - `MetaDetailsRepository` now directly handles CloudStream route IDs (`parseCloudStreamRouteId`), loading posters, backdrops, cast, genres, descriptions, and episode lists seamlessly from CloudStream providers.
-            2. **Direct CloudStream Stream & Link Extraction:**
-               - `StreamsRepository` and `PlayerStreamsRepository` now natively recognize CloudStream video IDs and invoke `CloudStreamRepository.loadLinks()` to extract direct playback URLs, qualities, and subtitles.
-            3. **ARM64 Pure Architecture:**
+            ### 🚀 Features & Fixes in Update 14:
+            1. **Playback Availability Resolution:**
+               - Fixed "Playback unavailable" disabled Play button on the Details screen.
+               - `PlaybackAvailability` now natively checks CloudStream routes (`parseCloudStreamRouteId`) and active CloudStream providers.
+            2. **Playback Unavailable Toast Fixed:**
+               - Eliminated the `"Playback isn't available for this title with your current setup."` toast when attempting to play CloudStream titles.
+               - `canStream` now properly evaluates `parentMetaId` alongside `videoId`.
+            3. **Direct CloudStream Auto-Play & Link Extraction:**
+               - StreamsRepository now auto-selects and auto-plays extracted CloudStream links without UI freeze.
+               - Increased provider link extraction timeout to 35 seconds to allow multi-extractor scraping to complete reliably.
+            4. **ARM64 Pure Architecture:**
                - Built exclusively for 64-bit ARM Android devices (`arm64-v8a`).
           draft: false
           prerelease: true

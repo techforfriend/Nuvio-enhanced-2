@@ -42,7 +42,7 @@ object StreamsRepository {
     val uiState: StateFlow<StreamsUiState> = _uiState.asStateFlow()
 
     private val cloudStreamSemaphore = Semaphore(4)
-    private const val STREAM_PROVIDER_TIMEOUT_MS = 20_000L
+    private const val STREAM_PROVIDER_TIMEOUT_MS = 35_000L
 
     private var activeJob: Job? = null
     private var activeRequestKey: String? = null
@@ -214,6 +214,7 @@ object StreamsRepository {
         }
 
         val cloudStreamRoute = parseCloudStreamRouteId(videoId)
+            ?: parentMetaId?.takeIf { type == "movie" }?.let { parseCloudStreamRouteId(it) }
         if (cloudStreamRoute != null) {
             CloudStreamRepository.initialize()
             val providerItem = CloudStreamRepository.uiState.value.plugins
@@ -232,6 +233,8 @@ object StreamsRepository {
                 ),
                 activeAddonIds = setOf(providerAddonId),
                 isAnyLoading = true,
+                isDirectAutoPlayFlow = isDirectAutoPlayFlow,
+                showDirectAutoPlayOverlay = isDirectAutoPlayFlow,
             )
             activeJob = scope.launch {
                 val result = runCatching {
@@ -262,12 +265,18 @@ object StreamsRepository {
                             ),
                             rules = streamBadgeRules,
                         )
+                        val autoPlayStream = if (isDirectAutoPlayFlow) streams.firstOrNull() else null
                         _uiState.value = StreamsUiState(
                             requestToken = requestToken,
                             groups = presentedGroup,
                             activeAddonIds = setOf(providerAddonId),
                             isAnyLoading = false,
                             emptyStateReason = if (streams.isEmpty()) StreamsEmptyStateReason.NoStreamsFound else null,
+                            autoPlayStream = autoPlayStream,
+                            autoPlayCandidates = if (isDirectAutoPlayFlow) streams else emptyList(),
+                            autoPlayDecided = true,
+                            isDirectAutoPlayFlow = isDirectAutoPlayFlow && autoPlayStream != null,
+                            showDirectAutoPlayOverlay = isDirectAutoPlayFlow && autoPlayStream != null,
                         )
                     },
                     onFailure = { error ->
@@ -286,6 +295,9 @@ object StreamsRepository {
                             activeAddonIds = setOf(providerAddonId),
                             isAnyLoading = false,
                             emptyStateReason = StreamsEmptyStateReason.StreamFetchFailed,
+                            autoPlayDecided = true,
+                            isDirectAutoPlayFlow = false,
+                            showDirectAutoPlayOverlay = false,
                         )
                     },
                 )
