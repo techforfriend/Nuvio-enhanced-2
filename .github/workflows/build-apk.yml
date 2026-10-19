@@ -64,22 +64,20 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.1-enhanced-pre12
-          name: "Nuvio Enhanced v0.6.1-beta (Update 12 - CloudStream Runtime ProGuard & Dex Class Loading Fix)"
+          tag_name: v0.6.1-enhanced-pre13
+          name: "Nuvio Enhanced v0.6.1-beta (Update 13 - CloudStream Details & Direct Playback Integration)"
           body: |
-            ## Nuvio Enhanced v0.6.1-beta (Update 12)
+            ## Nuvio Enhanced v0.6.1-beta (Update 13)
 
-            Critical stability update fixing CloudStream extension dynamic Dex loading, R8/ProGuard preservation, and provider execution:
+            Critical update integrating full CloudStream Details screen metadata and direct player stream resolution:
 
-            ### 🚀 Features & Fixes in Update 12:
-            1. **CloudStream Runtime ProGuard / R8 Fix:**
-               - Added comprehensive R8 keep rules for `com.lagradost.**`, `com.fasterxml.jackson.**`, `org.jsoup.**`, `org.mozilla.javascript.**`, `com.uwetrottmann.tmdb2.**`, `me.xdrop.fuzzywuzzy.**`, `dev.whyoleg.cryptography.**`, `org.schabi.newpipe.extractor.**`, `okhttp3.**`, and `okio.**`.
-               - Completely eliminates `ClassNotFoundException: Didn't find class "com.megix.Bollyflix" on path: DexPathList...` when loading CloudStream `.cs3` plugins in release builds.
-            2. **Enhanced Dynamic Extension Reliability:**
-               - All CloudStream third-party plugins (Bollyflix, CineStream, MegaRepo, etc.) now properly resolve runtime base classes (`Plugin`, `MainAPI`, NiceHttp, Jackson, Jsoup, Rhino) without ART linker failures.
-            3. **Increased Provider Fetch Window:**
-               - Expanded provider preview timeout to 10s to ensure slower or Cloudflare-protected catalogs load reliably on home startup.
-            4. **ARM64 Pure Architecture:**
+            ### 🚀 Features & Fixes in Update 13:
+            1. **CloudStream Details Screen Metadata:**
+               - Fixed "No addon provides meta for this content" error when clicking CloudStream items on Home or Catalog.
+               - `MetaDetailsRepository` now directly handles CloudStream route IDs (`parseCloudStreamRouteId`), loading posters, backdrops, cast, genres, descriptions, and episode lists seamlessly from CloudStream providers.
+            2. **Direct CloudStream Stream & Link Extraction:**
+               - `StreamsRepository` and `PlayerStreamsRepository` now natively recognize CloudStream video IDs and invoke `CloudStreamRepository.loadLinks()` to extract direct playback URLs, qualities, and subtitles.
+            3. **ARM64 Pure Architecture:**
                - Built exclusively for 64-bit ARM Android devices (`arm64-v8a`).
           draft: false
           prerelease: true

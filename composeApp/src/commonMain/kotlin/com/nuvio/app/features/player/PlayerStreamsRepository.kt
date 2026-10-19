@@ -36,6 +36,7 @@ import com.nuvio.app.features.cloudstream.parseCloudStreamRouteId
 import com.nuvio.app.features.streams.buildCloudStreamSearchRequest
 import com.nuvio.app.features.streams.cloudStreamProviderGroupsForRequest
 import com.nuvio.app.features.streams.resolveCloudStreamProviderStreams
+import com.nuvio.app.features.streams.cloudStreamSourcesToStreamItems
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -269,6 +270,84 @@ object PlayerStreamsRepository {
                 activeAddonIds = setOf("embedded"),
                 isAnyLoading = false,
             )
+            return
+        }
+
+        val cloudStreamRoute = parseCloudStreamRouteId(videoId)
+        if (cloudStreamRoute != null) {
+            CloudStreamRepository.initialize()
+            val providerItem = CloudStreamRepository.uiState.value.plugins
+                .firstOrNull { it.metadata.id.value == cloudStreamRoute.providerId }
+            val providerName = providerItem?.metadata?.name ?: "CloudStream"
+            val providerAddonId = "cloudstream:${cloudStreamRoute.providerId}"
+            stateFlow.value = StreamsUiState(
+                groups = listOf(
+                    AddonStreamGroup(
+                        addonName = providerName,
+                        addonId = providerAddonId,
+                        streams = emptyList(),
+                        isLoading = true,
+                    ),
+                ),
+                activeAddonIds = setOf(providerAddonId),
+                isAnyLoading = true,
+            )
+            val job = scope.launch {
+                val result = runCatching {
+                    withTimeoutOrNull(PLAYER_STREAM_PROVIDER_TIMEOUT_MS) {
+                        CloudStreamRepository.loadLinks(cloudStreamRoute.providerId, cloudStreamRoute.data)
+                    } ?: error("$providerName timed out")
+                }.fold(
+                    onSuccess = { it },
+                    onFailure = { Result.failure(it) },
+                )
+                if (requestKeyHolder() != requestKey) return@launch
+                result.fold(
+                    onSuccess = { sources ->
+                        val streams = cloudStreamSourcesToStreamItems(
+                            providerId = cloudStreamRoute.providerId,
+                            providerName = providerName,
+                            sources = sources,
+                        )
+                        val presentedGroup = StreamBadgePresentation.apply(
+                            groups = listOf(
+                                AddonStreamGroup(
+                                    addonName = providerName,
+                                    addonId = providerAddonId,
+                                    streams = streams,
+                                    isLoading = false,
+                                    error = if (streams.isEmpty()) "No links found" else null,
+                                ),
+                            ),
+                            rules = streamBadgeRules,
+                        )
+                        stateFlow.value = StreamsUiState(
+                            groups = presentedGroup,
+                            activeAddonIds = setOf(providerAddonId),
+                            isAnyLoading = false,
+                            emptyStateReason = if (streams.isEmpty()) com.nuvio.app.features.streams.StreamsEmptyStateReason.NoStreamsFound else null,
+                        )
+                    },
+                    onFailure = { error ->
+                        log.w(error) { "CloudStream link resolution failed provider=${cloudStreamRoute.providerId}" }
+                        stateFlow.value = StreamsUiState(
+                            groups = listOf(
+                                AddonStreamGroup(
+                                    addonName = providerName,
+                                    addonId = providerAddonId,
+                                    streams = emptyList(),
+                                    isLoading = false,
+                                    error = error.message ?: "CloudStream link resolution failed",
+                                ),
+                            ),
+                            activeAddonIds = setOf(providerAddonId),
+                            isAnyLoading = false,
+                            emptyStateReason = com.nuvio.app.features.streams.StreamsEmptyStateReason.StreamFetchFailed,
+                        )
+                    },
+                )
+            }
+            setJob(job)
             return
         }
 
