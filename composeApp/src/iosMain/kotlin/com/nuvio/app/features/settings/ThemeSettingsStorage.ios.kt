@@ -33,7 +33,6 @@ actual object ThemeSettingsStorage {
     private const val navBarGlowEnabledKey = "nav_bar_glow_enabled"
     private const val navBarDefaultIconColorEnabledKey = "enhanced_local_nav_bar_default_icon_color_enabled"
     private const val navBarDefaultIconColorKey = "enhanced_local_nav_bar_default_icon_color"
-    private const val navBarLiquidGlassEnabledKey = "enhanced_local_nav_bar_liquid_glass_enabled"
     private const val navBarLiquidGlassBarEffectsKey = "enhanced_local_nav_bar_liquid_glass_bar_effects"
     private const val navBarLiquidGlassSelectionEffectsKey = "enhanced_local_nav_bar_liquid_glass_selection_effects"
     private val profileScopedSyncKeys = listOf(
@@ -111,15 +110,6 @@ actual object ThemeSettingsStorage {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(navBarGlowEnabledKey))
     }
 
-    actual fun loadNavBarLiquidGlassEnabled(): Boolean? {
-        val defaults = NSUserDefaults.standardUserDefaults
-        val key = ProfileScopedKey.of(navBarLiquidGlassEnabledKey)
-        return if (defaults.objectForKey(key) != null) defaults.boolForKey(key) else null
-    }
-
-    actual fun saveNavBarLiquidGlassEnabled(enabled: Boolean) {
-        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(navBarLiquidGlassEnabledKey))
-    }
 
     actual fun loadNavBarLiquidGlassBarEffects(): String? = loadRawString(navBarLiquidGlassBarEffectsKey)
 

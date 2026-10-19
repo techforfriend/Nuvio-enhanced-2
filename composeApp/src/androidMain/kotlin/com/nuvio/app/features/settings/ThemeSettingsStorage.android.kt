@@ -33,7 +33,6 @@ actual object ThemeSettingsStorage {
     private const val navBarGlowEnabledKey = "nav_bar_glow_enabled"
     private const val navBarDefaultIconColorEnabledKey = "enhanced_local_nav_bar_default_icon_color_enabled"
     private const val navBarDefaultIconColorKey = "enhanced_local_nav_bar_default_icon_color"
-    private const val navBarLiquidGlassEnabledKey = "enhanced_local_nav_bar_liquid_glass_enabled"
     private const val navBarLiquidGlassBarEffectsKey = "enhanced_local_nav_bar_liquid_glass_bar_effects"
     private const val navBarLiquidGlassSelectionEffectsKey = "enhanced_local_nav_bar_liquid_glass_selection_effects"
     private val profileScopedSyncKeys = listOf(
@@ -118,18 +117,6 @@ actual object ThemeSettingsStorage {
         saveRawString(navBarDefaultIconColorKey, color)
     }
 
-    actual fun loadNavBarLiquidGlassEnabled(): Boolean? =
-        preferences?.let { prefs ->
-            val key = ProfileScopedKey.of(navBarLiquidGlassEnabledKey)
-            if (prefs.contains(key)) prefs.getBoolean(key, false) else null
-        }
-
-    actual fun saveNavBarLiquidGlassEnabled(enabled: Boolean) {
-        preferences
-            ?.edit()
-            ?.putBoolean(ProfileScopedKey.of(navBarLiquidGlassEnabledKey), enabled)
-            ?.apply()
-    }
 
     actual fun loadNavBarLiquidGlassBarEffects(): String? = loadRawString(navBarLiquidGlassBarEffectsKey)
 

@@ -43,19 +43,6 @@ class ThemeSettingsStorageTest {
     }
 
     @Test
-    fun liquidGlassPreferenceSurvivesReloadAndStaysOutOfSync() {
-        ThemeSettingsStorage.saveNavBarLiquidGlassEnabled(true)
-        ThemeSettingsStorage.initialize(RuntimeEnvironment.getApplication())
-        assertEquals(true, ThemeSettingsStorage.loadNavBarLiquidGlassEnabled())
-
-        val payload = ThemeSettingsStorage.exportToSyncPayload()
-        assertTrue(payload.keys.none { "liquid_glass" in it && "nav_bar" in it })
-
-        ThemeSettingsStorage.replaceFromSyncPayload(buildJsonObject {})
-        assertEquals(true, ThemeSettingsStorage.loadNavBarLiquidGlassEnabled())
-    }
-
-    @Test
     fun olderPayloadClearsOnlyTheCurrentProfilesGlowPreference() {
         val preferences = RuntimeEnvironment.getApplication()
             .getSharedPreferences("nuvio_theme_settings", Context.MODE_PRIVATE)

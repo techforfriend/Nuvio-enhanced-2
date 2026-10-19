@@ -69,19 +69,19 @@ internal fun LiquidGlassEffectSettings.shouldCaptureFloatingBar(): Boolean =
 internal object LiquidGlassEffectDefaults {
     val floatingBar = LiquidGlassEffectSettings(
         cornerRadiusPercent = 50f,
-        blurRadiusDp = 1f,
-        refractionHeightDp = 11f,
-        refractionAmountDp = 23f,
-        chromaticAberration = true,
-        depthEffect = true,
-        tintOpacity = 0f,
+        blurRadiusDp = 10f,
+        refractionHeightDp = 20f,
+        refractionAmountDp = 20f,
+        chromaticAberration = false,
+        depthEffect = false,
+        tintOpacity = 0.4f,
     )
     val selectionLens = LiquidGlassEffectSettings(
         cornerRadiusPercent = 50f,
-        blurRadiusDp = 1f,
-        refractionHeightDp = 6f,
-        refractionAmountDp = 11f,
-        chromaticAberration = true,
+        blurRadiusDp = 0f,
+        refractionHeightDp = 12f,
+        refractionAmountDp = 20f,
+        chromaticAberration = false,
         depthEffect = true,
         tintOpacity = 0f,
         affectTabIcons = true,
@@ -153,3 +153,23 @@ private fun kotlinx.serialization.json.JsonObject.booleanOrDefault(
  */
 internal fun effectiveLiquidGlassCornerRadiusPercent(value: Float): Int =
     (value.takeIf { !it.isNaN() } ?: 50f).coerceIn(0f, 50f).roundToInt()
+
+internal fun migrateLegacyNavBarGlassEffects(
+    raw: String?,
+): Pair<LiquidGlassEffectSettings, LiquidGlassEffectSettings>? {
+    if (!LiquidGlassStyle.isLegacyEncoding(raw)) return null
+    val parts = raw!!.split(LiquidGlassStyle.Separator)
+    fun int(index: Int): Int? = parts.getOrNull(index)?.toIntOrNull()
+    val chromatic = parts.getOrNull(6) == "1"
+    val bar = LiquidGlassEffectDefaults.floatingBar.let { d ->
+        d.copy(
+            blurRadiusDp = int(2)?.toFloat() ?: d.blurRadiusDp,
+            refractionHeightDp = int(3)?.toFloat() ?: d.refractionHeightDp,
+            refractionAmountDp = int(3)?.toFloat() ?: d.refractionAmountDp,
+            tintOpacity = int(4)?.let { it / 100f } ?: d.tintOpacity,
+            chromaticAberration = chromatic,
+        ).sanitized(d, LiquidGlassEffectDefaults.floatingBarLimits)
+    }
+    val lens = LiquidGlassEffectDefaults.selectionLens.copy(chromaticAberration = chromatic)
+    return bar to lens
+}

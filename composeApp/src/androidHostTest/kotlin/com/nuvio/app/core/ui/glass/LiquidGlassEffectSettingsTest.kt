@@ -11,19 +11,19 @@ class LiquidGlassEffectSettingsTest {
         val lens = LiquidGlassEffectDefaults.selectionLens
 
         assertEquals(50f, bar.cornerRadiusPercent)
-        assertEquals(1f, bar.blurRadiusDp)
-        assertEquals(11f, bar.refractionHeightDp)
-        assertEquals(23f, bar.refractionAmountDp)
-        assertEquals(0f, bar.tintOpacity)
-        assertEquals(true, bar.chromaticAberration)
-        assertEquals(true, bar.depthEffect)
+        assertEquals(10f, bar.blurRadiusDp)
+        assertEquals(20f, bar.refractionHeightDp)
+        assertEquals(20f, bar.refractionAmountDp)
+        assertEquals(0.4f, bar.tintOpacity)
+        assertEquals(false, bar.chromaticAberration)
+        assertEquals(false, bar.depthEffect)
 
         assertEquals(50f, lens.cornerRadiusPercent)
-        assertEquals(1f, lens.blurRadiusDp)
-        assertEquals(6f, lens.refractionHeightDp)
-        assertEquals(11f, lens.refractionAmountDp)
+        assertEquals(0f, lens.blurRadiusDp)
+        assertEquals(12f, lens.refractionHeightDp)
+        assertEquals(20f, lens.refractionAmountDp)
         assertEquals(0f, lens.tintOpacity)
-        assertEquals(true, lens.chromaticAberration)
+        assertEquals(false, lens.chromaticAberration)
         assertEquals(true, lens.depthEffect)
         assertEquals(true, lens.affectTabIcons)
         assertEquals(true, lens.affectFloatingBar)
@@ -134,5 +134,30 @@ class LiquidGlassEffectSettingsTest {
             custom,
             decodeLiquidGlassEffectSettings(encoded, defaults, LiquidGlassEffectDefaults.selectionLensLimits),
         )
+    }
+
+    @Test
+    fun legacyV1NavBarGlassNumbersMigrateIntoEffectSettings() {
+        val (bar, lens) = migrateLegacyNavBarGlassEffects("1;frosted;14;8;55;1;1;0;1;0")!!
+
+        assertEquals(14f, bar.blurRadiusDp)
+        assertEquals(8f, bar.refractionHeightDp)
+        assertEquals(8f, bar.refractionAmountDp)
+        assertEquals(0.55f, bar.tintOpacity)
+        assertEquals(true, bar.chromaticAberration)
+        assertEquals(true, lens.chromaticAberration)
+    }
+
+    @Test
+    fun onlyLegacyV1StylesMigrate() {
+        assertEquals(null, migrateLegacyNavBarGlassEffects(null))
+        assertEquals(null, migrateLegacyNavBarGlassEffects(LiquidGlassStyle.Default.encode()))
+    }
+
+    @Test
+    fun styleDecodesFlagsFromBothEncodings() {
+        val legacy = LiquidGlassStyle.decode("1;clear;14;8;55;0;1;0;1;0")
+        assertEquals(LiquidGlassStyle(LiquidGlassMaterial.CLEAR, vibrancy = false, edgeHighlight = false, shadow = true, selectionLens = false), legacy)
+        assertEquals(legacy, LiquidGlassStyle.decode(legacy.encode()))
     }
 }

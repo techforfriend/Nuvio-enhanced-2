@@ -10,6 +10,7 @@ import com.nuvio.app.core.ui.glass.LiquidGlassEffectDefaults
 import com.nuvio.app.core.ui.glass.LiquidGlassEffectSettings
 import com.nuvio.app.core.ui.glass.decodeLiquidGlassEffectSettings
 import com.nuvio.app.core.ui.glass.encodeLiquidGlassEffectSettings
+import com.nuvio.app.core.ui.glass.migrateLegacyNavBarGlassEffects
 import com.nuvio.app.core.ui.formatHexColor
 import com.nuvio.app.core.ui.parseHexColor
 import com.nuvio.app.core.ui.nativeAccentGradientHex
@@ -75,9 +76,6 @@ object ThemeSettingsRepository {
     internal val navBarDefaultIconColorRevision: StateFlow<Long> = _navBarDefaultIconColorRevision.asStateFlow()
     private var navBarDefaultIconColorDraftDirty = false
 
-    private val _navBarLiquidGlassEnabled = MutableStateFlow(false)
-    val navBarLiquidGlassEnabled: StateFlow<Boolean> = _navBarLiquidGlassEnabled.asStateFlow()
-
     private val _navBarLiquidGlassBarEffects = MutableStateFlow(LiquidGlassEffectDefaults.floatingBar)
     internal val navBarLiquidGlassBarEffects: StateFlow<LiquidGlassEffectSettings> = _navBarLiquidGlassBarEffects.asStateFlow()
 
@@ -128,7 +126,6 @@ object ThemeSettingsRepository {
         _navBarDefaultIconColorEnabled.value = false
         _navBarDefaultIconColor.value = DEFAULT_NAV_BAR_ICON_COLOR
         navBarDefaultIconColorDraftDirty = false
-        _navBarLiquidGlassEnabled.value = false
         _navBarLiquidGlassBarEffects.value = LiquidGlassEffectDefaults.floatingBar
         _navBarLiquidGlassSelectionEffects.value = LiquidGlassEffectDefaults.selectionLens
         _navBarStyle.value = NavBarStyle.ADAPTIVE
@@ -172,7 +169,6 @@ object ThemeSettingsRepository {
         _navBarDefaultIconColor.value = ThemeSettingsStorage.loadNavBarDefaultIconColor()
             ?.let(::parseHexColor) ?: DEFAULT_NAV_BAR_ICON_COLOR
         navBarDefaultIconColorDraftDirty = false
-        _navBarLiquidGlassEnabled.value = ThemeSettingsStorage.loadNavBarLiquidGlassEnabled() ?: false
         _navBarLiquidGlassBarEffects.value = decodeLiquidGlassEffectSettings(
             ThemeSettingsStorage.loadNavBarLiquidGlassBarEffects(),
             LiquidGlassEffectDefaults.floatingBar,
@@ -183,7 +179,9 @@ object ThemeSettingsRepository {
             LiquidGlassEffectDefaults.selectionLens,
             LiquidGlassEffectDefaults.selectionLensLimits,
         )
-        _navBarGlass.value = LiquidGlassStyle.decode(ThemeSettingsStorage.loadNavBarGlass())
+        val storedNavBarGlass = ThemeSettingsStorage.loadNavBarGlass()
+        _navBarGlass.value = LiquidGlassStyle.decode(storedNavBarGlass)
+        migrateLegacyNavBarGlass(storedNavBarGlass)
         applyLiquidGlassEffectsEnabled(ThemeSettingsStorage.loadLiquidGlassEffectsEnabled() ?: true)
     }
 
@@ -298,11 +296,21 @@ object ThemeSettingsRepository {
         _navBarDefaultIconColorRevision.value += 1L
     }
 
-    fun setNavBarLiquidGlassEnabled(enabled: Boolean) {
-        ensureLoaded()
-        if (_navBarLiquidGlassEnabled.value == enabled) return
-        ThemeSettingsStorage.saveNavBarLiquidGlassEnabled(enabled)
-        _navBarLiquidGlassEnabled.value = enabled
+    private fun migrateLegacyNavBarGlass(raw: String?) {
+        val (bar, lens) = migrateLegacyNavBarGlassEffects(raw) ?: return
+        if (ThemeSettingsStorage.loadNavBarLiquidGlassBarEffects() == null) {
+            _navBarLiquidGlassBarEffects.value = bar
+            ThemeSettingsStorage.saveNavBarLiquidGlassBarEffects(
+                encodeLiquidGlassEffectSettings(bar, LiquidGlassEffectDefaults.floatingBar, LiquidGlassEffectDefaults.floatingBarLimits),
+            )
+        }
+        if (ThemeSettingsStorage.loadNavBarLiquidGlassSelectionEffects() == null) {
+            _navBarLiquidGlassSelectionEffects.value = lens
+            ThemeSettingsStorage.saveNavBarLiquidGlassSelectionEffects(
+                encodeLiquidGlassEffectSettings(lens, LiquidGlassEffectDefaults.selectionLens, LiquidGlassEffectDefaults.selectionLensLimits),
+            )
+        }
+        ThemeSettingsStorage.saveNavBarGlass(_navBarGlass.value.encode())
     }
 
     internal fun updateNavBarLiquidGlassBarEffects(settings: LiquidGlassEffectSettings) {
@@ -364,8 +372,6 @@ object ThemeSettingsRepository {
             changed = true
         }
 
-        // ProfileSettingsSync observes this revision. Only bump it when the committed settings
-        // actually differ, otherwise merely opening and dismissing the sheet triggers a remote push.
         if (changed) _navBarLiquidGlassEffectsRevision.value += 1L
     }
 
