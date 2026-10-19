@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.6.2",
+          "buildVersion": "145",
+          "date": "2026-10-19T04:08:19Z",
+          "localizedDescription": "- feat(player): optional libmpv libass renderer for ASS/SSA on ExoPlayer @chrisk325\r\n- fix(player): soften liquid glass on player controls @chrisk325\r\n- fix(android): apply the player orientation toggle @luqmanfadlli\r\n- feat(player): orientation toggle for portrait videos @luqmanfadlli\r\n- fix(android): pinch zoom grows past the black bars in Fit on ExoPlayer @luqmanfadlli\r\n- feat(player): pinch for a custom zoom that keeps the aspect ratio @luqmanfadlli\r\n- feat(player): make Fill stretch on MPV and add pinch-to-zoom @luqmanfadlli\r\n- fix(settings): show slider values live while dragging @luqmanfadlli\r\n- fix(simkl): move explicitly watched series to Completed @luqmanfadlli\r\n- fix(ios): offer external players when scheme probing is unavailable @luqmanfadlli\r\n- more Enhanced strings into pt-BR (Brazilian Portuguese) (#209) @mikhaelvm\r\n- feat Liquid Glass integration in the entire android UI including legacy player with a toggle to disable it all (#210) @chrisk325\r\n- feat(player): tie the PiP button to the mini player setting on both platforms @luqmanfadlli\r\n- feat(ios): bring mini player to iOS @luqmanfadlli\r\n- fix(ios): keep iPad Liquid Glass tab bar setting device-local @luqmanfadlli\r\n- feat(ios): Liquid Glass tab bar option on iPadOS 26+ @luqmanfadlli\r\n- feat anime id mapper for trakt , mdblist and wetrackr (#205) @chrisk325\r\n- feat(i18n): add Brazilian Portuguese (pt-BR) localization for watch party, servers, mdblist and autosync (#202) @mikhaelvm\r\n- Revision and completion of pt-BR translation (#201) @mikhaelvm\r\n- fixes related to watchparty (#200) @chrisk325\r\n- feat(party): add chat to watch parties @tapframe\r\n- Fix escaped apostrophes and missing Italian translations (#2312) @WhiteGiso\r\n- fix(ios): keep Watch Party in sync and apply party rules during PiP (#2308) @WhiteGiso\r\n- i18n(el): finish the Greek locale (party, media servers, MDBList, Auto Sync, season count) (#2292) @nosvasedis\r\n- Filename and infoHash matching for binge group, prefetch fixes (#2278) @skoruppa",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.6.2-beta/nuvio-0.6.2-enhanced-release.ipa",
+          "size": 72991139,
+          "sha256": "57407deb12690668657b486fa36f2eb5a0dce10c2a53d0f8b8299241d06d7082",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.6.1",
           "buildVersion": "144",
           "date": "2026-10-16T16:15:30Z",
