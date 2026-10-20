@@ -53,6 +53,8 @@ import nuvio.composeapp.generated.resources.compose_player_loading_lines
 import nuvio.composeapp.generated.resources.compose_player_no_subtitle_lines_found
 import nuvio.composeapp.generated.resources.compose_player_outline
 import nuvio.composeapp.generated.resources.compose_player_outline_color
+import nuvio.composeapp.generated.resources.compose_player_shadow
+import nuvio.composeapp.generated.resources.compose_player_shadow_strength
 import nuvio.composeapp.generated.resources.compose_player_reload
 import nuvio.composeapp.generated.resources.compose_player_reset
 import nuvio.composeapp.generated.resources.compose_player_reset_defaults
@@ -179,6 +181,37 @@ fun SubtitleStylePanel(
                 enabled = style.outlineEnabled,
                 onColorSelected = { color ->
                     onStyleChanged(style.copy(outlineEnabled = true, outlineColor = color))
+                },
+            )
+        }
+
+        SubtitleStyleSection(title = stringResource(Res.string.compose_player_shadow)) {
+            SubtitleToggleChip(
+                enabled = style.shadowEnabled,
+                onClick = { onStyleChanged(style.copy(shadowEnabled = !style.shadowEnabled)) },
+            )
+            Text(
+                text = stringResource(Res.string.compose_player_shadow_strength),
+                color = Color.White.copy(alpha = 0.72f),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            SubtitleStyleStepper(
+                value = style.shadowStrength.toString(),
+                onDecrease = {
+                    onStyleChanged(
+                        style.copy(
+                            shadowEnabled = true,
+                            shadowStrength = (style.shadowStrength - 1).coerceAtLeast(SUBTITLE_SHADOW_STRENGTH_MIN),
+                        ),
+                    )
+                },
+                onIncrease = {
+                    onStyleChanged(
+                        style.copy(
+                            shadowEnabled = true,
+                            shadowStrength = (style.shadowStrength + 1).coerceAtMost(SUBTITLE_SHADOW_STRENGTH_MAX),
+                        ),
+                    )
                 },
             )
         }

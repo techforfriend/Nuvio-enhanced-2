@@ -374,6 +374,7 @@ internal class AiostreamsAssEngine(
         const val SMALL_DEVICE_BYTES = 3_400_000_000L
         const val DEFAULT_FONT_SIZE_SP = 18.0
         const val DEFAULT_BOTTOM_OFFSET = 20
+        const val ASS_SHADOW_ARGB = 0xB3000000.toInt()
 
         fun configKey(format: Format) = "cfg:" + (format.label ?: format.language ?: "")
 
@@ -394,11 +395,17 @@ internal class AiostreamsAssEngine(
                 override = AssStyle.SCALE,
                 color = assColor(style.textColor.toArgb()),
                 outlineColor = assColor(style.outlineColor.toArgb()),
-                backColor = assColor(if (box) style.backgroundColor.toArgb() else style.outlineColor.toArgb()),
+                backColor = assColor(
+                    when {
+                        box -> style.backgroundColor.toArgb()
+                        style.shadowEnabled -> ASS_SHADOW_ARGB
+                        else -> style.outlineColor.toArgb()
+                    },
+                ),
                 outlineSize = if (style.outlineEnabled) style.outlineWidth.toDouble() else 0.0,
                 borderStyle = if (box) 4 else 1,
                 bold = style.bold,
-                shadowSize = 0.0,
+                shadowSize = if (style.shadowEnabled) style.shadowStrength.toDouble() else 0.0,
                 fontFile = null,
             )
         }
