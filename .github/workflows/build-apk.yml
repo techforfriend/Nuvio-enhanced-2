@@ -75,24 +75,26 @@ jobs:
             This stable release brings full CloudStream 3 provider integration, 18 customized themes, Jellyfin/Plex native streaming, and complete bug fixes across playback, metadata, and UI.
 
             ### 🌟 Key Features & Highlights:
-            1. **Redesigned CloudStream Extension Switcher (Exact Match):**
-               - Sleek floating pill button at bottom-right with warm orange border and stacked layers icon.
-               - Custom popup card floating above the pill with dark theme, orange highlights, provider play badges, and checkmarks.
-            2. **Enhanced Settings Home Features (Fully Wired & Active):**
-               - Full visibility of Nuvio Experience and Premium Labs under the Home category tab.
-               - Smart Shelves, Release Radar Signals, Quiet Home Mode, Original Hero Banner, Compact Metadata, Ratings Above Metadata, and Hero Display Modes (Cinematic, Balanced, InfoRich).
-            3. **Full CloudStream 3 Engine Integration:**
-               - Run native CloudStream 3 `.cs3` plugin repositories and extensions.
-               - CloudStream home catalogues, multi-provider search, and complete Details screen metadata (posters, backdrops, cast, genres, seasons & episodes).
-               - Direct link extraction with subtitle parsing and multi-quality HLS / MP4 playback.
-            4. **Playback Availability & Direct Auto-Play:**
-               - Seamless streaming with no "Playback unavailable" blocks or setup errors.
-               - Smooth auto-play transition directly into the video player.
-            5. **18 Customized Themes & Personalization:**
-               - 18 themes including Dracula, Catppuccin Mocha, Nord, Cyberpunk, AMOLED Black, Monokai Pro, Tokyo Night, Sunset Glow, and dynamic hero poster theming.
-               - "by RAJA JI" customized footer branding.
-            6. **Pure ARM64 Architecture:**
-               - Built and optimized exclusively for 64-bit ARM Android devices (`arm64-v8a`) for peak performance and minimal resource overhead.
+            1. **Restored Live TV Navigation Dock & Streaming:**
+               - Restored dedicated Live TV tab on the bottom navigation dock with standard TV icon.
+               - Full Live TV guide, EPG sources, search & filter bar, and seamless channel player playback.
+            2. **Enhanced Settings Fixed & Working:**
+               - System Backup & Import file picker fully wired with native Android storage framework.
+               - External Download Folder selector linked to DocumentFile SAF storage.
+               - Dynamic DNS over HTTPS resolver with Google & Cloudflare DNS support and IPv4 fallback.
+               - Home, Core, Player, and System settings organized and functional.
+            3. **Redesigned AKRusso-Style Home Poster Hero:**
+               - Frosted capsule header, IMDb rating badge, compact metadata, pill watch button, and subtle shelf underline.
+            4. **Redesigned CloudStream Extension Switcher:**
+               - Floating pill button at bottom-right with warm orange border and stacked layers icon.
+               - Compact popup card floating above the pill with dark theme, orange highlights, and play badges.
+            5. **Full CloudStream 3 Engine & Playback Availability:**
+               - Run native CloudStream 3 `.cs3` plugins and extensions.
+               - Direct link extraction, subtitle parsing, and zero playback unavailable blocks.
+            6. **18 Customized Themes & "by RAJA JI" Branding:**
+               - 18 themes and personalized "by RAJA JI" footer branding.
+            7. **Pure ARM64 Architecture:**
+               - Optimized exclusively for 64-bit ARM Android devices (`arm64-v8a`) for peak performance.
           draft: false
           prerelease: false
           files: build-apks/*.apk
