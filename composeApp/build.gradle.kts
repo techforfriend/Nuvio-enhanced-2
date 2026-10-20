@@ -7,7 +7,10 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.CommandLineArgumentProvider
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
+import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTest
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import java.util.Properties
 
@@ -121,6 +124,19 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
             )
         }
 
+        outDir.resolve("com/nuvio/app/features/mdblist").apply {
+            mkdirs()
+            resolve("MdbListConfig.kt").writeText(
+                """
+                |package com.nuvio.app.features.mdblist
+                |
+                |object MdbListConfig {
+                |    const val CLIENT_ID = "${props.getProperty("MDBLIST_CLIENT_ID", "")}"
+                |}
+                """.trimMargin()
+            )
+        }
+
         outDir.resolve("com/nuvio/app/features/player/skip").apply {
             mkdirs()
             resolve("IntroDbConfig.kt").writeText(
@@ -220,7 +236,8 @@ val supabaseProps = Properties().apply {
     if (propsFile.exists()) propsFile.inputStream().use { load(it) }
 }
 val appVersionConfigFile = rootProject.file("iosApp/Configuration/Version.xcconfig")
-val releaseAppVersionName = readXcconfigValue(appVersionConfigFile, "MARKETING_VERSION")
+val releaseAppVersionName = providers.gradleProperty("nuvio.app.versionName").orNull
+    ?: readXcconfigValue(appVersionConfigFile, "MARKETING_VERSION")
     ?: error("MARKETING_VERSION is missing from ${appVersionConfigFile.path}")
 val releaseAppVersionCode = readXcconfigValue(appVersionConfigFile, "CURRENT_PROJECT_VERSION")
     ?.toIntOrNull()
@@ -401,6 +418,14 @@ kotlin {
                 )
             }
         }
+
+        if (iosTarget.name == "iosSimulatorArm64") {
+            val testEntitlements = project.file("src/iosTest/resources/keychain-test.entitlements")
+            iosTarget.binaries.withType<TestExecutable>().configureEach {
+                linkerOpts("-sectcreate", "__TEXT", "__entitlements", testEntitlements.absolutePath)
+                linkTaskProvider.configure { inputs.file(testEntitlements) }
+            }
+        }
     }
     
     sourceSets {
@@ -437,6 +462,9 @@ kotlin {
                 implementation(libs.androidx.media3.common)
                 implementation(libs.androidx.media3.container)
                 implementation(libs.androidx.media3.extractor)
+                implementation("com.google.guava:guava:33.3.1-android")
+                implementation("androidx.media3:media3-database:1.8.0")
+                implementation("androidx.annotation:annotation-experimental:1.3.1")
                 implementation(libs.mpv.android.lib)
                 implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("lib-*.aar"))))
                 if (androidDistribution == "full") {
@@ -493,12 +521,27 @@ kotlin {
             implementation(libs.supabase.auth)
             implementation(libs.supabase.functions)
             implementation(libs.supabase.storage)
+            implementation(libs.supabase.realtime)
             implementation(libs.reorderable)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:${libs.versions.kotlinx.coroutines.get()}")
+            implementation("io.ktor:ktor-client-mock:${libs.versions.ktor.get()}")
         }
     }
+}
+
+val bootIosTestSimulator by tasks.registering(Exec::class) {
+    val device = tasks.named<KotlinNativeSimulatorTest>("iosSimulatorArm64Test").flatMap { it.device }
+    commandLine("xcrun", "simctl", "boot")
+    argumentProviders.add(CommandLineArgumentProvider { listOf(device.get()) })
+    isIgnoreExitValue = true
+}
+
+tasks.withType<KotlinNativeSimulatorTest>().configureEach {
+    standalone.set(false)
+    dependsOn(bootIosTestSimulator)
 }
 
 configurations.matching { it.name == "iosMainImplementation" }.configureEach {
@@ -507,5 +550,10 @@ configurations.matching { it.name == "iosMainImplementation" }.configureEach {
 
 configurations.all {
     exclude(group = "androidx.media3", module = "media3-exoplayer")
+    exclude(group = "androidx.media3", module = "media3-exoplayer-hls")
     exclude(group = "androidx.media3", module = "media3-ui")
+    exclude(group = "androidx.media3", module = "media3-common")
+    exclude(group = "androidx.media3", module = "media3-datasource")
+    exclude(group = "androidx.media3", module = "media3-datasource-okhttp")
+    exclude(group = "androidx.media3", module = "media3-extractor")
 }

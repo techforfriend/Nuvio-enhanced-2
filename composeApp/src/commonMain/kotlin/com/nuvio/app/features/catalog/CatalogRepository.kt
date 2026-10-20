@@ -1,9 +1,13 @@
 package com.nuvio.app.features.catalog
 
+import com.nuvio.app.core.poster.CustomPosterUrlRepository
+import com.nuvio.app.core.poster.withCustomPosterUrls
 import com.nuvio.app.features.collection.CollectionRepository
 import com.nuvio.app.features.collection.TmdbCollectionSourceResolver
 import com.nuvio.app.features.collection.catalogRouteKey
 import com.nuvio.app.features.library.LibraryRepository
+import com.nuvio.app.features.servers.ServerCatalog
+import com.nuvio.app.features.servers.serverMessage
 import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.home.filterReleasedItems
 import com.nuvio.app.features.trakt.TraktPublicListSourceResolver
@@ -96,7 +100,9 @@ object CatalogRepository {
             try {
                 val target = request.target as CatalogTarget.Library
                 LibraryRepository.ensureLoaded()
-                LibraryRepository.uiState.libraryCatalogStates(target).collect { state ->
+                LibraryRepository.uiState.libraryCatalogStates(
+                    target, LibraryRepository.uiState.libraryCatalogOrders(target),
+                ).collect { state ->
                     if (activeRequest != request) return@collect
                     _uiState.value = state
                 }
@@ -105,7 +111,7 @@ object CatalogRepository {
             } catch (error: Exception) {
                 if (activeRequest != request) return@launch
                 _uiState.value = CatalogUiState(
-                    errorMessage = error.message ?: getString(Res.string.catalog_load_failed),
+                    errorMessage = error.serverMessage() ?: error.message ?: getString(Res.string.catalog_load_failed),
                 )
             }
         }
@@ -144,6 +150,8 @@ object CatalogRepository {
                         page = requestedSkip.takeIf { it > 0 } ?: 1,
                     )
 
+                    is CatalogTarget.Server -> ServerCatalog.page(target, skip = requestedSkip)
+
                     is CatalogTarget.Library -> error(getString(Res.string.catalog_load_failed))
                 }.withUnreleasedFilter(request.hideUnreleasedContent)
             }.fold(
@@ -164,8 +172,10 @@ object CatalogRepository {
                         loadedNewItems = loadedNewItems,
                         consecutiveDuplicatePages = if (reset) 0 else current.consecutiveDuplicatePages,
                     )
+                    CustomPosterUrlRepository.ensureLoaded()
+                    val posterPattern = CustomPosterUrlRepository.patternForScreen(com.nuvio.app.core.poster.CustomPosterScreen.HOME)
                     _uiState.value = CatalogUiState(
-                        items = mergedItems,
+                        items = mergedItems.withCustomPosterUrls(posterPattern),
                         isLoading = false,
                         nextSkip = paginationState.nextSkip,
                         consecutiveDuplicatePages = paginationState.consecutiveDuplicatePages,
@@ -179,7 +189,7 @@ object CatalogRepository {
                         items = if (reset) emptyList() else current.items,
                         isLoading = false,
                         nextSkip = null,
-                        errorMessage = error.message ?: getString(Res.string.catalog_load_failed),
+                        errorMessage = error.serverMessage() ?: error.message ?: getString(Res.string.catalog_load_failed),
                     )
                 },
             )

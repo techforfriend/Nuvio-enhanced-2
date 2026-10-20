@@ -23,8 +23,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -58,13 +62,19 @@ internal fun SkeletonAnimationProvider(content: @Composable () -> Unit) {
 @Composable
 internal fun rememberSkeletonProgress(): State<Float> {
     val animation = LocalSkeletonAnimation.current
-    DisposableEffect(animation) {
-        if (animation != null) animation.consumers++
+    SkeletonAnimationConsumer(animation)
+    return animation?.progress?.asState() ?: remember { mutableFloatStateOf(0f) }
+}
+
+@Composable
+private fun SkeletonAnimationConsumer(animation: SkeletonAnimation?) {
+    val active = LocalScreenActive.current
+    DisposableEffect(animation, active) {
+        if (animation != null && active) animation.consumers++
         onDispose {
-            if (animation != null) animation.consumers--
+            if (animation != null && active) animation.consumers--
         }
     }
-    return animation?.progress?.asState() ?: remember { mutableFloatStateOf(0f) }
 }
 
 @Composable
@@ -101,6 +111,35 @@ internal fun Modifier.skeleton(
                         start = Offset(start, 0f),
                         end = Offset(start + bandWidth, 0f),
                     ),
+                )
+            }
+        }
+}
+
+@Composable
+internal fun Modifier.shimmer(active: Boolean = true): Modifier {
+    if (!active) return this
+    val progress = rememberSkeletonProgress()
+
+    return graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        .drawWithCache {
+            val bandWidth = size.width * 0.8f
+            val dim = Color.Black.copy(alpha = 0.35f)
+            val stops = arrayOf(
+                0f to dim,
+                0.5f to Color.Black,
+                1f to dim,
+            )
+            onDrawWithContent {
+                drawContent()
+                val start = (size.width + bandWidth) * progress.value - bandWidth
+                drawRect(
+                    brush = Brush.linearGradient(
+                        colorStops = stops,
+                        start = Offset(start, 0f),
+                        end = Offset(start + bandWidth, 0f),
+                    ),
+                    blendMode = BlendMode.DstIn,
                 )
             }
         }

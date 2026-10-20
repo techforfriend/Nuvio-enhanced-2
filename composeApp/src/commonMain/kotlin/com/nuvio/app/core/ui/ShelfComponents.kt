@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -25,10 +26,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
@@ -69,6 +74,9 @@ fun <T> NuvioShelfSection(
     itemContent: @Composable (T) -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
+    ScreenActivityEffect(state) { active ->
+        if (!active) state.stopScroll()
+    }
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(tokens.spacing.controlGap + NuvioTokens.Space.s2),
@@ -116,6 +124,7 @@ fun NuvioPosterCard(
     title: String,
     imageUrl: String?,
     modifier: Modifier = Modifier,
+    fallbackImageUrl: String? = null,
     shape: NuvioPosterShape = NuvioPosterShape.Poster,
     detailLine: String? = null,
     showTitleBelow: Boolean = true,
@@ -158,8 +167,22 @@ fun NuvioPosterCard(
             contentAlignment = Alignment.Center,
         ) {
             if (imageUrl != null) {
+                val platformContext = coil3.compose.LocalPlatformContext.current
+                val hasFallback = !fallbackImageUrl.isNullOrBlank() && fallbackImageUrl != imageUrl
+                val imageModel = remember(imageUrl, fallbackImageUrl, platformContext) {
+                    if (hasFallback) {
+                        coil3.request.ImageRequest.Builder(platformContext)
+                            .data(imageUrl)
+                            .memoryCacheKeyExtras(
+                                mapOf(com.nuvio.app.core.poster.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to fallbackImageUrl!!)
+                            )
+                            .build()
+                    } else {
+                        imageUrl
+                    }
+                }
                 AsyncImage(
-                    model = imageUrl,
+                    model = imageModel,
                     contentDescription = title,
                     modifier = Modifier.matchParentSize(),
                     contentScale = ContentScale.Crop,
@@ -177,6 +200,21 @@ fun NuvioPosterCard(
             }
 
             if (!bottomLeftLogoUrl.isNullOrBlank() || !bottomLeftText.isNullOrBlank()) {
+                // Gradient scrim for readability — matching NuvioTV Modern Home style
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .drawWithCache {
+                            val gradient = Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color.Transparent,
+                                    0.58f to Color.Transparent,
+                                    1.0f to Color.Black.copy(alpha = 0.75f)
+                                )
+                            )
+                            onDrawBehind { drawRect(gradient) }
+                        }
+                )
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
@@ -190,6 +228,7 @@ fun NuvioPosterCard(
                                 .width(catalogLogoOverlaySize.width)
                                 .height(catalogLogoOverlaySize.height),
                             contentScale = ContentScale.Fit,
+                            alignment = Alignment.CenterStart,
                         )
                     } else {
                         Text(
