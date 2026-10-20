@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
@@ -86,37 +88,50 @@ internal fun PlayerToolbar(
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
-        onOrientationToggleClick?.let {
-            PlayerAction(
-                description = stringResource(playerOrientationToggleLabel(isPortraitPlayback)),
-                icon = playerOrientationToggleIcon(isPortraitPlayback),
-                onClick = it,
-            )
-        }
-        if (onPartyClick != null) {
-            PlayerAction(
-                description = stringResource(Res.string.party_title),
-                icon = Icons.Rounded.Groups,
-                onClick = onPartyClick,
-                tint = if (partyActive) MaterialTheme.colorScheme.primary else Color.White,
-            )
-        }
-        onCastClick?.let {
-            PlayerAction(
-                description = stringResource(Res.string.player_cast),
-                icon = if (isCasting) Icons.Rounded.CastConnected else Icons.Rounded.Cast,
-                onClick = it,
-            )
-        }
-        PlayerAction(
-            description = stringResource(
-                if (isLocked) Res.string.compose_player_unlock_controls else Res.string.compose_player_lock_controls,
+        // Toolbar actions share one liquid-glass capsule; close sits in its own glass circle.
+        Row(
+            modifier = Modifier.playerLiquidGlass(
+                shape = PlayerGlassCapsule,
+                refractionHeight = 8.dp,
+                refractionAmount = 12.dp,
             ),
-            icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
-            onClick = onLockToggle,
-        )
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            onOrientationToggleClick?.let {
+                PlayerAction(
+                    description = stringResource(playerOrientationToggleLabel(isPortraitPlayback)),
+                    icon = playerOrientationToggleIcon(isPortraitPlayback),
+                    onClick = it,
+                )
+            }
+            if (onPartyClick != null) {
+                PlayerAction(
+                    description = stringResource(Res.string.party_title),
+                    icon = Icons.Rounded.Groups,
+                    onClick = onPartyClick,
+                    tint = if (partyActive) MaterialTheme.colorScheme.primary else Color.White,
+                )
+            }
+            onCastClick?.let {
+                PlayerAction(
+                    description = stringResource(Res.string.player_cast),
+                    icon = if (isCasting) Icons.Rounded.CastConnected else Icons.Rounded.Cast,
+                    onClick = it,
+                )
+            }
+            PlayerAction(
+                description = stringResource(
+                    if (isLocked) Res.string.compose_player_unlock_controls else Res.string.compose_player_lock_controls,
+                ),
+                icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
+                onClick = onLockToggle,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
         NuvioBackButton(
             onClick = onBack,
+            modifier = Modifier.playerLiquidGlass(CircleShape, refractionHeight = 8.dp, refractionAmount = 12.dp),
+            shape = CircleShape,
             containerColor = Color.Transparent,
             contentColor = Color.White,
             buttonSize = 48.dp,
@@ -269,7 +284,6 @@ internal fun PlayerControlActions(
     val hasOverflow = actions.size > 5
     var expanded by remember(hasOverflow) { mutableStateOf(false) }
     val scrollState = rememberScrollState()
-    val startOffset = if (onNextEpisodeClick != null) (-13).dp else (-12).dp
     LaunchedEffect(expanded, scrollState.maxValue) {
         if (expanded) scrollState.animateScrollTo(scrollState.maxValue) else scrollState.scrollTo(0)
     }
@@ -279,50 +293,67 @@ internal fun PlayerControlActions(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.weight(1f).offset(x = startOffset).horizontalScroll(scrollState),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                actions.take(if (expanded) actions.size else 5).forEach { action ->
-                    Box {
-                        PlayerAction(
-                            description = action.description,
-                            onClick = {
-                                onInteraction()
-                                action.onClick()
-                            },
-                            icon = action.icon,
-                            painter = action.painter,
-                            iconSize = action.iconSize,
+            Box(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier
+                        .playerLiquidGlass(
+                            shape = PlayerGlassCapsule,
+                            refractionHeight = 8.dp,
+                            refractionAmount = 12.dp,
                         )
-                        action.popup?.invoke()
+                        .horizontalScroll(scrollState),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    actions.take(if (expanded) actions.size else 5).forEach { action ->
+                        Box {
+                            PlayerAction(
+                                description = action.description,
+                                onClick = {
+                                    onInteraction()
+                                    action.onClick()
+                                },
+                                icon = action.icon,
+                                painter = action.painter,
+                                iconSize = action.iconSize,
+                            )
+                            action.popup?.invoke()
+                        }
                     }
-                }
-                if (hasOverflow) {
-                    PlayerAction(
-                        description = stringResource(
-                            if (expanded) Res.string.compose_player_fewer_actions else Res.string.compose_player_more_actions,
-                        ),
-                        onClick = {
-                            expanded = !expanded
-                            onInteraction()
-                        },
-                        icon = if (expanded) Icons.AutoMirrored.Rounded.KeyboardArrowLeft else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                    )
+                    if (hasOverflow) {
+                        PlayerAction(
+                            description = stringResource(
+                                if (expanded) Res.string.compose_player_fewer_actions else Res.string.compose_player_more_actions,
+                            ),
+                            onClick = {
+                                expanded = !expanded
+                                onInteraction()
+                            },
+                            icon = if (expanded) Icons.AutoMirrored.Rounded.KeyboardArrowLeft else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                        )
+                    }
                 }
             }
             Box(
-                modifier = Modifier.height(48.dp).widthIn(min = 48.dp).clickable(
-                    role = Role.Button,
-                    onClickLabel = stringResource(
-                        if (showRemainingTime) Res.string.compose_player_show_elapsed_time else Res.string.compose_player_show_remaining_time,
-                    ),
-                    onClick = {
-                        onRuntimeClick()
-                        onInteraction()
-                    },
-                ),
-                contentAlignment = Alignment.CenterEnd,
+                modifier = Modifier
+                    .height(44.dp)
+                    .widthIn(min = 48.dp)
+                    .playerLiquidGlass(
+                        shape = PlayerGlassCapsule,
+                        refractionHeight = 6.dp,
+                        refractionAmount = 8.dp,
+                    )
+                    .clickable(
+                        role = Role.Button,
+                        onClickLabel = stringResource(
+                            if (showRemainingTime) Res.string.compose_player_show_elapsed_time else Res.string.compose_player_show_remaining_time,
+                        ),
+                        onClick = {
+                            onRuntimeClick()
+                            onInteraction()
+                        },
+                    )
+                    .padding(horizontal = 14.dp),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = formatPlaybackRuntime(displayedPositionMs, playbackSnapshot.durationMs, showRemainingTime),
@@ -352,6 +383,8 @@ private fun PlayerAction(
         }
     }
 }
+
+internal val PlayerGlassCapsule = RoundedCornerShape(percent = 50)
 
 private data class PlayerControlAction(
     val description: String,

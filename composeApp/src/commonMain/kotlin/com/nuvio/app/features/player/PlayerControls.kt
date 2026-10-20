@@ -3,7 +3,6 @@ package com.nuvio.app.features.player
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -101,7 +100,7 @@ import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
 import kotlin.math.roundToLong
 import com.nuvio.app.core.i18n.localizedEpisodeTitle
-import com.nuvio.app.core.ui.glass.ambientLiquidGlass
+import com.nuvio.app.core.ui.glass.isAmbientLiquidGlassActive
 
 @Composable
 internal fun PlayerControlsShell(
@@ -169,6 +168,7 @@ internal fun PlayerControlsShell(
 ) {
     val density = LocalDensity.current
     var timelineHeight by remember { mutableStateOf(0.dp) }
+    val glassActive = isAmbientLiquidGlassActive()
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val centerControlHeight = metrics.playIconSize + maxOf(metrics.playButtonPadding, metrics.sideButtonPadding) * 2
         val centerBottomPadding = if (useLegacyLayout) metrics.centerLift else maxOf(
@@ -183,7 +183,7 @@ internal fun PlayerControlsShell(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color.Black.copy(alpha = 0.7f),
+                            Color.Black.copy(alpha = if (glassActive) 0.35f else 0.7f),
                             Color.Transparent,
                         ),
                     ),
@@ -199,7 +199,14 @@ internal fun PlayerControlsShell(
                     Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color.Black.copy(alpha = if (useLegacyLayout) 0.7f else 0.8f),
+                            Color.Black.copy(
+                                alpha = when {
+                                    useLegacyLayout && glassActive -> 0.35f
+                                    useLegacyLayout -> 0.7f
+                                    glassActive -> 0.55f
+                                    else -> 0.8f
+                                },
+                            ),
                         ),
                     ),
                 ),
@@ -629,7 +636,9 @@ private fun PlayerHeader(
                     }
                     NuvioBackButton(
                         onClick = onBack,
-                        containerColor = Color.Black.copy(alpha = 0.35f),
+                        modifier = Modifier.playerLiquidGlass(CircleShape, refractionHeight = 6.dp, refractionAmount = 8.dp),
+                        shape = CircleShape,
+                        containerColor = Color.Transparent,
                         contentColor = Color.White,
                         buttonSize = metrics.headerIconSize + 16.dp,
                         iconSize = metrics.headerIconSize,
@@ -641,8 +650,6 @@ private fun PlayerHeader(
     }
 }
 
-
-private const val PlayerControlGlassOpacity = 0.35f
 
 @Composable
 internal fun PlayerHeaderIconButton(
@@ -656,13 +663,8 @@ internal fun PlayerHeaderIconButton(
     Box(
         modifier = Modifier
             .size(buttonSize)
-            .clip(CircleShape)
-            .ambientLiquidGlass(
+            .playerLiquidGlass(
                 shape = CircleShape,
-                tint = Color.White.copy(alpha = 0.06f),
-                fallback = Color.Black.copy(alpha = 0.35f),
-                blurRadius = 12.dp,
-                backdropOpacity = PlayerControlGlassOpacity,
                 refractionHeight = 6.dp,
                 refractionAmount = 8.dp,
             )
@@ -722,13 +724,8 @@ private fun SideControlButton(
 ) {
     Box(
         modifier = Modifier
-            .clip(CircleShape)
-            .ambientLiquidGlass(
+            .playerLiquidGlass(
                 shape = CircleShape,
-                tint = Color.White.copy(alpha = 0.06f),
-                fallback = Color.Transparent,
-                blurRadius = 14.dp,
-                backdropOpacity = PlayerControlGlassOpacity,
                 refractionHeight = 8.dp,
                 refractionAmount = 12.dp,
             )
@@ -758,13 +755,8 @@ internal fun PlayPauseControlButton(
 
     Box(
         modifier = Modifier
-            .clip(CircleShape)
-            .ambientLiquidGlass(
+            .playerLiquidGlass(
                 shape = CircleShape,
-                tint = Color.White.copy(alpha = 0.06f),
-                fallback = Color.Transparent,
-                blurRadius = 16.dp,
-                backdropOpacity = PlayerControlGlassOpacity,
                 refractionHeight = 10.dp,
                 refractionAmount = 14.dp,
             )
@@ -843,24 +835,15 @@ private fun ProgressControls(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
         ) {
+            // Legacy bottom bar: same compact pill as before, now liquid glass.
             Surface(
                 color = Color.Transparent,
                 shape = RoundedCornerShape(24.dp),
-                modifier = Modifier
-                    .ambientLiquidGlass(
-                        shape = RoundedCornerShape(24.dp),
-                        tint = Color.White.copy(alpha = 0.05f),
-                        fallback = Color.Black.copy(alpha = 0.5f),
-                        blurRadius = 16.dp,
-                        backdropOpacity = PlayerControlGlassOpacity,
-                        refractionHeight = 10.dp,
-                        refractionAmount = 14.dp,
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = Color.White.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(24.dp),
-                    ),
+                modifier = Modifier.playerLiquidGlass(
+                    shape = RoundedCornerShape(24.dp),
+                    refractionHeight = 10.dp,
+                    refractionAmount = 14.dp,
+                ),
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
@@ -1185,17 +1168,11 @@ internal fun LockedPlayerOverlay(
             Box(
                 modifier = Modifier
                     .size(78.dp)
-                    .clip(CircleShape)
-                    .ambientLiquidGlass(
+                    .playerLiquidGlass(
                         shape = CircleShape,
-                        tint = Color.White.copy(alpha = 0.06f),
-                        fallback = Color.Black.copy(alpha = 0.52f),
-                        blurRadius = 16.dp,
-                        backdropOpacity = PlayerControlGlassOpacity,
                         refractionHeight = 10.dp,
                         refractionAmount = 14.dp,
                     )
-                    .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
                     .clickable(onClick = onUnlock),
                 contentAlignment = Alignment.Center,
             ) {
@@ -1295,21 +1272,19 @@ internal fun LockedPlayerOverlay(
 private fun TimePill(
     text: String,
     fontSize: androidx.compose.ui.unit.TextUnit,
+    glass: Boolean = true,
 ) {
+    val glassModifier = if (glass) {
+        Modifier.playerLiquidGlass(
+            shape = RoundedCornerShape(12.dp),
+            refractionHeight = 4.dp,
+            refractionAmount = 6.dp,
+        )
+    } else {
+        Modifier
+    }
     Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .ambientLiquidGlass(
-                shape = RoundedCornerShape(12.dp),
-                tint = Color.White.copy(alpha = 0.05f),
-                fallback = Color.Black.copy(alpha = 0.5f),
-                blurRadius = 12.dp,
-                backdropOpacity = PlayerControlGlassOpacity,
-                refractionHeight = 4.dp,
-                refractionAmount = 6.dp,
-            )
-            .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+        modifier = glassModifier.padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
         Text(
             text = text,
