@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -34,12 +35,14 @@ import com.nuvio.app.core.ui.rememberNuvioNavBarScrollState
 import com.nuvio.app.features.profiles.NuvioProfile
 import com.nuvio.app.features.profiles.ProfileSwitcherTab
 import com.nuvio.app.features.settings.NavBarStyle
+import com.nuvio.app.features.settings.NuvioEnhancedSettingsRepository
 import com.nuvio.app.features.settings.ThemeSettingsRepository
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_nav_home
 import nuvio.composeapp.generated.resources.compose_nav_library
+import nuvio.composeapp.generated.resources.compose_nav_live_tv
 import nuvio.composeapp.generated.resources.compose_nav_profile
 import nuvio.composeapp.generated.resources.compose_nav_search
 import nuvio.composeapp.generated.resources.sidebar_library
@@ -79,41 +82,60 @@ internal fun MainTabsDestination(
         val navBarHazeState = rememberHazeState()
         val navBarStyleSetting by remember { ThemeSettingsRepository.navBarStyle }.collectAsStateWithLifecycle()
         val navBarGlowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
-        val floatingNavigationItems = listOf(
-            FloatingNavigationItem(
-                selected = selectedTab == AppScreenTab.Home,
-                onClick = { onTabSelected(AppScreenTab.Home) },
-                icon = Icons.Filled.Home,
-                label = stringResource(Res.string.compose_nav_home),
-            ),
-            FloatingNavigationItem(
-                selected = selectedTab == AppScreenTab.Search,
-                onClick = { onTabSelected(AppScreenTab.Search) },
-                drawable = Res.drawable.sidebar_search,
-                label = stringResource(Res.string.compose_nav_search),
-            ),
-            FloatingNavigationItem(
-                selected = selectedTab == AppScreenTab.Library,
-                onClick = { onTabSelected(AppScreenTab.Library) },
-                drawable = Res.drawable.sidebar_library,
-                label = stringResource(Res.string.compose_nav_library),
-            ),
-            FloatingNavigationItem(
-                selected = selectedTab == AppScreenTab.Settings,
-                onClick = { onTabSelected(AppScreenTab.Settings) },
-                label = stringResource(Res.string.compose_nav_profile),
-                content = { onClick ->
-                    ProfileSwitcherTab(
-                        selected = selectedTab == AppScreenTab.Settings,
-                        onClick = onClick,
-                        onProfileSelected = onProfileSelected,
-                        onAddProfileRequested = onAddProfileRequested,
-                        hazeState = navBarHazeState,
-                        popupBelowAnchor = isTabletLayout,
+        val liveTvEnabled by NuvioEnhancedSettingsRepository.liveTvEnabled.collectAsStateWithLifecycle()
+        val floatingNavigationItems = buildList {
+            add(
+                FloatingNavigationItem(
+                    selected = selectedTab == AppScreenTab.Home,
+                    onClick = { onTabSelected(AppScreenTab.Home) },
+                    icon = Icons.Filled.Home,
+                    label = stringResource(Res.string.compose_nav_home),
+                )
+            )
+            add(
+                FloatingNavigationItem(
+                    selected = selectedTab == AppScreenTab.Search,
+                    onClick = { onTabSelected(AppScreenTab.Search) },
+                    drawable = Res.drawable.sidebar_search,
+                    label = stringResource(Res.string.compose_nav_search),
+                )
+            )
+            if (liveTvEnabled) {
+                add(
+                    FloatingNavigationItem(
+                        selected = selectedTab == AppScreenTab.LiveTv,
+                        onClick = { onTabSelected(AppScreenTab.LiveTv) },
+                        icon = Icons.Filled.Tv,
+                        label = stringResource(Res.string.compose_nav_live_tv),
                     )
-                },
-            ),
-        )
+                )
+            }
+            add(
+                FloatingNavigationItem(
+                    selected = selectedTab == AppScreenTab.Library,
+                    onClick = { onTabSelected(AppScreenTab.Library) },
+                    drawable = Res.drawable.sidebar_library,
+                    label = stringResource(Res.string.compose_nav_library),
+                )
+            )
+            add(
+                FloatingNavigationItem(
+                    selected = selectedTab == AppScreenTab.Settings,
+                    onClick = { onTabSelected(AppScreenTab.Settings) },
+                    label = stringResource(Res.string.compose_nav_profile),
+                    content = { onClick ->
+                        ProfileSwitcherTab(
+                            selected = selectedTab == AppScreenTab.Settings,
+                            onClick = onClick,
+                            onProfileSelected = onProfileSelected,
+                            onAddProfileRequested = onAddProfileRequested,
+                            hazeState = navBarHazeState,
+                            popupBelowAnchor = isTabletLayout,
+                        )
+                    },
+                )
+            )
+        }
 
         Scaffold(
             modifier = Modifier
@@ -136,6 +158,14 @@ internal fun MainTabsDestination(
                             icon = Res.drawable.sidebar_search,
                             contentDescription = stringResource(Res.string.compose_nav_search),
                         )
+                        if (liveTvEnabled) {
+                            NavItem(
+                                selected = selectedTab == AppScreenTab.LiveTv,
+                                onClick = { onTabSelected(AppScreenTab.LiveTv) },
+                                icon = Icons.Filled.Tv,
+                                contentDescription = stringResource(Res.string.compose_nav_live_tv),
+                            )
+                        }
                         NavItem(
                             selected = selectedTab == AppScreenTab.Library,
                             onClick = { onTabSelected(AppScreenTab.Library) },

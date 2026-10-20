@@ -11,6 +11,7 @@ import androidx.activity.SystemBarStyle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.nuvio.app.core.auth.AuthStorage
+import com.nuvio.app.core.network.DnsOverHttpsSettingsStorage
 import com.nuvio.app.core.network.ServerConfigurationStorage
 import com.nuvio.app.core.diagnostics.SentryInitializer
 import com.nuvio.app.core.deeplink.handleAppUrl
@@ -21,9 +22,12 @@ import com.nuvio.app.features.addons.AddonStorage
 import com.nuvio.app.features.collection.CollectionMobileSettingsStorage
 import com.nuvio.app.features.collection.CollectionStorage
 import com.nuvio.app.features.debrid.DebridSettingsStorage
+import com.nuvio.app.features.downloads.DownloadsExternalFolderPlatform
 import com.nuvio.app.features.downloads.DownloadsLiveStatusPlatform
 import com.nuvio.app.features.downloads.DownloadsPlatformDownloader
 import com.nuvio.app.features.downloads.DownloadsStorage
+import com.nuvio.app.features.livetv.LiveTvStorage
+import com.nuvio.app.features.settings.NuvioEnhancedBackupFileBridge
 import com.nuvio.app.features.library.LibraryDisplaySettingsStorage
 import com.nuvio.app.features.membership.MemberAssetStorage
 import com.nuvio.app.features.library.LibraryStorage
@@ -154,6 +158,11 @@ open class MainActivity : AppCompatActivity() {
         DownloadsStorage.initialize(applicationContext)
         DownloadsPlatformDownloader.initialize(applicationContext)
         DownloadsLiveStatusPlatform.initialize(applicationContext)
+        DownloadsExternalFolderPlatform.initialize(applicationContext)
+        DownloadsExternalFolderPlatform.bindActivity(this)
+        NuvioEnhancedBackupFileBridge.bindActivity(this)
+        LiveTvStorage.initialize(applicationContext)
+        DnsOverHttpsSettingsStorage.initialize(applicationContext)
         AndroidAppUpdaterPlatform.initialize(applicationContext)
         PlatformLocalAccountDataCleaner.initialize(applicationContext)
         EpisodeReleaseNotificationPlatform.initialize(applicationContext)
@@ -187,12 +196,25 @@ open class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         AppSystemUiController.unbind(this)
         EpisodeReleaseNotificationPlatform.unbindActivity(this)
+        DownloadsExternalFolderPlatform.unbindActivity(this)
+        NuvioEnhancedBackupFileBridge.unbindActivity(this)
         val receiver = pipRemoteActionReceiver
         if (receiver != null) {
             runCatching { unregisterReceiver(receiver) }
             pipRemoteActionReceiver = null
         }
         super.onDestroy()
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (NuvioEnhancedBackupFileBridge.handleActivityResult(requestCode, resultCode, data)) {
+            return
+        }
+        if (DownloadsExternalFolderPlatform.handleActivityResult(requestCode, resultCode, data)) {
+            return
+        }
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun onRequestPermissionsResult(

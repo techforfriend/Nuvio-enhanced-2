@@ -32,3 +32,23 @@ private fun DnsOverHttpsProvider.bootstrapHosts(): List<InetAddress> =
     }.map { address ->
         InetAddress.getByName(address)
     }
+
+private val dohCache = java.util.concurrent.ConcurrentHashMap<DnsOverHttpsProvider, Dns>()
+
+class DynamicDnsOverHttps(private val fallbackDns: Dns = IPv4FirstDns()) : Dns {
+    override fun lookup(hostname: String): List<InetAddress> {
+        val provider = DnsOverHttpsSettingsRepository.snapshot().provider
+        if (provider == DnsOverHttpsProvider.None) {
+            return fallbackDns.lookup(hostname)
+        }
+        val dns = dohCache.getOrPut(provider) {
+            provider.toOkHttpDns()
+        }
+        return try {
+            val results = dns.lookup(hostname)
+            if (results.isEmpty()) fallbackDns.lookup(hostname) else results
+        } catch (_: Throwable) {
+            fallbackDns.lookup(hostname)
+        }
+    }
+}
