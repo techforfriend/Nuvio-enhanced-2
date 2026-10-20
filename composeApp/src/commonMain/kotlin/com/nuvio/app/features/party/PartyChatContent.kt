@@ -371,8 +371,12 @@ private fun Composer() {
         BasicTextField(
             value = text,
             onValueChange = { value ->
-                text = value.take(PartyChat.MAX_LENGTH)
-                PartyChat.draft.value = text
+                if (value.length == text.length + 1 && value.count { it == '\n' } > text.count { it == '\n' }) {
+                    send()
+                } else {
+                    text = value.take(PartyChat.MAX_LENGTH)
+                    PartyChat.draft.value = text
+                }
             },
             modifier = Modifier.weight(1f),
             textStyle = MaterialTheme.typography.bodyMedium.copy(color = tokens.colors.textPrimary),
