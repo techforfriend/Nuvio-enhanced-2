@@ -1,3 +1,5 @@
+@file:OptIn(androidx.media3.common.util.UnstableApi::class)
+
 package com.nuvio.app.features.player
 
 import android.text.SpannableString
@@ -6,6 +8,7 @@ import android.text.TextPaint
 import android.text.style.CharacterStyle
 import android.text.style.UpdateAppearance
 import androidx.media3.common.text.Cue
+import androidx.media3.common.text.LanguageFeatureSpan
 
 internal object ExoSubtitleShadow {
     @Volatile
@@ -26,7 +29,10 @@ internal object ExoSubtitleShadow {
     }
 }
 
-private class SubtitleShadowSpan(private val strength: Int) : CharacterStyle(), UpdateAppearance {
+private class SubtitleShadowSpan(private val strength: Int) :
+    CharacterStyle(),
+    UpdateAppearance,
+    LanguageFeatureSpan {
     override fun updateDrawState(paint: TextPaint) {
         val unit = paint.textSize * SHADOW_UNIT_OF_TEXT_SIZE * strength
         paint.setShadowLayer(unit * 1.6f, unit, unit, SHADOW_COLOR)
