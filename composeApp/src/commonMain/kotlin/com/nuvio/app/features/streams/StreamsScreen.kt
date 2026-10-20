@@ -479,7 +479,7 @@ private fun MobileStreamsLayout(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = if (isEpisode) 0.8f else 0.7f)),
+                    .background(Color.Black.copy(alpha = if (isEpisode) 0.72f else 0.62f)),
             )
         }
 
@@ -1524,7 +1524,7 @@ internal fun StreamSearchField(
             .clip(fieldShape)
             .ambientLiquidGlass(
                 shape = fieldShape,
-                tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                tint = Color.White.copy(alpha = 0.05f).compositeOver(Color.Black.copy(alpha = StreamGlassTintAlpha)),
                 fallback = tokens.colors.surfaceCard,
                 blurRadius = 14.dp,
                 refractionHeight = 8.dp,
