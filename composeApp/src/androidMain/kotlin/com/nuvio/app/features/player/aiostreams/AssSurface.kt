@@ -64,6 +64,8 @@ internal data class AssStyle(
  */
 internal class AssSurface(context: Context, font: () -> File) : SurfaceHolder.Callback {
     val view = SurfaceView(context).apply {
+        // Marks this as an overlay so the player's liquid-glass frame grabber never samples it.
+        tag = com.nuvio.app.features.player.PlayerOverlaySurfaceTag
         setZOrderMediaOverlay(true)
         holder.setFormat(PixelFormat.TRANSLUCENT)
         holder.addCallback(this@AssSurface)
