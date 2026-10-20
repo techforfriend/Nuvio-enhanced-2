@@ -59,6 +59,7 @@ import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.Color
 import com.nuvio.app.features.settings.NuvioHeroArtworkSource
+import com.nuvio.app.features.settings.NuvioHeroDisplayMode
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.rememberActionAccentStyle
 import com.nuvio.app.core.ui.rememberAnimatedLineBrush
@@ -131,6 +132,10 @@ internal fun HomeHeroSection(
     showHeroDetailsButton: Boolean = true,
     posterArtHeroEnabled: Boolean = false,
     heroArtworkSource: NuvioHeroArtworkSource = NuvioHeroArtworkSource.Backdrop,
+    originalNuvioHeroBannerEnabled: Boolean = false,
+    compactHeroMetadata: Boolean = true,
+    ratingsAboveMetadata: Boolean = false,
+    heroDisplayMode: NuvioHeroDisplayMode = NuvioHeroDisplayMode.Balanced,
     onItemClick: ((MetaPreview) -> Unit)? = null,
 ) {
     if (items.isEmpty()) return
@@ -188,8 +193,8 @@ internal fun HomeHeroSection(
             viewportHeightDp = viewportHeight?.value,
             mobileBelowSectionHeightHintDp = mobileBelowSectionHeightHint?.value,
         )
-        val isPosterMode = posterArtHeroEnabled || heroArtworkSource == NuvioHeroArtworkSource.Poster
-        val activeHeroHeight = if (isPosterMode) {
+        val isPosterMode = !originalNuvioHeroBannerEnabled && (posterArtHeroEnabled || heroArtworkSource == NuvioHeroArtworkSource.Poster)
+        val baseHeroHeight = if (isPosterMode) {
             posterArtHeroHeight(
                 maxWidthDp = maxWidth.value,
                 viewportHeightDp = viewportHeight?.value,
@@ -198,6 +203,17 @@ internal fun HomeHeroSection(
         } else {
             layout.heroHeight
         }
+        val activeHeroHeight = when (heroDisplayMode) {
+            NuvioHeroDisplayMode.Cinematic -> (baseHeroHeight * 1.10f).coerceAtMost(if (layout.isTablet) 480.dp else 700.dp)
+            else -> baseHeroHeight
+        }
+        val effectiveShowOverview = when {
+            originalNuvioHeroBannerEnabled -> false
+            heroDisplayMode == NuvioHeroDisplayMode.Cinematic -> false
+            heroDisplayMode == NuvioHeroDisplayMode.InfoRich -> true
+            else -> showOverview
+        }
+        val effectiveShowHeroDetailsButton = showHeroDetailsButton && !originalNuvioHeroBannerEnabled
         val heroWidthPx = with(LocalDensity.current) { maxWidth.toPx() }
         val heroHeightPx = with(LocalDensity.current) { activeHeroHeight.toPx() }
         val scrollOffsetPx by remember(listState, heroHeightPx) {
@@ -349,15 +365,17 @@ internal fun HomeHeroSection(
                                 HeroContentBlock(
                                     item = items[layer.itemIndex],
                                     layout = layout,
-                                    showOverview = showOverview,
+                                    showOverview = effectiveShowOverview,
                                     showRatings = showRatings,
+                                    compactHeroMetadata = compactHeroMetadata,
+                                    ratingsAboveMetadata = ratingsAboveMetadata,
                                     onItemClick = onItemClick,
                                 )
                             }
                         }
                     }
 
-                    if (showHeroDetailsButton) {
+                    if (effectiveShowHeroDetailsButton) {
                         Spacer(modifier = Modifier.height(14.dp))
                         Surface(
                             modifier = Modifier
@@ -471,6 +489,8 @@ private fun HeroContentBlock(
     layout: HomeHeroLayout,
     showOverview: Boolean,
     showRatings: Boolean,
+    compactHeroMetadata: Boolean = true,
+    ratingsAboveMetadata: Boolean = false,
     onItemClick: ((MetaPreview) -> Unit)?,
 ) {
     var logoLoadError by remember(item.type, item.id, item.logo) {
@@ -482,6 +502,31 @@ private fun HeroContentBlock(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = if (layout.isTablet) Alignment.Start else Alignment.CenterHorizontally,
     ) {
+        if (ratingsAboveMetadata && showRatings && !item.imdbRating.isNullOrBlank()) {
+            Row(
+                modifier = Modifier
+                    .padding(bottom = 6.dp)
+                    .background(Color(0x55000000), RoundedCornerShape(8.dp))
+                    .border(1.dp, Color(0x44FFD700), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Star,
+                    contentDescription = null,
+                    tint = Color(0xFFFFD700),
+                    modifier = Modifier.size(if (compactHeroMetadata) 13.dp else 15.dp),
+                )
+                Text(
+                    text = item.imdbRating,
+                    style = if (compactHeroMetadata) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
+                    color = Color(0xFFFFD700),
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+
         if (logoUrl != null && !logoLoadError) {
             AsyncImage(
                 model = logoUrl,
@@ -517,17 +562,18 @@ private fun HeroContentBlock(
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        val metaSpacing = if (compactHeroMetadata) 6.dp else 8.dp
+        Spacer(modifier = Modifier.height(if (compactHeroMetadata) 8.dp else 12.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = if (layout.isTablet) {
-                Arrangement.spacedBy(8.dp, Alignment.Start)
+                Arrangement.spacedBy(metaSpacing, Alignment.Start)
             } else {
-                Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+                Arrangement.spacedBy(metaSpacing, Alignment.CenterHorizontally)
             },
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (showRatings && !item.imdbRating.isNullOrBlank()) {
+            if (!ratingsAboveMetadata && showRatings && !item.imdbRating.isNullOrBlank()) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -536,25 +582,28 @@ private fun HeroContentBlock(
                         imageVector = Icons.Rounded.Star,
                         contentDescription = null,
                         tint = Color(0xFFFFD700),
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(if (compactHeroMetadata) 14.dp else 16.dp),
                     )
                     Text(
                         text = item.imdbRating,
-                        style = MaterialTheme.typography.labelLarge,
+                        style = if (compactHeroMetadata) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
                         color = Color(0xFFFFD700),
                         fontWeight = FontWeight.Bold,
                     )
                 }
                 HeroMetaDot()
             }
-            HeroMetaText(text = item.type.replaceFirstChar(Char::uppercase))
+            HeroMetaText(
+                text = item.type.replaceFirstChar(Char::uppercase),
+                isCompact = compactHeroMetadata,
+            )
             item.genres.firstOrNull()?.let { genre ->
                 HeroMetaDot()
-                HeroMetaText(text = genre)
+                HeroMetaText(text = genre, isCompact = compactHeroMetadata)
             }
             item.releaseInfo?.takeIf { it.isNotBlank() }?.let { info ->
                 HeroMetaDot()
-                HeroMetaText(text = formatReleaseDateForDisplay(info))
+                HeroMetaText(text = formatReleaseDateForDisplay(info), isCompact = compactHeroMetadata)
             }
         }
 
@@ -578,12 +627,12 @@ private fun HeroContentBlock(
 }
 
 @Composable
-private fun HeroMetaText(text: String) {
+private fun HeroMetaText(text: String, isCompact: Boolean = false) {
     Text(
         text = text,
-        style = MaterialTheme.typography.labelLarge,
+        style = if (isCompact) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onBackground,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = if (isCompact) FontWeight.Medium else FontWeight.SemiBold,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )
