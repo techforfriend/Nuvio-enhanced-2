@@ -82,7 +82,11 @@ internal fun MainTabsDestination(
         val navBarHazeState = rememberHazeState()
         val navBarStyleSetting by remember { ThemeSettingsRepository.navBarStyle }.collectAsStateWithLifecycle()
         val navBarGlowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
-        val liveTvEnabled by NuvioEnhancedSettingsRepository.liveTvEnabled.collectAsStateWithLifecycle()
+        val enhancedSettings by remember {
+            NuvioEnhancedSettingsRepository.ensureLoaded()
+            NuvioEnhancedSettingsRepository.uiState
+        }.collectAsStateWithLifecycle()
+        val liveTvEnabled = enhancedSettings.liveTvEnabled
         val floatingNavigationItems = buildList {
             add(
                 FloatingNavigationItem(
