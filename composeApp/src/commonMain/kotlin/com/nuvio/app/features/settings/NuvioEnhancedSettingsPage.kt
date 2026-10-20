@@ -232,7 +232,8 @@ private fun NuvioEnhancedSettingsPageContent(
         )
 
         if (selectedCategory == EnhancedSettingsCategory.All ||
-            selectedCategory == EnhancedSettingsCategory.Core
+            selectedCategory == EnhancedSettingsCategory.Core ||
+            selectedCategory == EnhancedSettingsCategory.Home
         ) {
         SettingsSection(
             title = stringResource(Res.string.nuvio_enhanced_section_nuvio_experience),
