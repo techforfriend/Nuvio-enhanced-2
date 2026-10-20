@@ -31,6 +31,8 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +53,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.addons.enabledAddons
+import com.nuvio.app.features.player.SUBTITLE_SHADOW_STRENGTH_MAX
+import com.nuvio.app.features.player.SUBTITLE_SHADOW_STRENGTH_MIN
+import com.nuvio.app.features.player.SubtitleFontRepository
 import com.nuvio.app.features.player.AndroidLibmpvVideoOutput
 import com.nuvio.app.features.player.AndroidPlaybackEngine
 import com.nuvio.app.features.player.AudioLanguageOption
@@ -85,7 +90,9 @@ import com.nuvio.app.features.plugins.PluginRepository
 import com.nuvio.app.features.streams.StreamAutoPlayMode
 import com.nuvio.app.features.streams.StreamAutoPlaySource
 import com.nuvio.app.isIos
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
@@ -338,6 +345,11 @@ private fun PlaybackSettingsSection(
     var showSubtitleTextColorDialog by remember { mutableStateOf(false) }
     var showSubtitleBackgroundColorDialog by remember { mutableStateOf(false) }
     var showSubtitleOutlineColorDialog by remember { mutableStateOf(false) }
+    var showSubtitleFontDialog by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.Default) { SubtitleFontRepository.ensureLoaded() }
+    }
+    val subtitleFonts by SubtitleFontRepository.fonts.collectAsState()
     var showExternalPlayerDialog by remember { mutableStateOf(false) }
     var showExternalPlayerAppDialog by remember { mutableStateOf(false) }
     var showReuseCacheDurationDialog by remember { mutableStateOf(false) }
@@ -718,6 +730,15 @@ private fun PlaybackSettingsSection(
                 )
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
+                    title = stringResource(Res.string.settings_playback_subtitle_font),
+                    description = subtitleFonts.firstOrNull { it.fileName == subtitleStyle.customFontFile }?.familyName
+                        ?: stringResource(Res.string.settings_playback_subtitle_font_default),
+                    enabled = subtitleRenderingEnabled,
+                    isTablet = isTablet,
+                    onClick = { showSubtitleFontDialog = true },
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_subtitle_text_color),
                     description = subtitleColorLabel(subtitleStyle.textColor),
                     enabled = subtitleRenderingEnabled,
@@ -751,6 +772,32 @@ private fun PlaybackSettingsSection(
                         enabled = subtitleRenderingEnabled,
                         isTablet = isTablet,
                         onClick = { showSubtitleOutlineColorDialog = true },
+                    )
+                }
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_subtitle_shadow),
+                    description = stringResource(Res.string.settings_playback_subtitle_shadow_description),
+                    checked = subtitleStyle.shadowEnabled,
+                    enabled = subtitleRenderingEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = { enabled ->
+                        PlayerSettingsRepository.setSubtitleStyle(subtitleStyle.copy(shadowEnabled = enabled))
+                    },
+                )
+                if (subtitleStyle.shadowEnabled) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSliderRow(
+                        title = stringResource(Res.string.settings_playback_subtitle_shadow_strength),
+                        value = subtitleStyle.shadowStrength,
+                        formatValue = { it.toString() },
+                        valueRange = SUBTITLE_SHADOW_STRENGTH_MIN..SUBTITLE_SHADOW_STRENGTH_MAX,
+                        step = 1,
+                        isTablet = isTablet,
+                        enabled = subtitleRenderingEnabled,
+                        onValueChange = { value ->
+                            PlayerSettingsRepository.setSubtitleStyle(subtitleStyle.copy(shadowStrength = value))
+                        },
                     )
                 }
                 val showLibassSettings = !isIos && androidPlaybackEngine != AndroidPlaybackEngine.Libmpv
@@ -1708,6 +1755,18 @@ private fun PlaybackSettingsSection(
                 showSubtitleBackgroundColorDialog = false
             },
             onDismiss = { showSubtitleBackgroundColorDialog = false },
+        )
+    }
+
+    if (showSubtitleFontDialog) {
+        SubtitleFontDialog(
+            selectedFontFile = autoPlayPlayerSettings.subtitleStyle.customFontFile,
+            onFontSelected = { fileName ->
+                PlayerSettingsRepository.setSubtitleStyle(
+                    PlayerSettingsRepository.uiState.value.subtitleStyle.copy(customFontFile = fileName),
+                )
+            },
+            onDismiss = { showSubtitleFontDialog = false },
         )
     }
 

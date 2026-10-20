@@ -197,11 +197,13 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
     func clearExternalSubtitle() { playerVC?.removeExternalSubtitles() }
     func clearExternalSubtitleAndSelect(trackId: Int32) { playerVC?.removeExternalSubtitlesAndSelect(Int(trackId)) }
     func setSubtitleDelayMs(delayMs: Int32) { playerVC?.setSubtitleDelayMs(Int(delayMs)) }
+    func setSubtitleFontPath(path: String) { playerVC?.setSubtitleFontPath(path) }
     func applySubtitleStyle(
         textColor: String,
         backgroundColor: String,
         outlineColor: String,
         outlineSize: Float,
+        shadowOffset: Float,
         bold: Bool,
         fontSize: Float,
         subPos: Int32,
@@ -212,6 +214,7 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
             backgroundColor: backgroundColor,
             outlineColor: outlineColor,
             outlineSize: outlineSize,
+            shadowOffset: shadowOffset,
             bold: bold,
             fontSize: fontSize,
             subPos: Int(subPos),
@@ -401,6 +404,7 @@ final class MPVPlayerViewController: UIViewController {
         let backgroundColor: String
         let outlineColor: String
         let outlineSize: Float
+        let shadowOffset: Float
         let bold: Bool
         let fontSize: Float
         let subPos: Int
@@ -1295,6 +1299,7 @@ final class MPVPlayerViewController: UIViewController {
                 backgroundColor: style.backgroundColor,
                 outlineColor: style.outlineColor,
                 outlineSize: style.outlineSize,
+                shadowOffset: style.shadowOffset,
                 bold: style.bold,
                 fontSize: style.fontSize,
                 subPos: style.subPos,
@@ -1547,6 +1552,10 @@ final class MPVPlayerViewController: UIViewController {
         }
     }
 
+    func setSubtitleFontPath(_ path: String) {
+        subtitleFonts.setCustomFontPath(path.isEmpty ? nil : path)
+    }
+
     func setSubtitleDelayMs(_ delayMs: Int) {
         lastSubtitleDelayMs = delayMs
         guard mpv != nil else { return }
@@ -1558,6 +1567,7 @@ final class MPVPlayerViewController: UIViewController {
         backgroundColor: String,
         outlineColor: String,
         outlineSize: Float,
+        shadowOffset: Float,
         bold: Bool,
         fontSize: Float,
         subPos: Int,
@@ -1568,6 +1578,7 @@ final class MPVPlayerViewController: UIViewController {
             backgroundColor: backgroundColor,
             outlineColor: outlineColor,
             outlineSize: outlineSize,
+            shadowOffset: shadowOffset,
             bold: bold,
             fontSize: fontSize,
             subPos: subPos,
@@ -1578,6 +1589,9 @@ final class MPVPlayerViewController: UIViewController {
         let hasBackground = !backgroundColor.hasPrefix("#00")
 
         let effectiveOutlineColor = hasBackground ? backgroundColor : outlineColor
+        let hasShadow = shadowOffset > 0
+        let shadowColor = "#B3000000"
+        let effectiveBackColor = (hasShadow && !hasBackground) ? shadowColor : backgroundColor
         let effectiveOutlineSize = hasBackground
             ? max(Double(outlineSize), 1.0)
             : Double(outlineSize)
@@ -1585,10 +1599,10 @@ final class MPVPlayerViewController: UIViewController {
         subtitleFonts.reapplyFont()
         setStringProperty("sub-ass-override", "no")
         setStringProperty("sub-color", textColor)
-        setStringProperty("sub-back-color", backgroundColor)
+        setStringProperty("sub-back-color", effectiveBackColor)
         setStringProperty("sub-outline-color", effectiveOutlineColor)
         setStringProperty("sub-border-style", hasBackground ? "opaque-box" : "outline-and-shadow")
-        setStringProperty("sub-shadow-offset", "0")
+        setDoubleProperty("sub-shadow-offset", hasBackground ? 0 : Double(shadowOffset))
         setStringProperty("sub-bold", bold ? "yes" : "no")
         setDoubleProperty("sub-outline-size", effectiveOutlineSize)
         setDoubleProperty("sub-font-size", Double(fontSize))

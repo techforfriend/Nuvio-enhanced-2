@@ -357,11 +357,13 @@ actual fun PlatformPlayerSurface(
                     "Player/iOS",
                     "apply subtitle style font=${style.fontSizeSp} bold=${style.bold} outline=${style.outlineEnabled}:${style.outlineWidth} bottom=${style.bottomOffset}",
                 )
+                bridge.setSubtitleFontPath(SubtitleFontRepository.pathOf(style.customFontFile).orEmpty())
                 bridge.applySubtitleStyle(
                     textColor = style.textColor.toMpvColorString(),
                     backgroundColor = style.backgroundColor.toMpvColorString(),
                     outlineColor = style.outlineColor.toMpvColorString(),
                     outlineSize = if (style.outlineEnabled) style.outlineWidth.toFloat() else 0f,
+                    shadowOffset = if (style.shadowEnabled) style.shadowStrength * MPV_SUBTITLE_SHADOW_OFFSET_SCALE else 0f,
                     bold = style.bold,
                     fontSize = style.toMpvSubtitleFontSize(),
                     subPos = style.toMpvSubtitlePosition(),
@@ -580,6 +582,8 @@ private fun Color.toMpvColorString(): String {
 
 private fun SubtitleStyleState.toMpvSubtitlePosition(): Int =
     (100 - (bottomOffset / 2)).coerceIn(0, 150)
+
+private const val MPV_SUBTITLE_SHADOW_OFFSET_SCALE = 1.5f
 
 private fun SubtitleStyleState.toMpvSubtitleFontSize(): Float =
     (fontSizeSp * 3f).coerceIn(18f, 96f)

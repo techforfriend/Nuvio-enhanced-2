@@ -351,8 +351,14 @@ object PlayerSettingsRepository {
                 ?: SubtitleStyleState.DEFAULT.outlineEnabled,
             outlineWidth = PlayerSettingsStorage.loadSubtitleOutlineWidth()
                 ?: SubtitleStyleState.DEFAULT.outlineWidth,
+            shadowEnabled = PlayerSettingsStorage.loadSubtitleShadowEnabled()
+                ?: SubtitleStyleState.DEFAULT.shadowEnabled,
+            shadowStrength = (PlayerSettingsStorage.loadSubtitleShadowStrength()
+                ?: SubtitleStyleState.DEFAULT.shadowStrength)
+                .coerceIn(SUBTITLE_SHADOW_STRENGTH_MIN, SUBTITLE_SHADOW_STRENGTH_MAX),
             bold = PlayerSettingsStorage.loadSubtitleBold()
                 ?: SubtitleStyleState.DEFAULT.bold,
+            customFontFile = PlayerSettingsStorage.loadSubtitleCustomFont()?.takeIf { it.isNotBlank() },
             fontSizeSp = (PlayerSettingsStorage.loadSubtitleFontSizeSp()
                 ?: SubtitleStyleState.DEFAULT.fontSizeSp).coerceIn(subtitleFontSizeRangeSp),
             bottomOffset = PlayerSettingsStorage.loadSubtitleBottomOffset()
@@ -662,7 +668,10 @@ object PlayerSettingsRepository {
 
     fun setSubtitleStyle(style: SubtitleStyleState) {
         ensureLoaded()
-        val normalized = style.copy(fontSizeSp = style.fontSizeSp.coerceIn(subtitleFontSizeRangeSp))
+        val normalized = style.copy(
+            fontSizeSp = style.fontSizeSp.coerceIn(subtitleFontSizeRangeSp),
+            shadowStrength = style.shadowStrength.coerceIn(SUBTITLE_SHADOW_STRENGTH_MIN, SUBTITLE_SHADOW_STRENGTH_MAX),
+        )
         if (subtitleStyle == normalized) return
         subtitleStyle = normalized
         publish()
@@ -671,7 +680,10 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveSubtitleOutlineColor(normalized.outlineColor.toStorageHexString())
         PlayerSettingsStorage.saveSubtitleOutlineEnabled(normalized.outlineEnabled)
         PlayerSettingsStorage.saveSubtitleOutlineWidth(normalized.outlineWidth)
+        PlayerSettingsStorage.saveSubtitleShadowEnabled(normalized.shadowEnabled)
+        PlayerSettingsStorage.saveSubtitleShadowStrength(normalized.shadowStrength)
         PlayerSettingsStorage.saveSubtitleBold(normalized.bold)
+        PlayerSettingsStorage.saveSubtitleCustomFont(normalized.customFontFile)
         PlayerSettingsStorage.saveSubtitleFontSizeSp(normalized.fontSizeSp)
         PlayerSettingsStorage.saveSubtitleBottomOffset(normalized.bottomOffset)
         PlayerSettingsStorage.saveSubtitleStripSdh(normalized.stripSdh)

@@ -74,11 +74,13 @@ interface NuvioPlayerBridge {
     fun clearExternalSubtitle()
     fun clearExternalSubtitleAndSelect(trackId: Int)
     fun setSubtitleDelayMs(delayMs: Int)
+    fun setSubtitleFontPath(path: String)
     fun applySubtitleStyle(
         textColor: String,
         backgroundColor: String,
         outlineColor: String,
         outlineSize: Float,
+        shadowOffset: Float,
         bold: Boolean,
         fontSize: Float,
         subPos: Int,

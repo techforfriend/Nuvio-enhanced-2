@@ -48,6 +48,9 @@ actual object PlayerSettingsStorage {
     private const val subtitleOutlineColorKey = "subtitle_outline_color"
     private const val subtitleOutlineEnabledKey = "subtitle_outline_enabled"
     private const val subtitleOutlineWidthKey = "subtitle_outline_width"
+    private const val subtitleShadowEnabledKey = "subtitle_shadow_enabled"
+    private const val subtitleShadowStrengthKey = "subtitle_shadow_strength"
+    private const val subtitleCustomFontKey = "subtitle_custom_font"
     private const val subtitleBoldKey = "subtitle_bold"
     private const val subtitleFontSizeSpKey = "subtitle_font_size_sp"
     private const val subtitleBottomOffsetKey = "subtitle_bottom_offset"
@@ -625,6 +628,50 @@ actual object PlayerSettingsStorage {
             ?.edit()
             ?.putInt(ProfileScopedKey.of(subtitleOutlineWidthKey), width)
             ?.apply()
+    }
+
+    actual fun loadSubtitleShadowEnabled(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(subtitleShadowEnabledKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, SubtitleStyleState.DEFAULT.shadowEnabled)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveSubtitleShadowEnabled(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(subtitleShadowEnabledKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadSubtitleShadowStrength(): Int? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(subtitleShadowStrengthKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getInt(key, SubtitleStyleState.DEFAULT.shadowStrength)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveSubtitleShadowStrength(strength: Int) {
+        preferences
+            ?.edit()
+            ?.putInt(ProfileScopedKey.of(subtitleShadowStrengthKey), strength)
+            ?.apply()
+    }
+
+    actual fun loadSubtitleCustomFont(): String? =
+        preferences?.getString(ProfileScopedKey.of(subtitleCustomFontKey), null)
+
+    actual fun saveSubtitleCustomFont(fileName: String?) {
+        preferences?.edit()?.apply {
+            val key = ProfileScopedKey.of(subtitleCustomFontKey)
+            if (fileName.isNullOrBlank()) remove(key) else putString(key, fileName)
+        }?.apply()
     }
 
     actual fun loadSubtitleBold(): Boolean? =

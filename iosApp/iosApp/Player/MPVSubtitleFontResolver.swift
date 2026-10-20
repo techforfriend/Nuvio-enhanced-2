@@ -114,6 +114,19 @@ enum MPVSubtitleFontResolver {
 
     private(set) static var registeredFamilies: [String] = []
 
+    static func registerCustomFont(atPath path: String) -> String? {
+        let url = URL(fileURLWithPath: path) as CFURL
+        var error: Unmanaged<CFError>?
+        if !CTFontManagerRegisterFontsForURL(url, .process, &error) {
+            let code = error.map { CFErrorGetCode($0.takeRetainedValue()) } ?? 0
+            guard code == CTFontManagerError.alreadyRegistered.rawValue else { return nil }
+        }
+        let descriptors = CTFontManagerCreateFontDescriptorsFromURL(url) as? [CTFontDescriptor]
+        return descriptors?.lazy
+            .compactMap { CTFontDescriptorCopyAttribute($0, kCTFontFamilyNameAttribute) as? String }
+            .first
+    }
+
     // MARK: Resolution
 
     /// Use the bundled Latin face for every script that does not need a
@@ -296,6 +309,8 @@ final class MPVSubtitleFontController {
     private var informativeCueCount = 0
     private var profileLocked = false
     private var currentSubtitleTrackID: Int64?
+    private var customFontPath: String?
+    private var customFamily: String?
 
     private let minimumEvidenceCues = 3
     private let maximumEvidenceCues = 5
@@ -335,8 +350,31 @@ final class MPVSubtitleFontController {
     }
 
     func reapplyFont() {
-        guard let family = appliedFamily else { return }
+        guard let family = desiredFamily() ?? appliedFamily else { return }
+        appliedFamily = family
         player?.setStringProperty("sub-font", family)
+    }
+
+    func setCustomFontPath(_ path: String?) {
+        guard path != customFontPath else { return }
+        customFontPath = path
+        customFamily = path.flatMap { MPVSubtitleFontResolver.registerCustomFont(atPath: $0) }
+        if let path, customFamily == nil {
+            InAppLogBridge.shared.warn(
+                tag: "MPV/SubFont",
+                message: "custom font could not be registered: \((path as NSString).lastPathComponent)"
+            )
+        }
+        applyResolvedFont()
+    }
+
+    private func desiredFamily() -> String? {
+        let script = scriptFromText ?? scriptFromLanguage
+        if let customFamily, script == nil || script == .latinExtended {
+            return customFamily
+        }
+        return script.flatMap { MPVSubtitleFontResolver.family(for: $0) }
+            ?? MPVSubtitleFontResolver.baselineFamily
     }
 
     func handlePropertyChange(_ eventPtr: UnsafeMutablePointer<mpv_event>) {
@@ -471,8 +509,7 @@ final class MPVSubtitleFontController {
 
     private func applyResolvedFont() {
         let script = scriptFromText ?? scriptFromLanguage
-        let family = script.flatMap { MPVSubtitleFontResolver.family(for: $0) }
-            ?? MPVSubtitleFontResolver.baselineFamily
+        let family = desiredFamily()
 
         guard let family, family != appliedFamily else { return }
 
