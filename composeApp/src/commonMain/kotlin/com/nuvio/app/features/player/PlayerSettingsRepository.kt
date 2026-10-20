@@ -358,6 +358,7 @@ object PlayerSettingsRepository {
                 .coerceIn(SUBTITLE_SHADOW_STRENGTH_MIN, SUBTITLE_SHADOW_STRENGTH_MAX),
             bold = PlayerSettingsStorage.loadSubtitleBold()
                 ?: SubtitleStyleState.DEFAULT.bold,
+            customFontFile = PlayerSettingsStorage.loadSubtitleCustomFont()?.takeIf { it.isNotBlank() },
             fontSizeSp = (PlayerSettingsStorage.loadSubtitleFontSizeSp()
                 ?: SubtitleStyleState.DEFAULT.fontSizeSp).coerceIn(subtitleFontSizeRangeSp),
             bottomOffset = PlayerSettingsStorage.loadSubtitleBottomOffset()
@@ -682,6 +683,7 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveSubtitleShadowEnabled(normalized.shadowEnabled)
         PlayerSettingsStorage.saveSubtitleShadowStrength(normalized.shadowStrength)
         PlayerSettingsStorage.saveSubtitleBold(normalized.bold)
+        PlayerSettingsStorage.saveSubtitleCustomFont(normalized.customFontFile)
         PlayerSettingsStorage.saveSubtitleFontSizeSp(normalized.fontSizeSp)
         PlayerSettingsStorage.saveSubtitleBottomOffset(normalized.bottomOffset)
         PlayerSettingsStorage.saveSubtitleStripSdh(normalized.stripSdh)

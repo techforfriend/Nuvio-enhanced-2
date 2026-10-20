@@ -55,6 +55,7 @@ data class SubtitleStyleState(
     val shadowEnabled: Boolean = false,
     val shadowStrength: Int = SUBTITLE_SHADOW_STRENGTH_DEFAULT,
     val bold: Boolean = false,
+    val customFontFile: String? = null,
     val fontSizeSp: Int = 18,
     val bottomOffset: Int = 20,
     val stripSdh: Boolean = false,

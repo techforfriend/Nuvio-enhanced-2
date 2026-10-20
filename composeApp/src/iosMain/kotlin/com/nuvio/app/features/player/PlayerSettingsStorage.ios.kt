@@ -43,6 +43,7 @@ actual object PlayerSettingsStorage {
     private const val secondaryPreferredSubtitleLanguageKey = "secondary_preferred_subtitle_language"
     private const val subtitleTextColorKey = "subtitle_text_color"
     private const val subtitleBackgroundColorKey = "subtitle_background_color"
+    private const val subtitleCustomFontKey = "subtitle_custom_font"
     private const val subtitleOutlineColorKey = "subtitle_outline_color"
     private const val subtitleOutlineEnabledKey = "subtitle_outline_enabled"
     private const val subtitleOutlineWidthKey = "subtitle_outline_width"
@@ -518,6 +519,18 @@ actual object PlayerSettingsStorage {
 
     actual fun saveSubtitleOutlineWidth(width: Int) {
         saveInt(subtitleOutlineWidthKey, width)
+    }
+
+    actual fun loadSubtitleCustomFont(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(subtitleCustomFontKey))
+
+    actual fun saveSubtitleCustomFont(fileName: String?) {
+        val key = ProfileScopedKey.of(subtitleCustomFontKey)
+        if (fileName.isNullOrBlank()) {
+            NSUserDefaults.standardUserDefaults.removeObjectForKey(key)
+        } else {
+            NSUserDefaults.standardUserDefaults.setObject(fileName, forKey = key)
+        }
     }
 
     actual fun loadSubtitleShadowEnabled(): Boolean? {

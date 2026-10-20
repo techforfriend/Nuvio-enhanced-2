@@ -357,6 +357,7 @@ actual fun PlatformPlayerSurface(
                     "Player/iOS",
                     "apply subtitle style font=${style.fontSizeSp} bold=${style.bold} outline=${style.outlineEnabled}:${style.outlineWidth} bottom=${style.bottomOffset}",
                 )
+                bridge.setSubtitleFontPath(SubtitleFontRepository.pathOf(style.customFontFile).orEmpty())
                 bridge.applySubtitleStyle(
                     textColor = style.textColor.toMpvColorString(),
                     backgroundColor = style.backgroundColor.toMpvColorString(),

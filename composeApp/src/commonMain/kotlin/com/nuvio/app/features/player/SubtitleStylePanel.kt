@@ -29,6 +29,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -39,6 +41,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.nuvio
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_action_off
 import nuvio.composeapp.generated.resources.compose_action_on
@@ -47,6 +51,8 @@ import nuvio.composeapp.generated.resources.compose_player_bold
 import nuvio.composeapp.generated.resources.compose_player_bottom_offset
 import nuvio.composeapp.generated.resources.compose_player_capture_line
 import nuvio.composeapp.generated.resources.compose_player_color
+import nuvio.composeapp.generated.resources.compose_player_font
+import nuvio.composeapp.generated.resources.compose_player_font_default
 import nuvio.composeapp.generated.resources.compose_player_font_size
 import nuvio.composeapp.generated.resources.compose_player_font_size_value
 import nuvio.composeapp.generated.resources.compose_player_loading_lines
@@ -139,6 +145,11 @@ fun SubtitleStylePanel(
                 onClick = { onStyleChanged(style.copy(bold = !style.bold)) },
             )
         }
+
+        SubtitleFontSection(
+            selectedFontFile = style.customFontFile,
+            onFontSelected = { fileName -> onStyleChanged(style.copy(customFontFile = fileName)) },
+        )
 
         SubtitleStyleSection(title = stringResource(Res.string.compose_player_color)) {
             SubtitleColorPicker(
@@ -315,6 +326,63 @@ private fun SubtitleStepperButton(
             contentDescription = null,
             tint = Color.White,
             modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+@Composable
+private fun SubtitleFontSection(
+    selectedFontFile: String?,
+    onFontSelected: (String?) -> Unit,
+) {
+    LaunchedEffect(Unit) { withContext(Dispatchers.Default) { SubtitleFontRepository.ensureLoaded() } }
+    val fonts by SubtitleFontRepository.fonts.collectAsState()
+    if (fonts.isEmpty()) return
+    val selected = selectedFontFile?.takeIf { file -> fonts.any { it.fileName == file } }
+
+    SubtitleStyleSection(title = stringResource(Res.string.compose_player_font)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            SubtitleOptionChip(
+                label = stringResource(Res.string.compose_player_font_default),
+                selected = selected == null,
+                onClick = { onFontSelected(null) },
+            )
+            fonts.forEach { font ->
+                SubtitleOptionChip(
+                    label = font.familyName,
+                    selected = selected == font.fileName,
+                    onClick = { onFontSelected(font.fileName) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubtitleOptionChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (selected) tokens.colors.accent else Color.White.copy(alpha = 0.08f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    ) {
+        Text(
+            text = label,
+            color = if (selected) tokens.colors.onAccent else Color.White,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

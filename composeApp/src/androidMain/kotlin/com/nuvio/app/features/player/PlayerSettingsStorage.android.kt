@@ -50,6 +50,7 @@ actual object PlayerSettingsStorage {
     private const val subtitleOutlineWidthKey = "subtitle_outline_width"
     private const val subtitleShadowEnabledKey = "subtitle_shadow_enabled"
     private const val subtitleShadowStrengthKey = "subtitle_shadow_strength"
+    private const val subtitleCustomFontKey = "subtitle_custom_font"
     private const val subtitleBoldKey = "subtitle_bold"
     private const val subtitleFontSizeSpKey = "subtitle_font_size_sp"
     private const val subtitleBottomOffsetKey = "subtitle_bottom_offset"
@@ -661,6 +662,16 @@ actual object PlayerSettingsStorage {
             ?.edit()
             ?.putInt(ProfileScopedKey.of(subtitleShadowStrengthKey), strength)
             ?.apply()
+    }
+
+    actual fun loadSubtitleCustomFont(): String? =
+        preferences?.getString(ProfileScopedKey.of(subtitleCustomFontKey), null)
+
+    actual fun saveSubtitleCustomFont(fileName: String?) {
+        preferences?.edit()?.apply {
+            val key = ProfileScopedKey.of(subtitleCustomFontKey)
+            if (fileName.isNullOrBlank()) remove(key) else putString(key, fileName)
+        }?.apply()
     }
 
     actual fun loadSubtitleBold(): Boolean? =

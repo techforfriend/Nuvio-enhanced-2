@@ -197,6 +197,7 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
     func clearExternalSubtitle() { playerVC?.removeExternalSubtitles() }
     func clearExternalSubtitleAndSelect(trackId: Int32) { playerVC?.removeExternalSubtitlesAndSelect(Int(trackId)) }
     func setSubtitleDelayMs(delayMs: Int32) { playerVC?.setSubtitleDelayMs(Int(delayMs)) }
+    func setSubtitleFontPath(path: String) { playerVC?.setSubtitleFontPath(path) }
     func applySubtitleStyle(
         textColor: String,
         backgroundColor: String,
@@ -1549,6 +1550,10 @@ final class MPVPlayerViewController: UIViewController {
                 command("sub-remove", args: ["\(id)"], checkForErrors: false)
             }
         }
+    }
+
+    func setSubtitleFontPath(_ path: String) {
+        subtitleFonts.setCustomFontPath(path.isEmpty ? nil : path)
     }
 
     func setSubtitleDelayMs(_ delayMs: Int) {

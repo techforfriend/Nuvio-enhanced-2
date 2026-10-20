@@ -406,7 +406,7 @@ internal class AiostreamsAssEngine(
                 borderStyle = if (box) 4 else 1,
                 bold = style.bold,
                 shadowSize = if (style.shadowEnabled) style.shadowStrength.toDouble() else 0.0,
-                fontFile = null,
+                fontFile = com.nuvio.app.features.player.SubtitleFontRepository.pathOf(style.customFontFile),
             )
         }
 

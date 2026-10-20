@@ -8,7 +8,6 @@ import android.net.Uri
 import android.util.Log
 import android.util.TypedValue
 import android.graphics.RectF
-import android.graphics.Typeface
 import android.os.Build
 import android.os.SystemClock
 import android.view.View
@@ -1729,6 +1728,7 @@ private class NuvioLibmpvView(
         mpv.setOptionString("demuxer-max-bytes", "${libmpvCacheBytes()}").logIfMpvError("demuxer-max-bytes")
         mpv.setOptionString("demuxer-max-back-bytes", "${libmpvCacheBytes()}").logIfMpvError("demuxer-max-back-bytes")
         mpv.setOptionString("vd-lavc-film-grain", "cpu")
+        SubtitleFontFiles.directoryPath()?.let { mpv.setOptionString("sub-fonts-dir", it).logIfMpvError("sub-fonts-dir") }
         mpv.setPropertyBoolean("keep-open", true)
         mpv.setPropertyBoolean("input-default-bindings", true)
         mpv.setPropertyBoolean("audio-fallback-to-null", true)
@@ -2294,6 +2294,10 @@ private class NuvioLibmpvView(
                     mpv.setPropertyString("sub-border-color", style.outlineColor.toMpvColor())
                     mpv.setPropertyString("sub-border-style", style.toMpvSubtitleBorderStyle())
                     mpv.setPropertyString("sub-bold", if (style.bold) "yes" else "no")
+                    mpv.setPropertyString(
+                        "sub-font",
+                        SubtitleFontRepository.familyNameFor(style.customFontFile) ?: MPV_DEFAULT_SUBTITLE_FONT,
+                    )
                     mpv.setPropertyInt("sub-font-size", style.toMpvSubtitleFontSize())
                     mpv.setPropertyInt("sub-outline-size", style.toMpvSubtitleOutlineSize())
                     mpv.setPropertyInt("sub-border-size", style.toMpvSubtitleOutlineSize())
@@ -2578,6 +2582,7 @@ private const val MPV_SUBTITLE_FONT_SIZE_MAX = 122
 private const val MPV_SUBTITLE_OUTLINE_SIZE_SCALE = 1.5
 private const val MPV_SUBTITLE_SHADOW_OFFSET_SCALE = 1.5
 private const val MPV_SUBTITLE_SHADOW_COLOR = "#B3000000"
+private const val MPV_DEFAULT_SUBTITLE_FONT = "sans-serif"
 
 private fun SubtitleStyleState.toMpvSubtitleShadowOffset(): Double =
     if (shadowEnabled && toMpvSubtitleBorderStyle() != "opaque-box") shadowStrength * MPV_SUBTITLE_SHADOW_OFFSET_SCALE else 0.0
@@ -3015,7 +3020,7 @@ private fun PlayerView.applySubtitleStyle(style: SubtitleStyleState, pipScale: F
                 android.graphics.Color.TRANSPARENT,
                 if (style.outlineEnabled) CaptionStyleCompat.EDGE_TYPE_OUTLINE else CaptionStyleCompat.EDGE_TYPE_NONE,
                 style.outlineColor.toArgb(),
-                if (style.bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT,
+                SubtitleTypefaces.forStyle(style),
             )
         )
         setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, style.fontSizeSp.toFloat() * pipScale)
