@@ -52,8 +52,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Star
@@ -380,34 +382,43 @@ internal fun HomeHeroSection(
                         Spacer(modifier = Modifier.height(14.dp))
                         Surface(
                             modifier = Modifier
-                                .clip(heroButtonShape)
-                                .background(actionAccent.brush, heroButtonShape)
+                                .widthIn(min = 180.dp, max = 250.dp)
+                                .clip(RoundedCornerShape(999.dp))
+                                .background(actionAccent.brush, RoundedCornerShape(999.dp))
                                 .clickable(enabled = onItemClick != null) {
                                     onItemClick?.invoke(currentItem)
                                 },
                             color = Color.Transparent,
                             contentColor = actionAccent.contentColor,
-                            shape = heroButtonShape,
+                            shape = RoundedCornerShape(999.dp),
                         ) {
-                            Text(
-                                text = stringResource(Res.string.home_view_details),
-                                modifier = Modifier.padding(horizontal = 28.dp, vertical = 12.dp),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 32.dp, vertical = 12.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = stringResource(Res.string.home_view_details),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = actionAccent.contentColor,
+                                )
+                            }
                         }
                     }
 
                     if (items.size > 1) {
-                        Spacer(modifier = Modifier.height(if (layout.isTablet) 14.dp else 12.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             items.forEachIndexed { index, _ ->
                                 val activeFraction = visiblePages
                                     .firstOrNull { it.itemIndex == index }
                                     ?.visibility ?: 0f
+                                val isActive = activeFraction > 0.5f
                                 Box(
                                     modifier = Modifier
                                         .clickable {
@@ -417,19 +428,16 @@ internal fun HomeHeroSection(
                                                 )
                                             }
                                         }
-                                        .clip(CircleShape)
+                                        .clip(RoundedCornerShape(999.dp))
                                         .then(
-                                            if (activeFraction > 0.5f) {
-                                                Modifier.background(lineBrush ?: actionAccent.brush)
+                                            if (isActive) {
+                                                Modifier.background(MaterialTheme.colorScheme.primary)
                                             } else {
-                                                Modifier.background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f))
+                                                Modifier.background(Color.White.copy(alpha = 0.35f))
                                             }
                                         )
-                                        .graphicsLayer {
-                                            alpha = 0.35f + (0.57f * activeFraction)
-                                        }
-                                        .width(8.dp + (24.dp * activeFraction))
-                                        .height(8.dp),
+                                        .width(if (isActive) 26.dp else 6.5.dp)
+                                        .height(6.5.dp),
                                 )
                             }
                         }
@@ -563,48 +571,91 @@ private fun HeroContentBlock(
             )
         }
 
-        val metaSpacing = if (compactHeroMetadata) 6.dp else 8.dp
-        Spacer(modifier = Modifier.height(if (compactHeroMetadata) 8.dp else 12.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = if (layout.isTablet) {
-                Arrangement.spacedBy(metaSpacing, Alignment.Start)
-            } else {
-                Arrangement.spacedBy(metaSpacing, Alignment.CenterHorizontally)
-            },
-            verticalAlignment = Alignment.CenterVertically,
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Frosted capsule metadata container (Series | Genre | Year | Extra)
+        Surface(
+            shape = RoundedCornerShape(999.dp),
+            color = Color(0x40000000),
+            border = BorderStroke(1.dp, Color(0x35FFFFFF)),
         ) {
-            if (!ratingsAboveMetadata && showRatings && !item.imdbRating.isNullOrBlank()) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+            Row(
+                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = MaterialTheme.colorScheme.primary,
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Star,
-                        contentDescription = null,
-                        tint = Color(0xFFFFD700),
-                        modifier = Modifier.size(if (compactHeroMetadata) 14.dp else 16.dp),
-                    )
                     Text(
-                        text = item.imdbRating,
-                        style = if (compactHeroMetadata) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
-                        color = Color(0xFFFFD700),
+                        text = item.type.replaceFirstChar(Char::uppercase),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                         fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 2.5.dp),
                     )
                 }
-                HeroMetaDot()
+
+                item.genres.firstOrNull()?.let { genre ->
+                    Text(
+                        text = genre,
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                        color = Color.White.copy(alpha = 0.92f),
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+
+                item.releaseInfo?.takeIf { it.isNotBlank() }?.let { info ->
+                    Text(
+                        text = formatReleaseDateForDisplay(info),
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                        color = Color.White.copy(alpha = 0.92f),
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+
+                if (item.genres.size > 1) {
+                    Text(
+                        text = item.genres[1],
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                        color = Color.White.copy(alpha = 0.92f),
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
             }
-            HeroMetaText(
-                text = item.type.replaceFirstChar(Char::uppercase),
-                isCompact = compactHeroMetadata,
-            )
-            item.genres.firstOrNull()?.let { genre ->
-                HeroMetaDot()
-                HeroMetaText(text = genre, isCompact = compactHeroMetadata)
-            }
-            item.releaseInfo?.takeIf { it.isNotBlank() }?.let { info ->
-                HeroMetaDot()
-                HeroMetaText(text = formatReleaseDateForDisplay(info), isCompact = compactHeroMetadata)
+        }
+
+        // IMDb rating badge (Yellow IMDb logo + gold rating text)
+        if (!ratingsAboveMetadata && showRatings && !item.imdbRating.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(9.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(3.dp),
+                    color = Color(0xFFF5C518),
+                ) {
+                    Text(
+                        text = "IMDb",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 10.sp,
+                            letterSpacing = (-0.2).sp,
+                            fontWeight = FontWeight.Black,
+                        ),
+                        color = Color.Black,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                    )
+                }
+                Text(
+                    text = item.imdbRating,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    color = Color(0xFFF5C518),
+                )
             }
         }
 
