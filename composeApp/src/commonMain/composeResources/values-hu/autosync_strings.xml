@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_playback_subtitle_auto_sync">Felirat automatikus szinkronizálása</string>
-    <string name="settings_playback_subtitle_auto_sync_description">Az elsõdleges kiegészítõ-felirat automatikus szinkronizálása a lejátszás indításakor. Elsõdleges feliratnyelv beállítása szükséges hozzá.</string>
-    <string name="settings_playback_auto_sync_mode_aggressive">Auto szinkron keresés: Alapos</string>
-    <string name="settings_playback_auto_sync_mode_aggressive_description">A pontosabb egyezés érdekében szinkronizálás elõtt tovább hasonlítja össze a többi feliratot és beágyazott sávot. Csak a biztos egyezéseket alkalmazza.</string>
-    <string name="settings_playback_auto_sync_mode_passive">Auto szinkron keresés: Gyors</string>
-    <string name="settings_playback_auto_sync_mode_passive_description">Mielõbb az elsõ jó egyezést használja. Az Alapos módhoz hasonlóan csak a biztos egyezéseket alkalmazza.</string>
-    <string name="settings_playback_auto_sync_tolerance">Auto szinkron toleranciája: %1$s</string>
-    <string name="settings_playback_auto_sync_tolerance_description">Megtartja az eredeti feliratelcsúsztatást, ha a szinkronizálás legfeljebb ennyivel módosítaná. Koppints a módosításhoz.</string>
+    <string name="settings_playback_subtitle_auto_sync">Felirat automatikus szinkronizÃ¡lÃ¡sa</string>
+    <string name="settings_playback_subtitle_auto_sync_description">Az elsÃµdleges kiegÃ©szÃ­tÃµ-felirat automatikus szinkronizÃ¡lÃ¡sa a lejÃ¡tszÃ¡s indÃ­tÃ¡sakor. ElsÃµdleges feliratnyelv beÃ¡llÃ­tÃ¡sa szÃ¼ksÃ©ges hozzÃ¡.</string>
+    <string name="settings_playback_auto_sync_mode_aggressive">Auto szinkron keresÃ©s: Alapos</string>
+    <string name="settings_playback_auto_sync_mode_aggressive_description">A pontosabb egyezÃ©s Ã©rdekÃ©ben szinkronizÃ¡lÃ¡s elÃµtt tovÃ¡bb hasonlÃ­tja Ã¶ssze a tÃ¶bbi feliratot Ã©s beÃ¡gyazott sÃ¡vot. Csak a biztos egyezÃ©seket alkalmazza.</string>
+    <string name="settings_playback_auto_sync_mode_passive">Auto szinkron keresÃ©s: Gyors</string>
+    <string name="settings_playback_auto_sync_mode_passive_description">MielÃµbb az elsÃµ jÃ³ egyezÃ©st hasznÃ¡lja. Az Alapos mÃ³dhoz hasonlÃ³an csak a biztos egyezÃ©seket alkalmazza.</string>
+    <string name="settings_playback_auto_sync_tolerance">Auto szinkron toleranciÃ¡ja: %1$s</string>
+    <string name="settings_playback_auto_sync_tolerance_description">Megtartja az eredeti feliratelcsÃºsztatÃ¡st, ha a szinkronizÃ¡lÃ¡s legfeljebb ennyivel mÃ³dosÃ­tanÃ¡. Koppints a mÃ³dosÃ­tÃ¡shoz.</string>
     <string name="settings_playback_auto_sync_tolerance_off">Ki</string>
     <string name="settings_playback_auto_sync_tolerance_value">%1$d ms</string>
 </resources>
