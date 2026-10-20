@@ -27,7 +27,7 @@
     <string name="settings_mdblist_auth_revoked">Sua conexão com o MDBList expirou ou foi revogada. Conecte-se novamente para retomar a sincronização.</string>
     <string name="settings_mdblist_invalid_response">O MDBList retornou uma resposta incompleta. Tente novamente.</string>
     <string name="settings_mdblist_write_required">O MDBList não concedeu permissão para atualizar o histórico de visualização. Reconecte e permita o acesso de gravação.</string>
-    <string name="library_manage_lists">Gerenciar Listas</string>
+    <string name="library_manage_lists">Gerenciar listas</string>
     <string name="library_create_list">Criar Lista</string>
     <string name="library_edit_list">Editar Lista</string>
     <string name="library_list_name">Nome</string>

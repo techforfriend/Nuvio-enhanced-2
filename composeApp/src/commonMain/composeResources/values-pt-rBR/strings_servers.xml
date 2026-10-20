@@ -21,9 +21,9 @@
     <string name="servers_enabled">Ativado</string>
     <string name="servers_enabled_description">Exibir este servidor no Início, na busca e nos resultados de stream.</string>
     <string name="servers_catalog_metadata">Usar metadados de addons</string>
-    <string name="servers_catalog_metadata_description">Os títulos abrem com os detalhes dos seus addons e sincronizam como qualquer outro título do catálogo, com a reprodução e as marcações de assistido ainda enviadas para %1$s. Alguns títulos podem não corresponder ou não reproduzir se os seus addons os numerarem ou identificarem de forma diferente.</string>
-    <string name="servers_import_watch_state">Importar progresso de visualização</string>
-    <string name="servers_import_watch_state_description">Adicione os títulos que você está assistindo no %1$s ao Continuar assistindo, juntamente com suas marcações de assistido. A reprodução é retomada do %1$s de qualquer forma.</string>
+    <string name="servers_catalog_metadata_description">Os títulos abrem com os detalhes dos seus addons e sincronizam como qualquer outro título do catálogo, com a reprodução e as marcações de itens assistidos ainda enviadas para %1$s. Alguns títulos podem não corresponder ou não reproduzir se os seus addons os numerarem ou identificarem de forma diferente.</string>
+    <string name="servers_import_watch_state">Importar estado de visualização</string>
+    <string name="servers_import_watch_state_description">Adicione os títulos que você está assistindo no %1$s ao Continuar assistindo, junto com as marcações de itens assistidos. A reprodução é retomada a partir do %1$s de qualquer forma.</string>
     <string name="servers_sign_in_again">Entrar novamente</string>
     <string name="servers_remove">Remover servidor</string>
     <string name="servers_remove_confirm_title">Remover este servidor?</string>
