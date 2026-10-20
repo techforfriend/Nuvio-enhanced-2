@@ -1422,23 +1422,27 @@ fun HomeScreen(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    val themeAccent = MaterialTheme.colorScheme.primary
+                    val themeSurface = MaterialTheme.colorScheme.surface
+                    val themeOnSurface = MaterialTheme.colorScheme.onSurface
+
                     if (cloudStreamProviderMenuExpanded) {
                         Box(
                             modifier = Modifier
-                                .widthIn(min = 220.dp, max = 250.dp)
-                                .clip(RoundedCornerShape(18.dp))
-                                .background(Color(0xFF141416))
-                                .border(1.dp, Color(0x35FF7A00), RoundedCornerShape(18.dp))
-                                .padding(12.dp),
+                                .widthIn(min = 140.dp, max = 165.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(themeSurface.copy(alpha = 0.95f))
+                                .border(1.dp, themeAccent.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+                                .padding(8.dp),
                         ) {
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
+                                        .clip(RoundedCornerShape(6.dp))
                                         .clickable {
                                             HomeRepository.setSelectedCloudStreamProvider(null)
                                             cloudStreamProviderMenuExpanded = false
@@ -1449,20 +1453,22 @@ fun HomeScreen(
                                     Icon(
                                         imageVector = Icons.Rounded.Layers,
                                         contentDescription = null,
-                                        tint = Color(0xFFFF7A00),
-                                        modifier = Modifier.size(20.dp),
+                                        tint = themeAccent,
+                                        modifier = Modifier.size(16.dp),
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = "All extensions",
-                                        color = Color.White,
+                                        color = themeOnSurface,
                                         fontWeight = FontWeight.SemiBold,
-                                        fontSize = 14.sp,
+                                        fontSize = 12.sp,
                                         modifier = Modifier.weight(1f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
                                     Box(
                                         modifier = Modifier
-                                            .size(24.dp)
+                                            .size(20.dp)
                                             .clip(CircleShape)
                                             .clickable { cloudStreamProviderMenuExpanded = false },
                                         contentAlignment = Alignment.Center,
@@ -1470,23 +1476,23 @@ fun HomeScreen(
                                         Icon(
                                             imageVector = Icons.Rounded.Close,
                                             contentDescription = "Close",
-                                            tint = Color.White.copy(alpha = 0.60f),
-                                            modifier = Modifier.size(16.dp),
+                                            tint = themeOnSurface.copy(alpha = 0.60f),
+                                            modifier = Modifier.size(13.dp),
                                         )
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(2.dp))
+                                Spacer(modifier = Modifier.height(1.dp))
 
                                 runnableCloudStreamProviders.forEach { provider ->
                                     val isSelected = provider.metadata.id.value == selectedCloudStreamProviderId
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(RoundedCornerShape(12.dp))
+                                            .clip(RoundedCornerShape(8.dp))
                                             .then(
                                                 if (isSelected) {
-                                                    Modifier.background(Color(0xFF222226))
+                                                    Modifier.background(themeAccent.copy(alpha = 0.16f))
                                                 } else {
                                                     Modifier
                                                 }
@@ -1495,59 +1501,59 @@ fun HomeScreen(
                                                 HomeRepository.setSelectedCloudStreamProvider(provider.metadata.id.value)
                                                 cloudStreamProviderMenuExpanded = false
                                             }
-                                            .padding(horizontal = 10.dp, vertical = 9.dp),
+                                            .padding(horizontal = 7.dp, vertical = 6.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         if (isSelected) {
                                             Box(
                                                 modifier = Modifier
-                                                    .size(28.dp)
-                                                    .background(Color(0xFF2E1C10), RoundedCornerShape(8.dp)),
+                                                    .size(22.dp)
+                                                    .background(themeAccent.copy(alpha = 0.25f), RoundedCornerShape(6.dp)),
                                                 contentAlignment = Alignment.Center,
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Rounded.PlayArrow,
                                                     contentDescription = null,
-                                                    tint = Color(0xFFFF7A00),
-                                                    modifier = Modifier.size(18.dp),
+                                                    tint = themeAccent,
+                                                    modifier = Modifier.size(14.dp),
                                                 )
                                             }
                                         } else {
                                             Box(
-                                                modifier = Modifier.size(28.dp),
+                                                modifier = Modifier.size(22.dp),
                                                 contentAlignment = Alignment.Center,
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Rounded.Movie,
                                                     contentDescription = null,
-                                                    tint = Color.White.copy(alpha = 0.85f),
-                                                    modifier = Modifier.size(18.dp),
+                                                    tint = themeOnSurface.copy(alpha = 0.70f),
+                                                    modifier = Modifier.size(14.dp),
                                                 )
                                             }
                                         }
-                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Spacer(modifier = Modifier.width(7.dp))
                                         Text(
                                             text = provider.metadata.name,
-                                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.85f),
-                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                                            fontSize = 14.sp,
+                                            color = if (isSelected) themeOnSurface else themeOnSurface.copy(alpha = 0.85f),
+                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                            fontSize = 12.sp,
                                             modifier = Modifier.weight(1f),
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
                                         )
-                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
                                         if (isSelected) {
                                             Icon(
                                                 imageVector = Icons.Rounded.Check,
                                                 contentDescription = null,
-                                                tint = Color(0xFFFF7A00),
-                                                modifier = Modifier.size(18.dp),
+                                                tint = themeAccent,
+                                                modifier = Modifier.size(15.dp),
                                             )
                                         } else {
                                             Box(
                                                 modifier = Modifier
-                                                    .size(18.dp)
-                                                    .border(1.5.dp, Color.White.copy(alpha = 0.35f), CircleShape),
+                                                    .size(14.dp)
+                                                    .border(1.2.dp, themeOnSurface.copy(alpha = 0.35f), CircleShape),
                                             )
                                         }
                                     }
@@ -1563,32 +1569,33 @@ fun HomeScreen(
 
                     Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(Color(0xFF141416))
-                            .border(1.5.dp, Color(0xFFFF7A00), RoundedCornerShape(24.dp))
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(themeSurface.copy(alpha = 0.92f))
+                            .border(1.2.dp, themeAccent, RoundedCornerShape(20.dp))
                             .clickable { cloudStreamProviderMenuExpanded = !cloudStreamProviderMenuExpanded }
-                            .padding(horizontal = 14.dp, vertical = 9.dp),
+                            .padding(horizontal = 11.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Layers,
                             contentDescription = null,
-                            tint = Color(0xFFFF7A00),
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = pillLabel,
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
+                            tint = themeAccent,
+                            modifier = Modifier.size(16.dp),
                         )
                         Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = pillLabel,
+                            color = themeOnSurface,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp,
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
                         Icon(
                             imageVector = if (cloudStreamProviderMenuExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
                             contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.90f),
-                            modifier = Modifier.size(18.dp),
+                            tint = themeOnSurface.copy(alpha = 0.85f),
+                            modifier = Modifier.size(15.dp),
                         )
                     }
                 }
