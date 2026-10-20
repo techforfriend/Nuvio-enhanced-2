@@ -891,6 +891,7 @@ internal fun MainAppContent(
                 streamType = channel.streamType,
                 logo = channel.logoUrl,
                 streamTitle = channel.name,
+                providerName = channel.groupName.ifBlank { "Live TV" },
                 parentMetaId = channel.id.ifBlank { channel.streamUrl },
                 parentMetaType = "live-tv",
             )
