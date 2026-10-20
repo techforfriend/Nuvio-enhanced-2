@@ -629,9 +629,11 @@ fun HomeScreen(
             emptyList()
         } else {
             buildHomeReleaseRadarItems(
+                todayIsoDate = CurrentDateProvider.todayIsoDate(),
                 continueWatchingItems = continueWatchingItems,
                 libraryItems = libraryUiState.items,
                 catalogSections = homeUiState.sections,
+                resolvedLibraryDetails = emptyMap(),
             ).filteredByNuvioEnhancedReleaseRadar(enhancedSettings)
         }
     }
