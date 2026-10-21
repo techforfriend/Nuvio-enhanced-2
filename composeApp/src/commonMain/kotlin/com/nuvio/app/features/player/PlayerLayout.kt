@@ -4,8 +4,11 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeContent
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -128,8 +131,19 @@ internal fun playerHorizontalSafePadding(): Dp {
 }
 
 @Composable
+internal fun playerToolbarTopInsets(metrics: PlayerLayoutMetrics): WindowInsets {
+    val safeInsets = WindowInsets.displayCutout.union(WindowInsets.statusBars).only(WindowInsetsSides.Top)
+    val contentInsets = WindowInsets(top = metrics.sliderBottomOffset / 2)
+    return if (isIos) safeInsets.union(contentInsets) else safeInsets.add(contentInsets)
+}
+
+@Composable
 internal fun playerTimelineBottomInsets(metrics: PlayerLayoutMetrics): WindowInsets {
-    val safeInsets = WindowInsets.safeContent.only(WindowInsetsSides.Bottom)
+    val safeInsets = if (isIos) {
+        WindowInsets.safeContent.only(WindowInsetsSides.Bottom)
+    } else {
+        WindowInsets.displayCutout.union(WindowInsets.navigationBars).only(WindowInsetsSides.Bottom)
+    }
     val contentInsets = WindowInsets(bottom = metrics.sliderBottomOffset / 2)
     return if (isIos) safeInsets.union(contentInsets) else safeInsets.add(contentInsets)
 }
