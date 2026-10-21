@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.nuvioTypeScale
+import com.nuvio.app.features.streams.StreamBadge
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import com.nuvio.app.core.i18n.localizedEpisodeTitle
@@ -56,6 +57,7 @@ internal fun PlayerTimelineDetails(
     providerName: String,
     isPlaying: Boolean,
     metrics: PlayerLayoutMetrics,
+    badges: List<StreamBadge> = emptyList(),
 ) {
     val typeScale = MaterialTheme.nuvioTypeScale
     Column(Modifier.padding(horizontal = PlayerTimelineContentInset)) {
@@ -80,6 +82,9 @@ internal fun PlayerTimelineDetails(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+        if (badges.isNotEmpty()) {
+            PlayerBadges(badges = badges, modifier = Modifier.padding(vertical = 4.dp))
         }
         if (!releaseInfo.isNullOrBlank()) {
             Text(
