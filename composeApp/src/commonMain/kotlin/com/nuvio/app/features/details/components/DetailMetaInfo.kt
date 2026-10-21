@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -125,10 +124,7 @@ fun DetailMetaInfo(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        ImdbRatingSourceLabel(
-                            storeTextStyle = imdbTextStyle,
-                            storeTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        ImdbRatingSourceLabel(storeTextStyle = imdbTextStyle)
                         Spacer(modifier = Modifier.width(5.dp))
                         Text(
                             text = validImdbRating,
@@ -220,10 +216,7 @@ internal fun RatingsRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (visuals.source == PROVIDER_IMDB && !AppFeaturePolicy.imdbRatingLogoEnabled) {
-                    ImdbRatingSourceLabel(
-                        storeTextStyle = ratingTextStyle,
-                        storeTextColor = visuals.valueColor,
-                    )
+                    ImdbRatingSourceLabel(storeTextStyle = ratingTextStyle)
                 } else {
                     val logoHeight = when (rating.rottenTomatoesStatus) {
                         RottenTomatoesStatus.CERTIFIED_FRESH, RottenTomatoesStatus.VERIFIED_HOT -> 24.dp
@@ -247,31 +240,18 @@ internal fun RatingsRow(
 }
 
 @Composable
-internal fun ImdbRatingSourceLabel(
-    storeTextStyle: TextStyle,
-    storeTextColor: Color,
-) {
+internal fun ImdbRatingSourceLabel(storeTextStyle: TextStyle) {
     if (AppFeaturePolicy.imdbRatingLogoEnabled) {
-        Surface(
-            shape = RoundedCornerShape(4.dp),
-            color = ImdbYellow,
-        ) {
-            Text(
-                text = stringResource(Res.string.source_imdb),
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 0.sp,
-                ),
-                color = ImdbBlack,
-            )
-        }
+        Image(
+            painter = painterResource(Res.drawable.rating_imdb),
+            contentDescription = stringResource(Res.string.source_imdb),
+            modifier = Modifier.size(width = 30.dp, height = 16.dp),
+        )
     } else {
         Text(
             text = stringResource(Res.string.source_imdb),
             style = storeTextStyle,
-            color = storeTextColor,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
         )
     }
@@ -342,7 +322,6 @@ private fun MetaBadgeText(
 }
 
 internal val ImdbYellow = Color(0xFFF5C518)
-private val ImdbBlack = Color(0xFF000000)
 
 private data class RatingVisuals(
     val source: String,
