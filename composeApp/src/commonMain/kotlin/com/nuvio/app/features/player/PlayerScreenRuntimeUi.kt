@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.features.p2p.P2pStreamingState
 import com.nuvio.app.features.party.PartyRepository
 import com.nuvio.app.features.p2p.formatP2pMegabytes
@@ -27,6 +28,7 @@ import com.nuvio.app.features.streams.streamAddonInstanceId
 import com.nuvio.app.isIos
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
@@ -326,10 +328,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                 args.onBack()
             },
             onPartyClick = if (PartyRepository.available.collectAsStateWithLifecycle().value) {
-                {
-                    showPartyPanel = true
-                    controlsVisible = false
-                }
+                { openPartyPanel() }
             } else {
                 null
             },
@@ -401,7 +400,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                 null
             },
             onSwitchEngineClick = if (playerController?.playbackEngine != null) {
-                { switchPlaybackEngine() }
+                { showSwitchEngineConfirm = true }
             } else {
                 null
             },
@@ -727,4 +726,19 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         addonSubtitle = selectedAddonSubtitle.takeIf { useCustomSubtitles },
         onDismiss = { showStreamInfo = false },
     )
+    val switchEngineTarget = playerController?.playbackEngine?.switchTarget
+    if (switchEngineTarget != null) {
+        NuvioStatusModal(
+            isVisible = showSwitchEngineConfirm,
+            title = stringResource(Res.string.player_engine_switch_title, switchEngineTarget.label),
+            message = stringResource(Res.string.player_engine_switch_message),
+            confirmText = stringResource(Res.string.action_switch),
+            dismissText = stringResource(Res.string.action_cancel),
+            onConfirm = {
+                showSwitchEngineConfirm = false
+                switchPlaybackEngine()
+            },
+            onDismiss = { showSwitchEngineConfirm = false },
+        )
+    }
 }
