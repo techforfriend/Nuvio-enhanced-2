@@ -2361,7 +2361,7 @@
     <string name="updates_channel_description">Válaszd ki a fogadni kívánt alkalmazásfrissítések típusát</string>
     <string name="updates_channel_stable">Stabil (Stable)</string>
     <string name="updates_channel_beta">Béta (Beta)</string>
-    <string name="updates_channel_stable_description">Mennaponta történő használatra javasolt.</string>
+    <string name="updates_channel_stable_description">Mindennapi használatra javasolt.</string>
     <string name="updates_channel_beta_description">Korai frissítések, amelyek hibákat tartalmazhatnak, funkciókat törhetnek meg, vagy váratlanul működhetnek.</string>
     <string name="updates_waiting_for_stable">A következő stabil kiadást fogod megkapni, amint elérhetővé válik</string>
     <string name="settings_playback_auto_skip_segments">Automatikus átugrás</string>
