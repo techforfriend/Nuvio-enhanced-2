@@ -263,7 +263,7 @@ internal fun PlayerControlsShell(
                         partyActive = partyActive,
                         onOrientationToggleClick = onOrientationToggleClick,
                         isPortraitPlayback = isPortraitPlayback,
-                        onSwitchEngineClick = onSwitchEngineClick,
+                        onPictureInPictureClick = onPictureInPictureClick,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .windowInsetsPadding(playerToolbarTopInsets(metrics))
@@ -407,7 +407,7 @@ internal fun PlayerControlsShell(
                         onSubmitIntroClick = onSubmitIntroClick,
                         qualityLabel = qualityLabel,
                         onQualityClick = onQualityClick,
-                        onPictureInPictureClick = onPictureInPictureClick,
+                        onSwitchEngineClick = onSwitchEngineClick,
                         onInfoClick = onInfoClick,
                         onRateClick = onRateClick,
                         userRating = userRating,

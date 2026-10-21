@@ -85,7 +85,7 @@ internal fun PlayerToolbar(
     partyActive: Boolean = false,
     onOrientationToggleClick: (() -> Unit)? = null,
     isPortraitPlayback: Boolean = false,
-    onSwitchEngineClick: (() -> Unit)? = null,
+    onPictureInPictureClick: (() -> Unit)? = null,
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
@@ -98,11 +98,11 @@ internal fun PlayerToolbar(
             ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (onSwitchEngineClick != null) {
+            onPictureInPictureClick?.let {
                 PlayerAction(
-                    description = stringResource(Res.string.cd_switch_player_engine),
-                    icon = Icons.Rounded.SwapHoriz,
-                    onClick = onSwitchEngineClick,
+                    description = stringResource(Res.string.compose_player_picture_in_picture),
+                    icon = Icons.Rounded.PictureInPictureAlt,
+                    onClick = it,
                 )
             }
             onOrientationToggleClick?.let {
@@ -176,57 +176,17 @@ internal fun PlayerControlActions(
     onSubmitIntroClick: (() -> Unit)?,
     qualityLabel: String? = null,
     onQualityClick: (() -> Unit)? = null,
-    onPictureInPictureClick: (() -> Unit)? = null,
+    onSwitchEngineClick: (() -> Unit)? = null,
     onInfoClick: (() -> Unit)? = null,
     onRateClick: (() -> Unit)? = null,
     userRating: Int? = null,
     onInteraction: () -> Unit,
 ) {
-    val actions = listOfNotNull(
+    val primaryActions = listOfNotNull(
         onNextEpisodeClick?.let {
             PlayerControlAction(
                 stringResource(Res.string.player_next_episode), it,
                 icon = Icons.Rounded.SkipNext, iconSize = 40.dp,
-            )
-        },
-        PlayerControlAction(
-            stringResource(Res.string.compose_player_subtitles), onSubtitleClick,
-            painter = appIconPainter(AppIconResource.PlayerSubtitles),
-        ),
-        PlayerControlAction(
-            stringResource(Res.string.compose_player_audio), onAudioClick,
-            painter = appIconPainter(AppIconResource.PlayerAudioFilled),
-        ),
-        onSourcesClick?.let {
-            PlayerControlAction(
-                stringResource(Res.string.compose_player_sources), it,
-                painter = appIconPainter(AppIconResource.PlayerSource),
-            )
-        },
-        onEpisodesClick?.let {
-            PlayerControlAction(
-                stringResource(Res.string.compose_player_episodes), it,
-                painter = appIconPainter(AppIconResource.PlayerEpisodes),
-            )
-        },
-        onChaptersClick?.let {
-            PlayerControlAction(
-                stringResource(Res.string.player_chapters), it,
-                icon = Icons.AutoMirrored.Rounded.ListAlt,
-            )
-        },
-        onRateClick?.let {
-            PlayerControlAction(
-                userRating?.let { rating -> stringResource(Res.string.user_rating_action_rated, rating) }
-                    ?: stringResource(Res.string.user_rating_action_rate),
-                it,
-                icon = if (userRating != null) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-            )
-        },
-        onQualityClick?.let {
-            PlayerControlAction(
-                qualityLabel?.takeIf { label -> label.isNotBlank() } ?: "Quality", it,
-                icon = Icons.Rounded.HighQuality,
             )
         },
         PlayerControlAction(
@@ -245,17 +205,71 @@ internal fun PlayerControlActions(
             stringResource(resizeMode.labelRes), onResizeModeClick,
             painter = appIconPainter(AppIconResource.PlayerAspectRatio),
         ),
+        PlayerControlAction(
+            stringResource(Res.string.compose_player_subtitles), onSubtitleClick,
+            painter = appIconPainter(AppIconResource.PlayerSubtitles),
+        ),
+        onChaptersClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.player_chapters), it,
+                icon = Icons.AutoMirrored.Rounded.ListAlt,
+            )
+        },
+    )
+    val secondaryActions = listOfNotNull(
+        PlayerControlAction(
+            stringResource(Res.string.compose_player_audio), onAudioClick,
+            painter = appIconPainter(AppIconResource.PlayerAudioFilled),
+        ),
+        onQualityClick?.let {
+            PlayerControlAction(
+                qualityLabel?.takeIf { label -> label.isNotBlank() } ?: "Quality", it,
+                icon = Icons.Rounded.HighQuality,
+            )
+        },
+        onSourcesClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.compose_player_sources), it,
+                painter = appIconPainter(AppIconResource.PlayerSource),
+            )
+        },
+        onEpisodesClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.compose_player_episodes), it,
+                painter = appIconPainter(AppIconResource.PlayerEpisodes),
+            )
+        },
+        onRateClick?.let {
+            PlayerControlAction(
+                userRating?.let { rating -> stringResource(Res.string.user_rating_action_rated, rating) }
+                    ?: stringResource(Res.string.user_rating_action_rate),
+                it,
+                icon = if (userRating != null) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+            )
+        },
         onOpenInExternalPlayer?.let {
             PlayerControlAction(
                 stringResource(Res.string.streams_open_external_player), it,
                 icon = Icons.AutoMirrored.Rounded.OpenInNew,
             )
         },
+        onInfoClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.compose_player_playback_info), it,
+                icon = Icons.Rounded.Info,
+            )
+        },
         onStreamInfoClick.takeIf { ShowUpstreamStreamInfoAction }?.let {
-        PlayerControlAction(
-            stringResource(Res.string.cd_stream_info), onStreamInfoClick,
-            icon = Icons.Rounded.Info,
-        )
+            PlayerControlAction(
+                stringResource(Res.string.cd_stream_info), onStreamInfoClick,
+                icon = Icons.Rounded.Info,
+            )
+        },
+        onSwitchEngineClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.cd_switch_player_engine), it,
+                icon = Icons.Rounded.SwapHoriz,
+            )
         },
         onVideoSettingsClick?.let {
             PlayerControlAction(
@@ -269,20 +283,8 @@ internal fun PlayerControlActions(
                 icon = Icons.Rounded.Flag,
             )
         },
-        onPictureInPictureClick?.let {
-            PlayerControlAction(
-                stringResource(Res.string.compose_player_picture_in_picture), it,
-                icon = Icons.Rounded.PictureInPictureAlt,
-            )
-        },
-        onInfoClick?.let {
-            PlayerControlAction(
-                stringResource(Res.string.compose_player_playback_info), it,
-                icon = Icons.Rounded.Info,
-            )
-        },
     )
-    val hasOverflow = actions.size > 5
+    val hasOverflow = secondaryActions.isNotEmpty()
     var expanded by remember(hasOverflow) { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     LaunchedEffect(expanded, scrollState.maxValue) {
@@ -305,7 +307,7 @@ internal fun PlayerControlActions(
                         .horizontalScroll(scrollState),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    actions.take(if (expanded) actions.size else 5).forEach { action ->
+                    (if (expanded) primaryActions + secondaryActions else primaryActions).forEach { action ->
                         Box {
                             PlayerAction(
                                 description = action.description,
