@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -179,21 +181,33 @@ internal fun DetailRatingsRow(
     modifier: Modifier = Modifier,
     horizontalScrollPadding: Dp = 0.dp,
 ) {
-    val orderedRatings = remember(ratings) {
-        val bySource = ratings.associateBy { it.source }
-        ratingVisuals.mapNotNull { visuals ->
-            bySource[visuals.source]?.let { rating -> visuals to rating }
-        }
-    }
-
-    if (orderedRatings.isEmpty()) return
-
-    Row(
+    RatingsRow(
+        ratings = ratings,
         modifier = modifier
             .nuvioHorizontalScrollBleed(horizontalScrollPadding)
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = horizontalScrollPadding),
+    )
+}
+
+@Composable
+internal fun RatingsRow(
+    ratings: List<MetaExternalRating>,
+    modifier: Modifier = Modifier,
+    maxItems: Int = Int.MAX_VALUE,
+) {
+    val orderedRatings = remember(ratings, maxItems) {
+        val bySource = ratings.associateBy { it.source }
+        ratingVisuals.mapNotNull { visuals ->
+            bySource[visuals.source]?.let { rating -> visuals to rating }
+        }.take(maxItems)
+    }
+
+    if (orderedRatings.isEmpty()) return
+
+    Row(
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -287,24 +301,44 @@ internal fun MetaLabelValueRow(
 internal fun DetailHeroMetaBadge(
     text: String,
     contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    secondaryText: String? = null,
 ) {
-    Box(
+    val borderColor = contentColor.copy(alpha = 0.55f)
+    Row(
         modifier = Modifier
             .border(
-                border = BorderStroke(1.dp, contentColor.copy(alpha = 0.55f)),
+                border = BorderStroke(1.dp, borderColor),
                 shape = RoundedCornerShape(6.dp),
             )
             .padding(horizontal = 8.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            color = contentColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        MetaBadgeText(text = text, color = contentColor)
+        secondaryText?.let { secondary ->
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(12.dp)
+                    .background(borderColor),
+            )
+            MetaBadgeText(text = secondary, color = contentColor)
+        }
     }
+}
+
+@Composable
+private fun MetaBadgeText(
+    text: String,
+    color: Color,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = color,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 internal val ImdbYellow = Color(0xFFF5C518)
