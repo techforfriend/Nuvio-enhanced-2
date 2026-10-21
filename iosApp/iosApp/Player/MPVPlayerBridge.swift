@@ -521,6 +521,9 @@ final class MPVPlayerViewController: UIViewController {
         checkError(mpv_set_option_string(mpv, "gpu-api", "vulkan"))
         checkError(mpv_set_option_string(mpv, "gpu-context", "moltenvk"))
         checkError(mpv_set_option_string(mpv, "hwdec", "videotoolbox"))
+        // iOS can invalidate the VideoToolbox session (e.g. Notification Center during PiP).
+        // FFmpeg recreates it at the next frames; keep hardware decoding meanwhile.
+        checkError(mpv_set_option_string(mpv, "hwdec-software-fallback", "300"))
         checkError(mpv_set_option_string(mpv, "ao", Self.defaultAudioOutput))
         checkError(mpv_set_option_string(mpv, "audio-channels", "auto"))
         checkError(mpv_set_option_string(mpv, "audio-fallback-to-null", "yes"))
