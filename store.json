@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.6.3",
+          "buildVersion": "146",
+          "date": "2026-10-21T04:42:34Z",
+          "localizedDescription": "- d45d4d36 fix(party): show the party's source as plain text @tapframe  \r\n- 37a6656a fix(player): keep center controls in place on pause @tapframe  \r\n- 344117e7 feat(player): show badges for what is playing @tapframe  \r\n- ebb17678 feat(party): chat from your phone with the same profile @tapframe  \r\n- 18268427 fix(player): move engine switch to top row with confirmation @tapframe  \r\n- [feat(i18n): add Brazilian Portuguese (pt-BR) localization for watch party, servers, mdblist and autosync (#2288)](https://github.com/NuvioMedia/NuvioMobile/pull/2288) @jhojhocraazy  \r\n- b8249380 fix(party): send chat messages with the return key @tapframe  \r\n- [Update Hungarian translations (#2333)](https://github.com/NuvioMedia/NuvioMobile/pull/2333) @emgeje  \r\n- [Fix binge group initial state from stream args, apply custom posters in library see-all (#2332)](https://github.com/NuvioMedia/NuvioMobile/pull/2332) @skoruppa  \r\n- [i18n(vi): update strings.xml, translate watch party and auto sync strings into Vietnamese (#2297)](https://github.com/NuvioMedia/NuvioMobile/pull/2297) @blueocean2308  \r\n",
+          "downloadURL": "https://github.com/NuvioMedia/NuvioMobile/releases/download/0.6.3-beta/nuvio-0.6.3-full-release.ipa",
+          "size": 68815810,
+          "sha256": "90cccaa6bfe194c0567e0eb763a2aa65c2fd32ea84660eab18ef336b83558640",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.6.2",
           "buildVersion": "145",
           "date": "2026-10-18T23:13:01Z",
