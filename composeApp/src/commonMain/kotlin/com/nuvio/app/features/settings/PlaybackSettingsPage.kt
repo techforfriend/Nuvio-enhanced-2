@@ -708,14 +708,6 @@ private fun PlaybackSettingsSection(
                     if (useLibass) {
                         SettingsGroupDivider(isTablet = isTablet)
                         SettingsNavigationRow(
-                            title = stringResource(Res.string.settings_playback_render_type),
-                            description = libassRenderTypeLabel(libassRenderType),
-                            enabled = subtitleRenderingEnabled,
-                            isTablet = isTablet,
-                            onClick = { showLibassRenderTypeDialog = true },
-                        )
-                        SettingsGroupDivider(isTablet = isTablet)
-                        SettingsNavigationRow(
                             title = stringResource(Res.string.settings_playback_render_scale),
                             description = libassRenderScale,
                             enabled = subtitleRenderingEnabled,
