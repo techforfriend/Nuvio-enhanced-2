@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.6.3",
+          "buildVersion": "146",
+          "date": "2026-10-21T04:26:46Z",
+          "localizedDescription": "- feat(subtitle): add custom font and shadow (#227) @luqmanfadlli\r\n- Translate new strings to pt-BR and some minor changes (#223) @mikhaelvm\r\n- fix(player): liquid glass regression from the mpv libass layer @chrisk325\r\n- feat(streams): liquid glass search bar @chrisk325\r\n- feat: Discord Rich Presence @chrisk325\r\n- fix text visibility on stream cards (#216) @chrisk325\r\n- fix(details): reuse the hero artwork for the cinematic background @luqmanfadlli\r\n- feat(streams): liquid glass stream filter field in cinematic mode @luqmanfadlli\r\n- fix(navigation): fix nav bar glass shadow rendering @luqmanfadlli\r\n- refactor(glass): fold small nav bar glass files into their owners @luqmanfadlli\r\n- refactor(navigation): wire the unified nav bar glass and drop old strings @luqmanfadlli\r\n- feat(settings): one Glass section for the nav bar @luqmanfadlli\r\n- refactor(navigation): render the nav bar glass through one path @luqmanfadlli\r\n- refactor(glass): one nav bar glass model (material + effect settings) @luqmanfadlli\r\n- fix(trailer): keep iOS hero trailer zoomed after Fill became stretch @luqmanfadlli\r\n- fix(settings): keep nav bar Liquid Glass and icon colour settings local @luqmanfadlli\r\n- Feature/(Android): add configurable Liquid Glass and custom icon colors for navigation bar (#213) @jeff25steve\r\n- fix(party): show the party's source as plain text @tapframe\r\n- fix(player): keep center controls in place on pause @tapframe\r\n- feat(player): show badges for what is playing @tapframe\r\n- feat(party): chat from your phone with the same profile @tapframe\r\n- fix(player): move engine switch to top row with confirmation @tapframe\r\n- feat(i18n): add Brazilian Portuguese (pt-BR) localization for watch party, servers, mdblist and autosync (#2288) @jhojhocraazy\r\n- fix(party): send chat messages with the return key @tapframe\r\n- Update Hungarian translations (#2333) @emgeje\r\n- Fix binge group initial state from stream args, apply custom posters in library see-all (#2332) @skoruppa\r\n- i18n(vi): update strings.xml, translate watch party and auto sync strings into Vietnamese (#2297) @blueocean2308",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.6.3-beta/nuvio-0.6.3-enhanced-release.ipa",
+          "size": 73495899,
+          "sha256": "b5a39aa61b2d2740527bc266c5eab2d34247738e99351bb25a7c244ee8ef9998",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.6.2",
           "buildVersion": "145",
           "date": "2026-10-19T04:08:19Z",
