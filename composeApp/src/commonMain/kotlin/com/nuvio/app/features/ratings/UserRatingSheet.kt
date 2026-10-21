@@ -87,7 +87,7 @@ fun rememberUserRating(target: TrackingRatingTarget?): Int? {
     val state by UserRatingsRepository.uiState.collectAsState()
     val connected by TrackingProviderRegistry.connectedProviderIds.collectAsState()
     if (target == null) return null
-    val providers = remember(target.key, connected) { UserRatingsRepository.providersFor(target) }
+    val providers = remember(target.key, connected, state.inAppRatingEnabled) { UserRatingsRepository.providersFor(target) }
     LaunchedEffect(target.key, providers) {
         if (providers.isNotEmpty()) UserRatingsRepository.load(target)
     }
@@ -100,8 +100,11 @@ fun rememberUserRating(target: TrackingRatingTarget?): Int? {
 @Composable
 fun rememberCanRate(target: TrackingRatingTarget?): Boolean {
     val connected by TrackingProviderRegistry.connectedProviderIds.collectAsState()
+    val state by UserRatingsRepository.uiState.collectAsState()
     if (target == null) return false
-    return remember(target.key, connected) { UserRatingsRepository.providersFor(target).isNotEmpty() }
+    return remember(target.key, connected, state.inAppRatingEnabled) {
+        UserRatingsRepository.providersFor(target).isNotEmpty()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

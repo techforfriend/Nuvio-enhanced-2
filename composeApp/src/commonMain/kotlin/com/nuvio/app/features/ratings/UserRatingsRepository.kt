@@ -34,14 +34,11 @@ import nuvio.composeapp.generated.resources.user_rating_sync_failed
 import org.jetbrains.compose.resources.getString
 import kotlin.time.Clock
 
-/** The personal rating of one item across every connected provider that was asked. */
 data class UserRatingEntry(
-    /** A provider is present once its answer is known; a null value means "not rated". */
     val byProvider: Map<TrackingProviderId, Int?> = emptyMap(),
     val loadingProviders: Set<TrackingProviderId> = emptySet(),
     val savingProviders: Set<TrackingProviderId> = emptySet(),
     val failedProviders: Set<TrackingProviderId> = emptySet(),
-    /** Bumped on every local write so reads started earlier cannot overwrite it. */
     val revision: Long = 0L,
 ) {
     val isLoading: Boolean get() = loadingProviders.isNotEmpty()
@@ -55,6 +52,7 @@ data class UserRatingEntry(
 data class UserRatingsUiState(
     val entries: Map<String, UserRatingEntry> = emptyMap(),
     val disabledProviders: Set<TrackingProviderId> = emptySet(),
+    val inAppRatingEnabled: Boolean = true,
     val profileId: Int = -1,
 )
 
@@ -84,21 +82,36 @@ object UserRatingsRepository {
         val records: List<TrackingRatingRecord>,
     )
 
-    // ── providers ───────────────────────────────────────────────────────
+    fun hasRatingProvider(): Boolean {
+        ensureRegistered()
+        return TrackingProviderRegistry.connectedRatingProviders().isNotEmpty()
+    }
 
-    /** Connected providers able to rate [target], in provider order. */
+    fun isInAppRatingEnabled(): Boolean {
+        syncProfile()
+        return _uiState.value.inAppRatingEnabled
+    }
+
+    fun setInAppRatingEnabled(enabled: Boolean) {
+        syncProfile()
+        _uiState.update { it.copy(inAppRatingEnabled = enabled) }
+        UserRatingsStorage.saveInAppRatingEnabled(_uiState.value.profileId, enabled)
+    }
+
     fun providersFor(target: TrackingRatingTarget): List<TrackingProviderId> {
         ensureRegistered()
         syncProfile()
+        if (!_uiState.value.inAppRatingEnabled) return emptyList()
         if (!target.isValid) return emptyList()
         return TrackingProviderRegistry.connectedRatingProviders()
             .filter { provider -> target.scope in provider.supportedScopes && provider.canRate(target) }
             .map(TrackingRatingProvider::providerId)
     }
 
-    /** Connected providers supporting [scope] at all (used to decide whether to show an entry). */
     fun providersFor(scope: TrackingRatingScope): List<TrackingProviderId> {
         ensureRegistered()
+        syncProfile()
+        if (!_uiState.value.inAppRatingEnabled) return emptyList()
         return TrackingProviderRegistry.connectedRatingProviders()
             .filter { provider -> scope in provider.supportedScopes }
             .map(TrackingRatingProvider::providerId)
@@ -119,8 +132,6 @@ object UserRatingsRepository {
     }
 
     fun entryKey(target: TrackingRatingTarget): String = "${ProfileRepository.activeProfileId}|${target.key}"
-
-    // ── reads ───────────────────────────────────────────────────────────
 
     fun load(target: TrackingRatingTarget, maxAgeMs: Long = CACHE_TTL_MS) {
         val providers = providersFor(target)
@@ -172,14 +183,11 @@ object UserRatingsRepository {
             val records = provider.fetchRatings(profileId, ratingScope)
                 .filter { it.rating in TRACKING_RATING_MIN..TRACKING_RATING_MAX }
             cacheMutex.withLock {
-                // A write that landed mid-fetch makes this snapshot stale; keep it out of the cache.
                 if (writeSequence == sequenceBefore) cache[cacheKey] = CachedRatings(nowMs(), records)
             }
             records
         }
     }
-
-    // ── writes ──────────────────────────────────────────────────────────
 
     fun rate(target: TrackingRatingTarget, rating: Int) {
         require(rating in TRACKING_RATING_MIN..TRACKING_RATING_MAX) { "Rating must be 1..10" }
@@ -272,8 +280,6 @@ object UserRatingsRepository {
         cache[cacheKey] = cached.copy(records = next)
     }
 
-    // ── helpers ─────────────────────────────────────────────────────────
-
     private var registered = false
 
     private fun ensureRegistered() {
@@ -309,10 +315,12 @@ object UserRatingsRepository {
             .split(',')
             .mapNotNull(TrackingProviderId::fromStorage)
             .toSet()
-        _uiState.update { it.copy(profileId = profileId, disabledProviders = disabled) }
+        val inAppRatingEnabled = UserRatingsStorage.loadInAppRatingEnabled(profileId) ?: true
+        _uiState.update {
+            it.copy(profileId = profileId, disabledProviders = disabled, inAppRatingEnabled = inAppRatingEnabled)
+        }
     }
 
-    /** Includes the account generation so reconnecting a different account never reuses stale ratings. */
     private fun cacheKey(profileId: Int, providerId: TrackingProviderId, scope: TrackingRatingScope): String {
         val generation = TrackingProviderRegistry.authProvider(providerId)?.accountGeneration ?: 0L
         return "$profileId|${providerId.storageId}|$generation|${scope.name}"

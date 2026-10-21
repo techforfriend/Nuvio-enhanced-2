@@ -7,4 +7,6 @@ package com.nuvio.app.features.ratings
 internal expect object UserRatingsStorage {
     fun loadDisabledProviders(profileId: Int): String?
     fun saveDisabledProviders(profileId: Int, value: String)
+    fun loadInAppRatingEnabled(profileId: Int): Boolean?
+    fun saveInAppRatingEnabled(profileId: Int, enabled: Boolean)
 }
