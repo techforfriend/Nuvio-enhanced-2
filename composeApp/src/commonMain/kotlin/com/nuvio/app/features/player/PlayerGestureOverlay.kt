@@ -113,7 +113,7 @@ private fun PlayerGestureFeedback(
                     val reading = feedback.messageArgs.firstOrNull()?.toString() ?: percent.toString()
                     Column(
                         modifier = Modifier
-                            .align(if (isBrightness) Alignment.CenterStart else Alignment.CenterEnd)
+                            .align(if (isBrightness) Alignment.CenterEnd else Alignment.CenterStart)
                             .padding(horizontal = horizontalSafePadding + 8.dp)
                             .width(6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
