@@ -829,16 +829,26 @@ private fun ProgressControls(
             onScrubFinished = onScrubFinished,
             seekPreview = seekPreview,
             onTouchChange = onTimelineTouchChange,
+            showTimeRow = false,
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-        ) {
+        // Legacy bottom bar: time pills on the bar's outer edges (lined up with the seek bar's
+        // ends and the pill's top edge), actions in the middle.
+        Box(modifier = Modifier.fillMaxWidth()) {
+            TimePill(
+                text = formatPlaybackTime(displayedPositionMs),
+                fontSize = metrics.timeSize,
+                modifier = Modifier.align(Alignment.TopStart),
+            )
+            TimePill(
+                text = formatPlaybackTime(playbackSnapshot.durationMs),
+                fontSize = metrics.timeSize,
+                modifier = Modifier.align(Alignment.TopEnd),
+            )
             // Legacy bottom bar: same compact pill as before, now liquid glass.
             Surface(
                 color = Color.Transparent,
                 shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.playerLiquidGlass(
+                modifier = Modifier.align(Alignment.TopCenter).playerLiquidGlass(
                     shape = RoundedCornerShape(24.dp),
                     refractionHeight = 10.dp,
                     refractionAmount = 14.dp,
@@ -980,6 +990,8 @@ internal fun PlayerSeekBar(
     seekPreview: SeekPreviewController? = null,
     chapters: List<PlayerChapter> = emptyList(),
     onTouchChange: (Boolean) -> Unit = {},
+    /** The legacy layout draws the time pills beside its action pill instead. */
+    showTimeRow: Boolean = true,
 ) {
     val seekDurationMs = durationMs.coerceAtLeast(1L)
     val bufferedFraction = playerBufferedFraction(bufferedPositionMs, durationMs)
@@ -1027,16 +1039,18 @@ internal fun PlayerSeekBar(
                 modifier = Modifier.matchParentSize(),
             )
         }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp)
-                .padding(top = 4.dp, bottom = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TimePill(text = formatPlaybackTime(displayedPositionMs), fontSize = metrics.timeSize)
-            TimePill(text = formatPlaybackTime(durationMs), fontSize = metrics.timeSize)
+        if (showTimeRow) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp)
+                    .padding(top = 4.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TimePill(text = formatPlaybackTime(displayedPositionMs), fontSize = metrics.timeSize)
+                TimePill(text = formatPlaybackTime(durationMs), fontSize = metrics.timeSize)
+            }
         }
     }
 }
@@ -1272,6 +1286,7 @@ private fun TimePill(
     text: String,
     fontSize: androidx.compose.ui.unit.TextUnit,
     glass: Boolean = true,
+    modifier: Modifier = Modifier,
 ) {
     val glassModifier = if (glass) {
         Modifier.playerLiquidGlass(
@@ -1283,7 +1298,7 @@ private fun TimePill(
         Modifier
     }
     Box(
-        modifier = glassModifier.padding(horizontal = 10.dp, vertical = 4.dp),
+        modifier = modifier.then(glassModifier).padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
         Text(
             text = text,
