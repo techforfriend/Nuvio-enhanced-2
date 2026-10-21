@@ -894,6 +894,8 @@
     <string name="settings_stream_badges_section">KIỂU FUSION</string>
     <string name="settings_stream_size_badges_title">Nhãn dung lượng</string>
     <string name="settings_stream_size_badges_description">Hiển thị nhãn dung lượng tệp trong kết quả luồng và bảng chọn nguồn phát.</string>
+    <string name="settings_stream_badges_in_player_title">Hiển thị trong trình phát</string>
+    <string name="settings_stream_badges_in_player_description">Hiển thị nhãn cho video và âm thanh đang phát bên dưới tiêu đề trình phát.</string>
     <string name="settings_stream_addon_logo_title">Biểu tượng tiện ích</string>
     <string name="settings_stream_addon_logo_description">Hiển thị biểu tượng và tên tiện ích bên cạnh mỗi nguồn phát</string>
     <string name="settings_stream_display_section">HIỂN THỊ</string>
@@ -2447,6 +2449,8 @@
     <string name="cd_switch_player_engine">Chuyển lõi trình phát</string>
     <string name="cd_stream_info">Thông tin luồng</string>
     <string name="player_engine_switching_manual_message">Đang chuyển sang %1$s...</string>
+    <string name="player_engine_switch_title">Chuyển sang %1$s?</string>
+    <string name="player_engine_switch_message">Video sẽ tải lại từ vị trí hiện tại của bạn.</string>
     <string name="stream_info_section_source">NGUỒN</string>
     <string name="stream_info_section_video">VIDEO</string>
     <string name="stream_info_section_audio">ÂM THANH</string>
