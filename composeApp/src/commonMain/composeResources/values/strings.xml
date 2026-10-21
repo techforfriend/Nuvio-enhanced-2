@@ -2887,4 +2887,8 @@
     <string name="settings_nav_bar_default_icon_color_change">Change default icon color</string>
     <string name="settings_nav_bar_default_icon_color_expand">Tap to expand the color picker.</string>
     <string name="settings_nav_bar_default_icon_color_collapse">Tap to collapse the color picker.</string>
+    <string name="settings_tracking_ratings_section">Ratings</string>
+    <string name="settings_tracking_in_app_rating">In-app rating</string>
+    <string name="settings_tracking_in_app_rating_description">Show your rating on the details page and a rating button in the player. Ratings are saved to your connected trackers.</string>
+    <string name="settings_tracking_in_app_rating_requires_tracker">Connect a tracker above to turn this on.</string>
 </resources>

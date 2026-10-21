@@ -22,6 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.features.ratings.UserRatingsRepository
+import com.nuvio.app.features.tracking.TrackingProviderRegistry
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.anilist.AniListTracker
@@ -47,6 +49,10 @@ import com.nuvio.app.features.watchprogress.WatchProgressSourceCoordinator
 import com.nuvio.app.features.wetrakr.WeTrakrTracker
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.settings_tracking_in_app_rating
+import nuvio.composeapp.generated.resources.settings_tracking_in_app_rating_description
+import nuvio.composeapp.generated.resources.settings_tracking_in_app_rating_requires_tracker
+import nuvio.composeapp.generated.resources.settings_tracking_ratings_section
 import nuvio.composeapp.generated.resources.tracking_source_mdblist
 import nuvio.composeapp.generated.resources.tracking_source_anilist
 import nuvio.composeapp.generated.resources.tracking_source_wetrakr
@@ -157,6 +163,15 @@ internal fun LazyListScope.trackingSettingsContent(
         }
     }
 
+    item {
+        SettingsSection(
+            title = stringResource(Res.string.settings_tracking_ratings_section),
+            isTablet = isTablet,
+        ) {
+            TrackingInAppRatingSection(isTablet = isTablet)
+        }
+    }
+
     if (traktUiState.mode == TraktConnectionMode.CONNECTED) {
         item {
             SettingsSection(
@@ -202,6 +217,29 @@ internal fun LazyListScope.trackingSettingsContent(
                 MdbListLibraryListsSection(isTablet = isTablet)
             }
         }
+    }
+}
+
+@Composable
+private fun TrackingInAppRatingSection(isTablet: Boolean) {
+    val connected by TrackingProviderRegistry.connectedProviderIds.collectAsStateWithLifecycle()
+    val ratingsState by UserRatingsRepository.uiState.collectAsStateWithLifecycle()
+    val hasRatingProvider = remember(connected) { UserRatingsRepository.hasRatingProvider() }
+    val enabled = remember(ratingsState.profileId, ratingsState.inAppRatingEnabled) {
+        UserRatingsRepository.isInAppRatingEnabled()
+    }
+    SettingsGroup(isTablet = isTablet) {
+        SettingsSwitchRow(
+            title = stringResource(Res.string.settings_tracking_in_app_rating),
+            description = listOfNotNull(
+                stringResource(Res.string.settings_tracking_in_app_rating_description),
+                stringResource(Res.string.settings_tracking_in_app_rating_requires_tracker).takeUnless { hasRatingProvider },
+            ).joinToString("\n"),
+            checked = hasRatingProvider && enabled,
+            enabled = hasRatingProvider,
+            isTablet = isTablet,
+            onCheckedChange = UserRatingsRepository::setInAppRatingEnabled,
+        )
     }
 }
 
