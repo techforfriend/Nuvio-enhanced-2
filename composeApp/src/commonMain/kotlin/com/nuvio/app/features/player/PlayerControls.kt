@@ -244,6 +244,7 @@ internal fun PlayerControlsShell(
                     onOpenInExternalPlayer = onOpenInExternalPlayer,
                     onPartyClick = onPartyClick,
                     partyActive = partyActive,
+                    onSwitchEngineClick = onSwitchEngineClick,
                     onBack = onBack,
                     modifier = Modifier
                         .align(Alignment.TopStart)
@@ -447,6 +448,7 @@ private fun PlayerHeader(
     onOpenInExternalPlayer: (() -> Unit)?,
     onPartyClick: (() -> Unit)?,
     partyActive: Boolean,
+    onSwitchEngineClick: (() -> Unit)? = null,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -556,6 +558,15 @@ private fun PlayerHeader(
                             onClick = onOpenInExternalPlayer,
                         )
                     }
+                    if (onSwitchEngineClick != null) {
+                        PlayerHeaderIconButton(
+                            icon = Icons.Rounded.SwapHoriz,
+                            contentDescription = stringResource(Res.string.cd_switch_player_engine),
+                            buttonSize = metrics.headerIconSize + 16.dp,
+                            iconSize = metrics.headerIconSize,
+                            onClick = onSwitchEngineClick,
+                        )
+                    }
                     if (onPartyClick != null) {
                         PlayerHeaderIconButton(
                             icon = Icons.Rounded.Groups,
@@ -564,26 +575,6 @@ private fun PlayerHeader(
                             iconSize = metrics.headerIconSize,
                             onClick = onPartyClick,
                             tint = if (partyActive) MaterialTheme.colorScheme.primary else Color.White,
-                        )
-                    }
-                    PlayerHeaderIconButton(
-                        icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
-                        contentDescription = if (isLocked) {
-                            stringResource(Res.string.compose_player_unlock_controls)
-                        } else {
-                            stringResource(Res.string.compose_player_lock_controls)
-                        },
-                        buttonSize = metrics.headerIconSize + 16.dp,
-                        iconSize = metrics.headerIconSize,
-                        onClick = onLockToggle,
-                    )
-                    if (onVideoSettingsClick != null) {
-                        PlayerHeaderIconButton(
-                            icon = Icons.Rounded.Build,
-                            contentDescription = stringResource(Res.string.player_action_video_settings),
-                            buttonSize = metrics.headerIconSize + 16.dp,
-                            iconSize = metrics.headerIconSize,
-                            onClick = onVideoSettingsClick,
                         )
                     }
                     if (onCastClick != null) {
@@ -633,6 +624,26 @@ private fun PlayerHeader(
                             onClick = onInfoClick,
                         )
                     }
+                    if (onVideoSettingsClick != null) {
+                        PlayerHeaderIconButton(
+                            icon = Icons.Rounded.Build,
+                            contentDescription = stringResource(Res.string.player_action_video_settings),
+                            buttonSize = metrics.headerIconSize + 16.dp,
+                            iconSize = metrics.headerIconSize,
+                            onClick = onVideoSettingsClick,
+                        )
+                    }
+                    PlayerHeaderIconButton(
+                        icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
+                        contentDescription = if (isLocked) {
+                            stringResource(Res.string.compose_player_unlock_controls)
+                        } else {
+                            stringResource(Res.string.compose_player_lock_controls)
+                        },
+                        buttonSize = metrics.headerIconSize + 16.dp,
+                        iconSize = metrics.headerIconSize,
+                        onClick = onLockToggle,
+                    )
                     NuvioBackButton(
                         onClick = onBack,
                         modifier = Modifier.playerLiquidGlass(CircleShape, refractionHeight = 6.dp, refractionAmount = 8.dp),
@@ -810,6 +821,7 @@ private fun ProgressControls(
     val aspectRatioPainter = appIconPainter(AppIconResource.PlayerAspectRatio)
     val subtitlesPainter = appIconPainter(AppIconResource.PlayerSubtitles)
     val audioPainter = appIconPainter(AppIconResource.PlayerAudioFilled)
+    val sourcesPainter = appIconPainter(AppIconResource.PlayerSource)
 
     Column(modifier = modifier) {
         PlayerChapterLabel(
@@ -896,15 +908,8 @@ private fun ProgressControls(
                     if (onSourcesClick != null) {
                         PlayerActionPillButton(
                             label = stringResource(Res.string.compose_player_sources),
-                            icon = Icons.Rounded.SwapHoriz,
+                            painter = sourcesPainter,
                             onClick = onSourcesClick,
-                        )
-                    }
-                    if (onEpisodesClick != null) {
-                        PlayerActionPillButton(
-                            label = stringResource(Res.string.compose_player_episodes),
-                            icon = Icons.Rounded.VideoLibrary,
-                            onClick = onEpisodesClick,
                         )
                     }
                     if (onChaptersClick != null) {
@@ -912,6 +917,13 @@ private fun ProgressControls(
                             label = stringResource(Res.string.player_chapters),
                             icon = Icons.AutoMirrored.Rounded.ListAlt,
                             onClick = onChaptersClick,
+                        )
+                    }
+                    if (onEpisodesClick != null) {
+                        PlayerActionPillButton(
+                            label = stringResource(Res.string.compose_player_episodes),
+                            icon = Icons.Rounded.VideoLibrary,
+                            onClick = onEpisodesClick,
                         )
                     }
                     if (onLiveChannelsClick != null) {
