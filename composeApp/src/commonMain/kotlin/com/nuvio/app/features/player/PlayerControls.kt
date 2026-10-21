@@ -225,6 +225,7 @@ internal fun PlayerControlsShell(
                         onBack = onBack,
                         onPartyClick = onPartyClick,
                         partyActive = partyActive,
+                        onSwitchEngineClick = onSwitchEngineClick,
                         randomNextEpisodeMode = randomNextEpisodeMode,
                         onRandomNextEpisodeModeToggle = onRandomNextEpisodeModeToggle,
                         modifier = Modifier
@@ -367,7 +368,6 @@ internal fun PlayerControlsShell(
                         onSourcesClick = onSourcesClick,
                         onEpisodesClick = onEpisodesClick,
                         onNextEpisodeClick = onNextEpisodeClick,
-                        onSwitchEngineClick = onSwitchEngineClick,
                         onSpeedClick = onSpeedClick,
                         onResizeModeClick = onResizeModeClick,
                         onVideoSettingsClick = onVideoSettingsClick,

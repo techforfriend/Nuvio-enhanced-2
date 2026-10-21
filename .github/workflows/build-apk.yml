@@ -64,36 +64,45 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.1-enhanced-stable
-          name: "Nuvio Enhanced v0.6.1 Stable Release"
+          tag_name: v0.6.2-enhanced-stable
+          name: "Nuvio Enhanced v0.6.2 Stable Release"
           body: |
-            ## Nuvio Enhanced v0.6.1 Stable Release
+            ## Nuvio Enhanced v0.6.2 Stable Release
             **by RAJA JI**
 
-            🎉 **Official Stable Release of Nuvio Enhanced v0.6.1!**
+            🎉 **Official Stable Release of Nuvio Enhanced v0.6.2!**
 
-            This stable release brings full CloudStream 3 provider integration, 18 customized themes, Jellyfin/Plex native streaming, and complete bug fixes across playback, metadata, and UI.
+            This release merges all upstream Nuvio 0.6.2-beta features (Watch Party Chat, Companion Mode, Engine switch improvements, Binge matching) with our complete Enhanced suite (CloudStream 3 extensions, Live TV, 18 themes, AKRusso poster hero, and Backup/DoH fixes).
 
             ### 🌟 Key Features & Highlights:
-            1. **Restored Live TV Navigation Dock & Streaming:**
+            1. **Watch Party Live Chat & Mobile Companion Mode (0.6.2 New):**
+               - Live in-app chat directly inside Watch Parties while watching together.
+               - Phone Companion Mode: Chat from your mobile phone with the same profile while watching on another screen.
+               - Enter/Return key support and Picture-in-Picture (PiP) party synchronization.
+            2. **Player Engine Switcher Safety & Top Row (0.6.2 New):**
+               - Moved engine switcher to the top control toolbar with confirmation modal to prevent accidental switches during playback.
+            3. **Smart Binge Matching & Stream Prefetch (0.6.2 New):**
+               - Intelligent filename & infoHash matching for torrent/debrid binge episode groupings.
+               - Enhanced stream prefetch reliability.
+            4. **Restored Live TV Navigation Dock & Streaming:**
                - Restored dedicated Live TV tab on the bottom navigation dock with standard TV icon.
                - Full Live TV guide, EPG sources, search & filter bar, and seamless channel player playback.
-            2. **Enhanced Settings Fixed & Working:**
+            5. **Enhanced Settings Fixed & Working:**
                - System Backup & Import file picker fully wired with native Android storage framework.
                - External Download Folder selector linked to DocumentFile SAF storage.
                - Dynamic DNS over HTTPS resolver with Google & Cloudflare DNS support and IPv4 fallback.
                - Home, Core, Player, and System settings organized and functional.
-            3. **Redesigned AKRusso-Style Home Poster Hero:**
+            6. **Redesigned AKRusso-Style Home Poster Hero:**
                - Frosted capsule header, IMDb rating badge, compact metadata, pill watch button, and subtle shelf underline.
-            4. **Redesigned CloudStream Extension Switcher:**
+            7. **Redesigned CloudStream Extension Switcher:**
                - Floating pill button at bottom-right with warm orange border and stacked layers icon.
                - Compact popup card floating above the pill with dark theme, orange highlights, and play badges.
-            5. **Full CloudStream 3 Engine & Playback Availability:**
+            8. **Full CloudStream 3 Engine & Playback Availability:**
                - Run native CloudStream 3 `.cs3` plugins and extensions.
                - Direct link extraction, subtitle parsing, and zero playback unavailable blocks.
-            6. **18 Customized Themes & "by RAJA JI" Branding:**
+            9. **18 Customized Themes & "by RAJA JI" Branding:**
                - 18 themes and personalized "by RAJA JI" footer branding.
-            7. **Pure ARM64 Architecture:**
+            10. **Pure ARM64 Architecture:**
                - Optimized exclusively for 64-bit ARM Android devices (`arm64-v8a`) for peak performance.
           draft: false
           prerelease: false

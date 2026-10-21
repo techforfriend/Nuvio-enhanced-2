@@ -64,11 +64,19 @@ internal fun PlayerToolbar(
     modifier: Modifier = Modifier,
     onPartyClick: (() -> Unit)? = null,
     partyActive: Boolean = false,
+    onSwitchEngineClick: (() -> Unit)? = null,
     randomNextEpisodeMode: Boolean = false,
     onRandomNextEpisodeModeToggle: (() -> Unit)? = null,
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
+        if (onSwitchEngineClick != null) {
+            PlayerAction(
+                description = stringResource(Res.string.cd_switch_player_engine),
+                icon = Icons.Rounded.SwapHoriz,
+                onClick = onSwitchEngineClick,
+            )
+        }
         if (onRandomNextEpisodeModeToggle != null) {
             PlayerAction(
                 description = if (randomNextEpisodeMode) {
@@ -120,7 +128,6 @@ internal fun PlayerControlActions(
     onSourcesClick: (() -> Unit)?,
     onEpisodesClick: (() -> Unit)?,
     onNextEpisodeClick: (() -> Unit)?,
-    onSwitchEngineClick: (() -> Unit)?,
     onSpeedClick: () -> Unit,
     onResizeModeClick: () -> Unit,
     onVideoSettingsClick: (() -> Unit)?,
@@ -154,12 +161,6 @@ internal fun PlayerControlActions(
             PlayerControlAction(
                 stringResource(Res.string.compose_player_episodes), it,
                 painter = appIconPainter(AppIconResource.PlayerEpisodes),
-            )
-        },
-        onSwitchEngineClick?.let {
-            PlayerControlAction(
-                stringResource(Res.string.cd_switch_player_engine), it,
-                icon = Icons.Rounded.SwapHoriz,
             )
         },
         PlayerControlAction(
