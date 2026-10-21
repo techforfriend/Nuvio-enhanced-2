@@ -119,6 +119,7 @@ internal fun LazyListScope.playbackSettingsContent(
     tunnelingEnabled: Boolean,
     useLibass: Boolean,
     libassRenderType: String,
+    libassRenderScale: String,
 ) {
     item {
         PlaybackSettingsSection(
@@ -142,6 +143,7 @@ internal fun LazyListScope.playbackSettingsContent(
             tunnelingEnabled = tunnelingEnabled,
             useLibass = useLibass,
             libassRenderType = libassRenderType,
+            libassRenderScale = libassRenderScale,
         )
     }
 }
@@ -328,6 +330,7 @@ private fun PlaybackSettingsSection(
     tunnelingEnabled: Boolean,
     useLibass: Boolean,
     libassRenderType: String,
+    libassRenderScale: String,
 ) {
     var showPreferredAudioDialog by remember { mutableStateOf(false) }
     var showAutoSkipSegmentDialog by remember { mutableStateOf(false) }
@@ -342,6 +345,7 @@ private fun PlaybackSettingsSection(
     var showReuseCacheDurationDialog by remember { mutableStateOf(false) }
     var showPlaybackEngineDialog by remember { mutableStateOf(false) }
     var showLibmpvVideoOutputDialog by remember { mutableStateOf(false) }
+    var showLibassRenderScaleDialog by remember { mutableStateOf(false) }
     var showDecoderPriorityDialog by remember { mutableStateOf(false) }
     var showHoldToSpeedValueDialog by remember { mutableStateOf(false) }
     var showIosAudioOutputDialog by remember { mutableStateOf(false) }
@@ -709,6 +713,14 @@ private fun PlaybackSettingsSection(
                             enabled = subtitleRenderingEnabled,
                             isTablet = isTablet,
                             onClick = { showLibassRenderTypeDialog = true },
+                        )
+                        SettingsGroupDivider(isTablet = isTablet)
+                        SettingsNavigationRow(
+                            title = stringResource(Res.string.settings_playback_render_scale),
+                            description = libassRenderScale,
+                            enabled = subtitleRenderingEnabled,
+                            isTablet = isTablet,
+                            onClick = { showLibassRenderScaleDialog = true },
                         )
                     }
                 }
@@ -1886,6 +1898,17 @@ private fun PlaybackSettingsSection(
         )
     }
 
+    if (showLibassRenderScaleDialog) {
+        LibassRenderScaleDialog(
+            selectedScale = libassRenderScale,
+            onScaleSelected = { scale ->
+                PlayerSettingsRepository.setLibassRenderScale(scale)
+                showLibassRenderScaleDialog = false
+            },
+            onDismiss = { showLibassRenderScaleDialog = false },
+        )
+    }
+
     if (showAutoPlayModeDialog) {
         StreamAutoPlayModeDialog(
             selectedMode = autoPlayPlayerSettings.streamAutoPlayMode,
@@ -2322,6 +2345,48 @@ private fun LibassRenderTypeDialog(
                     text = stringResource(labelRes),
                     selected = isSelected,
                     onClick = { onRenderTypeSelected(value) },
+                )
+            }
+        }
+
+        DialogButtons {
+            DialogButton(
+                text = stringResource(Res.string.action_done),
+                onClick = onDismiss,
+            )
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun LibassRenderScaleDialog(
+    selectedScale: String,
+    onScaleSelected: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val options = listOf(
+        "FULL" to "Full",
+        "THREE_QUARTER" to "\u00BE",
+        "HALF" to "\u00BD",
+        "THIRD" to "\u2153",
+        "QUARTER" to "\u00BC",
+    )
+
+    DialogSurface(
+        onDismissRequest = onDismiss,
+        title = stringResource(Res.string.settings_playback_render_scale),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            options.forEach { (value, label) ->
+                val isSelected = value == selectedScale
+                DialogOption(
+                    text = label,
+                    selected = isSelected,
+                    onClick = { onScaleSelected(value) },
                 )
             }
         }
