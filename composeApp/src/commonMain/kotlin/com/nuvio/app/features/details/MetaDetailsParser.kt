@@ -255,6 +255,9 @@ internal object MetaDetailsParser {
                 runtime = parseRuntimeMinutes((video["runtime"] as? JsonPrimitive)?.contentOrNull),
                 rating = video.string("rating")?.trim()?.toDoubleOrNull()?.takeIf { it > 0.0 },
                 streams = video.embeddedStreams(),
+                imdbId = video.string("imdb_id") ?: video.string("imdbId"),
+                imdbSeason = video.int("imdbSeason") ?: video.int("imdb_season"),
+                imdbEpisode = video.int("imdbEpisode") ?: video.int("imdb_episode"),
             )
         }
 

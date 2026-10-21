@@ -2891,4 +2891,15 @@
     <string name="settings_tracking_in_app_rating">In-app rating</string>
     <string name="settings_tracking_in_app_rating_description">Show your rating on the details page and a rating button in the player. Ratings are saved to your connected trackers.</string>
     <string name="settings_tracking_in_app_rating_requires_tracker">Connect a tracker above to turn this on.</string>
+    <string name="layout_rating_map">Rating Map</string>
+    <string name="layout_rating_map_sub">Show a color-coded map of episode ratings at the bottom of show and anime pages.</string>
+    <string name="details_rating_map">Rating Map</string>
+    <string name="details_rating_map_summary">Average %1$s · %2$d episodes rated</string>
+    <string name="details_rating_map_season_rated">%1$d rated</string>
+    <string name="details_rating_map_best">Best %1$s</string>
+    <string name="details_rating_map_lowest">Lowest %1$s</string>
+    <string name="details_rating_map_rated">Rated %1$s on %2$s</string>
+    <string name="details_rating_map_unrated">Not rated yet</string>
+    <string name="details_rating_map_hidden">Watch this episode to reveal its rating</string>
+    <string name="details_rating_map_hint">Tap an episode to see its rating.</string>
 </resources>

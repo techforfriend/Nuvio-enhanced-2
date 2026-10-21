@@ -11,6 +11,8 @@ import nuvio.composeapp.generated.resources.layout_episode_ratings_sub
 import nuvio.composeapp.generated.resources.layout_overall_ratings
 import nuvio.composeapp.generated.resources.layout_overall_ratings_sub_off
 import nuvio.composeapp.generated.resources.layout_overall_ratings_sub_on
+import nuvio.composeapp.generated.resources.layout_rating_map
+import nuvio.composeapp.generated.resources.layout_rating_map_sub
 import nuvio.composeapp.generated.resources.layout_ratings_hide
 import nuvio.composeapp.generated.resources.layout_ratings_hide_unwatched
 import nuvio.composeapp.generated.resources.layout_ratings_show
@@ -51,4 +53,12 @@ internal fun RatingsSettings(
             )
         }
     }
+    SettingsGroupDivider(isTablet = isTablet)
+    SettingsSwitchRow(
+        title = stringResource(Res.string.layout_rating_map),
+        description = stringResource(Res.string.layout_rating_map_sub),
+        checked = uiState.showRatingMap,
+        isTablet = isTablet,
+        onCheckedChange = MetaScreenSettingsRepository::setShowRatingMap,
+    )
 }

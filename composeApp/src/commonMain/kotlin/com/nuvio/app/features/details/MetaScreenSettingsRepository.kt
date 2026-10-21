@@ -54,6 +54,7 @@ data class MetaScreenSettingsUiState(
     val posterTransitionEnabled: Boolean = false,
     val showOverallRatings: Boolean = true,
     val episodeRatingsVisibility: EpisodeRatingsVisibility = EpisodeRatingsVisibility.SHOW_ALL,
+    val showRatingMap: Boolean = true,
 )
 
 enum class MetaScreenBackgroundMode {
@@ -144,6 +145,8 @@ private data class StoredMetaScreenSettingsPayload(
     val showOverallRatings: Boolean = true,
     @SerialName("episode_ratings_visibility")
     val episodeRatingsVisibility: String = EpisodeRatingsVisibility.SHOW_ALL.name,
+    @SerialName("show_rating_map")
+    val showRatingMap: Boolean = true,
 )
 
 private data class MetaScreenSectionDefinition(
@@ -231,6 +234,7 @@ object MetaScreenSettingsRepository {
     private var blurUnwatchedEpisodes: Boolean = false
     private var showOverallRatings: Boolean = true
     private var episodeRatingsVisibility: EpisodeRatingsVisibility = EpisodeRatingsVisibility.SHOW_ALL
+    private var showRatingMap: Boolean = true
     private var posterTransitionEnabled: Boolean = false
     private fun localizedString(resource: StringResource): String = runBlocking { getString(resource) }
 
@@ -260,6 +264,7 @@ object MetaScreenSettingsRepository {
                 posterTransitionEnabled = parsed.posterTransitionEnabled
                 showOverallRatings = parsed.showOverallRatings
                 episodeRatingsVisibility = EpisodeRatingsVisibility.parse(parsed.episodeRatingsVisibility)
+                showRatingMap = parsed.showRatingMap
                 preferences = parsed.items.mapNotNull { item ->
                     val key = runCatching { MetaScreenSectionKey.valueOf(item.key) }.getOrNull() ?: return@mapNotNull null
                     key to item
@@ -286,6 +291,7 @@ object MetaScreenSettingsRepository {
         posterTransitionEnabled = false
         showOverallRatings = true
         episodeRatingsVisibility = EpisodeRatingsVisibility.SHOW_ALL
+        showRatingMap = true
         _uiState.value = MetaScreenSettingsUiState()
         ensureLoaded()
     }
@@ -376,6 +382,14 @@ object MetaScreenSettingsRepository {
         persist()
     }
 
+    fun setShowRatingMap(enabled: Boolean) {
+        ensureLoaded()
+        if (showRatingMap == enabled) return
+        showRatingMap = enabled
+        publish()
+        persist()
+    }
+
     fun setPosterTransitionEnabled(enabled: Boolean) {
         ensureLoaded()
         posterTransitionEnabled = enabled
@@ -410,6 +424,7 @@ object MetaScreenSettingsRepository {
         posterTransitionEnabled = false
         showOverallRatings = true
         episodeRatingsVisibility = EpisodeRatingsVisibility.SHOW_ALL
+        showRatingMap = true
         _uiState.value = MetaScreenSettingsUiState()
     }
 
@@ -427,6 +442,7 @@ object MetaScreenSettingsRepository {
         posterTransitionEnabled: Boolean = false,
         showOverallRatings: Boolean = true,
         episodeRatingsVisibility: EpisodeRatingsVisibility = EpisodeRatingsVisibility.SHOW_ALL,
+        showRatingMap: Boolean = true,
     ) {
         ensureLoaded()
         this.backgroundMode = backgroundMode ?: MetaScreenBackgroundMode.fromLegacyCinematic(cinematicBackground)
@@ -443,6 +459,7 @@ object MetaScreenSettingsRepository {
         this.posterTransitionEnabled = posterTransitionEnabled
         this.showOverallRatings = showOverallRatings
         this.episodeRatingsVisibility = episodeRatingsVisibility
+        this.showRatingMap = showRatingMap
         preferences = items.associate { item ->
             item.key to StoredMetaScreenSectionPreference(
                 key = item.key.name,
@@ -476,6 +493,7 @@ object MetaScreenSettingsRepository {
         posterTransitionEnabled = false
         showOverallRatings = true
         episodeRatingsVisibility = EpisodeRatingsVisibility.SHOW_ALL
+        showRatingMap = true
         normalizePreferences()
         publish()
         persist()
@@ -551,6 +569,7 @@ object MetaScreenSettingsRepository {
             posterTransitionEnabled = posterTransitionEnabled,
             showOverallRatings = showOverallRatings,
             episodeRatingsVisibility = episodeRatingsVisibility,
+            showRatingMap = showRatingMap,
         )
     }
 
@@ -571,6 +590,7 @@ object MetaScreenSettingsRepository {
                     posterTransitionEnabled = posterTransitionEnabled,
                     showOverallRatings = showOverallRatings,
                     episodeRatingsVisibility = episodeRatingsVisibility.name,
+                    showRatingMap = showRatingMap,
                 ),
             ),
         )

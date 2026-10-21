@@ -110,6 +110,9 @@ data class MetaVideo(
     val imdbRating: Double? = null,
     val rating: Double? = null,
     val streams: List<StreamItem> = emptyList(),
+    val imdbId: String? = null,
+    val imdbSeason: Int? = null,
+    val imdbEpisode: Int? = null,
 )
 
 data class MetaDetailsUiState(

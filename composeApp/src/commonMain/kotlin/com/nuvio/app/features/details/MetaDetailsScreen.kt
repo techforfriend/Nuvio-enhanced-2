@@ -109,6 +109,8 @@ import com.nuvio.app.features.details.components.CommentDetailSheet
 import com.nuvio.app.features.details.components.DetailAdditionalInfoSection
 import com.nuvio.app.features.details.components.DetailCastSection
 import com.nuvio.app.features.details.components.DetailCommentsSection
+import com.nuvio.app.features.details.components.DetailEpisodeRatingMap
+import com.nuvio.app.features.details.components.hasEpisodeRatingMap
 import com.nuvio.app.features.details.components.DetailFloatingHeader
 import com.nuvio.app.features.details.components.DetailHero
 import com.nuvio.app.features.details.components.DetailMetaInfo
@@ -1434,6 +1436,42 @@ fun MetaDetailsScreen(
                                         leadingItemCount = 1,
                                         stickyBackground = heroGradientColor ?: colorScheme.background,
                                     )
+
+                                    if (
+                                        metaScreenSettingsUiState.showRatingMap &&
+                                        metaScreenSettingsUiState.episodeRatingsVisibility.showRatings &&
+                                        hasEpisodes &&
+                                        meta.hasEpisodeRatingMap()
+                                    ) {
+                                        item(key = "detail-rating-map") {
+                                            val ratingMapWatchedKeys = watchedUiState.watchedKeys
+                                            val isRatingMapEpisodeWatched = remember(meta, ratingMapWatchedKeys, progressByVideoId) {
+                                                { episode: MetaVideo ->
+                                                    isEpisodeWatchedForActions(
+                                                        meta = meta,
+                                                        episode = episode,
+                                                        watchedKeys = ratingMapWatchedKeys,
+                                                        progressByVideoId = progressByVideoId,
+                                                    )
+                                                }
+                                            }
+                                            DetailSectionContainer(
+                                                horizontalPadding = contentHorizontalPadding,
+                                                contentMaxWidth = if (isTablet && !useTabletLayout) contentMaxWidth else Dp.Unspecified,
+                                            ) {
+                                                DetailEpisodeRatingMap(
+                                                    meta = meta,
+                                                    episodeRatingsVisibility = metaScreenSettingsUiState.episodeRatingsVisibility,
+                                                    isEpisodeWatched = isRatingMapEpisodeWatched,
+                                                    onEpisodeClick = onEpisodePlayClick,
+                                                    onEpisodeLongPress = { video ->
+                                                        selectedEpisodeZoomAnchor = null
+                                                        selectedEpisodeForActions = video
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    }
 
                                     item(key = "detail-bottom-spacer") {
                                         Spacer(modifier = Modifier.height(nuvioSafeBottomPadding(32.dp)))

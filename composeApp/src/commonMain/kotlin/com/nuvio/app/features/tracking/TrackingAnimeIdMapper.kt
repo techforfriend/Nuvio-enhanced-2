@@ -90,6 +90,39 @@ internal object TrackingAnimeIdMapper {
         )
     }
 
+    data class AnimeImdbMapping(
+        val imdb: String,
+        val episodes: List<SimklIdResolver.EpisodeMapping>,
+        val fallbackSeason: Int?,
+    ) {
+        fun imdbEpisodeFor(number: Int): Pair<Int, Int>? {
+            episodes.firstOrNull { it.animeEpisode == number }?.let { return it.tvdbSeason to it.tvdbEpisode }
+            episodes.filter { it.animeEpisode < number }.maxByOrNull { it.animeEpisode }?.let { previous ->
+                return previous.tvdbSeason to previous.tvdbEpisode + (number - previous.animeEpisode)
+            }
+            if (episodes.isNotEmpty()) return null
+            val season = fallbackSeason ?: return null
+            return season to number
+        }
+    }
+
+    suspend fun animeImdbMapping(source: String, id: Long): AnimeImdbMapping? {
+        val normalizedSource = source.trim().lowercase()
+        if (normalizedSource !in animePrefixes || id <= 0L) return null
+        return lock.withLock {
+            val resolved = resolveSimkl(normalizedSource, id) ?: return@withLock null
+            val imdb = resolved.imdb?.trim()?.takeIf { it.startsWith("tt", ignoreCase = true) } ?: return@withLock null
+            val episodes = try {
+                SimklIdResolver.getEpisodeMapping(resolved.simklId, resolved.type)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                emptyList()
+            }
+            AnimeImdbMapping(imdb = imdb, episodes = episodes, fallbackSeason = resolved.tvdbSeason)
+        }
+    }
+
     private fun TrackingExternalIds.withImdb(imdb: String): TrackingExternalIds {
         val current = this.imdb?.trim()?.takeIf(String::isNotBlank)
         return when {
