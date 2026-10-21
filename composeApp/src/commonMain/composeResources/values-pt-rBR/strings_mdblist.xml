@@ -4,7 +4,7 @@
     <string name="settings_mdb_ratings_connected_account">Usando conta conectada</string>
     <string name="tracking_source_mdblist">MDBList</string>
     <string name="settings_mdblist_library_description">Lista de interesses e suas listas estáticas de filmes e séries.</string>
-    <string name="settings_mdblist_progress_description">Histórico de visualização, progresso de retomada e Next Up do MDBList.</string>
+    <string name="settings_mdblist_progress_description">Histórico de visualização, progresso de retomada e A Seguir do MDBList.</string>
     <string name="library_mdblist_title">Biblioteca do MDBList</string>
     <string name="library_mdblist_load_failed">Não foi possível carregar sua biblioteca do MDBList</string>
     <string name="library_mdblist_empty_title">Sua biblioteca do MDBList está vazia</string>
@@ -27,7 +27,7 @@
     <string name="settings_mdblist_auth_revoked">Sua conexão com o MDBList expirou ou foi revogada. Conecte-se novamente para retomar a sincronização.</string>
     <string name="settings_mdblist_invalid_response">O MDBList retornou uma resposta incompleta. Tente novamente.</string>
     <string name="settings_mdblist_write_required">O MDBList não concedeu permissão para atualizar o histórico de visualização. Reconecte e permita o acesso de gravação.</string>
-    <string name="library_manage_lists">Gerenciar Listas</string>
+    <string name="library_manage_lists">Gerenciar listas</string>
     <string name="library_create_list">Criar Lista</string>
     <string name="library_edit_list">Editar Lista</string>
     <string name="library_list_name">Nome</string>

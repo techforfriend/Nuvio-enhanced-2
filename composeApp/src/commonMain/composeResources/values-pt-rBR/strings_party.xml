@@ -76,7 +76,7 @@
     <string name="party_tab_party">Sessão</string>
     <string name="party_tab_chat">Chat</string>
     <string name="party_chat_empty_title">Nenhuma mensagem ainda</string>
-    <string name="party_chat_empty_message">Apenas pessoas nesta sessão podem ver o chat.</string>
+    <string name="party_chat_empty_message">Apenas as pessoas nesta sessão podem ver o chat.</string>
     <string name="party_chat_placeholder">Mensagem</string>
     <string name="party_chat_send">Enviar</string>
     <string name="party_chat_not_sent">Não enviada. Toque para tentar novamente</string>

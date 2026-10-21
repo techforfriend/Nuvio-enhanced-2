@@ -15,11 +15,12 @@ actual object StreamBadgeSettingsStorage {
     private const val showFileSizeBadgesKey = "show_file_size_badges"
     private const val showAddonLogoKey = "show_addon_logo"
     private const val showStreamSearchKey = "show_stream_search"
+    private const val showInPlayerKey = "show_badges_in_player"
     private const val streamBackgroundModeKey = "stream_background_mode"
     private const val streamBadgePlacementKey = "stream_badge_placement"
     private const val pinnedStreamSourcesKey = "pinned_stream_sources"
     private const val legacyDebridStreamBadgeRulesKey = "debrid_stream_badge_rules"
-    private val syncKeys = listOf(streamBadgeRulesKey, showFileSizeBadgesKey, streamBadgePlacementKey, streamBackgroundModeKey, pinnedStreamSourcesKey)
+    private val syncKeys = listOf(streamBadgeRulesKey, showFileSizeBadgesKey, showInPlayerKey, streamBadgePlacementKey, streamBackgroundModeKey, pinnedStreamSourcesKey)
 
     actual fun loadStreamBadgeRules(): String? = loadString(streamBadgeRulesKey)
 
@@ -43,6 +44,12 @@ actual object StreamBadgeSettingsStorage {
 
     actual fun saveShowStreamSearch(enabled: Boolean) {
         saveBoolean(showStreamSearchKey, enabled)
+    }
+
+    actual fun loadShowInPlayer(): Boolean? = loadBoolean(showInPlayerKey)
+
+    actual fun saveShowInPlayer(enabled: Boolean) {
+        saveBoolean(showInPlayerKey, enabled)
     }
 
     actual fun loadStreamBadgePlacement(): String? = loadString(streamBadgePlacementKey)
@@ -94,6 +101,7 @@ actual object StreamBadgeSettingsStorage {
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {
         loadStreamBadgeRules()?.let { put(streamBadgeRulesKey, encodeSyncString(it)) }
         loadShowFileSizeBadges()?.let { put(showFileSizeBadgesKey, encodeSyncBoolean(it)) }
+        loadShowInPlayer()?.let { put(showInPlayerKey, encodeSyncBoolean(it)) }
         loadStreamBadgePlacement()?.let { put(streamBadgePlacementKey, encodeSyncString(it)) }
         loadStreamBackgroundMode()?.let { put(streamBackgroundModeKey, encodeSyncString(it)) }
         loadPinnedStreamSources()?.let { put(pinnedStreamSourcesKey, encodeSyncString(it)) }
@@ -106,6 +114,7 @@ actual object StreamBadgeSettingsStorage {
 
         payload.decodeSyncString(streamBadgeRulesKey)?.let(::saveStreamBadgeRules)
         payload.decodeSyncBoolean(showFileSizeBadgesKey)?.let(::saveShowFileSizeBadges)
+        payload.decodeSyncBoolean(showInPlayerKey)?.let(::saveShowInPlayer)
         payload.decodeSyncString(streamBadgePlacementKey)?.let(::saveStreamBadgePlacement)
         payload.decodeSyncString(streamBackgroundModeKey)?.let(::saveStreamBackgroundMode)
         payload.decodeSyncString(pinnedStreamSourcesKey)?.let(::savePinnedStreamSources)

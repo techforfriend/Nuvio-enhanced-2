@@ -85,6 +85,7 @@ internal fun PlayerToolbar(
     partyActive: Boolean = false,
     onOrientationToggleClick: (() -> Unit)? = null,
     isPortraitPlayback: Boolean = false,
+    onSwitchEngineClick: (() -> Unit)? = null,
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
@@ -97,6 +98,13 @@ internal fun PlayerToolbar(
             ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (onSwitchEngineClick != null) {
+                PlayerAction(
+                    description = stringResource(Res.string.cd_switch_player_engine),
+                    icon = Icons.Rounded.SwapHoriz,
+                    onClick = onSwitchEngineClick,
+                )
+            }
             onOrientationToggleClick?.let {
                 PlayerAction(
                     description = stringResource(playerOrientationToggleLabel(isPortraitPlayback)),
@@ -157,7 +165,6 @@ internal fun PlayerControlActions(
     onEpisodesClick: (() -> Unit)?,
     onChaptersClick: (() -> Unit)? = null,
     onNextEpisodeClick: (() -> Unit)?,
-    onSwitchEngineClick: (() -> Unit)?,
     onSpeedClick: () -> Unit,
     speedPickerVisible: Boolean = false,
     onSpeedSelected: (Float) -> Unit = {},
@@ -220,12 +227,6 @@ internal fun PlayerControlActions(
             PlayerControlAction(
                 qualityLabel?.takeIf { label -> label.isNotBlank() } ?: "Quality", it,
                 icon = Icons.Rounded.HighQuality,
-            )
-        },
-        onSwitchEngineClick?.let {
-            PlayerControlAction(
-                stringResource(Res.string.cd_switch_player_engine), it,
-                icon = Icons.Rounded.SwapHoriz,
             )
         },
         PlayerControlAction(
