@@ -842,6 +842,7 @@ private fun ProgressControls(
             seekPreview = seekPreview,
             onTouchChange = onTimelineTouchChange,
             showTimeRow = false,
+            modifier = Modifier.padding(bottom = 8.dp),
         )
         // Legacy bottom bar: time pills on the bar's outer edges (lined up with the seek bar's
         // ends and the pill's top edge), actions in the middle.
