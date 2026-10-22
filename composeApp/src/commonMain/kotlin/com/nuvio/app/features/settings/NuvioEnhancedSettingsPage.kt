@@ -955,8 +955,7 @@ private fun NuvioEnhancedSettingsPageContent(
         }
 
         if (selectedCategory == EnhancedSettingsCategory.All ||
-            selectedCategory == EnhancedSettingsCategory.System ||
-            selectedCategory == EnhancedSettingsCategory.Core
+            selectedCategory == EnhancedSettingsCategory.System
         ) {
             SettingsSection(
                 title = stringResource(Res.string.nuvio_enhanced_section_app_experience),
@@ -1008,13 +1007,8 @@ private fun NuvioEnhancedSettingsPageContent(
                     )
                 }
             }
-        }
 
-        if (selectedCategory == EnhancedSettingsCategory.All ||
-            selectedCategory == EnhancedSettingsCategory.System
-        ) {
-
-        SettingsSection(
+            SettingsSection(
             title = stringResource(Res.string.nuvio_enhanced_section_network),
             isTablet = isTablet,
         ) {
