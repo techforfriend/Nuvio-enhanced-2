@@ -2304,7 +2304,7 @@ private fun LibassRenderScaleDialog(
     onDismiss: () -> Unit,
 ) {
     val options = listOf(
-        "FULL" to "Full",
+        "FULL" to "1:1",
         "THREE_QUARTER" to "\u00BE",
         "HALF" to "\u00BD",
         "THIRD" to "\u2153",
