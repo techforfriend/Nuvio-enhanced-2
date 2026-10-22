@@ -33,7 +33,11 @@ internal actual object StreamSourcePreferencesStorage {
 
     actual fun loadPinnedSourcesPayload(): String? {
         val prefs = getPrefs() ?: return null
-        return prefs.getString(ProfileScopedKey.of(pinnedSourcesKey), null)
+        val scoped = prefs.getString(ProfileScopedKey.of(pinnedSourcesKey), null)?.trim()
+        if (!scoped.isNullOrEmpty()) return scoped
+        val profile1 = prefs.getString(ProfileScopedKey.of(pinnedSourcesKey, 1), null)?.trim()
+        if (!profile1.isNullOrEmpty()) return profile1
+        return prefs.getString(pinnedSourcesKey, null)?.trim()
     }
 
     actual fun savePinnedSourcesPayload(payload: String) {
@@ -41,8 +45,11 @@ internal actual object StreamSourcePreferencesStorage {
         prefs
             .edit()
             .putString(ProfileScopedKey.of(pinnedSourcesKey), payload)
+            .putString(pinnedSourcesKey, payload)
             .remove(ProfileScopedKey.of(pinnedSourceIdKey))
             .remove(ProfileScopedKey.of(pinnedSourceNameKey))
+            .remove(pinnedSourceIdKey)
+            .remove(pinnedSourceNameKey)
             .apply()
     }
 

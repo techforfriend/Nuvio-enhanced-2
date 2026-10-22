@@ -140,6 +140,7 @@ internal enum class NuvioEnhancedFeature(
 }
 
 private val latestReleaseFeatureIds = setOf(
+    NuvioEnhancedFeature.LiveTvControls.id,
     NuvioEnhancedFeature.HeroControlsV2.id,
     NuvioEnhancedFeature.DetailPresentationControlsV2.id,
     NuvioEnhancedFeature.NuvioRead.id,

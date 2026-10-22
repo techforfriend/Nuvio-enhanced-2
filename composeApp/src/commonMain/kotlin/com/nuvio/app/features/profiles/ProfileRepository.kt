@@ -172,7 +172,7 @@ object ProfileRepository {
         TrackingProviderRegistry.onProfileChanged()
         LibraryRepository.onProfileChanged(profileIndex)
         LibraryDisplaySettingsRepository.onProfileChanged()
-        WatchProgressRepository.onProfileChanged(profileIndex)
+        WatchProgressRepository.onProfileChanged(profileIndex, forceReload = true)
         AddonRepository.onProfileChanged(profileIndex)
         if (com.nuvio.app.core.build.AppFeaturePolicy.pluginsEnabled) {
             PluginRepository.onProfileChanged(profileIndex)

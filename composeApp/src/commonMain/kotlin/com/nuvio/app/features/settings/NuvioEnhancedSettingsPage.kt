@@ -162,7 +162,8 @@ private fun NuvioEnhancedSettingsPageContent(
         settings.isNew(NuvioEnhancedFeature.HeroControlsV2) ||
         settings.isNew(NuvioEnhancedFeature.DetailPresentationControlsV2) ||
         settings.isNew(NuvioEnhancedFeature.NuvioRead) ||
-        settings.isNew(NuvioEnhancedFeature.CinematicDetailHeader)
+        settings.isNew(NuvioEnhancedFeature.CinematicDetailHeader) ||
+        settings.isNew(NuvioEnhancedFeature.LiveTvControls)
     var selectedCategory by rememberSaveable {
         mutableStateOf(
             if (hasNewFeatures) {
@@ -954,7 +955,8 @@ private fun NuvioEnhancedSettingsPageContent(
         }
 
         if (selectedCategory == EnhancedSettingsCategory.All ||
-            selectedCategory == EnhancedSettingsCategory.System
+            selectedCategory == EnhancedSettingsCategory.System ||
+            selectedCategory == EnhancedSettingsCategory.Core
         ) {
             SettingsSection(
                 title = stringResource(Res.string.nuvio_enhanced_section_app_experience),
@@ -970,6 +972,18 @@ private fun NuvioEnhancedSettingsPageContent(
                         onCheckedChange = {
                             markSeen(NuvioEnhancedFeature.StatusBarVisibility)
                             NuvioEnhancedSettingsRepository.setStatusBarVisible(it)
+                        },
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_live_tv_title),
+                        description = stringResource(Res.string.nuvio_enhanced_live_tv_desc),
+                        checked = settings.liveTvEnabled,
+                        isTablet = isTablet,
+                        highlighted = isNew(NuvioEnhancedFeature.LiveTvControls),
+                        onCheckedChange = {
+                            markSeen(NuvioEnhancedFeature.LiveTvControls)
+                            NuvioEnhancedSettingsRepository.setLiveTvEnabled(it)
                         },
                     )
                     SettingsGroupDivider(isTablet = isTablet)
@@ -994,6 +1008,11 @@ private fun NuvioEnhancedSettingsPageContent(
                     )
                 }
             }
+        }
+
+        if (selectedCategory == EnhancedSettingsCategory.All ||
+            selectedCategory == EnhancedSettingsCategory.System
+        ) {
 
         SettingsSection(
             title = stringResource(Res.string.nuvio_enhanced_section_network),

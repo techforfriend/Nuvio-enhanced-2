@@ -642,6 +642,10 @@ actual object PlayerSettingsStorage {
             val key = ProfileScopedKey.of(streamReuseLastLinkEnabledKey)
             if (sharedPreferences.contains(key)) {
                 sharedPreferences.getBoolean(key, false)
+            } else if (sharedPreferences.contains(ProfileScopedKey.of(streamReuseLastLinkEnabledKey, 1))) {
+                sharedPreferences.getBoolean(ProfileScopedKey.of(streamReuseLastLinkEnabledKey, 1), false)
+            } else if (sharedPreferences.contains(streamReuseLastLinkEnabledKey)) {
+                sharedPreferences.getBoolean(streamReuseLastLinkEnabledKey, false)
             } else {
                 null
             }
@@ -651,6 +655,7 @@ actual object PlayerSettingsStorage {
         preferences
             ?.edit()
             ?.putBoolean(ProfileScopedKey.of(streamReuseLastLinkEnabledKey), enabled)
+            ?.putBoolean(streamReuseLastLinkEnabledKey, enabled)
             ?.apply()
     }
 
@@ -659,6 +664,10 @@ actual object PlayerSettingsStorage {
             val key = ProfileScopedKey.of(streamReuseLastLinkCacheHoursKey)
             if (sharedPreferences.contains(key)) {
                 sharedPreferences.getInt(key, 24)
+            } else if (sharedPreferences.contains(ProfileScopedKey.of(streamReuseLastLinkCacheHoursKey, 1))) {
+                sharedPreferences.getInt(ProfileScopedKey.of(streamReuseLastLinkCacheHoursKey, 1), 24)
+            } else if (sharedPreferences.contains(streamReuseLastLinkCacheHoursKey)) {
+                sharedPreferences.getInt(streamReuseLastLinkCacheHoursKey, 24)
             } else {
                 null
             }
@@ -668,6 +677,7 @@ actual object PlayerSettingsStorage {
         preferences
             ?.edit()
             ?.putInt(ProfileScopedKey.of(streamReuseLastLinkCacheHoursKey), hours)
+            ?.putInt(streamReuseLastLinkCacheHoursKey, hours)
             ?.apply()
     }
 
