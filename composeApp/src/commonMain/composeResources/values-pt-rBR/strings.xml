@@ -1141,11 +1141,6 @@
     <string name="settings_playback_regex_preset_quality_720p_smaller">720p / Menor</string>
     <string name="settings_playback_regex_preset_web_sources">Fontes WEB</string>
     <string name="settings_playback_render_type">Modo de Renderização Libass</string>
-    <string name="settings_playback_render_type_cues">Cues Padrão</string>
-    <string name="settings_playback_render_type_effects_canvas">Effects Canvas</string>
-    <string name="settings_playback_render_type_effects_opengl">Effects OpenGL</string>
-    <string name="settings_playback_render_type_overlay_canvas">Overlay Canvas</string>
-    <string name="settings_playback_render_type_overlay_opengl">Overlay OpenGL (Recomendado)</string>
     <string name="settings_playback_reuse_last_link">Reutilizar Último Link</string>
     <string name="settings_playback_reuse_last_link_description">Reproduzir automaticamente sua última stream funcional para este mesmo filme/episódio enquanto o cache estiver válido</string>
     <string name="settings_playback_secondary_audio_language">Segundo Idioma de Áudio</string>

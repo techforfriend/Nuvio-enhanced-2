@@ -702,11 +702,6 @@
     <string name="settings_playback_regex_preset_quality_720p_smaller">720p / Μικρότερο</string>
     <string name="settings_playback_regex_preset_web_sources">Πηγές WEB</string>
     <string name="settings_playback_render_type">Λειτουργία απόδοσης Libass</string>
-    <string name="settings_playback_render_type_cues">Τυπικό (Cues)</string>
-    <string name="settings_playback_render_type_effects_canvas">Καμβάς εφέ</string>
-    <string name="settings_playback_render_type_effects_opengl">Εφέ OpenGL</string>
-    <string name="settings_playback_render_type_overlay_canvas">Καμβάς επικάλυψης</string>
-    <string name="settings_playback_render_type_overlay_opengl">Επικάλυψη OpenGL (Προτεινόμενο)</string>
     <string name="settings_playback_reuse_last_link">Επαναχρησιμοποίηση τελευταίου συνδέσμου</string>
     <string name="settings_playback_reuse_last_link_description">Αυτόματη αναπαραγωγή της τελευταίας λειτουργικής ροής για την ίδια ταινία/επεισόδιο όταν η προσωρινή μνήμη είναι ακόμα έγκυρη.</string>
     <string name="settings_playback_secondary_audio_language">Δευτερεύουσα γλώσσα ήχου</string>

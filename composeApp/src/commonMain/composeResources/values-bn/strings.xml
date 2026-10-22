@@ -1137,11 +1137,6 @@
     <string name="settings_playback_regex_preset_quality_720p_smaller">720p / ছোট</string>
     <string name="settings_playback_regex_preset_web_sources">ওয়েব সোর্স</string>
     <string name="settings_playback_render_type">libass রেন্ডার মোড</string>
-    <string name="settings_playback_render_type_cues">স্ট্যান্ডার্ড কিউ</string>
-    <string name="settings_playback_render_type_effects_canvas">ইফেক্টস ক্যানভাস</string>
-    <string name="settings_playback_render_type_effects_opengl">ইফেক্টস OpenGL</string>
-    <string name="settings_playback_render_type_overlay_canvas">ওভারলে ক্যানভাস</string>
-    <string name="settings_playback_render_type_overlay_opengl">ওভারলে OpenGL (প্রস্তাবিত)</string>
     <string name="settings_playback_reuse_last_link">শেষ লিঙ্ক আবার ব্যবহার করুন</string>
     <string name="settings_playback_reuse_last_link_description">এই মুভি/পর্বের সর্বশেষ সচল স্ট্রিমটি অটো-প্লে করুন, যদি ক্যাশে বৈধ থাকে</string>
     <string name="settings_playback_secondary_audio_language">দ্বিতীয় পছন্দের অডিও ভাষা</string>
