@@ -24,7 +24,8 @@ import androidx.media3.common.util.GlUtil
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
+import com.nuvio.app.core.network.SharedOkHttpClient
 import androidx.media3.effect.GlEffect
 import androidx.media3.effect.GlShaderProgram
 import androidx.media3.effect.MatrixTransformation
@@ -56,6 +57,15 @@ import java.util.concurrent.atomic.AtomicReference
 
 private const val FrameTimeoutSeconds = 20L
 private const val NetworkTimeoutMs = 10_000
+
+private val seekPreviewHttpClient by lazy {
+    SharedOkHttpClient.base.newBuilder()
+        .connectTimeout(NetworkTimeoutMs.toLong(), java.util.concurrent.TimeUnit.MILLISECONDS)
+        .readTimeout(NetworkTimeoutMs.toLong(), java.util.concurrent.TimeUnit.MILLISECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .build()
+}
 private const val SeekToleranceUs = 2_000_000L
 private const val GrabberMinBufferMs = 1_000
 private const val GrabberMaxBufferMs = 2_000
@@ -149,10 +159,7 @@ private class ExoFrameGrabber(
 
     init {
         val userAgent = headers.entries.firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }?.value
-        val httpFactory = DefaultHttpDataSource.Factory()
-            .setAllowCrossProtocolRedirects(true)
-            .setConnectTimeoutMs(NetworkTimeoutMs)
-            .setReadTimeoutMs(NetworkTimeoutMs)
+        val httpFactory = OkHttpDataSource.Factory(seekPreviewHttpClient)
             .setDefaultRequestProperties(headers.filterKeys { !it.equals("User-Agent", ignoreCase = true) })
             .apply { if (userAgent != null) setUserAgent(userAgent) }
         val mediaSourceFactory = DefaultMediaSourceFactory(
