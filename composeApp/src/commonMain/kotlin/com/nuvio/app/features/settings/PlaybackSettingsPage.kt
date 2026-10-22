@@ -57,6 +57,7 @@ import com.nuvio.app.features.player.SUBTITLE_SHADOW_STRENGTH_MAX
 import com.nuvio.app.features.player.SUBTITLE_SHADOW_STRENGTH_MIN
 import com.nuvio.app.features.player.SubtitleFontRepository
 import com.nuvio.app.features.player.AndroidLibmpvVideoOutput
+import com.nuvio.app.features.player.PlayerSkipSecondsOptions
 import com.nuvio.app.features.player.AndroidPlaybackEngine
 import com.nuvio.app.features.player.AudioLanguageOption
 import com.nuvio.app.features.player.AvailableLanguageOptions
@@ -357,6 +358,7 @@ private fun PlaybackSettingsSection(
     var showLibmpvVideoOutputDialog by remember { mutableStateOf(false) }
     var showDecoderPriorityDialog by remember { mutableStateOf(false) }
     var showHoldToSpeedValueDialog by remember { mutableStateOf(false) }
+    var skipDirectionDialog by remember { mutableStateOf<Boolean?>(null) } // true = forward
     var showIosAudioOutputDialog by remember { mutableStateOf(false) }
     var showIosHardwareDecoderDialog by remember { mutableStateOf(false) }
     var showIosTargetPrimariesDialog by remember { mutableStateOf(false) }
@@ -557,6 +559,28 @@ private fun PlaybackSettingsSection(
                         onClick = { showHoldToSpeedValueDialog = true },
                     )
                 }
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.settings_playback_skip_backward),
+                    description = stringResource(
+                        Res.string.settings_playback_skip_seconds_value,
+                        autoPlayPlayerSettings.skipBackwardSeconds,
+                    ),
+                    enabled = !autoPlayPlayerSettings.externalPlayerEnabled,
+                    isTablet = isTablet,
+                    onClick = { skipDirectionDialog = false },
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.settings_playback_skip_forward),
+                    description = stringResource(
+                        Res.string.settings_playback_skip_seconds_value,
+                        autoPlayPlayerSettings.skipForwardSeconds,
+                    ),
+                    enabled = !autoPlayPlayerSettings.externalPlayerEnabled,
+                    isTablet = isTablet,
+                    onClick = { skipDirectionDialog = true },
+                )
             }
         }
 
@@ -1864,6 +1888,28 @@ private fun PlaybackSettingsSection(
         )
     }
 
+    skipDirectionDialog?.let { forward ->
+        SkipSecondsDialog(
+            title = stringResource(
+                if (forward) Res.string.settings_playback_skip_forward else Res.string.settings_playback_skip_backward,
+            ),
+            selectedSeconds = if (forward) {
+                autoPlayPlayerSettings.skipForwardSeconds
+            } else {
+                autoPlayPlayerSettings.skipBackwardSeconds
+            },
+            onSelected = { seconds ->
+                if (forward) {
+                    PlayerSettingsRepository.setSkipForwardSeconds(seconds)
+                } else {
+                    PlayerSettingsRepository.setSkipBackwardSeconds(seconds)
+                }
+                skipDirectionDialog = null
+            },
+            onDismiss = { skipDirectionDialog = null },
+        )
+    }
+
     if (showHoldToSpeedValueDialog) {
         HoldToSpeedValueDialog(
             selectedSpeed = holdToSpeedValue,
@@ -3144,3 +3190,36 @@ private fun libassRenderTypeRes(renderType: String): StringResource = when (rend
 
 @Composable
 private fun libassRenderTypeLabel(renderType: String): String = stringResource(libassRenderTypeRes(renderType))
+
+@Composable
+private fun SkipSecondsDialog(
+    title: String,
+    selectedSeconds: Int,
+    onSelected: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    DialogSurface(
+        onDismissRequest = onDismiss,
+        title = title,
+        message = stringResource(Res.string.settings_playback_skip_description),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            PlayerSkipSecondsOptions.forEach { seconds ->
+                DialogOption(
+                    text = stringResource(Res.string.settings_playback_skip_seconds_value, seconds),
+                    selected = seconds == selectedSeconds,
+                    onClick = { onSelected(seconds) },
+                )
+            }
+        }
+        DialogButtons {
+            DialogButton(
+                text = stringResource(Res.string.action_cancel),
+                onClick = onDismiss,
+            )
+        }
+    }
+}
