@@ -897,7 +897,7 @@
     <string name="settings_stream_badges_in_player_title">Hiển thị trong trình phát</string>
     <string name="settings_stream_badges_in_player_description">Hiển thị nhãn cho video và âm thanh đang phát bên dưới tiêu đề trình phát. Cần một bộ nhãn khớp với văn bản thuần túy như 2160p hoặc Atmos.</string>
     <string name="settings_stream_player_badges_title">Nhãn trình phát</string>
-    <string name="settings_stream_player_badges_description">Chọn bộ nhãn mà trình phát sử dụng.</string>
+    <string name="settings_stream_player_badges_description">Chọn bộ nhãn trình phát sử dụng.</string>
     <string name="settings_stream_player_badges_same">Giống nhãn luồng phát</string>
     <string name="settings_stream_addon_logo_title">Biểu tượng tiện ích</string>
     <string name="settings_stream_addon_logo_description">Hiển thị biểu tượng và tên tiện ích bên cạnh mỗi nguồn phát</string>
