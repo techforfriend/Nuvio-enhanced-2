@@ -13,13 +13,20 @@ actual object StreamLinkCacheStorage {
         preferences = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
     }
 
-    actual fun loadEntry(hashedKey: String): String? =
-        preferences?.getString(ProfileScopedKey.of(hashedKey), null)
+    actual fun loadEntry(hashedKey: String): String? {
+        val prefs = preferences ?: return null
+        val scoped = prefs.getString(ProfileScopedKey.of(hashedKey), null)?.trim()
+        if (!scoped.isNullOrEmpty()) return scoped
+        val profile1 = prefs.getString(ProfileScopedKey.of(hashedKey, 1), null)?.trim()
+        if (!profile1.isNullOrEmpty()) return profile1
+        return prefs.getString(hashedKey, null)?.trim()
+    }
 
     actual fun saveEntry(hashedKey: String, payload: String) {
         preferences
             ?.edit()
             ?.putString(ProfileScopedKey.of(hashedKey), payload)
+            ?.putString(hashedKey, payload)
             ?.apply()
     }
 
@@ -27,6 +34,7 @@ actual object StreamLinkCacheStorage {
         preferences
             ?.edit()
             ?.remove(ProfileScopedKey.of(hashedKey))
+            ?.remove(hashedKey)
             ?.apply()
     }
 }

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -87,6 +88,11 @@ internal fun MainTabsDestination(
             NuvioEnhancedSettingsRepository.uiState
         }.collectAsStateWithLifecycle()
         val liveTvEnabled = enhancedSettings.liveTvEnabled
+        LaunchedEffect(liveTvEnabled) {
+            if (!liveTvEnabled && selectedTab == AppScreenTab.LiveTv) {
+                onTabSelected(AppScreenTab.Home)
+            }
+        }
         val floatingNavigationItems = buildList {
             add(
                 FloatingNavigationItem(

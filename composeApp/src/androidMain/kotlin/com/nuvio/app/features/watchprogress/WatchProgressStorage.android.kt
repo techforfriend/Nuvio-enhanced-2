@@ -13,13 +13,24 @@ actual object WatchProgressStorage {
         preferences = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
     }
 
-    actual fun loadPayload(profileId: Int): String? =
-        preferences?.getString("${payloadKey}_$profileId", null)
+    actual fun loadPayload(profileId: Int): String? {
+        val prefs = preferences ?: return null
+        val direct = prefs.getString("${payloadKey}_$profileId", null)?.trim()
+        if (!direct.isNullOrEmpty()) return direct
+        if (profileId != 1) {
+            val fallback = prefs.getString("${payloadKey}_1", null)?.trim()
+            if (!fallback.isNullOrEmpty()) return fallback
+        }
+        val unscoped = prefs.getString(payloadKey, null)?.trim()
+        if (!unscoped.isNullOrEmpty()) return unscoped
+        return null
+    }
 
     actual fun savePayload(profileId: Int, payload: String) {
         preferences
             ?.edit()
             ?.putString("${payloadKey}_$profileId", payload)
+            ?.putString(payloadKey, payload)
             ?.apply()
     }
 }
