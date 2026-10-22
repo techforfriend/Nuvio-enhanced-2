@@ -2028,7 +2028,7 @@ private fun PlayerView.syncLibassOverlay(
             overlayContainer.removeAssOverlayChildren()
         }
         if (boundPlayer != null) {
-            player.getAssHandlerCompat()?.videoFrameCallback = null
+            boundPlayer.getAssHandlerCompat()?.videoFrameCallback = null
             setTag(R.id.libass_overlay_bound_player, null)
         }
         return
