@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -31,6 +32,8 @@ import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Forward10
+import androidx.compose.material.icons.rounded.Forward30
+import androidx.compose.material.icons.rounded.Forward5
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Star
@@ -39,7 +42,10 @@ import androidx.compose.material.icons.rounded.CastConnected
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Replay10
+import androidx.compose.material.icons.rounded.Replay30
+import androidx.compose.material.icons.rounded.Replay5
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.Tv
@@ -79,6 +85,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.LayoutDirection
@@ -128,6 +135,8 @@ internal fun PlayerControlsShell(
     onTogglePlayback: () -> Unit,
     onSeekBack: () -> Unit,
     onSeekForward: () -> Unit,
+    skipBackwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
+    skipForwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
     onResizeModeClick: () -> Unit,
     onSpeedClick: (() -> Unit)? = null,
     speedPickerVisible: Boolean = false,
@@ -287,6 +296,8 @@ internal fun PlayerControlsShell(
                     CenterControls(
                         snapshot = playbackSnapshot,
                         metrics = metrics,
+                        skipBackwardSeconds = skipBackwardSeconds,
+                        skipForwardSeconds = skipForwardSeconds,
                         onSeekBack = {
                             if (!useLegacyLayout) onInteraction()
                             onSeekBack()
@@ -698,6 +709,8 @@ private fun CenterControls(
     onSeekForward: () -> Unit,
     onTogglePlayback: () -> Unit,
     modifier: Modifier = Modifier,
+    skipBackwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
+    skipForwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
 ) {
     Row(
         modifier = modifier,
@@ -705,11 +718,10 @@ private fun CenterControls(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SideControlButton(
-            icon = Icons.Rounded.Replay10,
-            contentDescription = stringResource(Res.string.compose_player_seek_back_10),
+            contentDescription = stringResource(Res.string.compose_player_seek_back_seconds, skipBackwardSeconds),
             metrics = metrics,
             onClick = onSeekBack,
-        )
+        ) { SkipStepIcon(seconds = skipBackwardSeconds, forward = false, size = metrics.playIconSize) }
         PlayPauseControlButton(
             isPlaying = snapshot.isPlaying,
             isBuffering = snapshot.isLoading,
@@ -717,20 +729,19 @@ private fun CenterControls(
             onClick = onTogglePlayback,
         )
         SideControlButton(
-            icon = Icons.Rounded.Forward10,
-            contentDescription = stringResource(Res.string.compose_player_seek_forward_10),
+            contentDescription = stringResource(Res.string.compose_player_seek_forward_seconds, skipForwardSeconds),
             metrics = metrics,
             onClick = onSeekForward,
-        )
+        ) { SkipStepIcon(seconds = skipForwardSeconds, forward = true, size = metrics.playIconSize) }
     }
 }
 
 @Composable
 private fun SideControlButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
     contentDescription: String,
     metrics: PlayerLayoutMetrics,
     onClick: () -> Unit,
+    icon: @Composable () -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -740,14 +751,45 @@ private fun SideControlButton(
                 refractionAmount = 12.dp,
             )
             .clickable(onClick = onClick)
-            .padding(metrics.sideButtonPadding),
+            .padding(metrics.sideButtonPadding)
+            .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
     ) {
+        icon()
+    }
+}
+
+@Composable
+private fun SkipStepIcon(seconds: Int, forward: Boolean, size: Dp) {
+    val numbered = when (seconds) {
+        5 -> if (forward) Icons.Rounded.Forward5 else Icons.Rounded.Replay5
+        10 -> if (forward) Icons.Rounded.Forward10 else Icons.Rounded.Replay10
+        30 -> if (forward) Icons.Rounded.Forward30 else Icons.Rounded.Replay30
+        else -> null
+    }
+    if (numbered != null) {
+        Icon(numbered, contentDescription = null, tint = Color.White, modifier = Modifier.size(size))
+        return
+    }
+    Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
         Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
+            imageVector = Icons.Rounded.Replay,
+            contentDescription = null,
             tint = Color.White,
-            modifier = Modifier.size(metrics.playIconSize),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { if (forward) scaleX = -1f },
+        )
+        val density = LocalDensity.current
+        Text(
+            text = seconds.toString(),
+            color = Color.White,
+            style = MaterialTheme.nuvioTypeScale.labelSm.copy(
+                fontSize = with(density) { (size * 0.26f).toSp() },
+                lineHeight = with(density) { (size * 0.26f).toSp() },
+                fontWeight = FontWeight.Bold,
+            ),
+            modifier = Modifier.offset(y = size * 0.1f),
         )
     }
 }

@@ -478,6 +478,8 @@
     <string name="compose_player_seek_feedback_backward">-%1$ds</string>
     <string name="compose_player_seek_feedback_forward">+%1$ds</string>
     <string name="compose_player_seek_forward_10">Seek forward 10 seconds</string>
+    <string name="compose_player_seek_back_seconds">Seek backward %1$d seconds</string>
+    <string name="compose_player_seek_forward_seconds">Seek forward %1$d seconds</string>
     <string name="compose_player_sources">Sources</string>
     <string name="compose_player_style">Style</string>
     <string name="compose_player_select_addon_subtitle_first">Select an addon subtitle first</string>

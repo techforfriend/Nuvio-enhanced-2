@@ -235,8 +235,8 @@ internal fun PlayerScreenRuntime.handleKeyboardShortcut(shortcut: PlayerKeyboard
     if (playerControlsLocked || isAnyOverlayVisible) return
     when (shortcut) {
         PlayerKeyboardShortcut.TogglePlayback -> togglePlayback()
-        PlayerKeyboardShortcut.SeekBackward -> seekBy(-PlayerDoubleTapSeekStepMs)
-        PlayerKeyboardShortcut.SeekForward -> seekBy(PlayerDoubleTapSeekStepMs)
+        PlayerKeyboardShortcut.SeekBackward -> seekBy(-skipStepMs(PlayerSeekDirection.Backward))
+        PlayerKeyboardShortcut.SeekForward -> seekBy(skipStepMs(PlayerSeekDirection.Forward))
         PlayerKeyboardShortcut.Exit -> {
             flushWatchProgress()
             args.onBack()
@@ -244,16 +244,23 @@ internal fun PlayerScreenRuntime.handleKeyboardShortcut(shortcut: PlayerKeyboard
     }
 }
 
+internal fun PlayerScreenRuntime.skipStepMs(direction: PlayerSeekDirection): Long =
+    when (direction) {
+        PlayerSeekDirection.Backward -> playerSettingsUiState.skipBackwardSeconds
+        PlayerSeekDirection.Forward -> playerSettingsUiState.skipForwardSeconds
+    } * 1_000L
+
 internal fun PlayerScreenRuntime.handleDoubleTapSeek(direction: PlayerSeekDirection) {
+    val stepMs = skipStepMs(direction)
     val currentPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
     val currentSeekState = accumulatedSeekState
     val nextState = if (currentSeekState?.direction == direction) {
-        currentSeekState.copy(amountMs = currentSeekState.amountMs + PlayerDoubleTapSeekStepMs)
+        currentSeekState.copy(amountMs = currentSeekState.amountMs + stepMs)
     } else {
         PlayerAccumulatedSeekState(
             direction = direction,
             baselinePositionMs = currentPositionMs,
-            amountMs = PlayerDoubleTapSeekStepMs,
+            amountMs = stepMs,
         )
     }
     val maxDurationMs = playbackSnapshot.durationMs.takeIf { it > 0L }
