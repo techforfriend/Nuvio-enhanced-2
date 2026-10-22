@@ -705,6 +705,7 @@ final class MPVPlayerViewController: UIViewController {
         setSetupOption("gpu-api", "vulkan")
         setSetupOption("gpu-context", "moltenvk")
         setSetupOption("hwdec", "videotoolbox")
+        setSetupOption("hwdec-software-fallback", "300")
         setSetupOption("ao", Self.defaultAudioOutput)
         setSetupOption("audio-exclusive", "yes")
         setSetupOption("audio-channels", "auto")
