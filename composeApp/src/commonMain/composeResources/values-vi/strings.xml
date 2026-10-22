@@ -896,6 +896,9 @@
     <string name="settings_stream_size_badges_description">Hiển thị nhãn dung lượng tệp trong kết quả luồng và bảng chọn nguồn phát.</string>
     <string name="settings_stream_badges_in_player_title">Hiển thị trong trình phát</string>
     <string name="settings_stream_badges_in_player_description">Hiển thị nhãn cho video và âm thanh đang phát bên dưới tiêu đề trình phát.</string>
+    <string name="settings_stream_player_badges_title">Nhãn trình phát</string>
+    <string name="settings_stream_player_badges_description">Chọn nhãn mà trình phát sử dụng.</string>
+    <string name="settings_stream_player_badges_same">Giống nhãn luồng phát</string>
     <string name="settings_stream_addon_logo_title">Biểu tượng tiện ích</string>
     <string name="settings_stream_addon_logo_description">Hiển thị biểu tượng và tên tiện ích bên cạnh mỗi nguồn phát</string>
     <string name="settings_stream_display_section">HIỂN THỊ</string>
@@ -908,8 +911,8 @@
     <string name="settings_stream_badge_position_top">Phía trên</string>
     <string name="settings_stream_badge_position_bottom">Phía dưới</string>
     <string name="settings_stream_badge_urls_title">URL nhãn Fusion</string>
-    <string name="settings_stream_badge_urls_description">Nhập tối đa %1$d URL JSON nhãn luồng kiểu Fusion. Bạn có thể cập nhật hoặc xóa từng URL riêng lẻ.</string>
-    <string name="settings_stream_badge_urls_search_description">Quản lý các URL JSON nhãn luồng kiểu Fusion đã nhập.</string>
+    <string name="settings_stream_badge_urls_description">Nhập tối đa %1$d URL JSON nhãn luồng phát kiểu Fusion. Bạn có thể cập nhật hoặc xóa từng URL riêng lẻ.</string>
+    <string name="settings_stream_badge_urls_search_description">Quản lý các URL JSON nhãn luồng phát kiểu Fusion đã nhập.</string>
     <string name="settings_stream_badge_import_failed">Nhập thất bại</string>
     <string name="settings_stream_badge_enter_url">Nhập URL chuỗi JSON của nhãn</string>
     <string name="settings_stream_badge_url_scheme_invalid">URL nhãn phải bắt đầu bằng http:// hoặc https://.</string>
