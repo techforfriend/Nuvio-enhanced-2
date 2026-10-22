@@ -41,6 +41,8 @@ data class PlayerSettingsUiState(
     val resizeMode: PlayerResizeMode = PlayerResizeMode.Fit,
     val holdToSpeedEnabled: Boolean = true,
     val holdToSpeedValue: Float = 2f,
+    val skipBackwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
+    val skipForwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
     val touchGesturesEnabled: Boolean = true,
     val swipeToSeekEnabled: Boolean = true,
     val seekPreviewEnabled: Boolean = true,
@@ -132,6 +134,8 @@ object PlayerSettingsRepository {
     private var resizeMode = PlayerResizeMode.Fit
     private var holdToSpeedEnabled = true
     private var holdToSpeedValue = 2f
+    private var skipBackwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
+    private var skipForwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
     private var touchGesturesEnabled = true
     private var swipeToSeekEnabled = true
     private var seekPreviewEnabled = true
@@ -228,6 +232,8 @@ object PlayerSettingsRepository {
         resizeMode = PlayerResizeMode.Fit
         holdToSpeedEnabled = true
         holdToSpeedValue = 2f
+        skipBackwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
+        skipForwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
         touchGesturesEnabled = true
         swipeToSeekEnabled = true
         seekPreviewEnabled = true
@@ -319,6 +325,8 @@ object PlayerSettingsRepository {
             ?: PlayerResizeMode.Fit
         holdToSpeedEnabled = PlayerSettingsStorage.loadHoldToSpeedEnabled() ?: true
         holdToSpeedValue = PlayerSettingsStorage.loadHoldToSpeedValue() ?: 2f
+        skipBackwardSeconds = normalizePlayerSkipSeconds(PlayerSettingsStorage.loadSkipBackwardSeconds())
+        skipForwardSeconds = normalizePlayerSkipSeconds(PlayerSettingsStorage.loadSkipForwardSeconds())
         touchGesturesEnabled = PlayerSettingsStorage.loadTouchGesturesEnabled() ?: true
         swipeToSeekEnabled = PlayerSettingsStorage.loadSwipeToSeekEnabled() ?: true
         seekPreviewEnabled = PlayerSettingsStorage.loadSeekPreviewEnabled() ?: true
@@ -539,6 +547,24 @@ object PlayerSettingsRepository {
         holdToSpeedValue = normalized
         publish()
         PlayerSettingsStorage.saveHoldToSpeedValue(normalized)
+    }
+
+    fun setSkipBackwardSeconds(seconds: Int) {
+        ensureLoaded()
+        val normalized = normalizePlayerSkipSeconds(seconds)
+        if (skipBackwardSeconds == normalized) return
+        skipBackwardSeconds = normalized
+        publish()
+        PlayerSettingsStorage.saveSkipBackwardSeconds(normalized)
+    }
+
+    fun setSkipForwardSeconds(seconds: Int) {
+        ensureLoaded()
+        val normalized = normalizePlayerSkipSeconds(seconds)
+        if (skipForwardSeconds == normalized) return
+        skipForwardSeconds = normalized
+        publish()
+        PlayerSettingsStorage.saveSkipForwardSeconds(normalized)
     }
 
     fun setTouchGesturesEnabled(enabled: Boolean) {
@@ -1237,6 +1263,8 @@ object PlayerSettingsRepository {
             resizeMode = resizeMode,
             holdToSpeedEnabled = holdToSpeedEnabled,
             holdToSpeedValue = holdToSpeedValue,
+            skipBackwardSeconds = skipBackwardSeconds,
+            skipForwardSeconds = skipForwardSeconds,
             touchGesturesEnabled = touchGesturesEnabled,
             swipeToSeekEnabled = swipeToSeekEnabled,
             seekPreviewEnabled = seekPreviewEnabled,
@@ -1324,3 +1352,9 @@ object PlayerSettingsRepository {
         }
     }
 }
+
+val PlayerSkipSecondsOptions = listOf(5, 10, 15, 30)
+const val PLAYER_SKIP_SECONDS_DEFAULT = 10
+
+internal fun normalizePlayerSkipSeconds(seconds: Int?): Int =
+    seconds?.takeIf { it in PlayerSkipSecondsOptions } ?: PLAYER_SKIP_SECONDS_DEFAULT

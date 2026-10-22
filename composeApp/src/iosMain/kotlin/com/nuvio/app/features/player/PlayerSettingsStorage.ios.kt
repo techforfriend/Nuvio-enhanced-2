@@ -27,6 +27,8 @@ actual object PlayerSettingsStorage {
     private const val resizeModeKey = "resize_mode"
     private const val holdToSpeedEnabledKey = "hold_to_speed_enabled"
     private const val holdToSpeedValueKey = "hold_to_speed_value"
+    private const val skipBackwardSecondsKey = "skip_backward_seconds"
+    private const val skipForwardSecondsKey = "skip_forward_seconds"
     private const val touchGesturesEnabledKey = "touch_gestures_enabled"
     private const val swipeToSeekEnabledKey = "swipe_to_seek_enabled"
     private const val seekPreviewEnabledKey = "seek_preview_enabled"
@@ -324,6 +326,14 @@ actual object PlayerSettingsStorage {
     actual fun saveHoldToSpeedValue(speed: Float) {
         NSUserDefaults.standardUserDefaults.setFloat(speed, forKey = ProfileScopedKey.of(holdToSpeedValueKey))
     }
+
+    actual fun loadSkipBackwardSeconds(): Int? = loadInt(skipBackwardSecondsKey)
+
+    actual fun saveSkipBackwardSeconds(seconds: Int) = saveInt(skipBackwardSecondsKey, seconds)
+
+    actual fun loadSkipForwardSeconds(): Int? = loadInt(skipForwardSecondsKey)
+
+    actual fun saveSkipForwardSeconds(seconds: Int) = saveInt(skipForwardSecondsKey, seconds)
 
     actual fun loadTouchGesturesEnabled(): Boolean? = loadBoolean(touchGesturesEnabledKey)
 
