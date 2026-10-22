@@ -1,5 +1,27 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.AppLoadingProfileAvatar
+import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.core.ui.themePalette
+import com.nuvio.app.features.profiles.ProfileRepository
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -97,6 +119,11 @@ internal fun LazyListScope.settingsRootContent(
     showAdvancedSection: Boolean = true,
     showSupportersContributorsPage: Boolean = true,
 ) {
+    if (showAccountSection && onSwitchProfileClick != null) {
+        item {
+            SettingsProfileCard(isTablet = isTablet, onClick = onSwitchProfileClick)
+        }
+    }
     if (showAccountSection) {
         item {
             SettingsSection(
@@ -104,16 +131,6 @@ internal fun LazyListScope.settingsRootContent(
                 isTablet = isTablet,
             ) {
                 SettingsGroup(isTablet = isTablet) {
-                    if (onSwitchProfileClick != null) {
-                        SettingsNavigationRow(
-                            title = stringResource(Res.string.compose_settings_root_profile_title),
-                            description = stringResource(Res.string.compose_settings_root_profile_description),
-                            icon = Icons.Rounded.People,
-                            isTablet = isTablet,
-                            onClick = onSwitchProfileClick,
-                        )
-                        SettingsGroupDivider(isTablet = isTablet)
-                    }
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_account),
                         description = stringResource(Res.string.compose_settings_root_account_description),
@@ -310,6 +327,71 @@ internal fun LazyListScope.settingsRootContent(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsProfileCard(
+    isTablet: Boolean,
+    onClick: () -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
+    val profile = profileState.activeProfile
+    val avatarSize = if (isTablet) 84.dp else 72.dp
+    SettingsGroup(
+        isTablet = isTablet,
+        modifier = Modifier.padding(top = if (isTablet) 12.dp else 8.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = if (isTablet) 20.dp else 16.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(avatarSize)
+                    .border(2.5.dp, MaterialTheme.themePalette.accentBrush(), CircleShape)
+                    .padding(4.dp),
+            ) {
+                if (profile != null) {
+                    AppLoadingProfileAvatar(profile = profile, modifier = Modifier.fillMaxSize())
+                } else {
+                    Icon(
+                        imageVector = Icons.Rounded.People,
+                        contentDescription = null,
+                        tint = tokens.colors.accent,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = profile?.name?.takeIf { it.isNotBlank() }
+                        ?: stringResource(Res.string.compose_settings_root_profile_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = tokens.colors.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = stringResource(Res.string.compose_settings_root_profile_description),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = tokens.colors.textMuted,
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                contentDescription = null,
+                tint = tokens.colors.textMuted,
+                modifier = Modifier.padding(start = 8.dp),
             )
         }
     }
