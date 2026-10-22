@@ -112,7 +112,7 @@ internal fun LazyListScope.appearanceSettingsContent(
             isTablet = isTablet,
         ) {
             SettingsGroup(isTablet = isTablet) {
-                AppearanceThemePicker(
+                AppearanceThemeSelector(
                     isTablet = isTablet,
                     selectedTheme = selectedTheme,
                     onThemeSelected = onThemeSelected,

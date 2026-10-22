@@ -1,6 +1,9 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,9 +15,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
@@ -29,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -49,6 +55,59 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.cd_selected
 import nuvio.composeapp.generated.resources.custom_theme_edit
 import org.jetbrains.compose.resources.stringResource
+
+@Composable
+internal fun AppearanceThemeSelector(
+    isTablet: Boolean,
+    selectedTheme: AppTheme,
+    onThemeSelected: (AppTheme) -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val customColors by ThemeSettingsRepository.customThemeColors.collectAsStateWithLifecycle()
+    val palette = remember(selectedTheme, customColors) { ThemeColors.getColorPalette(selectedTheme, customColors) }
+    val chevronRotation by animateFloatAsState(if (expanded) 90f else 0f, label = "themeChevron")
+    Column(modifier = Modifier.fillMaxWidth().animateContentSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(
+                    horizontal = if (isTablet) NuvioTokens.Space.s20 else NuvioTokens.Space.s16,
+                    vertical = if (isTablet) NuvioTokens.Space.s16 else NuvioTokens.Space.s14,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(if (isTablet) 36.dp else 32.dp)
+                    .clip(CircleShape)
+                    .background(palette.accentBrush()),
+            )
+            Spacer(Modifier.width(NuvioTokens.Space.s16))
+            Text(
+                text = stringResource(selectedTheme.labelRes),
+                style = MaterialTheme.typography.bodyLarge,
+                color = tokens.colors.textPrimary,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                contentDescription = null,
+                tint = tokens.colors.textMuted,
+                modifier = Modifier.rotate(chevronRotation),
+            )
+        }
+        if (expanded) {
+            AppearanceThemePicker(
+                isTablet = isTablet,
+                selectedTheme = selectedTheme,
+                onThemeSelected = onThemeSelected,
+            )
+        }
+    }
+}
 
 @Composable
 internal fun AppearanceThemePicker(
