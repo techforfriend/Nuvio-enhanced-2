@@ -726,8 +726,7 @@ private fun EpisodeNavigatorStickyBar(
                     ?: Int.MAX_VALUE
                 translationY = (floatingHeaderPx - offset).coerceIn(0f, floatingHeaderPx)
             }
-            .onSizeChanged { barHeightPx = it.height }
-            .background(background),
+            .onSizeChanged { barHeightPx = it.height },
     ) {
         EpisodeSectionContainer(horizontalPadding, contentMaxWidth, bottom = 0.dp, modifier = Modifier.padding(vertical = 10.dp)) {
             EpisodeNavigatorBar(
