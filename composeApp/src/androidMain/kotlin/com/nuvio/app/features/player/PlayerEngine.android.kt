@@ -2029,10 +2029,6 @@ private fun PlayerView.syncLibassOverlay(
         }
         if (boundPlayer != null) {
             player.getAssHandlerCompat()?.videoFrameCallback = null
-            @Suppress("UNCHECKED_CAST")
-            val pollingPair = getTag(R.id.libass_overlay_polling_runnable) as? Pair<Runnable, android.os.Handler>
-            pollingPair?.let { (runnable, handler) -> handler.removeCallbacks(runnable) }
-            setTag(R.id.libass_overlay_polling_runnable, null)
             setTag(R.id.libass_overlay_bound_player, null)
         }
         return
@@ -2045,32 +2041,13 @@ private fun PlayerView.syncLibassOverlay(
 
     overlayContainer.removeAssOverlayChildren()
     val assSubtitleView = AssSubtitleSurfaceView(overlayContainer.context, assHandler)
-    // Primary path: VideoFrameMetadataListener provides exact PTS + releaseTimeNs
-    // for vsync-pinned rendering. Works for non-tunneled playback.
+    // Wire video frame callback to drive subtitle rendering.
+    // The primary path (VideoFrameMetadataListener) provides vsync-pinned timing.
+    // When it doesn't fire (tunneled playback), AssPositionRenderer in the
+    // RenderersFactory provides position-based fallback on every render loop.
     assHandler.videoFrameCallback = { presentationTimeUs, releaseTimeNs ->
         assSubtitleView.requestRender(presentationTimeUs, releaseTimeNs)
     }
-    // Fallback for tunneled playback: poll player position when the frame callback
-    // hasn't fired recently. Subtitles show up without vsync pinning.
-    val pollingHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    var lastFrameCallbackNs = System.nanoTime()
-    val originalCallback = assHandler.videoFrameCallback
-    assHandler.videoFrameCallback = { pts, releaseNs ->
-        lastFrameCallbackNs = System.nanoTime()
-        originalCallback?.invoke(pts, releaseNs)
-    }
-    val pollingRunnable = object : Runnable {
-        override fun run() {
-            val elapsed = (System.nanoTime() - lastFrameCallbackNs) / 1_000_000
-            if (elapsed > 500 && player.isPlaying) {
-                val posUs = player.currentPosition * 1000L
-                assSubtitleView.requestRender(posUs, androidx.media3.common.C.TIME_UNSET)
-            }
-            pollingHandler.postDelayed(this, 250)
-        }
-    }
-    pollingHandler.postDelayed(pollingRunnable, 500)
-    setTag(R.id.libass_overlay_polling_runnable, pollingRunnable to pollingHandler)
     overlayContainer.addView(
         assSubtitleView,
         android.widget.FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
