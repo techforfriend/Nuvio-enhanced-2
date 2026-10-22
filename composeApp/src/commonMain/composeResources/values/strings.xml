@@ -2908,4 +2908,9 @@
     <string name="details_rating_map_unrated">Not rated yet</string>
     <string name="details_rating_map_hidden">Watch this episode to reveal its rating</string>
     <string name="details_rating_map_hint">Tap an episode to see its rating.</string>
+    <string name="settings_advanced_section_network">Network</string>
+    <string name="settings_advanced_dns">DNS</string>
+    <string name="settings_advanced_dns_system">System default</string>
+    <string name="settings_advanced_dns_doh_format">%1$s (DNS over HTTPS)</string>
+    <string name="settings_advanced_dns_note">Used for all of Nuvio\'s connections on this device: addons, metadata, images, sync, trackers and the ExoPlayer engine. Your phone\'s DNS stays the same for other apps. The libmpv engine and web sign-in pages still use the system DNS.</string>
 </resources>
