@@ -45,3 +45,5 @@ object DnsSettingsRepository {
         DnsPlatform.apply(provider)
     }
 }
+
+internal expect fun platformHttpEngine(): io.ktor.client.engine.HttpClientEngine?

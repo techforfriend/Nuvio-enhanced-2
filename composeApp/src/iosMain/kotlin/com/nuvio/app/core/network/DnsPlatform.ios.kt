@@ -6,3 +6,5 @@ internal actual object DnsPlatform {
     actual fun save(storageId: String) = Unit
     actual fun apply(provider: DnsProvider) = Unit
 }
+
+internal actual fun platformHttpEngine(): io.ktor.client.engine.HttpClientEngine? = null

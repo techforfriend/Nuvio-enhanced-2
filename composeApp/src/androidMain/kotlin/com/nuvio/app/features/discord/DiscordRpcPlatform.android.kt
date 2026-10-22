@@ -46,6 +46,7 @@ internal actual fun createDiscordGatewayHttpClient(): HttpClient = HttpClient(Ok
     install(WebSockets)
     engine {
         config {
+            dns(com.nuvio.app.core.network.NuvioDns)
             connectTimeout(15, TimeUnit.SECONDS)
             readTimeout(0, TimeUnit.MILLISECONDS)
             writeTimeout(15, TimeUnit.SECONDS)

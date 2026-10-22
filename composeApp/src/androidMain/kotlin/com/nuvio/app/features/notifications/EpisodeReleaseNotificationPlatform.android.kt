@@ -80,6 +80,7 @@ internal actual object EpisodeReleaseNotificationPlatform {
                 connectTimeoutMillis = 15_000
                 socketTimeoutMillis = 15_000
             }
+            engine { preconfigured = com.nuvio.app.core.network.SharedOkHttpClient.base }
         }
     }
 

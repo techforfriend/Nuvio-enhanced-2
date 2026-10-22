@@ -25,3 +25,6 @@ internal actual object DnsPlatform {
         NuvioDns.provider = provider
     }
 }
+
+internal actual fun platformHttpEngine(): io.ktor.client.engine.HttpClientEngine? =
+    io.ktor.client.engine.okhttp.OkHttp.create { preconfigured = SharedOkHttpClient.base }
