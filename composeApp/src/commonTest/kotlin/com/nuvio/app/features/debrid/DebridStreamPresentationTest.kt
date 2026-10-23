@@ -339,6 +339,66 @@ class DebridStreamPresentationTest {
         )
     }
 
+    @Test
+    fun `reads languages from release name words when the stream has no parsed languages`() {
+        fun languages(filename: String) = DebridStreamMetadata.facts(
+            stream = localTorboxStream(filename = filename, size = 1_000_000_000),
+            preferences = DebridStreamPreferences(),
+        ).languages
+
+        assertEquals(
+            listOf(DebridStreamLanguage.EN, DebridStreamLanguage.IT),
+            languages("Movie.2023.1080p.WEB-DL.ITA.ENG.x264-GRP.mkv"),
+        )
+        assertEquals(listOf(DebridStreamLanguage.FR), languages("Movie.2023.TRUEFRENCH.1080p.WEB-DL.x265-GRP.mkv"))
+        assertEquals(listOf(DebridStreamLanguage.FR), languages("Movie.2023.FRENCH.1080p.WEB-DL.x265-GRP.mkv"))
+        assertEquals(listOf(DebridStreamLanguage.DE), languages("Movie.2023.German.DL.1080p.BluRay.x264-GRP.mkv"))
+        assertEquals(listOf(DebridStreamLanguage.ES), languages("Movie (2023) [BluRay][Castellano].mkv"))
+        assertEquals(listOf(DebridStreamLanguage.MULTI), languages("Movie.2023.MULTI.1080p.BluRay.x264-GRP.mkv"))
+        assertEquals(emptyList(), languages("Por.Siempre.2023.1080p.WEB-DL.x264-GRP.mkv"))
+        assertEquals(emptyList(), languages("Movie.2023.1080p.WEB-DL.x264-GRP.mkv"))
+    }
+
+    @Test
+    fun `accepts release name words in parsed languages`() {
+        val stream = premiumizeDirectStream(
+            name = "PM Instant",
+            filename = "Movie.2023.2160p.WEB-DL.H265.mkv",
+            size = 12_000_000_000,
+        ).let { stream ->
+            val resolve = stream.clientResolve!!
+            val raw = resolve.stream!!.raw!!
+            stream.copy(
+                clientResolve = resolve.copy(
+                    stream = StreamClientResolveStream(
+                        raw = raw.copy(parsed = raw.parsed!!.copy(languages = listOf("ita", "Eng", "klingon"))),
+                    ),
+                ),
+            )
+        }
+
+        val languages = DebridStreamMetadata.facts(stream, DebridStreamPreferences()).languages
+
+        assertEquals(listOf(DebridStreamLanguage.IT, DebridStreamLanguage.EN), languages)
+    }
+
+    @Test
+    fun `required language keeps streams whose release name only has the language word`() {
+        val italian = localTorboxStream(name = "First", filename = "Movie.2023.1080p.WEB-DL.ITA.x264-GRP.mkv", size = 1_000_000_000)
+        val english = localTorboxStream(name = "Second", filename = "Movie.2023.1080p.WEB-DL.ENG.x264-GRP.mkv", size = 2_000_000_000)
+
+        val result = DebridStreamPresentation.applyPreferences(
+            streams = listOf(italian, english),
+            settings = DebridSettings(
+                enabled = true,
+                providerApiKeys = mapOf(DebridProviders.TORBOX_ID to "key"),
+                streamPreferences = DebridStreamPreferences(requiredLanguages = listOf(DebridStreamLanguage.IT)),
+            ),
+        )
+
+        assertEquals(listOf("First"), result.map { it.name })
+    }
+
     private fun localTorboxStream(
         name: String = "Torrent",
         filename: String,
