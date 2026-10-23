@@ -18,14 +18,18 @@ private enum NuvioComposeHost {
 
     static func wrap(
         _ contentController: UIViewController,
+        backgroundColor: UIColor = nuvioBackgroundColor,
         disablesInteractiveContentPopGesture: Bool = false,
+        avoidsVerticalBar: Bool = true,
         onTabBarControllerAvailable: ((UITabBarController) -> Void)? = nil
     ) -> RootComposeViewController {
         _ = registerPlayerBridge
-        contentController.view.backgroundColor = nuvioBackgroundColor
+        contentController.view.backgroundColor = backgroundColor
         return RootComposeViewController(
             contentController: contentController,
+            backgroundColor: backgroundColor,
             disablesInteractiveContentPopGesture: disablesInteractiveContentPopGesture,
+            avoidsVerticalBar: avoidsVerticalBar,
             onTabBarControllerAvailable: onTabBarControllerAvailable
         )
     }
@@ -36,16 +40,23 @@ private enum NuvioComposeHost {
 /// to the deepest child that requests them.
 final class RootComposeViewController: UIViewController {
     private let contentController: UIViewController
+    private let backgroundColor: UIColor
     private let disablesInteractiveContentPopGesture: Bool
+    private let avoidsVerticalBar: Bool
     private let onTabBarControllerAvailable: ((UITabBarController) -> Void)?
+    private var horizontalConstraints: [NSLayoutConstraint] = []
 
     init(
         contentController: UIViewController,
+        backgroundColor: UIColor,
         disablesInteractiveContentPopGesture: Bool,
+        avoidsVerticalBar: Bool,
         onTabBarControllerAvailable: ((UITabBarController) -> Void)?
     ) {
         self.contentController = contentController
+        self.backgroundColor = backgroundColor
         self.disablesInteractiveContentPopGesture = disablesInteractiveContentPopGesture
+        self.avoidsVerticalBar = avoidsVerticalBar
         self.onTabBarControllerAvailable = onTabBarControllerAvailable
         super.init(nibName: nil, bundle: nil)
     }
@@ -58,19 +69,46 @@ final class RootComposeViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        view.backgroundColor = nuvioBackgroundColor
-        contentController.view.backgroundColor = nuvioBackgroundColor
+        view.backgroundColor = backgroundColor
+        view.isOpaque = backgroundColor != .clear
+        contentController.view.backgroundColor = backgroundColor
 
         addChild(contentController)
         view.addSubview(contentController.view)
         contentController.view.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            contentController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            contentController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             contentController.view.topAnchor.constraint(equalTo: view.topAnchor),
             contentController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+        updateHorizontalConstraints()
+        if #available(iOS 27.1, *), avoidsVerticalBar {
+            registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) {
+                (controller: RootComposeViewController, _: UITraitCollection) in
+                controller.updateHorizontalConstraints()
+            }
+        }
         contentController.didMove(toParent: self)
+    }
+
+    private func updateHorizontalConstraints() {
+        var leadingAnchor = view.leadingAnchor
+        var trailingAnchor = view.trailingAnchor
+        if #available(iOS 27.1, *), avoidsVerticalBar {
+            switch traitCollection.verticalBarEdge {
+            case .leading:
+                leadingAnchor = view.safeAreaLayoutGuide.leadingAnchor
+            case .trailing:
+                trailingAnchor = view.safeAreaLayoutGuide.trailingAnchor
+            default:
+                break
+            }
+        }
+        NSLayoutConstraint.deactivate(horizontalConstraints)
+        horizontalConstraints = [
+            contentController.view.leadingAnchor.constraint(equalTo: leadingAnchor),
+            contentController.view.trailingAnchor.constraint(equalTo: trailingAnchor),
+        ]
+        NSLayoutConstraint.activate(horizontalConstraints)
     }
 
     override var childForHomeIndicatorAutoHidden: UIViewController? {
@@ -743,9 +781,8 @@ struct AppGateComposeView: UIViewControllerRepresentable {
                 appCoordinator.setMainContentVisible(visible.boolValue)
             }
         )
-        controller.view.backgroundColor = .clear
         controller.view.isOpaque = false
-        return controller
+        return NuvioComposeHost.wrap(controller, backgroundColor: .clear)
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
@@ -780,7 +817,8 @@ struct DetailComposeView: UIViewControllerRepresentable {
         )
         return NuvioComposeHost.wrap(
             controller,
-            disablesInteractiveContentPopGesture: route is PlayerRoute
+            disablesInteractiveContentPopGesture: route is PlayerRoute,
+            avoidsVerticalBar: !(route is PlayerRoute)
         )
     }
 
@@ -922,6 +960,7 @@ private struct DetailDestinationView: View {
             hidesNativeNavigationBar ? Visibility.hidden : Visibility.visible,
             for: .navigationBar
         )
+        .verticalBarDisabled(wrapper.route is PlayerRoute)
     }
 
     @ViewBuilder
@@ -930,6 +969,17 @@ private struct DetailDestinationView: View {
             content.navigationSubtitle(wrapper.route.subtitle ?? "")
         } else {
             content
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func verticalBarDisabled(_ disabled: Bool) -> some View {
+        if #available(iOS 27.1, *), disabled {
+            toolbarVerticalBehavior(.disabled)
+        } else {
+            self
         }
     }
 }
