@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
+
 package com.nuvio.app.features.settings
 
 import androidx.compose.runtime.Composable
@@ -5,7 +7,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSString
 import platform.Foundation.NSTemporaryDirectory
@@ -101,12 +102,10 @@ internal actual fun rememberSettingsConfigFileLauncher(
     }
 }
 
-@OptIn(ExperimentalForeignApi::class)
 private fun writeUtf8File(path: String, content: String): Boolean = runCatching {
     NSString.create(string = content).writeToFile(path, true, NSUTF8StringEncoding, null)
 }.getOrDefault(false)
 
-@OptIn(ExperimentalForeignApi::class)
 private fun readUtf8File(url: NSURL): String? =
     NSString.stringWithContentsOfURL(url, NSUTF8StringEncoding, null)?.removePrefix("\uFEFF")
 
