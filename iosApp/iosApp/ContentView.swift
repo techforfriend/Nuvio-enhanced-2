@@ -782,6 +782,7 @@ struct AppGateComposeView: UIViewControllerRepresentable {
     let appCoordinator: AppNavigationCoordinator
 
     func makeUIViewController(context: Context) -> UIViewController {
+        let verticalBar = VerticalBar()
         let controller = MainViewControllerKt.AppGateViewController(
             appGateController: appCoordinator.appGateController,
             nativeProfileSwitcherController: appCoordinator.profileSwitcherController,
@@ -796,10 +797,11 @@ struct AppGateComposeView: UIViewControllerRepresentable {
             },
             onMainContentVisibleChanged: { visible in
                 appCoordinator.setMainContentVisible(visible.boolValue)
-            }
+            },
+            verticalBar: verticalBar
         )
         controller.view.isOpaque = false
-        return NuvioComposeHost.wrap(controller, backgroundColor: .clear)
+        return NuvioComposeHost.wrap(controller, backgroundColor: .clear, verticalBar: verticalBar)
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}

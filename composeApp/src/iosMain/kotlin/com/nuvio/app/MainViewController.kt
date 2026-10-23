@@ -81,20 +81,23 @@ fun AppGateViewController(
     onAppReady: (Boolean) -> Unit,
     onMainContentMountChanged: (Boolean) -> Unit,
     onMainContentVisibleChanged: (Boolean) -> Unit,
+    verticalBar: VerticalBar,
 ): UIViewController = ComposeUIViewController(
     configure = {
         onFocusBehavior = OnFocusBehavior.DoNothing
         opaque = false
     },
     content = {
-        AppGateOverlay(
-            onActivate = { tab -> onActivate(tab.name) },
-            onAppReady = onAppReady,
-            onMainContentMountChanged = onMainContentMountChanged,
-            onMainContentVisibleChanged = onMainContentVisibleChanged,
-            nativeProfileSwitcherController = nativeProfileSwitcherController,
-            appGateController = appGateController,
-        )
+        CompositionLocalProvider(LocalVerticalBarPadding provides verticalBar.padding) {
+            AppGateOverlay(
+                onActivate = { tab -> onActivate(tab.name) },
+                onAppReady = onAppReady,
+                onMainContentMountChanged = onMainContentMountChanged,
+                onMainContentVisibleChanged = onMainContentVisibleChanged,
+                nativeProfileSwitcherController = nativeProfileSwitcherController,
+                appGateController = appGateController,
+            )
+        }
     },
 ).apply {
     view.backgroundColor = UIColor.clearColor
