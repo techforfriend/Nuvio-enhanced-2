@@ -886,7 +886,7 @@ private fun ProgressControls(
 
     Column(modifier = modifier) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            modifier = Modifier.fillMaxWidth().offset(y = (-19).dp).padding(horizontal = 12.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
             Box(modifier = Modifier.weight(1f)) {
@@ -924,7 +924,7 @@ private fun ProgressControls(
             TimePill(
                 text = formatPlaybackTime(displayedPositionMs),
                 fontSize = metrics.timeSize,
-                modifier = Modifier.align(Alignment.TopStart).offset(y = (-9).dp),
+                modifier = Modifier.align(Alignment.TopStart).offset(y = (-17).dp),
             )
             TimePill(
                 text = if (showRemainingTime) {
@@ -935,7 +935,7 @@ private fun ProgressControls(
                 fontSize = metrics.timeSize,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .offset(y = (-9).dp)
+                    .offset(y = (-17).dp)
                     .clip(RoundedCornerShape(12.dp))
                     .clickable(
                         role = Role.Button,
