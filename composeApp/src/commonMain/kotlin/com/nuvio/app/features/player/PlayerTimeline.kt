@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -142,9 +143,12 @@ internal fun PlayerTimeline(
         label = "playerTimelineThickness",
     )
 
+    val sliderState = remember(rangeEnd) { SliderState(trackRange = 0f..rangeEnd) }
+    sliderState.value = displayedPositionMs.coerceIn(0L, durationMs).toFloat()
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Slider(
-            value = displayedPositionMs.coerceIn(0L, durationMs).toFloat(),
+            state = sliderState,
             onValueChange = { value ->
                 val position = value.toLong().coerceIn(0L, durationMs)
                 scrubPosition = position
@@ -154,7 +158,6 @@ internal fun PlayerTimeline(
                 onScrubFinished((scrubPosition ?: displayedPositionMs).coerceIn(0L, durationMs))
                 scrubPosition = null
             },
-            valueRange = 0f..rangeEnd,
             enabled = enabled && durationMs > 0L,
             interactionSource = interactionSource,
             thumb = {},
