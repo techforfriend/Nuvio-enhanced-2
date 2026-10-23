@@ -55,7 +55,6 @@ import com.nuvio.app.features.details.MetaDetails
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import com.nuvio.app.core.ui.LocalVerticalBarPadding
-import com.nuvio.app.core.ui.centeredVerticalBarPadding
 import com.nuvio.app.core.ui.verticalBarWidth
 
 @Composable
@@ -231,7 +230,7 @@ fun DetailHero(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(centeredVerticalBarPadding(if (isTablet) 32.dp else 18.dp))
+                        .padding(horizontal = if (isTablet) 32.dp else 18.dp)
                         .padding(bottom = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {

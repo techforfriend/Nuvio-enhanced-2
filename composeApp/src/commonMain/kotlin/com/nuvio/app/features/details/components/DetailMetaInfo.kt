@@ -67,8 +67,6 @@ import org.jetbrains.compose.resources.stringResource
 import kotlinx.coroutines.runBlocking
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
-import com.nuvio.app.core.ui.withVerticalBar
-import androidx.compose.foundation.layout.PaddingValues
 
 @Composable
 fun DetailMetaInfo(
@@ -182,10 +180,10 @@ internal fun DetailRatingsRow(
     RatingsRow(
         ratings = ratings,
         modifier = modifier
-            .nuvioHorizontalScrollBleed(PaddingValues(horizontal = horizontalScrollPadding).withVerticalBar())
+            .nuvioHorizontalScrollBleed(horizontalScrollPadding)
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(PaddingValues(horizontal = horizontalScrollPadding).withVerticalBar()),
+            .padding(horizontal = horizontalScrollPadding),
     )
 }
 

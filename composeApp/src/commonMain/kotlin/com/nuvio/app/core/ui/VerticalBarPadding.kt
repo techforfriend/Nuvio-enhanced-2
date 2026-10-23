@@ -42,13 +42,3 @@ fun verticalBarWidth(): Dp {
     val layoutDirection = LocalLayoutDirection.current
     return verticalBar.calculateStartPadding(layoutDirection) + verticalBar.calculateEndPadding(layoutDirection)
 }
-
-@Composable
-fun oppositeVerticalBarPadding(): PaddingValues {
-    val verticalBar = LocalVerticalBarPadding.current
-    val layoutDirection = LocalLayoutDirection.current
-    return PaddingValues(
-        start = verticalBar.calculateEndPadding(layoutDirection),
-        end = verticalBar.calculateStartPadding(layoutDirection),
-    )
-}

@@ -40,7 +40,6 @@ import com.nuvio.app.features.trakt.TraktCommentReview
 import kotlinx.coroutines.flow.distinctUntilChanged
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
-import com.nuvio.app.core.ui.withVerticalBar
 
 @Composable
 fun DetailCommentsSection(
@@ -81,9 +80,9 @@ fun DetailCommentsSection(
             isLoading -> {
                 LazyRow(
                     modifier = Modifier
-                        .nuvioHorizontalScrollBleed(PaddingValues(horizontal = horizontalScrollPadding).withVerticalBar())
+                        .nuvioHorizontalScrollBleed(horizontalScrollPadding)
                         .fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = horizontalScrollPadding).withVerticalBar(),
+                    contentPadding = PaddingValues(horizontal = horizontalScrollPadding),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(3) {
@@ -122,10 +121,10 @@ fun DetailCommentsSection(
             else -> {
                 LazyRow(
                     modifier = Modifier
-                        .nuvioHorizontalScrollBleed(PaddingValues(horizontal = horizontalScrollPadding).withVerticalBar())
+                        .nuvioHorizontalScrollBleed(horizontalScrollPadding)
                         .fillMaxWidth(),
                     state = listState,
-                    contentPadding = PaddingValues(horizontal = horizontalScrollPadding).withVerticalBar(),
+                    contentPadding = PaddingValues(horizontal = horizontalScrollPadding),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(

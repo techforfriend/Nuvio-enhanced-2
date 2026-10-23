@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -45,6 +46,7 @@ import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -81,7 +83,6 @@ import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.LocalVerticalBarPadding
-import com.nuvio.app.core.ui.nuvioHorizontalScrollBleed
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioPosterZoomActionOverlay
 import com.nuvio.app.core.ui.NuvioToastController
@@ -92,7 +93,6 @@ import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.TrackingListPickerDialog
 import com.nuvio.app.core.ui.nuvioSafeBottomPadding
 import com.nuvio.app.core.ui.rememberHeroStretchState
-import com.nuvio.app.core.ui.oppositeVerticalBarPadding
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import com.nuvio.app.features.details.components.DetailActions
@@ -1156,64 +1156,61 @@ fun MetaDetailsScreen(
                                     .fillMaxSize()
                                     .nestedScroll(heroStretchState.nestedScrollConnection)
                                     .zIndex(1f),
-                                contentPadding = LocalVerticalBarPadding.current,
                             ) {
                                 item(key = "detail-hero") {
-                                    Box(modifier = Modifier.nuvioHorizontalScrollBleed(LocalVerticalBarPadding.current)) {
-                                        if (useTabletLayout) {
-                                            TabletDetailHero(
-                                                meta = meta,
-                                                showOverview = isSectionEnabled(MetaScreenSectionKey.OVERVIEW),
-                                                showOverallRatings = metaScreenSettingsUiState.showOverallRatings,
-                                                isMdbListActive = mdbListSettings.isActive,
-                                                horizontalPadding = contentHorizontalPadding,
-                                                heroTrailerSourceUrl = heroTrailerSourceUrl,
-                                                heroTrailerReady = heroTrailerReady,
-                                                heroTrailerMuted = heroTrailerMuted,
-                                                onHeroTrailerMuteToggle = HeroTrailerAudioState::toggleMuted,
-                                                onHeightChanged = { heroHeightPx.intValue = it },
-                                                actions = if (isSectionEnabled(MetaScreenSectionKey.ACTIONS)) {
-                                                    {
-                                                        DetailActions(
-                                                            playLabel = playButtonLabel,
-                                                            playEnabled = isPrimaryPlayEnabled,
-                                                            isSaved = isSaved,
-                                                            isWatched = isWatched,
-                                                            isTablet = true,
-                                                            shuffleEnabled = shuffleSettings.enabled,
-                                                            onPlayClick = onPrimaryPlayClick,
-                                                            onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
-                                                            onShuffleClick = onShuffleClick,
-                                                            onWatchedClick = toggleWatched,
-                                                            onSaveClick = toggleSaved,
-                                                            onSaveLongClick = openLibraryListPicker,
-                                                        )
-                                                    }
-                                                } else {
-                                                    null
-                                                },
-                                            )
-                                        } else {
-                                            DetailHero(
-                                                meta = meta,
-                                                isTablet = isTablet,
-                                                contentMaxWidth = contentMaxWidth,
-                                                scrollOffset = heroScrollOffset,
-                                                stretchPx = { heroStretchState.stretchPx },
-                                                onHeightChanged = { heroHeightPx.intValue = it },
-                                                heroTrailerSourceUrl = heroTrailerSourceUrl,
-                                                heroTrailerSourceAudioUrl = heroTrailerSourceAudioUrl,
-                                                heroTrailerReady = heroTrailerReady,
-                                                heroTrailerPlayWhenReady = heroTrailerPlayWhenReady,
-                                                heroTrailerMuted = heroTrailerMuted,
-                                                heroGradientColor = heroGradientColor,
-                                                onBackdropLoaded = onBackdropLoaded,
-                                                onHeroTrailerMuteToggle = HeroTrailerAudioState::toggleMuted,
-                                                onHeroTrailerReady = onHeroTrailerReady,
-                                                onHeroTrailerEnded = onHeroTrailerFinished,
-                                                onHeroTrailerError = onHeroTrailerFinished,
-                                            )
-                                        }
+                                    if (useTabletLayout) {
+                                        TabletDetailHero(
+                                            meta = meta,
+                                            showOverview = isSectionEnabled(MetaScreenSectionKey.OVERVIEW),
+                                            showOverallRatings = metaScreenSettingsUiState.showOverallRatings,
+                                            isMdbListActive = mdbListSettings.isActive,
+                                            horizontalPadding = contentHorizontalPadding,
+                                            heroTrailerSourceUrl = heroTrailerSourceUrl,
+                                            heroTrailerReady = heroTrailerReady,
+                                            heroTrailerMuted = heroTrailerMuted,
+                                            onHeroTrailerMuteToggle = HeroTrailerAudioState::toggleMuted,
+                                            onHeightChanged = { heroHeightPx.intValue = it },
+                                            actions = if (isSectionEnabled(MetaScreenSectionKey.ACTIONS)) {
+                                                {
+                                                    DetailActions(
+                                                        playLabel = playButtonLabel,
+                                                        playEnabled = isPrimaryPlayEnabled,
+                                                        isSaved = isSaved,
+                                                        isWatched = isWatched,
+                                                        isTablet = true,
+                                                        shuffleEnabled = shuffleSettings.enabled,
+                                                        onPlayClick = onPrimaryPlayClick,
+                                                        onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
+                                                        onShuffleClick = onShuffleClick,
+                                                        onWatchedClick = toggleWatched,
+                                                        onSaveClick = toggleSaved,
+                                                        onSaveLongClick = openLibraryListPicker,
+                                                    )
+                                                }
+                                            } else {
+                                                null
+                                            },
+                                        )
+                                    } else {
+                                        DetailHero(
+                                            meta = meta,
+                                            isTablet = isTablet,
+                                            contentMaxWidth = contentMaxWidth,
+                                            scrollOffset = heroScrollOffset,
+                                            stretchPx = { heroStretchState.stretchPx },
+                                            onHeightChanged = { heroHeightPx.intValue = it },
+                                            heroTrailerSourceUrl = heroTrailerSourceUrl,
+                                            heroTrailerSourceAudioUrl = heroTrailerSourceAudioUrl,
+                                            heroTrailerReady = heroTrailerReady,
+                                            heroTrailerPlayWhenReady = heroTrailerPlayWhenReady,
+                                            heroTrailerMuted = heroTrailerMuted,
+                                            heroGradientColor = heroGradientColor,
+                                            onBackdropLoaded = onBackdropLoaded,
+                                            onHeroTrailerMuteToggle = HeroTrailerAudioState::toggleMuted,
+                                            onHeroTrailerReady = onHeroTrailerReady,
+                                            onHeroTrailerEnded = onHeroTrailerFinished,
+                                            onHeroTrailerError = onHeroTrailerFinished,
+                                        )
                                     }
                                 }
 
@@ -2192,7 +2189,7 @@ private fun DetailSectionContainer(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            content()
+            CompositionLocalProvider(LocalVerticalBarPadding provides PaddingValues(), content)
         }
     }
 }
@@ -2299,22 +2296,20 @@ private fun ConfiguredMetaSections(
     fun RenderSection(key: MetaScreenSectionKey, showHeader: Boolean = true) {
         when (key) {
             MetaScreenSectionKey.ACTIONS -> {
-                Box(modifier = Modifier.padding(oppositeVerticalBarPadding())) {
-                    DetailActions(
-                        playLabel = playButtonLabel,
-                        playEnabled = isPrimaryPlayEnabled,
-                        isSaved = isSaved,
-                        isWatched = isWatched,
-                        isTablet = isTablet,
-                        shuffleEnabled = shuffleEnabled,
-                        onPlayClick = onPrimaryPlayClick,
-                        onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
-                        onShuffleClick = onShuffleClick,
-                        onWatchedClick = onWatchedClick,
-                        onSaveClick = onSaveClick,
-                        onSaveLongClick = onSaveLongClick,
-                    )
-                }
+                DetailActions(
+                    playLabel = playButtonLabel,
+                    playEnabled = isPrimaryPlayEnabled,
+                    isSaved = isSaved,
+                    isWatched = isWatched,
+                    isTablet = isTablet,
+                    shuffleEnabled = shuffleEnabled,
+                    onPlayClick = onPrimaryPlayClick,
+                    onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
+                    onShuffleClick = onShuffleClick,
+                    onWatchedClick = onWatchedClick,
+                    onSaveClick = onSaveClick,
+                    onSaveLongClick = onSaveLongClick,
+                )
             }
             MetaScreenSectionKey.OVERVIEW -> {
                 DetailMetaInfo(
