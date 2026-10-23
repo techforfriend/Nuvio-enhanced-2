@@ -54,6 +54,7 @@ import com.nuvio.app.core.ui.heroStretchZoom
 import com.nuvio.app.features.details.MetaDetails
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
 
 @Composable
 fun DetailHero(
@@ -177,6 +178,7 @@ fun DetailHero(
                         targetState = heroTrailerMuted,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
+                            .padding(LocalVerticalBarPadding.current)
                             .padding(
                                 top = heroChromeTopPadding,
                                 end = if (isTablet) 32.dp else 22.dp,
@@ -227,6 +229,7 @@ fun DetailHero(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(LocalVerticalBarPadding.current)
                         .padding(horizontal = if (isTablet) 32.dp else 18.dp)
                         .padding(bottom = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,

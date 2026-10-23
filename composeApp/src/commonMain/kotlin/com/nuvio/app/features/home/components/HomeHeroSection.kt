@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.heroStretchHeight
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
 import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.heroStretchZoom
 import com.nuvio.app.features.home.MetaPreview
@@ -271,6 +272,7 @@ fun HomeHeroSection(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
+                        .padding(LocalVerticalBarPadding.current)
                         .padding(
                             horizontal = layout.contentHorizontalPadding,
                             vertical = layout.contentVerticalPadding,

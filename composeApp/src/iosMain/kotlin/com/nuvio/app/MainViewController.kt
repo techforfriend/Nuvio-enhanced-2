@@ -1,8 +1,10 @@
 package com.nuvio.app
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.uikit.OnFocusBehavior
 import androidx.compose.ui.window.ComposeUIViewController
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
 import com.nuvio.app.core.ui.NativeProfileSwitcherController
 import com.nuvio.app.navigation.AppRoute
 import platform.UIKit.UIColor
@@ -26,9 +28,10 @@ fun MainViewController(
     onActivate: (String) -> Unit,
     onTabTitles: (String, String, String, String, String, String) -> Unit,
     appGateController: AppGateController,
+    verticalBar: VerticalBar,
 ): UIViewController {
     val initialTab = AppScreenTab.fromName(initialTabName)
-    return nuvioComposeViewController {
+    return nuvioComposeViewController(verticalBar) {
         App(
             initialTab = initialTab,
             useNativeNavigation = true,
@@ -54,7 +57,8 @@ fun ScreenViewController(
     onReplace: (AppRoute) -> Unit,
     onActivate: (String) -> Unit,
     appGateController: AppGateController,
-): UIViewController = nuvioComposeViewController {
+    verticalBar: VerticalBar,
+): UIViewController = nuvioComposeViewController(verticalBar) {
     App(
         initialRoute = route,
         useNativeNavigation = true,
@@ -97,10 +101,13 @@ fun AppGateViewController(
 }
 
 private fun nuvioComposeViewController(
+    verticalBar: VerticalBar = VerticalBar(),
     content: @androidx.compose.runtime.Composable () -> Unit,
 ): UIViewController = ComposeUIViewController(
     configure = { onFocusBehavior = OnFocusBehavior.DoNothing },
-    content = content,
+    content = {
+        CompositionLocalProvider(LocalVerticalBarPadding provides verticalBar.padding, content)
+    },
 ).apply {
     view.backgroundColor = nuvioBackgroundColor
 }

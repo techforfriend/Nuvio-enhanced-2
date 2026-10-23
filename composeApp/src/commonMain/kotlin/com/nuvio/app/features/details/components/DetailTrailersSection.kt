@@ -49,6 +49,7 @@ import nuvio.composeapp.generated.resources.detail_tab_trailer
 import nuvio.composeapp.generated.resources.detail_trailer_category_count
 import nuvio.composeapp.generated.resources.detail_trailers_title
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.withVerticalBar
 
 @Composable
 fun DetailTrailersSection(
@@ -161,9 +162,9 @@ fun DetailTrailersSection(
             val sizing = trailerSectionSizing(maxWidth.value, userCornerRadius)
             LazyRow(
                 modifier = Modifier
-                    .nuvioHorizontalScrollBleed(horizontalScrollPadding)
+                    .nuvioHorizontalScrollBleed(PaddingValues(horizontal = horizontalScrollPadding).withVerticalBar())
                     .fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = horizontalScrollPadding),
+                contentPadding = PaddingValues(horizontal = horizontalScrollPadding).withVerticalBar(),
                 horizontalArrangement = Arrangement.spacedBy(sizing.cardSpacing),
             ) {
                 itemsIndexed(

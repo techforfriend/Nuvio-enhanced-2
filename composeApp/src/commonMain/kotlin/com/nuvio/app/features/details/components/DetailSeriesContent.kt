@@ -90,6 +90,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
+import com.nuvio.app.core.ui.withVerticalBar
 
 private val log = Logger.withTag("SeriesContent")
 
@@ -508,9 +509,9 @@ private fun SeasonTextChipScrollRow(
     LazyRow(
         state = seasonListState,
         modifier = Modifier
-            .nuvioHorizontalScrollBleed(horizontalScrollPadding)
+            .nuvioHorizontalScrollBleed(PaddingValues(horizontal = horizontalScrollPadding).withVerticalBar())
             .fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = horizontalScrollPadding),
+        contentPadding = PaddingValues(horizontal = horizontalScrollPadding).withVerticalBar(),
         horizontalArrangement = Arrangement.spacedBy(sizing.seasonChipGap),
     ) {
         items(seasons, key = { season -> season }) { season ->
@@ -581,9 +582,9 @@ private fun SeasonPosterScrollRow(
     LazyRow(
         state = seasonListState,
         modifier = Modifier
-            .nuvioHorizontalScrollBleed(horizontalScrollPadding)
+            .nuvioHorizontalScrollBleed(PaddingValues(horizontal = horizontalScrollPadding).withVerticalBar())
             .fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = horizontalScrollPadding),
+        contentPadding = PaddingValues(horizontal = horizontalScrollPadding).withVerticalBar(),
         horizontalArrangement = Arrangement.spacedBy(sizing.seasonChipGap),
     ) {
         items(seasons, key = { season -> season }) { season ->
@@ -735,12 +736,12 @@ private fun EpisodeHorizontalRow(
     LazyRow(
         state = listState,
         modifier = Modifier
-            .nuvioHorizontalScrollBleed(horizontalScrollPadding)
+            .nuvioHorizontalScrollBleed(PaddingValues(horizontal = horizontalScrollPadding).withVerticalBar())
             .fillMaxWidth(),
         contentPadding = PaddingValues(
             horizontal = horizontalScrollPadding + rowMetrics.rowHorizontalPadding,
             vertical = rowMetrics.rowVerticalPadding,
-        ),
+        ).withVerticalBar(),
         horizontalArrangement = Arrangement.spacedBy(rowMetrics.itemSpacing),
     ) {
         itemsIndexed(

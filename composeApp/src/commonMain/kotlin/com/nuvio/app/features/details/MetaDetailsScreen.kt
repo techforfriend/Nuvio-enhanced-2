@@ -80,6 +80,8 @@ import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
 import com.nuvio.app.core.ui.NuvioBackButton
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
+import com.nuvio.app.core.ui.nuvioHorizontalScrollBleed
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioPosterZoomActionOverlay
 import com.nuvio.app.core.ui.NuvioToastController
@@ -1153,61 +1155,64 @@ fun MetaDetailsScreen(
                                     .fillMaxSize()
                                     .nestedScroll(heroStretchState.nestedScrollConnection)
                                     .zIndex(1f),
+                                contentPadding = LocalVerticalBarPadding.current,
                             ) {
                                 item(key = "detail-hero") {
-                                    if (useTabletLayout) {
-                                        TabletDetailHero(
-                                            meta = meta,
-                                            showOverview = isSectionEnabled(MetaScreenSectionKey.OVERVIEW),
-                                            showOverallRatings = metaScreenSettingsUiState.showOverallRatings,
-                                            isMdbListActive = mdbListSettings.isActive,
-                                            horizontalPadding = contentHorizontalPadding,
-                                            heroTrailerSourceUrl = heroTrailerSourceUrl,
-                                            heroTrailerReady = heroTrailerReady,
-                                            heroTrailerMuted = heroTrailerMuted,
-                                            onHeroTrailerMuteToggle = HeroTrailerAudioState::toggleMuted,
-                                            onHeightChanged = { heroHeightPx.intValue = it },
-                                            actions = if (isSectionEnabled(MetaScreenSectionKey.ACTIONS)) {
-                                                {
-                                                    DetailActions(
-                                                        playLabel = playButtonLabel,
-                                                        playEnabled = isPrimaryPlayEnabled,
-                                                        isSaved = isSaved,
-                                                        isWatched = isWatched,
-                                                        isTablet = true,
-                                                        shuffleEnabled = shuffleSettings.enabled,
-                                                        onPlayClick = onPrimaryPlayClick,
-                                                        onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
-                                                        onShuffleClick = onShuffleClick,
-                                                        onWatchedClick = toggleWatched,
-                                                        onSaveClick = toggleSaved,
-                                                        onSaveLongClick = openLibraryListPicker,
-                                                    )
-                                                }
-                                            } else {
-                                                null
-                                            },
-                                        )
-                                    } else {
-                                        DetailHero(
-                                            meta = meta,
-                                            isTablet = isTablet,
-                                            contentMaxWidth = contentMaxWidth,
-                                            scrollOffset = heroScrollOffset,
-                                            stretchPx = { heroStretchState.stretchPx },
-                                            onHeightChanged = { heroHeightPx.intValue = it },
-                                            heroTrailerSourceUrl = heroTrailerSourceUrl,
-                                            heroTrailerSourceAudioUrl = heroTrailerSourceAudioUrl,
-                                            heroTrailerReady = heroTrailerReady,
-                                            heroTrailerPlayWhenReady = heroTrailerPlayWhenReady,
-                                            heroTrailerMuted = heroTrailerMuted,
-                                            heroGradientColor = heroGradientColor,
-                                            onBackdropLoaded = onBackdropLoaded,
-                                            onHeroTrailerMuteToggle = HeroTrailerAudioState::toggleMuted,
-                                            onHeroTrailerReady = onHeroTrailerReady,
-                                            onHeroTrailerEnded = onHeroTrailerFinished,
-                                            onHeroTrailerError = onHeroTrailerFinished,
-                                        )
+                                    Box(modifier = Modifier.nuvioHorizontalScrollBleed(LocalVerticalBarPadding.current)) {
+                                        if (useTabletLayout) {
+                                            TabletDetailHero(
+                                                meta = meta,
+                                                showOverview = isSectionEnabled(MetaScreenSectionKey.OVERVIEW),
+                                                showOverallRatings = metaScreenSettingsUiState.showOverallRatings,
+                                                isMdbListActive = mdbListSettings.isActive,
+                                                horizontalPadding = contentHorizontalPadding,
+                                                heroTrailerSourceUrl = heroTrailerSourceUrl,
+                                                heroTrailerReady = heroTrailerReady,
+                                                heroTrailerMuted = heroTrailerMuted,
+                                                onHeroTrailerMuteToggle = HeroTrailerAudioState::toggleMuted,
+                                                onHeightChanged = { heroHeightPx.intValue = it },
+                                                actions = if (isSectionEnabled(MetaScreenSectionKey.ACTIONS)) {
+                                                    {
+                                                        DetailActions(
+                                                            playLabel = playButtonLabel,
+                                                            playEnabled = isPrimaryPlayEnabled,
+                                                            isSaved = isSaved,
+                                                            isWatched = isWatched,
+                                                            isTablet = true,
+                                                            shuffleEnabled = shuffleSettings.enabled,
+                                                            onPlayClick = onPrimaryPlayClick,
+                                                            onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
+                                                            onShuffleClick = onShuffleClick,
+                                                            onWatchedClick = toggleWatched,
+                                                            onSaveClick = toggleSaved,
+                                                            onSaveLongClick = openLibraryListPicker,
+                                                        )
+                                                    }
+                                                } else {
+                                                    null
+                                                },
+                                            )
+                                        } else {
+                                            DetailHero(
+                                                meta = meta,
+                                                isTablet = isTablet,
+                                                contentMaxWidth = contentMaxWidth,
+                                                scrollOffset = heroScrollOffset,
+                                                stretchPx = { heroStretchState.stretchPx },
+                                                onHeightChanged = { heroHeightPx.intValue = it },
+                                                heroTrailerSourceUrl = heroTrailerSourceUrl,
+                                                heroTrailerSourceAudioUrl = heroTrailerSourceAudioUrl,
+                                                heroTrailerReady = heroTrailerReady,
+                                                heroTrailerPlayWhenReady = heroTrailerPlayWhenReady,
+                                                heroTrailerMuted = heroTrailerMuted,
+                                                heroGradientColor = heroGradientColor,
+                                                onBackdropLoaded = onBackdropLoaded,
+                                                onHeroTrailerMuteToggle = HeroTrailerAudioState::toggleMuted,
+                                                onHeroTrailerReady = onHeroTrailerReady,
+                                                onHeroTrailerEnded = onHeroTrailerFinished,
+                                                onHeroTrailerError = onHeroTrailerFinished,
+                                            )
+                                        }
                                     }
                                 }
 
@@ -1808,6 +1813,7 @@ private fun DetailHeaderOverlay(
         NuvioBackButton(
             onClick = onBack,
             modifier = Modifier
+                .padding(LocalVerticalBarPadding.current)
                 .padding(
                     start = 12.dp,
                     top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,

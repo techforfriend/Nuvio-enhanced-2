@@ -63,6 +63,7 @@ import nuvio.composeapp.generated.resources.details_director
 import nuvio.composeapp.generated.resources.details_writer
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
 
 @Composable
 fun TabletDetailBackdrop(
@@ -266,6 +267,7 @@ fun TabletDetailHero(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
+                .padding(LocalVerticalBarPadding.current)
                 .widthIn(max = 760.dp)
                 .padding(
                     start = horizontalPadding,
@@ -359,6 +361,7 @@ fun TabletDetailHero(
                 enabled = heroTrailerReady,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
+                    .padding(LocalVerticalBarPadding.current)
                     .padding(
                         top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + space.s8,
                         end = horizontalPadding,

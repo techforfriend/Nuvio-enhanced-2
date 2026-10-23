@@ -20,7 +20,7 @@ private enum NuvioComposeHost {
         _ contentController: UIViewController,
         backgroundColor: UIColor = nuvioBackgroundColor,
         disablesInteractiveContentPopGesture: Bool = false,
-        avoidsVerticalBar: Bool = true,
+        verticalBar: VerticalBar? = nil,
         onTabBarControllerAvailable: ((UITabBarController) -> Void)? = nil
     ) -> RootComposeViewController {
         _ = registerPlayerBridge
@@ -29,7 +29,7 @@ private enum NuvioComposeHost {
             contentController: contentController,
             backgroundColor: backgroundColor,
             disablesInteractiveContentPopGesture: disablesInteractiveContentPopGesture,
-            avoidsVerticalBar: avoidsVerticalBar,
+            verticalBar: verticalBar,
             onTabBarControllerAvailable: onTabBarControllerAvailable
         )
     }
@@ -42,21 +42,22 @@ final class RootComposeViewController: UIViewController {
     private let contentController: UIViewController
     private let backgroundColor: UIColor
     private let disablesInteractiveContentPopGesture: Bool
-    private let avoidsVerticalBar: Bool
+    private let verticalBar: VerticalBar?
     private let onTabBarControllerAvailable: ((UITabBarController) -> Void)?
-    private var horizontalConstraints: [NSLayoutConstraint] = []
+    private var leadingConstraint: NSLayoutConstraint?
+    private var trailingConstraint: NSLayoutConstraint?
 
     init(
         contentController: UIViewController,
         backgroundColor: UIColor,
         disablesInteractiveContentPopGesture: Bool,
-        avoidsVerticalBar: Bool,
+        verticalBar: VerticalBar?,
         onTabBarControllerAvailable: ((UITabBarController) -> Void)?
     ) {
         self.contentController = contentController
         self.backgroundColor = backgroundColor
         self.disablesInteractiveContentPopGesture = disablesInteractiveContentPopGesture
-        self.avoidsVerticalBar = avoidsVerticalBar
+        self.verticalBar = verticalBar
         self.onTabBarControllerAvailable = onTabBarControllerAvailable
         super.init(nibName: nil, bundle: nil)
     }
@@ -76,39 +77,52 @@ final class RootComposeViewController: UIViewController {
         addChild(contentController)
         view.addSubview(contentController.view)
         contentController.view.translatesAutoresizingMaskIntoConstraints = false
+        let leadingConstraint = contentController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor)
+        let trailingConstraint = contentController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         NSLayoutConstraint.activate([
             contentController.view.topAnchor.constraint(equalTo: view.topAnchor),
             contentController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            leadingConstraint,
+            trailingConstraint,
         ])
-        updateHorizontalConstraints()
-        if #available(iOS 27.1, *), avoidsVerticalBar {
+        self.leadingConstraint = leadingConstraint
+        self.trailingConstraint = trailingConstraint
+        if #available(iOS 27.1, *) {
             registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) {
                 (controller: RootComposeViewController, _: UITraitCollection) in
-                controller.updateHorizontalConstraints()
+                controller.updateVerticalBar()
             }
         }
         contentController.didMove(toParent: self)
     }
 
-    private func updateHorizontalConstraints() {
-        var leadingAnchor = view.leadingAnchor
-        var trailingAnchor = view.trailingAnchor
-        if #available(iOS 27.1, *), avoidsVerticalBar {
-            switch traitCollection.verticalBarEdge {
-            case .leading:
-                leadingAnchor = view.safeAreaLayoutGuide.leadingAnchor
-            case .trailing:
-                trailingAnchor = view.safeAreaLayoutGuide.trailingAnchor
-            default:
-                break
-            }
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        updateVerticalBar()
+    }
+
+    private func updateVerticalBar() {
+        let insets = verticalBarInsets
+        if let verticalBar {
+            verticalBar.update(start: Double(insets.leading), end: Double(insets.trailing))
+        } else {
+            leadingConstraint?.constant = insets.leading
+            trailingConstraint?.constant = -insets.trailing
         }
-        NSLayoutConstraint.deactivate(horizontalConstraints)
-        horizontalConstraints = [
-            contentController.view.leadingAnchor.constraint(equalTo: leadingAnchor),
-            contentController.view.trailingAnchor.constraint(equalTo: trailingAnchor),
-        ]
-        NSLayoutConstraint.activate(horizontalConstraints)
+    }
+
+    private var verticalBarInsets: NSDirectionalEdgeInsets {
+        guard #available(iOS 27.1, *) else { return .zero }
+        let insets = view.safeAreaInsets
+        let isRightToLeft = view.effectiveUserInterfaceLayoutDirection == .rightToLeft
+        switch traitCollection.verticalBarEdge {
+        case .leading:
+            return NSDirectionalEdgeInsets(top: 0, leading: isRightToLeft ? insets.right : insets.left, bottom: 0, trailing: 0)
+        case .trailing:
+            return NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 0, trailing: isRightToLeft ? insets.left : insets.right)
+        default:
+            return .zero
+        }
     }
 
     override var childForHomeIndicatorAutoHidden: UIViewController? {
@@ -717,6 +731,7 @@ struct NativeNavComposeView: UIViewControllerRepresentable {
     let appCoordinator: AppNavigationCoordinator
 
     func makeUIViewController(context: Context) -> UIViewController {
+        let verticalBar = VerticalBar()
         let controller = MainViewControllerKt.MainViewController(
             initialTabName: tab.rawValue,
             useNativeTabBar: usesNativeTabBar,
@@ -747,10 +762,12 @@ struct NativeNavComposeView: UIViewControllerRepresentable {
                     addProfile: addProfile
                 )
             },
-            appGateController: appCoordinator.appGateController
+            appGateController: appCoordinator.appGateController,
+            verticalBar: verticalBar
         )
         return NuvioComposeHost.wrap(
             controller,
+            verticalBar: verticalBar,
             onTabBarControllerAvailable: { tabBarController in
                 appCoordinator.profileTabInteraction.attach(to: tabBarController)
             }
@@ -795,6 +812,7 @@ struct DetailComposeView: UIViewControllerRepresentable {
     let appCoordinator: AppNavigationCoordinator
 
     func makeUIViewController(context: Context) -> UIViewController {
+        let verticalBar = VerticalBar()
         let controller = MainViewControllerKt.ScreenViewController(
             route: route,
             onNavigate: { newRoute, launchSingleTop in
@@ -813,12 +831,13 @@ struct DetailComposeView: UIViewControllerRepresentable {
             onActivate: { tabName in
                 appCoordinator.activateTab(named: tabName)
             },
-            appGateController: appCoordinator.appGateController
+            appGateController: appCoordinator.appGateController,
+            verticalBar: verticalBar
         )
         return NuvioComposeHost.wrap(
             controller,
             disablesInteractiveContentPopGesture: route is PlayerRoute,
-            avoidsVerticalBar: !(route is PlayerRoute)
+            verticalBar: verticalBar
         )
     }
 

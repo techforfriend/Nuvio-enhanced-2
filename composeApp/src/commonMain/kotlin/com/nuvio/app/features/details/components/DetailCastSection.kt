@@ -41,6 +41,7 @@ import com.nuvio.app.features.details.MetaPerson
 import com.nuvio.app.features.details.castAvatarSharedTransitionKey
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.withVerticalBar
 
 @Composable
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -65,9 +66,9 @@ fun DetailCastSection(
 
             LazyRow(
                 modifier = Modifier
-                    .nuvioHorizontalScrollBleed(horizontalScrollPadding)
+                    .nuvioHorizontalScrollBleed(PaddingValues(horizontal = horizontalScrollPadding).withVerticalBar())
                     .fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = horizontalScrollPadding),
+                contentPadding = PaddingValues(horizontal = horizontalScrollPadding).withVerticalBar(),
                 horizontalArrangement = Arrangement.spacedBy(sizing.avatarGap),
             ) {
                 itemsIndexed(
