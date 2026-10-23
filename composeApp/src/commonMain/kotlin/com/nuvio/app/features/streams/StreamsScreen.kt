@@ -74,6 +74,7 @@ import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.nuvioSafeBottomPadding
 import com.nuvio.app.core.ui.shimmer
 import com.nuvio.app.core.ui.LocalVerticalBarPadding
+import com.nuvio.app.core.ui.centeredVerticalBarPadding
 import com.nuvio.app.features.debrid.DebridSettingsRepository
 import com.nuvio.app.features.debrid.DirectDebridPlayableResult
 import com.nuvio.app.features.debrid.DirectDebridPlaybackResolver
@@ -481,11 +482,7 @@ private fun MobileStreamsLayout(
                     )
                 }
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(LocalVerticalBarPadding.current),
-                ) {
+                Column(modifier = Modifier.fillMaxSize()) {
                     if ((resumePositionMs != null && resumePositionMs > 0L) || (resumeProgressFraction != null && resumeProgressFraction > 0f)) {
                         ResumeBanner(
                             positionMs = resumePositionMs,
@@ -584,7 +581,7 @@ private fun MovieHeroBlock(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(LocalVerticalBarPadding.current)
+            .padding(centeredVerticalBarPadding())
             .height(140.dp)
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top)),
         contentAlignment = Alignment.Center,

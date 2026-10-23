@@ -55,6 +55,8 @@ import com.nuvio.app.features.details.MetaDetails
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import com.nuvio.app.core.ui.LocalVerticalBarPadding
+import com.nuvio.app.core.ui.centeredVerticalBarPadding
+import com.nuvio.app.core.ui.verticalBarWidth
 
 @Composable
 fun DetailHero(
@@ -80,7 +82,7 @@ fun DetailHero(
     BoxWithConstraints(
         modifier = modifier.fillMaxWidth(),
     ) {
-        val heroHeight = detailHeroHeight(maxWidth, isTablet)
+        val heroHeight = detailHeroHeight(maxWidth - verticalBarWidth(), isTablet)
         val trailerAlpha by animateFloatAsState(
             targetValue = if (heroTrailerReady) 1f else 0f,
             animationSpec = tween(durationMillis = 300),
@@ -229,8 +231,7 @@ fun DetailHero(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(LocalVerticalBarPadding.current)
-                        .padding(horizontal = if (isTablet) 32.dp else 18.dp)
+                        .padding(centeredVerticalBarPadding(if (isTablet) 32.dp else 18.dp))
                         .padding(bottom = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {

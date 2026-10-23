@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -58,6 +59,8 @@ import com.nuvio.app.core.ui.heroStretchHeight
 import com.nuvio.app.core.ui.LocalVerticalBarPadding
 import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.heroStretchZoom
+import com.nuvio.app.core.ui.centeredVerticalBarPadding
+import com.nuvio.app.core.ui.withVerticalBar
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.stableKey
 import kotlinx.coroutines.CoroutineScope
@@ -272,11 +275,14 @@ fun HomeHeroSection(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .padding(LocalVerticalBarPadding.current)
                         .padding(
-                            horizontal = layout.contentHorizontalPadding,
-                            vertical = layout.contentVerticalPadding,
-                        ),
+                            if (layout.isTablet) {
+                                PaddingValues(horizontal = layout.contentHorizontalPadding).withVerticalBar()
+                            } else {
+                                centeredVerticalBarPadding(layout.contentHorizontalPadding)
+                            },
+                        )
+                        .padding(vertical = layout.contentVerticalPadding),
                     horizontalAlignment = if (layout.isTablet) Alignment.Start else Alignment.CenterHorizontally,
                 ) {
                     Box(

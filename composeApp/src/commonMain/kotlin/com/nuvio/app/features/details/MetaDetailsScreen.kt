@@ -92,6 +92,7 @@ import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.TrackingListPickerDialog
 import com.nuvio.app.core.ui.nuvioSafeBottomPadding
 import com.nuvio.app.core.ui.rememberHeroStretchState
+import com.nuvio.app.core.ui.oppositeVerticalBarPadding
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import com.nuvio.app.features.details.components.DetailActions
@@ -2298,20 +2299,22 @@ private fun ConfiguredMetaSections(
     fun RenderSection(key: MetaScreenSectionKey, showHeader: Boolean = true) {
         when (key) {
             MetaScreenSectionKey.ACTIONS -> {
-                DetailActions(
-                    playLabel = playButtonLabel,
-                    playEnabled = isPrimaryPlayEnabled,
-                    isSaved = isSaved,
-                    isWatched = isWatched,
-                    isTablet = isTablet,
-                    shuffleEnabled = shuffleEnabled,
-                    onPlayClick = onPrimaryPlayClick,
-                    onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
-                    onShuffleClick = onShuffleClick,
-                    onWatchedClick = onWatchedClick,
-                    onSaveClick = onSaveClick,
-                    onSaveLongClick = onSaveLongClick,
-                )
+                Box(modifier = Modifier.padding(oppositeVerticalBarPadding())) {
+                    DetailActions(
+                        playLabel = playButtonLabel,
+                        playEnabled = isPrimaryPlayEnabled,
+                        isSaved = isSaved,
+                        isWatched = isWatched,
+                        isTablet = isTablet,
+                        shuffleEnabled = shuffleEnabled,
+                        onPlayClick = onPrimaryPlayClick,
+                        onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
+                        onShuffleClick = onShuffleClick,
+                        onWatchedClick = onWatchedClick,
+                        onSaveClick = onSaveClick,
+                        onSaveLongClick = onSaveLongClick,
+                    )
+                }
             }
             MetaScreenSectionKey.OVERVIEW -> {
                 DetailMetaInfo(

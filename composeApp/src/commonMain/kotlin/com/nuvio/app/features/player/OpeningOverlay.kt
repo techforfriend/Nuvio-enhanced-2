@@ -51,6 +51,7 @@ import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.nuvioTypeScale
 import com.nuvio.app.core.ui.LocalVerticalBarPadding
+import com.nuvio.app.core.ui.centeredVerticalBarPadding
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_player_close
 import org.jetbrains.compose.resources.stringResource
@@ -143,8 +144,7 @@ internal fun OpeningOverlay(
         Layout(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(LocalVerticalBarPadding.current)
-                .padding(horizontal = 24.dp),
+                .padding(centeredVerticalBarPadding(24.dp)),
             content = {
                 Box(contentAlignment = Alignment.Center) {
                     if (logoUrl != null && !logoLoadError) {
