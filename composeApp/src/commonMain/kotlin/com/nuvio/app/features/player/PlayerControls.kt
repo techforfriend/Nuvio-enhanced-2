@@ -81,6 +81,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -322,6 +323,8 @@ internal fun PlayerControlsShell(
                     playbackSnapshot = playbackSnapshot,
                     displayedPositionMs = displayedPositionMs,
                     metrics = metrics,
+                    showRemainingTime = showRemainingTime,
+                    onRuntimeClick = onRuntimeClick,
                     resizeMode = resizeMode,
                     onScrubChange = onScrubChange,
                     onScrubFinished = onScrubFinished,
@@ -854,6 +857,8 @@ private fun ProgressControls(
     playbackSnapshot: PlayerPlaybackSnapshot,
     displayedPositionMs: Long,
     metrics: PlayerLayoutMetrics,
+    showRemainingTime: Boolean = false,
+    onRuntimeClick: () -> Unit = {},
     resizeMode: PlayerResizeMode,
     onScrubChange: (Long) -> Unit,
     onScrubFinished: (Long) -> Unit,
@@ -922,9 +927,26 @@ private fun ProgressControls(
                 modifier = Modifier.align(Alignment.TopStart),
             )
             TimePill(
-                text = formatPlaybackTime(playbackSnapshot.durationMs),
+                text = if (showRemainingTime) {
+                    formatPlaybackRemaining(displayedPositionMs, playbackSnapshot.durationMs)
+                } else {
+                    formatPlaybackTime(playbackSnapshot.durationMs)
+                },
                 fontSize = metrics.timeSize,
-                modifier = Modifier.align(Alignment.TopEnd),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(
+                        role = Role.Button,
+                        onClickLabel = stringResource(
+                            if (showRemainingTime) {
+                                Res.string.compose_player_show_elapsed_time
+                            } else {
+                                Res.string.compose_player_show_remaining_time
+                            },
+                        ),
+                        onClick = onRuntimeClick,
+                    ),
             )
             // Legacy bottom bar: same compact pill as before, now liquid glass.
             Surface(

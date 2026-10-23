@@ -176,11 +176,15 @@ internal fun formatPlaybackTime(positionMs: Long): String {
 
 internal fun formatPlaybackRuntime(positionMs: Long, durationMs: Long, showRemainingTime: Boolean): String =
     if (showRemainingTime) {
-        val remainingMs = (durationMs.coerceAtLeast(0L) - positionMs.coerceAtLeast(0L)).coerceAtLeast(0L)
-        "−${formatPlaybackTime(remainingMs)}"
+        "${formatPlaybackTime(positionMs)} / ${formatPlaybackRemaining(positionMs, durationMs)}"
     } else {
         "${formatPlaybackTime(positionMs)} / ${formatPlaybackTime(durationMs)}"
     }
+
+internal fun formatPlaybackRemaining(positionMs: Long, durationMs: Long): String {
+    val remainingMs = (durationMs.coerceAtLeast(0L) - positionMs.coerceAtLeast(0L)).coerceAtLeast(0L)
+    return "−${formatPlaybackTime(remainingMs)}"
+}
 
 internal fun formatPlaybackSpeedLabel(speed: Float): String {
     val normalized = speed.toString().trimEnd('0').trimEnd('.')
