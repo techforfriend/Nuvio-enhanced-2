@@ -373,17 +373,31 @@ internal fun PlayerControlsShell(
                             },
                         )
                     }
-                    PlayerChapterLabel(
-                        chapters = playbackSnapshot.chapters,
-                        positionMs = displayedPositionMs,
-                        metrics = metrics,
-                        onClick = onChaptersClick?.let { openChapters ->
-                            {
-                                onInteraction()
-                                openChapters()
-                            }
-                        },
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Bottom,
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            PlayerChapterLabel(
+                                chapters = playbackSnapshot.chapters,
+                                positionMs = displayedPositionMs,
+                                metrics = metrics,
+                                onClick = onChaptersClick?.let { openChapters ->
+                                    {
+                                        onInteraction()
+                                        openChapters()
+                                    }
+                                },
+                            )
+                        }
+                        PlayerEndTimeLabel(
+                            positionMs = displayedPositionMs,
+                            durationMs = playbackSnapshot.durationMs,
+                            playbackSpeed = playbackSnapshot.playbackSpeed,
+                            isPlaying = playbackSnapshot.isPlaying,
+                            metrics = metrics,
+                        )
+                    }
                     PlayerTimeline(
                         snapshot = playbackSnapshot,
                         displayedPositionMs = displayedPositionMs,
@@ -866,13 +880,26 @@ private fun ProgressControls(
     val sourcesPainter = appIconPainter(AppIconResource.PlayerSource)
 
     Column(modifier = modifier) {
-        PlayerChapterLabel(
-            chapters = playbackSnapshot.chapters,
-            positionMs = displayedPositionMs,
-            metrics = metrics,
-            modifier = Modifier.padding(horizontal = 12.dp),
-            onClick = onChaptersClick,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                PlayerChapterLabel(
+                    chapters = playbackSnapshot.chapters,
+                    positionMs = displayedPositionMs,
+                    metrics = metrics,
+                    onClick = onChaptersClick,
+                )
+            }
+            PlayerEndTimeLabel(
+                positionMs = displayedPositionMs,
+                durationMs = playbackSnapshot.durationMs,
+                playbackSpeed = playbackSnapshot.playbackSpeed,
+                isPlaying = playbackSnapshot.isPlaying,
+                metrics = metrics,
+            )
+        }
         PlayerSeekBar(
             durationMs = playbackSnapshot.durationMs,
             displayedPositionMs = displayedPositionMs,

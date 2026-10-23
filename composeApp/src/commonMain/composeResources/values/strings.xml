@@ -2913,4 +2913,5 @@
     <string name="settings_advanced_dns_system">System default</string>
     <string name="settings_advanced_dns_doh_format">%1$s (DNS over HTTPS)</string>
     <string name="settings_advanced_dns_note">Used for all of Nuvio\'s connections on this device: addons, metadata, images, sync, trackers and the ExoPlayer engine. Your phone\'s DNS stays the same for other apps. The libmpv engine and web sign-in pages still use the system DNS.</string>
+    <string name="compose_player_ends_at">Ends at %1$s</string>
 </resources>
