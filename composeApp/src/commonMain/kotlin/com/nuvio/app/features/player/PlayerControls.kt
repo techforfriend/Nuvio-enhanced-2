@@ -916,7 +916,7 @@ private fun ProgressControls(
             seekPreview = seekPreview,
             onTouchChange = onTimelineTouchChange,
             showTimeRow = false,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.offset(y = (-9).dp).padding(bottom = 8.dp),
         )
         // Legacy bottom bar: time pills on the bar's outer edges (lined up with the seek bar's
         // ends and the pill's top edge), actions in the middle.
@@ -924,7 +924,7 @@ private fun ProgressControls(
             TimePill(
                 text = formatPlaybackTime(displayedPositionMs),
                 fontSize = metrics.timeSize,
-                modifier = Modifier.align(Alignment.TopStart),
+                modifier = Modifier.align(Alignment.TopStart).offset(y = (-9).dp),
             )
             TimePill(
                 text = if (showRemainingTime) {
@@ -935,6 +935,7 @@ private fun ProgressControls(
                 fontSize = metrics.timeSize,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
+                    .offset(y = (-9).dp)
                     .clip(RoundedCornerShape(12.dp))
                     .clickable(
                         role = Role.Button,
