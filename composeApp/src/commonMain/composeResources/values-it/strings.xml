@@ -2222,7 +2222,6 @@
     <string name="settings_playback_auto_skip_movie_credits">Titoli di coda</string>
     <string name="player_skip_movie_credits">Salta i titoli di coda</string>
     <string name="player_skip_to_post_credits">Vai alla scena dopo i titoli di coda</string>
-    <string name="compose_player_via">tramite %1$s</string>
     <string name="compose_player_speed">Velocità di riproduzione</string>
     <string name="compose_player_brightness">Luminosità</string>
     <string name="random_episode_title">Riproduzione casuale</string>

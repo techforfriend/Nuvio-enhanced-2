@@ -19,7 +19,6 @@ import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,7 +33,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
@@ -56,12 +54,8 @@ internal fun PlayerTimelineDetails(
     episodeNumber: Int?,
     episodeTitle: String?,
     releaseInfo: String?,
-    streamTitle: String,
-    providerName: String,
-    isPlaying: Boolean,
     metrics: PlayerLayoutMetrics,
     badges: List<StreamBadge> = emptyList(),
-    onSourceLineHeightChanged: (Int) -> Unit = {},
 ) {
     val typeScale = MaterialTheme.nuvioTypeScale
     Column(Modifier.padding(horizontal = PlayerTimelineContentInset)) {
@@ -97,20 +91,6 @@ internal fun PlayerTimelineDetails(
                 color = Color.White.copy(alpha = 0.68f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-            )
-        }
-        val source = streamTitle.ifBlank { providerName }.replace("\n", " · ")
-        if (!isPlaying && source.isNotBlank()) {
-            DisposableEffect(Unit) {
-                onDispose { onSourceLineHeightChanged(0) }
-            }
-            Text(
-                text = stringResource(Res.string.compose_player_via, source),
-                style = typeScale.labelSm.copy(fontSize = metrics.metadataSize),
-                color = Color.White.copy(alpha = 0.68f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.onSizeChanged { onSourceLineHeightChanged(it.height) },
             )
         }
     }

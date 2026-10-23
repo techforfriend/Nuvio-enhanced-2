@@ -2395,7 +2395,6 @@
     <string name="layout_ratings_hide_unwatched">Ocultar não assistidos</string>
     <string name="settings_playback_legacy_layout">Layout clássico</string>
     <string name="settings_playback_legacy_layout_description">Usar os controles originais do player.</string>
-    <string name="compose_player_via">Via %1$s</string>
     <string name="compose_player_episode_code">T%1$d E%2$d</string>
     <string name="compose_player_more_actions">Mais controles</string>
     <string name="compose_player_fewer_actions">Menos controles</string>

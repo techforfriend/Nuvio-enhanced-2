@@ -2357,7 +2357,6 @@
     <string name="layout_ratings_hide_unwatched">Sakrij nepogledano</string>
     <string name="settings_playback_legacy_layout">Klasični izgled</string>
     <string name="settings_playback_legacy_layout_description">Koristi izvorne kontrole reproduktora.</string>
-    <string name="compose_player_via">Putem %1$s</string>
     <string name="compose_player_episode_code">S%1$d E%2$d</string>
     <string name="compose_player_more_actions">Više kontrola</string>
     <string name="compose_player_fewer_actions">Manje kontrola</string>
