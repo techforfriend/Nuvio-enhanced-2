@@ -45,7 +45,6 @@ import com.nuvio.app.isIos
 import com.nuvio.app.navigation.LocalUseNativeNavigation
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
-import com.nuvio.app.core.ui.centeredVerticalBarPadding
 
 @Composable
 fun DetailFloatingHeader(
@@ -95,7 +94,6 @@ fun DetailFloatingHeader(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(centeredVerticalBarPadding())
                     .padding(top = headerTopPadding, start = 16.dp, end = 16.dp)
                     .height(56.dp)
                     .graphicsLayer { alpha = progress },
