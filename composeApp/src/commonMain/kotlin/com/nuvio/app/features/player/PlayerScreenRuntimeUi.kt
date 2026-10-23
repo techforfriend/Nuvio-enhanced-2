@@ -3,6 +3,8 @@ package com.nuvio.app.features.player
 import com.nuvio.app.features.watching.application.WatchingState
 import com.nuvio.app.features.home.MetaPreview
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -435,6 +437,10 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
         enter = fadeIn(),
         exit = fadeOut(),
     ) {
+        @OptIn(ExperimentalAnimationApi::class)
+        val controlsFadingOut = transition.targetState == EnterExitState.PostExit
+        val shownBeforeExit = remember { booleanArrayOf(controlsVisible) }
+        if (!controlsFadingOut) shownBeforeExit[0] = controlsVisible
         val displayedPositionMs = scrubbingPositionMs ?: playbackSnapshot.positionMs
         val orientationToggleSupported = rememberPlayerOrientationToggleSupported()
         val portraitPlayback by PlayerOrientationPreference.portrait.collectAsStateWithLifecycle()
@@ -464,7 +470,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
                 }
             } else null,
             onInteraction = { controlsActivityTick += 1 },
-            showPlaybackControls = controlsVisible,
+            showPlaybackControls = if (controlsFadingOut) shownBeforeExit[0] else controlsVisible,
             onLockToggle = {
                 if (playerControlsLocked) unlockPlayerControls() else lockPlayerControls()
             },

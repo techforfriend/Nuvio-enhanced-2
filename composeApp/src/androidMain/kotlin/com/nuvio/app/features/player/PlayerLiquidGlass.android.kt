@@ -51,7 +51,6 @@ internal actual fun rememberVideoFrameBackdrop(enabled: Boolean): VideoFrameBack
             .distinctUntilChanged()
             .collectLatest { active ->
                 if (!active) {
-                    backdrop.clearFrame()
                     return@collectLatest
                 }
                 while (currentCoroutineContext().isActive) {
