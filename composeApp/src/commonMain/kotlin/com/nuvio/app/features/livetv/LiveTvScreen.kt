@@ -536,7 +536,7 @@ fun LiveTvScreen(
 
             items(
                 count = visibleChannels.size,
-                key = { index -> visibleChannels[index].id },
+                key = { index -> "${visibleChannels[index].id.ifBlank { visibleChannels[index].streamUrl }}_$index" },
             ) { index ->
                 LiveTvChannelRow(
                     channel = visibleChannels[index],

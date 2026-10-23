@@ -460,6 +460,7 @@ private fun heroPageOffset(
 ): Float = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
 
 internal fun heroPageForItem(currentPage: Int, itemIndex: Int, itemCount: Int): Int {
+    if (itemCount <= 0) return 0
     val page = currentPage.toLong() - currentPage % itemCount + itemIndex
     return listOf(page - itemCount, page, page + itemCount)
         .filter { it in 0L until Int.MAX_VALUE.toLong() }
@@ -603,6 +604,8 @@ private fun HeroContentBlock(
                         style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
                         color = Color.White.copy(alpha = 0.92f),
                         fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
 
@@ -612,6 +615,8 @@ private fun HeroContentBlock(
                         style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
                         color = Color.White.copy(alpha = 0.92f),
                         fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
 
@@ -621,6 +626,8 @@ private fun HeroContentBlock(
                         style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
                         color = Color.White.copy(alpha = 0.92f),
                         fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

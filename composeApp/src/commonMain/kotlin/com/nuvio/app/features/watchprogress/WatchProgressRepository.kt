@@ -752,7 +752,8 @@ object WatchProgressRepository {
         }
         replaceLocalEntries(updatedEntries)
         updatedEntries.values.forEach { entry ->
-            if (serverEntries.none { it.resolvedProgressKey() == entry.resolvedProgressKey() }) {
+            val matchingRemote = serverEntries.firstOrNull { it.resolvedProgressKey() == entry.resolvedProgressKey() }
+            if (matchingRemote == null || entry.lastWatched > (matchingRemote.lastWatched ?: 0L)) {
                 markProgressDirty(entry)
             }
         }
@@ -948,7 +949,8 @@ object WatchProgressRepository {
         localByProgressKey.forEach { (progressKey, localEntry) ->
             val remoteEntry = merged[progressKey]
             val shouldPreserve = progressKey in effectiveDirtyKeys ||
-                (preserveAllLocalMissingFromRemote && remoteEntry == null)
+                (preserveAllLocalMissingFromRemote && remoteEntry == null) ||
+                (remoteEntry != null && localEntry.isFresherThan(remoteEntry))
             if (!shouldPreserve) return@forEach
             if (remoteEntry == null || localEntry.isFresherThan(remoteEntry)) {
                 merged[progressKey] = localEntry

@@ -201,6 +201,7 @@ object ProfileRepository {
         DownloadsRepository.onProfileChanged()
         ServerRepository.onProfileChanged()
         ProfileSettingsSync.onProfileChanged()
+        com.nuvio.app.features.livetv.LiveTvRepository.onProfileChanged()
     }
 
     suspend fun pushProfiles(profiles: List<ProfilePushPayload>) {
