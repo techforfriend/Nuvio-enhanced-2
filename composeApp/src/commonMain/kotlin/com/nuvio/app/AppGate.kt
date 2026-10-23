@@ -459,10 +459,7 @@ internal fun AppGate(
                         profile = editingProfile,
                         onBack = { gateScreen = AppGateScreen.ProfileSelection.name },
                         onSaved = { gateScreen = AppGateScreen.ProfileSelection.name },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.nuvio.colors.background)
-                            .padding(LocalVerticalBarPadding.current),
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
                 AppGateScreen.Main.name -> {
