@@ -1146,11 +1146,6 @@
     <string name="settings_playback_regex_preset_quality_720p_smaller">720p / Dung lượng nhỏ</string>
     <string name="settings_playback_regex_preset_web_sources">Nguồn WEB</string>
     <string name="settings_playback_render_type">Chế độ kết xuất libass</string>
-    <string name="settings_playback_render_type_cues">Phụ đề tiêu chuẩn</string>
-    <string name="settings_playback_render_type_effects_canvas">Hiệu ứng Canvas</string>
-    <string name="settings_playback_render_type_effects_opengl">Hiệu ứng OpenGL</string>
-    <string name="settings_playback_render_type_overlay_canvas">Lớp phủ Canvas</string>
-    <string name="settings_playback_render_type_overlay_opengl">Lớp phủ OpenGL (Khuyến nghị)</string>
     <string name="settings_playback_reuse_last_link">Dùng lại liên kết cuối</string>
     <string name="settings_playback_reuse_last_link_description">Tự động phát luồng hoạt động gần nhất cho cùng một phim điện ảnh/tập phim khi bộ nhớ đệm vẫn còn hiệu lực.</string>
     <string name="settings_playback_secondary_audio_language">Ngôn ngữ âm thanh phụ</string>
