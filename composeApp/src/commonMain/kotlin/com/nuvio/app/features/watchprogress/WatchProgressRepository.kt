@@ -753,7 +753,7 @@ object WatchProgressRepository {
         replaceLocalEntries(updatedEntries)
         updatedEntries.values.forEach { entry ->
             val matchingRemote = serverEntries.firstOrNull { it.resolvedProgressKey() == entry.resolvedProgressKey() }
-            if (matchingRemote == null || entry.lastWatched > (matchingRemote.lastWatched ?: 0L)) {
+            if (matchingRemote == null || entry.lastUpdatedEpochMs > matchingRemote.lastWatched) {
                 markProgressDirty(entry)
             }
         }
