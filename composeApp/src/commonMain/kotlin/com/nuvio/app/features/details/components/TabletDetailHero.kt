@@ -1,7 +1,12 @@
 package com.nuvio.app.features.details.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -304,12 +309,18 @@ fun TabletDetailHero(
             if (showOverview) {
                 Spacer(modifier = Modifier.height(space.s20))
                 TabletHeroMetaRow(meta = meta, showImdbRating = showOverallRatings && !isMdbListActive)
-                if (isMdbListActive && meta.externalRatings.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(space.s12))
-                    DetailRatingsRow(
-                        ratings = meta.externalRatings,
-                        modifier = Modifier.widthIn(max = 520.dp),
-                    )
+                AnimatedVisibility(
+                    visible = isMdbListActive && meta.externalRatings.isNotEmpty(),
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically(),
+                ) {
+                    Column {
+                        Spacer(modifier = Modifier.height(space.s12))
+                        DetailRatingsRow(
+                            ratings = meta.externalRatings,
+                            modifier = Modifier.widthIn(max = 520.dp),
+                        )
+                    }
                 }
             }
             if (meta.genres.isNotEmpty()) {
