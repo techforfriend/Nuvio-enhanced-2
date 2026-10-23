@@ -63,25 +63,41 @@ actual object StreamBadgeSettingsStorage {
         NSUserDefaults.standardUserDefaults.removeObjectForKey(ProfileScopedKey.of(legacyDebridStreamBadgeRulesKey))
     }
 
-    private fun loadString(key: String): String? =
-        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(key))
+    private fun loadString(key: String): String? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val scoped = defaults.stringForKey(ProfileScopedKey.of(key))?.trim()
+        if (!scoped.isNullOrEmpty()) return scoped
+        val profile1 = defaults.stringForKey(ProfileScopedKey.of(key, 1))?.trim()
+        if (!profile1.isNullOrEmpty()) return profile1
+        return defaults.stringForKey(key)?.trim()
+    }
 
     private fun saveString(key: String, value: String) {
-        NSUserDefaults.standardUserDefaults.setObject(value, forKey = ProfileScopedKey.of(key))
+        val defaults = NSUserDefaults.standardUserDefaults
+        defaults.setObject(value, forKey = ProfileScopedKey.of(key))
+        defaults.setObject(value, forKey = key)
     }
 
     private fun loadBoolean(key: String): Boolean? {
         val defaults = NSUserDefaults.standardUserDefaults
         val scopedKey = ProfileScopedKey.of(key)
-        return if (defaults.objectForKey(scopedKey) != null) {
-            defaults.boolForKey(scopedKey)
-        } else {
-            null
+        if (defaults.objectForKey(scopedKey) != null) {
+            return defaults.boolForKey(scopedKey)
         }
+        val profile1Key = ProfileScopedKey.of(key, 1)
+        if (defaults.objectForKey(profile1Key) != null) {
+            return defaults.boolForKey(profile1Key)
+        }
+        if (defaults.objectForKey(key) != null) {
+            return defaults.boolForKey(key)
+        }
+        return null
     }
 
     private fun saveBoolean(key: String, enabled: Boolean) {
-        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(key))
+        val defaults = NSUserDefaults.standardUserDefaults
+        defaults.setBool(enabled, forKey = ProfileScopedKey.of(key))
+        defaults.setBool(enabled, forKey = key)
     }
 
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {

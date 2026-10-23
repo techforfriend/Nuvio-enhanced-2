@@ -48,7 +48,13 @@ internal fun PlayerBadges(
         modifier = modifier,
     ) { measurables, constraints ->
         val gap = 4.dp.roundToPx()
-        val placeables = measurables.map { it.measure(Constraints(maxWidth = constraints.maxWidth)) }
+        val safeConstraints = Constraints(
+            minWidth = 0,
+            maxWidth = constraints.maxWidth.coerceAtLeast(0),
+            minHeight = 0,
+            maxHeight = constraints.maxHeight.coerceAtLeast(0),
+        )
+        val placeables = measurables.map { it.measure(safeConstraints) }
         var width = 0
         var visibleCount = 0
         for (placeable in placeables) {
@@ -59,10 +65,12 @@ internal fun PlayerBadges(
         }
         val visible = placeables.take(visibleCount)
         val height = visible.maxOfOrNull { it.height } ?: 0
-        layout(width, height) {
+        val finalWidth = width.coerceIn(constraints.minWidth, constraints.maxWidth)
+        val finalHeight = height.coerceIn(constraints.minHeight, constraints.maxHeight)
+        layout(finalWidth, finalHeight) {
             var x = 0
             visible.forEach { placeable ->
-                placeable.placeRelative(x, (height - placeable.height) / 2)
+                placeable.placeRelative(x, (finalHeight - placeable.height) / 2)
                 x += placeable.width + gap
             }
         }

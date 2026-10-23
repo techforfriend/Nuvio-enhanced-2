@@ -359,7 +359,11 @@ private fun GuideGrid(
                 .fillMaxWidth()
                 .weight(1f),
         ) {
-            items(items = channels, key = LiveTvChannel::id) { channel ->
+            items(
+                count = channels.size,
+                key = { index -> "${channels[index].id.ifBlank { channels[index].streamUrl }}_$index" },
+            ) { index ->
+                val channel = channels[index]
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

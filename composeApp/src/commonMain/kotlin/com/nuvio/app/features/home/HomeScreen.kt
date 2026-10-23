@@ -19,8 +19,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -1436,18 +1439,29 @@ fun HomeScreen(
                                 .padding(8.dp),
                         ) {
                             Column(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 280.dp)
+                                    .verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
+                                val allSelected = selectedCloudStreamProviderId == null
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(6.dp))
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .then(
+                                            if (allSelected) {
+                                                Modifier.background(themeAccent.copy(alpha = 0.16f))
+                                            } else {
+                                                Modifier
+                                            }
+                                        )
                                         .clickable {
                                             HomeRepository.setSelectedCloudStreamProvider(null)
                                             cloudStreamProviderMenuExpanded = false
                                         }
-                                        .padding(vertical = 2.dp),
+                                        .padding(horizontal = 7.dp, vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Icon(
@@ -1460,24 +1474,25 @@ fun HomeScreen(
                                     Text(
                                         text = "All extensions",
                                         color = themeOnSurface,
-                                        fontWeight = FontWeight.SemiBold,
+                                        fontWeight = if (allSelected) FontWeight.SemiBold else FontWeight.Normal,
                                         fontSize = 12.sp,
                                         modifier = Modifier.weight(1f),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
-                                    Box(
-                                        modifier = Modifier
-                                            .size(20.dp)
-                                            .clip(CircleShape)
-                                            .clickable { cloudStreamProviderMenuExpanded = false },
-                                        contentAlignment = Alignment.Center,
-                                    ) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    if (allSelected) {
                                         Icon(
-                                            imageVector = Icons.Rounded.Close,
-                                            contentDescription = "Close",
-                                            tint = themeOnSurface.copy(alpha = 0.60f),
-                                            modifier = Modifier.size(13.dp),
+                                            imageVector = Icons.Rounded.Check,
+                                            contentDescription = null,
+                                            tint = themeAccent,
+                                            modifier = Modifier.size(15.dp),
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(14.dp)
+                                                .border(1.2.dp, themeOnSurface.copy(alpha = 0.35f), CircleShape),
                                         )
                                     }
                                 }
