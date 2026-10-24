@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.NuvioStatusModal
-import com.nuvio.app.core.ui.Fold
 import com.nuvio.app.core.ui.LocalFold
 import com.nuvio.app.features.p2p.P2pStreamingState
 import com.nuvio.app.features.party.PartyRepository
@@ -124,6 +123,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
     val gestureCallbacks = rememberSurfaceGestureCallbacks()
     val fold = LocalFold.current?.takeIf { !isInPip }
     val videoModifier = if (fold != null) Modifier.fillMaxWidth().height(fold.top) else Modifier.fillMaxSize()
+    val panelModifier = if (fold != null) Modifier.fillMaxSize().padding(top = fold.bottom) else Modifier.fillMaxSize()
     val playbackGesturesEnabled = initialLoadCompleted && errorMessage == null
 
     BindAutoSyncRuntimeEffects() // AutoSync hook
@@ -239,7 +239,12 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
             )
         }
 
-        RenderPlayerControls(displayedPositionMs = displayedPositionMs, isEpisode = isEpisode, fold = fold)
+        RenderPlayerControls(
+            displayedPositionMs = displayedPositionMs,
+            isEpisode = isEpisode,
+            folded = fold != null,
+            modifier = panelModifier,
+        )
         Box(modifier = videoModifier) {
             RenderPlaybackOverlays(
                 runtime = runtime,
@@ -250,10 +255,13 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
                 showP2pRebufferStats = showP2pRebufferStats,
                 p2pRebufferMessage = p2pRebufferMessage,
                 p2pRebufferProgress = p2pRebufferProgress,
+                folded = fold != null,
             )
         }
-        RenderPlayerModals(displayedPositionMs = displayedPositionMs)
-        RenderParty(runtime = runtime)
+        Box(modifier = panelModifier) {
+            RenderPlayerModals(displayedPositionMs = displayedPositionMs)
+            RenderParty(runtime = runtime)
+        }
     }
 }
 
@@ -281,13 +289,19 @@ private fun PlayerScreenRuntime.currentInitialPositionRequestKey(): String? {
 }
 
 @Composable
-private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, isEpisode: Boolean, fold: Fold?) {
+private fun PlayerScreenRuntime.RenderPlayerControls(
+    displayedPositionMs: Long,
+    isEpisode: Boolean,
+    folded: Boolean,
+    modifier: Modifier,
+) {
     val isInPip = rememberIsInPictureInPicture()
     val partyState by PartyRepository.state.collectAsStateWithLifecycle()
     val partyActive = partyState.party != null
     val playerBadges = rememberPlayerBadges()
     AnimatedVisibility(
-        visible = (controlsVisible || fold != null || showParentalGuide) && !playerControlsLocked && !isInPip,
+        visible = (controlsVisible || folded || showParentalGuide) && !playerControlsLocked && !isInPip &&
+            !(folded && isPanelOpen),
         enter = fadeIn(),
         exit = fadeOut(),
     ) {
@@ -315,7 +329,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                 }
             } else null,
             onInteraction = { controlsActivityTick += 1 },
-            showPlaybackControls = controlsVisible || fold != null,
+            showPlaybackControls = controlsVisible || folded,
             onLockToggle = {
                 if (playerControlsLocked) unlockPlayerControls() else lockPlayerControls()
             },
@@ -421,7 +435,18 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                 }
             },
             horizontalSafePadding = horizontalSafePadding,
-            modifier = if (fold != null) Modifier.fillMaxSize().padding(top = fold.bottom) else Modifier.fillMaxSize(),
+            modifier = modifier,
+            foldLayout = folded,
+        )
+    }
+    AnimatedVisibility(
+        visible = folded && playerControlsLocked && !isInPip,
+        enter = fadeIn(),
+        exit = fadeOut(),
+    ) {
+        FoldLockedControls(
+            onUnlock = { unlockPlayerControls() },
+            modifier = modifier,
         )
     }
 }
@@ -436,12 +461,13 @@ private fun BoxScope.RenderPlaybackOverlays(
     showP2pRebufferStats: Boolean,
     p2pRebufferMessage: String?,
     p2pRebufferProgress: Float?,
+    folded: Boolean,
 ) {
     runtime.run {
         PlayerPlaybackOverlays(
             playerControlsLocked = playerControlsLocked,
             useLegacyLayout = playerSettingsUiState.useLegacyPlayerLayout,
-            lockedOverlayVisible = lockedOverlayVisible,
+            lockedOverlayVisible = lockedOverlayVisible && !folded,
             showRemainingTime = showRemainingTime,
             playbackSnapshot = playbackSnapshot,
         displayedPositionMs = displayedPositionMs,
