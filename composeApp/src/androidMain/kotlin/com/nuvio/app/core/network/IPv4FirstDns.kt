@@ -8,7 +8,7 @@ import java.net.InetAddress
  * Reorders DNS results to prefer IPv4 first. This helps avoid broken IPv6 routes
  * on some emulator and network setups.
  */
-class IPv4FirstDns(private val delegate: Dns = Dns.SYSTEM) : Dns {
+internal class IPv4FirstDns(private val delegate: Dns = NuvioDns) : Dns {
     override fun lookup(hostname: String): List<InetAddress> {
         val addresses = delegate.lookup(hostname)
         return addresses.sortedBy { if (it is Inet4Address) 0 else 1 }

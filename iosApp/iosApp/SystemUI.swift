@@ -36,7 +36,9 @@ final class SystemUI: ObservableObject {
         pictureInPictureMessage = visible ? localizedPictureInPictureMessage : nil
     }
 
-    private func refresh() {
+    // Fork: internal (upstream: private) so RootComposeViewController.refreshImmersiveSystemUI
+    // can re-propagate appearance to every window (persistent Home Bar fix).
+    func refresh() {
         for scene in UIApplication.shared.connectedScenes {
             guard let windowScene = scene as? UIWindowScene else { continue }
             for window in windowScene.windows {

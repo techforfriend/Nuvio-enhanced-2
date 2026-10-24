@@ -21,9 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
-import coil3.compose.LocalPlatformContext
 import com.nuvio.app.core.i18n.localizedByteUnit
+import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
 import kotlin.math.round
@@ -117,16 +116,15 @@ internal fun StreamBadgeChip(
             .padding(horizontal = size.horizontalPadding, vertical = size.verticalPadding),
         contentAlignment = Alignment.Center,
     ) {
-        val platformContext = LocalPlatformContext.current
-        AsyncImage(
-            model = imageURL,
-            imageLoader = BadgeImageLoader.get(platformContext),
+        NuvioAsyncImage(
+            imageUrl = imageURL,
             contentDescription = name,
             modifier = Modifier
                 .height(size.imageHeight)
                 .widthIn(min = size.minImageWidth, max = size.maxImageWidth)
                 .clip(shape),
             contentScale = ContentScale.Fit,
+            animateIfPossible = true,
         )
     }
 }

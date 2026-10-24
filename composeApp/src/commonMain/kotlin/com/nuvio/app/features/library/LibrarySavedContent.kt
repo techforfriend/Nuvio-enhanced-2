@@ -108,6 +108,7 @@ internal fun LibrarySavedControls(
 internal fun LazyListScope.libraryVerticalContent(
     projection: LibraryVerticalProjection,
     columns: Int,
+    releaseInfoFor: (LibraryItem) -> String,
     watchedKeys: Set<String>,
     fullyWatchedSeriesKeys: Set<String>,
     posterPattern: String,
@@ -121,11 +122,11 @@ internal fun LazyListScope.libraryVerticalContent(
             "library-vertical:${firstEntry.item.type}:${firstEntry.item.id}"
         },
     ) { rowEntries ->
-        val resolvedItems = remember(rowEntries, posterPattern) {
+        val resolvedItems = remember(rowEntries, posterPattern, releaseInfoFor) {
             rowEntries.map { entry ->
-                entry.item.toMetaPreview().let {
-                    if (posterPattern.isNotBlank()) it.withCustomPosterUrl(posterPattern) else it
-                }
+                entry.item.toMetaPreview()
+                    .copy(releaseInfo = releaseInfoFor(entry.item))
+                    .let { if (posterPattern.isNotBlank()) it.withCustomPosterUrl(posterPattern) else it }
             }
         }
         PosterGridRow(

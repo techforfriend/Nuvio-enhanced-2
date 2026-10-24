@@ -47,6 +47,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Use biometric authentication to unlock your primary Nuvio profile.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Nuvio connects to media servers on your local network.</string>
 	<key>NSAppTransportSecurity</key>
@@ -56,6 +58,7 @@
 	</dict>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
+		<string>shareddocuments</string>
 		<string>infuse</string>
 		<string>vlc-x-callback</string>
 		<string>outplayer</string>
@@ -71,5 +74,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<false/>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 </dict>
 </plist>

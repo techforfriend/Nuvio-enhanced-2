@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.graphicsLayer
 
 internal data class ActionAccentStyle(
@@ -39,6 +40,20 @@ internal fun rememberActionAccentStyle(enabled: Boolean = true): ActionAccentSty
         contentColor = tokens.colors.onAccent,
     )
 }
+
+fun ThemeColorPalette.accentBrush(alpha: Float): Brush =
+    if (accentGradient.size >= 2) {
+        Brush.linearGradient(accentGradient.map { color -> color.copy(alpha = alpha) })
+    } else {
+        SolidColor((accentGradient.firstOrNull() ?: secondary).copy(alpha = alpha))
+    }
+
+fun ThemeColorPalette.nativeAccentGradientHex(): List<String> =
+    if (accentGradient.size >= 2) {
+        accentGradient.map { color -> formatHexColor(color.toArgb() and 0xFFFFFF) }
+    } else {
+        listOf(nativeAccentHex)
+    }
 
 fun Modifier.gradientMask(brush: Brush): Modifier =
     graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }

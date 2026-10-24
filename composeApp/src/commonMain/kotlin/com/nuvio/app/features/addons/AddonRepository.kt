@@ -1,12 +1,15 @@
 package com.nuvio.app.features.addons
 
 import co.touchlab.kermit.Logger
+import com.nuvio.app.core.logging.InAppLogger
 import com.nuvio.app.core.network.SupabaseProvider
 import com.nuvio.app.core.sync.putSyncOriginClientId
 import com.nuvio.app.features.profiles.ProfileRepository
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.postgrest.rpc
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -56,8 +59,10 @@ object AddonRepository {
     val uiState: StateFlow<AddonsUiState> = _uiState.asStateFlow()
 
     private var initialized = false
+    private var pulledFromServer = false
     private var currentProfileId: Int = 1
     private val activeRefreshJobs = mutableMapOf<String, Job>()
+    private val activeRefreshJobsLock = SynchronizedObject()
     private val pushJobsByProfile = mutableMapOf<Int, Job>()
 
     fun initialize() {
@@ -70,6 +75,7 @@ object AddonRepository {
         val storedUrls = dedupeManifestUrls(AddonStorage.loadInstalledAddonUrls(currentProfileId))
         val enabledByUrl = loadLocalEnabledStates()
         log.d { "initialize() — local addon count: ${storedUrls.size}" }
+        InAppLogger.info("Addons/Repository", "initialize profile=$currentProfileId localAddons=${storedUrls.size}")
         if (storedUrls.isEmpty()) return
 
         val existingByUrl = _uiState.value.addons.associateBy(ManagedAddon::manifestUrl)
@@ -94,24 +100,32 @@ object AddonRepository {
     fun onProfileChanged(profileId: Int) {
         val effectiveProfileId = resolveEffectiveProfileId(profileId)
         if (effectiveProfileId == currentProfileId && initialized) return
+        InAppLogger.info(
+            "Addons/Repository",
+            "profile changed requested=$profileId effective=$effectiveProfileId previous=$currentProfileId",
+        )
         cancelActiveRefreshes()
         currentProfileId = effectiveProfileId
         initialized = false
+        pulledFromServer = false
         _uiState.value = AddonsUiState()
     }
 
     fun clearLocalState() {
+        InAppLogger.info("Addons/Repository", "clear local in-memory state")
         cancelActiveRefreshes()
         pushJobsByProfile.values.forEach(Job::cancel)
         pushJobsByProfile.clear()
         currentProfileId = 1
         initialized = false
+        pulledFromServer = false
         _uiState.value = AddonsUiState()
     }
 
     suspend fun pullFromServer(profileId: Int) {
         currentProfileId = resolveEffectiveProfileId(profileId)
-        log.i { "pullFromServer() — profileId=$profileId, initialized=$initialized" }
+        log.i { "pullFromServer() — profileId=$profileId, initialized=$initialized, pulledFromServer=$pulledFromServer" }
+        InAppLogger.info("Addons/Repository", "pullFromServer profile=$currentProfileId initialized=$initialized pulled=$pulledFromServer")
         runCatching {
             val rows = SupabaseProvider.client.postgrest
                 .from("addons")
@@ -131,7 +145,68 @@ object AddonRepository {
 
             val urls = rowsByUrl.keys.toList()
             log.i { "pullFromServer() — server returned ${rows.size} addons" }
+            InAppLogger.info("Addons/Repository", "pullFromServer serverRows=${rows.size} uniqueUrls=${urls.size}")
             urls.forEachIndexed { i, u -> log.d { "  server[$i]: $u" } }
+
+            if (urls.isEmpty() && !pulledFromServer) {
+                val localUrls = dedupeManifestUrls(AddonStorage.loadInstalledAddonUrls(currentProfileId))
+                log.i { "pullFromServer() — server empty, local has ${localUrls.size} addons" }
+                if (localUrls.isNotEmpty()) {
+                    log.i { "pullFromServer() — migrating local addons to server for profile $currentProfileId" }
+                    initialize()
+                    pulledFromServer = true
+                    val enabledByUrl = loadLocalEnabledStates()
+                    val addons = localUrls.mapIndexed { index, addonUrl ->
+                        val manifestUrl = ensureManifestSuffix(addonUrl)
+                        AddonPushItem(
+                            url = manifestUrl,
+                            name = _uiState.value.addons
+                                .find { it.manifestUrl == manifestUrl }?.manifest?.name ?: "",
+                            enabled = enabledByUrl[manifestUrl]
+                                ?: _uiState.value.addons.find { it.manifestUrl == manifestUrl }?.enabled
+                                ?: true,
+                            sortOrder = index,
+                        )
+                    }
+                    val params = buildJsonObject {
+                        put("p_profile_id", currentProfileId)
+                        put("p_addons", json.encodeToJsonElement(addons))
+                        putSyncOriginClientId()
+                    }
+                    SupabaseProvider.client.postgrest.rpc("sync_push_addons", params)
+                    log.i { "pullFromServer() — migration push done (${addons.size} addons)" }
+                    InAppLogger.info("Addons/Repository", "migrated local addons to server count=${addons.size}")
+                    return
+                }
+            }
+
+            if (urls.isEmpty()) {
+                val localUrls = dedupeManifestUrls(AddonStorage.loadInstalledAddonUrls(currentProfileId))
+                if (localUrls.isNotEmpty()) {
+                    log.w { "pullFromServer() — remote empty while local has ${localUrls.size} addons; preserving local addons" }
+                    val enabledByUrl = loadLocalEnabledStates()
+                    val existingByUrl = _uiState.value.addons.associateBy(ManagedAddon::manifestUrl)
+                    _uiState.value = AddonsUiState(
+                        addons = localUrls.map { url ->
+                            existingByUrl[url].toPendingAddon(
+                                manifestUrl = url,
+                                enabled = enabledByUrl[url],
+                            )
+                        },
+                    )
+                    persist()
+                    localUrls.forEach { url ->
+                        val existing = existingByUrl[url]
+                        val addon = _uiState.value.addons.firstOrNull { it.manifestUrl == url }
+                        if (addon?.enabled == true && (existing == null || (addon.manifest == null && !addon.isRefreshing))) {
+                            refreshAddon(url)
+                        }
+                    }
+                    pulledFromServer = true
+                    initialized = true
+                    return
+                }
+            }
 
             val existingByUrl = _uiState.value.addons.associateBy(ManagedAddon::manifestUrl)
             _uiState.value = AddonsUiState(
@@ -152,10 +227,13 @@ object AddonRepository {
                     refreshAddon(url)
                 }
             }
+            pulledFromServer = true
             initialized = true
             log.i { "pullFromServer() — applied ${urls.size} addons to state" }
+            InAppLogger.info("Addons/Repository", "pullFromServer applied=${urls.size}")
         }.onFailure { e ->
             log.e(e) { "pullFromServer() — FAILED" }
+            InAppLogger.error("Addons/Repository", "pullFromServer failed: ${InAppLogger.throwableSummary(e)}")
         }
     }
 
@@ -170,28 +248,39 @@ object AddonRepository {
 
     suspend fun addAddon(rawUrl: String): AddAddonResult {
         if (isUsingPrimaryAddonsFromSecondaryProfile()) {
+            InAppLogger.warn("Addons/Repository", "addAddon blocked because active profile uses primary addons")
             return AddAddonResult.Error(getString(Res.string.profile_primary_addons_required))
         }
         log.i { "addAddon() — rawUrl=$rawUrl" }
+        InAppLogger.info("Addons/Repository", "addAddon rawUrl=${InAppLogger.redactUrl(rawUrl)}")
         val manifestUrl = try {
             normalizeManifestUrl(rawUrl)
         } catch (error: IllegalArgumentException) {
+            InAppLogger.warn(
+                "Addons/Repository",
+                "addAddon invalid url=${InAppLogger.redactUrl(rawUrl)} error=${error.message.orEmpty()}",
+            )
             return AddAddonResult.Error(error.message ?: getString(Res.string.addon_invalid_url))
         }
+        InAppLogger.debug("Addons/Repository", "addAddon normalized=${InAppLogger.redactUrl(manifestUrl)}")
 
         if (_uiState.value.addons.any { it.manifestUrl == manifestUrl }) {
+            InAppLogger.warn("Addons/Repository", "addAddon duplicate url=${InAppLogger.redactUrl(manifestUrl)}")
             return AddAddonResult.Error(getString(Res.string.addon_already_installed))
         }
 
         val manifest = try {
             withContext(Dispatchers.Default) {
+                InAppLogger.info("Addons/Manifest", "GET ${InAppLogger.redactUrl(manifestUrl)} reason=add")
                 val payload = fetchAddonResponseText(manifestUrl)
+                InAppLogger.info("Addons/Manifest", "GET ${InAppLogger.redactUrl(manifestUrl)} ok chars=${payload.length} reason=add")
                 AddonManifestParser.parse(
                     manifestUrl = manifestUrl,
                     payload = payload,
                 )
             }
         } catch (error: Throwable) {
+            InAppLogger.error("Addons/Manifest", "GET ${InAppLogger.redactUrl(manifestUrl)} failed reason=add: ${InAppLogger.throwableSummary(error)}")
             return AddAddonResult.Error(error.message ?: getString(Res.string.addon_load_manifest_failed))
         }
 
@@ -207,11 +296,15 @@ object AddonRepository {
         }
         persist()
         pushToServer()
+        InAppLogger.info("Addons/Repository", "addAddon success name=${manifest.name} url=${InAppLogger.redactUrl(manifestUrl)}")
         return AddAddonResult.Success(manifest)
     }
 
     fun removeAddon(manifestUrl: String) {
-        if (isUsingPrimaryAddonsFromSecondaryProfile()) return
+        if (isUsingPrimaryAddonsFromSecondaryProfile()) {
+            InAppLogger.warn("Addons/Repository", "removeAddon blocked because active profile uses primary addons")
+            return
+        }
         log.i { "removeAddon() — $manifestUrl" }
         var changed = false
         _uiState.update { current ->
@@ -219,13 +312,18 @@ object AddonRepository {
             changed = updatedAddons.size != current.addons.size
             if (changed) current.copy(addons = updatedAddons) else current
         }
+        InAppLogger.info("Addons/Repository", "removeAddon removed=$changed url=${InAppLogger.redactUrl(manifestUrl)}")
         if (!changed) return
         persist()
         pushToServer()
     }
 
     fun moveAddon(fromIndex: Int, toIndex: Int) {
-        if (isUsingPrimaryAddonsFromSecondaryProfile()) return
+        if (isUsingPrimaryAddonsFromSecondaryProfile()) {
+            InAppLogger.warn("Addons/Repository", "moveAddon blocked because active profile uses primary addons")
+            return
+        }
+        var movedUrl: String? = null
         var changed = false
         _uiState.update { current ->
             val addons = current.addons
@@ -234,14 +332,22 @@ object AddonRepository {
                 toIndex !in addons.indices ||
                 fromIndex == toIndex
             ) {
+                InAppLogger.debug(
+                    "Addons/Repository",
+                    "moveAddon ignored from=$fromIndex to=$toIndex count=${addons.size}",
+                )
                 return@update current
             }
 
             val reordered = addons.toMutableList()
             val movingAddon = reordered.removeAt(fromIndex)
+            movedUrl = movingAddon.manifestUrl
             reordered.add(toIndex, movingAddon)
             changed = true
             current.copy(addons = reordered)
+        }
+        movedUrl?.let { url ->
+            InAppLogger.info("Addons/Repository", "moveAddon from=$fromIndex to=$toIndex url=${InAppLogger.redactUrl(url)}")
         }
         if (!changed) return
         persist()
@@ -249,9 +355,12 @@ object AddonRepository {
     }
 
     fun setAddonEnabled(manifestUrl: String, enabled: Boolean) {
-        if (isUsingPrimaryAddonsFromSecondaryProfile()) return
-        var shouldRefresh = false
+        if (isUsingPrimaryAddonsFromSecondaryProfile()) {
+            InAppLogger.warn("Addons/Repository", "setAddonEnabled blocked because active profile uses primary addons")
+            return
+        }
         var changed = false
+        var shouldRefresh = false
         _uiState.update { current ->
             current.copy(
                 addons = current.addons.map { addon ->
@@ -265,6 +374,10 @@ object AddonRepository {
                 },
             )
         }
+        InAppLogger.info(
+            "Addons/Repository",
+            "setAddonEnabled enabled=$enabled changed=$changed shouldRefresh=$shouldRefresh url=${InAppLogger.redactUrl(manifestUrl)}",
+        )
         if (!changed) return
         persist()
         pushToServer()
@@ -274,7 +387,9 @@ object AddonRepository {
     }
 
     fun refreshAll() {
-        _uiState.value.addons.filter { it.enabled }.distinctBy { it.manifestUrl }.forEach { addon ->
+        val enabledAddons = _uiState.value.addons.filter { it.enabled }.distinctBy { it.manifestUrl }
+        InAppLogger.info("Addons/Repository", "refreshAll enabledCount=${enabledAddons.size}")
+        enabledAddons.forEach { addon ->
             refreshAddon(
                 manifestUrl = addon.manifestUrl,
                 forceRefresh = true,
@@ -286,18 +401,23 @@ object AddonRepository {
         manifestUrl: String,
         forceRefresh: Boolean = false,
     ) {
-        val existingJob = activeRefreshJobs[manifestUrl]
-        if (existingJob?.isActive == true) return
+        val existingJob = synchronized(activeRefreshJobsLock) { activeRefreshJobs[manifestUrl] }
+        if (existingJob?.isActive == true) {
+            InAppLogger.debug("Addons/Manifest", "refresh skipped active url=${InAppLogger.redactUrl(manifestUrl)}")
+            return
+        }
 
         markRefreshing(manifestUrl)
         var refreshJob: Job? = null
         refreshJob = scope.launch {
             try {
                 val result = runCatching {
+                    InAppLogger.info("Addons/Manifest", "GET ${InAppLogger.redactUrl(manifestUrl)} reason=refresh")
                     val payload = fetchAddonResponseText(
                         url = manifestUrl,
                         forceRefresh = forceRefresh,
                     )
+                    InAppLogger.info("Addons/Manifest", "GET ${InAppLogger.redactUrl(manifestUrl)} ok chars=${payload.length} reason=refresh")
                     AddonManifestParser.parse(
                         manifestUrl = manifestUrl,
                         payload = payload,
@@ -312,6 +432,7 @@ object AddonRepository {
                             } else {
                                 result.fold(
                                     onSuccess = { manifest ->
+                                        InAppLogger.info("Addons/Manifest", "refresh success name=${manifest.name} url=${InAppLogger.redactUrl(manifestUrl)}")
                                         addon.copy(
                                             manifest = manifest,
                                             isRefreshing = false,
@@ -319,6 +440,7 @@ object AddonRepository {
                                         )
                                     },
                                     onFailure = { error ->
+                                        InAppLogger.error("Addons/Manifest", "refresh failed url=${InAppLogger.redactUrl(manifestUrl)}: ${InAppLogger.throwableSummary(error)}")
                                         addon.copy(
                                             isRefreshing = false,
                                             errorMessage = error.message ?: getString(Res.string.addon_load_manifest_failed),
@@ -330,12 +452,14 @@ object AddonRepository {
                     )
                 }
             } finally {
-                if (activeRefreshJobs[manifestUrl] === refreshJob) {
-                    activeRefreshJobs.remove(manifestUrl)
+                synchronized(activeRefreshJobsLock) {
+                    if (activeRefreshJobs[manifestUrl] === refreshJob) {
+                        activeRefreshJobs.remove(manifestUrl)
+                    }
                 }
             }
         }
-        activeRefreshJobs[manifestUrl] = refreshJob
+        synchronized(activeRefreshJobsLock) { activeRefreshJobs[manifestUrl] = refreshJob }
     }
 
     private fun pushToServer() {
@@ -357,6 +481,7 @@ object AddonRepository {
             try {
                 delay(ADDON_PUSH_DEBOUNCE_MS)
                 log.d { "pushToServer() — profileId=$profileId, pushing ${addons.size} addons" }
+                InAppLogger.debug("Addons/Repository", "pushToServer profile=$profileId count=${addons.size}")
                 val params = buildJsonObject {
                     put("p_profile_id", profileId)
                     put("p_addons", json.encodeToJsonElement(addons))
@@ -364,10 +489,12 @@ object AddonRepository {
                 }
                 SupabaseProvider.client.postgrest.rpc("sync_push_addons", params)
                 log.d { "pushToServer() — success" }
+                InAppLogger.info("Addons/Repository", "pushToServer success count=${addons.size}")
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
                 log.e(error) { "pushToServer() — FAILED" }
+                InAppLogger.error("Addons/Repository", "pushToServer failed: ${InAppLogger.throwableSummary(error)}")
             } finally {
                 if (pushJobsByProfile[profileId] === pushJob) {
                     pushJobsByProfile.remove(profileId)
@@ -411,8 +538,10 @@ object AddonRepository {
             .mapKeys { (url, _) -> ensureManifestSuffix(url) }
 
     private fun cancelActiveRefreshes() {
-        activeRefreshJobs.values.forEach(Job::cancel)
-        activeRefreshJobs.clear()
+        val jobs = synchronized(activeRefreshJobsLock) {
+            activeRefreshJobs.values.toList().also { activeRefreshJobs.clear() }
+        }
+        jobs.forEach(Job::cancel)
     }
 
     private fun resolveEffectiveProfileId(profileId: Int): Int {

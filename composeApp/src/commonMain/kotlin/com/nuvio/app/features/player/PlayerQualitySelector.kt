@@ -1,6 +1,7 @@
 package com.nuvio.app.features.player
 
 import co.touchlab.kermit.Logger
+import com.nuvio.app.core.logging.InAppLogger
 import com.nuvio.app.features.addons.httpGetText
 import com.nuvio.app.features.addons.httpGetTextWithHeaders
 
@@ -77,23 +78,19 @@ data class PlayerQualitySelectionState(
     val hasSelectableQualities: Boolean
         get() = variants.size > 1
 
-    fun playbackUrlFor(selectedVariantId: String?): String? {
-        val selected = when {
+    fun selectedVariantFor(selectedVariantId: String?): PlayerQualityVariant? =
+        when {
             selectedVariantId.isNullOrBlank() || selectedVariantId == PlayerQualityAutoId -> {
                 variants.firstOrNull { it.id == recommendedVariantId }
             }
             else -> variants.firstOrNull { it.id == selectedVariantId }
         }
-        return selected?.playbackUrl ?: sourceUrl.takeIf { it.isNotBlank() }
-    }
+
+    fun playbackUrlFor(selectedVariantId: String?): String? =
+        selectedVariantFor(selectedVariantId)?.playbackUrl ?: sourceUrl.takeIf { it.isNotBlank() }
 
     fun labelFor(selectedVariantId: String?, forButton: Boolean = false): String? {
-        val selected = when {
-            selectedVariantId.isNullOrBlank() || selectedVariantId == PlayerQualityAutoId -> {
-                variants.firstOrNull { it.id == recommendedVariantId }
-            }
-            else -> variants.firstOrNull { it.id == selectedVariantId }
-        }
+        val selected = selectedVariantFor(selectedVariantId)
         return if (forButton) {
             selected?.buttonQualityName
         } else {
@@ -108,12 +105,21 @@ internal object PlayerQualityResolver {
     suspend fun resolve(
         sourceUrl: String,
         requestHeaders: Map<String, String> = emptyMap(),
-        forceHls: Boolean = false,
     ): PlayerQualitySelectionState {
         val normalizedUrl = sourceUrl.trim()
-        if (!forceHls && !looksLikeHlsPlaylist(normalizedUrl)) {
+        if (!looksLikeHlsPlaylist(normalizedUrl)) {
+            InAppLogger.debug(
+                "Player/Quality",
+                "skip HLS quality inspection url=${InAppLogger.redactUrl(normalizedUrl)}",
+            )
             return PlayerQualitySelectionState(sourceUrl = normalizedUrl)
         }
+
+        InAppLogger.info(
+            "Player/Quality",
+            "inspect HLS master url=${InAppLogger.redactUrl(normalizedUrl)} " +
+                "requestHeaders=${InAppLogger.headerKeys(requestHeaders)}",
+        )
 
         val playlistText = runCatching {
             if (requestHeaders.isEmpty()) {
@@ -123,17 +129,31 @@ internal object PlayerQualityResolver {
             }
         }.onFailure { error ->
             log.w(error) { "Failed to fetch HLS master playlist for quality detection" }
+            InAppLogger.warn(
+                "Player/Quality",
+                "inspect HLS master failed url=${InAppLogger.redactUrl(normalizedUrl)} " +
+                    "error=${InAppLogger.throwableSummary(error)}",
+            )
         }.getOrNull() ?: return PlayerQualitySelectionState(
             sourceUrl = normalizedUrl,
             errorMessage = "Unable to inspect HLS quality variants.",
         )
 
         if (!playlistText.contains("#EXT-X-STREAM-INF", ignoreCase = true)) {
+            InAppLogger.debug(
+                "Player/Quality",
+                "HLS playlist is not a master playlist url=${InAppLogger.redactUrl(normalizedUrl)} " +
+                    "chars=${playlistText.length}",
+            )
             return PlayerQualitySelectionState(sourceUrl = normalizedUrl)
         }
 
         val parsed = HlsMasterPlaylist.parse(normalizedUrl, playlistText)
         if (parsed.variants.isEmpty()) {
+            InAppLogger.warn(
+                "Player/Quality",
+                "HLS master parsed with no variants url=${InAppLogger.redactUrl(normalizedUrl)} chars=${playlistText.length}",
+            )
             return PlayerQualitySelectionState(sourceUrl = normalizedUrl)
         }
 
@@ -142,6 +162,11 @@ internal object PlayerQualityResolver {
             val playbackUrl = writeTemporaryHlsPlaylist(sanitized)
             if (playbackUrl == null) {
                 log.w { "Failed to write sanitized HLS playlist for variant=${variant.name.ifBlank { variant.id }}" }
+                InAppLogger.warn(
+                    "Player/Quality",
+                    "failed to write temporary playlist variant=${variant.name.ifBlank { variant.id }} " +
+                        "declared=${variant.width ?: 0}x${variant.height ?: 0}",
+                )
                 null
             } else {
                 variant.toUiVariant(index = index, playbackUrl = playbackUrl)
@@ -149,6 +174,11 @@ internal object PlayerQualityResolver {
         }
 
         if (variants.isEmpty()) {
+            InAppLogger.warn(
+                "Player/Quality",
+                "HLS variants detected but none prepared url=${InAppLogger.redactUrl(normalizedUrl)} " +
+                    "rawVariants=${parsed.variants.size}",
+            )
             return PlayerQualitySelectionState(
                 sourceUrl = normalizedUrl,
                 errorMessage = "Unable to prepare HLS quality variants.",
@@ -159,6 +189,12 @@ internal object PlayerQualityResolver {
         log.i {
             "Detected HLS qualities count=${variants.size} recommended=${recommended?.displayLabel.orEmpty()} url=${redactUrl(normalizedUrl)}"
         }
+        InAppLogger.info(
+            "Player/Quality",
+            "detected HLS qualities count=${variants.size} recommended=${recommended?.qualityName.orEmpty()} " +
+                "variants=${variants.joinToString(separator = ",") { it.qualityName }} " +
+                "url=${InAppLogger.redactUrl(normalizedUrl)}",
+        )
         return PlayerQualitySelectionState(
             sourceUrl = normalizedUrl,
             variants = variants,
@@ -174,6 +210,7 @@ internal object PlayerQualityResolver {
 }
 
 private data class HlsMasterPlaylist(
+    val baseUrl: String,
     val headerLines: List<String>,
     val mediaLines: List<HlsMediaLine>,
     val variants: List<HlsVariant>,
@@ -257,6 +294,7 @@ private data class HlsMasterPlaylist(
             }
 
             return HlsMasterPlaylist(
+                baseUrl = baseUrl,
                 headerLines = headerLines.distinct(),
                 mediaLines = mediaLines,
                 variants = variants,
@@ -322,6 +360,9 @@ internal fun playerQualityNameForResolution(
     }
     return if (forButton) label.toPlayerQualityButtonName() else label
 }
+
+internal fun playerQualityNameForHeight(height: Int?, forButton: Boolean = false): String? =
+    playerQualityNameForResolution(width = null, height = height, forButton = forButton)
 
 internal fun String.toPlayerQualityButtonName(): String =
     if (equals("2160p", ignoreCase = true)) "4K UHD" else this

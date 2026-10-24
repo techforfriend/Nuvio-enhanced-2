@@ -13,7 +13,19 @@ interface PlayerEngineController {
         onResult(null)
     }
     fun retry()
+    fun isPictureInPictureSupported(): Boolean = false
+    fun startPictureInPicture() {}
+    fun setVideoZoom(scale: Float) {}
+    fun showCastDialog() {}
     fun setPlaybackSpeed(speed: Float)
+    fun currentPlayerVolume(): PlayerAudioLevel = PlayerAudioLevel(
+        fraction = 1f,
+        isMuted = false,
+    )
+    fun setPlayerVolume(level: Float): PlayerAudioLevel = PlayerAudioLevel(
+        fraction = 1f,
+        isMuted = false,
+    )
     fun setMuted(muted: Boolean) {}
     fun getAudioTracks(): List<AudioTrack>
     fun getSubtitleTracks(): List<SubtitleTrack>
@@ -32,6 +44,18 @@ interface PlayerEngineController {
         hasActiveSubtitle: Boolean,
         useCustomSubtitles: Boolean = false,
     ) {}
+    /**
+     * Enables or disables hardware-keyboard shortcuts that a platform handles outside Compose
+     * (currently only iOS/mpv). Disabled while an overlay owns the keyboard or the controls
+     * are locked.
+     */
+    fun setKeyboardShortcutsEnabled(enabled: Boolean) {}
+
+    /**
+     * Routes a shortcut the platform recognised back into the player runtime, so a key press
+     * takes exactly the same path as the equivalent tap or gesture.
+     */
+    fun setKeyboardShortcutHandler(handler: ((PlayerKeyboardShortcut) -> Unit)?) {}
     fun setSubtitleDelayMs(delayMs: Int) {}
     fun configureIosVideoOutput(settings: PlayerSettingsUiState) {}
     fun updateNowPlayingMetadata(info: PlayerNowPlayingInfo) {}

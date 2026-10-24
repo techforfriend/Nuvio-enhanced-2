@@ -23,11 +23,12 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,6 +55,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -71,11 +74,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
-import dev.chrisbanes.haze.HazeState
+import com.nuvio.app.core.ui.NuvioAsyncImage
+import com.kyant.backdrop.Backdrop
 import com.nuvio.app.isIos
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
@@ -91,8 +95,9 @@ fun ProfileSwitcherTab(
     onAddProfileRequested: () -> Unit,
     triggerContent: (@Composable (selected: Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier,
-    hazeState: HazeState? = null,
+    backdrop: Backdrop? = null,
     popupBelowAnchor: Boolean = false,
+    defaultIconColorOverride: Color? = null,
 ) {
     val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -111,6 +116,7 @@ fun ProfileSwitcherTab(
     // Keep popup composed while exit animation plays
     var popupVisible by remember { mutableStateOf(false) }
     var pinProfile by remember { mutableStateOf<NuvioProfile?>(null) }
+    var biometricAuthenticating by remember { mutableStateOf(false) }
     var dragTargetProfileIndex by remember { mutableStateOf<Int?>(null) }
     var triggerCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
     val profileBubbleBounds = remember(profiles.map { it.profileIndex }) {
@@ -142,7 +148,7 @@ fun ProfileSwitcherTab(
         dragTargetProfileIndex = nextTargetProfileIndex
     }
 
-    fun chooseProfile(profile: NuvioProfile) {
+    fun routeProfileNormally(profile: NuvioProfile) {
         routeProfileSelection(
             profile = profile,
             isEditMode = false,
@@ -160,6 +166,45 @@ fun ProfileSwitcherTab(
                 onProfileSelected(it)
             },
         )
+    }
+
+    fun chooseProfile(profile: NuvioProfile) {
+        if (biometricAuthenticating) return
+        val isLockedPrimary = profile.profileIndex == 1 &&
+            profile.pinEnabled &&
+            profile.userId.isNotBlank() &&
+            profile.profileIndex != ProfileRepository.state.value.activeProfile?.profileIndex
+        if (!isLockedPrimary) {
+            routeProfileNormally(profile)
+            return
+        }
+
+        biometricAuthenticating = true
+        scope.launch {
+            val result = try {
+                ProfileBiometricAuth.authenticate(profile.profileIndex, profile.userId)
+            } catch (error: CancellationException) {
+                biometricAuthenticating = false
+                throw error
+            } catch (_: Exception) {
+                ProfileBiometricResult.Failed
+            }
+            biometricAuthenticating = false
+            when (result) {
+                ProfileBiometricResult.Success -> {
+                    pinProfile = null
+                    showPopup = false
+                    onProfileSelected(profile)
+                }
+                ProfileBiometricResult.Cancelled -> Unit
+                ProfileBiometricResult.FallbackRequested,
+                ProfileBiometricResult.Invalidated,
+                ProfileBiometricResult.Unavailable,
+                ProfileBiometricResult.NotConfigured,
+                ProfileBiometricResult.Failed,
+                -> routeProfileNormally(profile)
+            }
+        }
     }
 
     fun chooseDragTarget() {
@@ -242,6 +287,7 @@ fun ProfileSwitcherTab(
                 avatars = avatars,
                 selected = selected,
                 size = 28,
+                iconColorOverride = defaultIconColorOverride,
             )
         }
 
@@ -271,7 +317,7 @@ fun ProfileSwitcherTab(
                     activeProfileIndex = activeProfile?.profileIndex,
                     hoveredProfileIndex = dragTargetProfileIndex,
                     pinProfile = pinProfile,
-                    hazeState = hazeState,
+                    backdrop = backdrop,
                     opensBelow = opensBelow,
                     availableHeight = availableHeight,
                     modifier = Modifier.graphicsLayer {
@@ -327,6 +373,7 @@ fun NativeProfileSwitcherPopup(
     var showPopup by remember { mutableStateOf(false) }
     var popupVisible by remember { mutableStateOf(false) }
     var pinProfile by remember { mutableStateOf<NuvioProfile?>(null) }
+    var biometricAuthenticating by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         AvatarRepository.refreshAvatars()
@@ -346,7 +393,7 @@ fun NativeProfileSwitcherPopup(
         }
     }
 
-    fun chooseProfile(profile: NuvioProfile) {
+    fun routeProfileNormally(profile: NuvioProfile) {
         routeProfileSelection(
             profile = profile,
             isEditMode = false,
@@ -366,6 +413,46 @@ fun NativeProfileSwitcherPopup(
                 onProfileSelected(it)
             },
         )
+    }
+
+    fun chooseProfile(profile: NuvioProfile) {
+        if (biometricAuthenticating) return
+        val isLockedPrimary = profile.profileIndex == 1 &&
+            profile.pinEnabled &&
+            profile.userId.isNotBlank() &&
+            profile.profileIndex != ProfileRepository.state.value.activeProfile?.profileIndex
+        if (!isLockedPrimary) {
+            routeProfileNormally(profile)
+            return
+        }
+
+        biometricAuthenticating = true
+        scope.launch {
+            val result = try {
+                ProfileBiometricAuth.authenticate(profile.profileIndex, profile.userId)
+            } catch (error: CancellationException) {
+                biometricAuthenticating = false
+                throw error
+            } catch (_: Exception) {
+                ProfileBiometricResult.Failed
+            }
+            biometricAuthenticating = false
+            when (result) {
+                ProfileBiometricResult.Success -> {
+                    pinProfile = null
+                    showPopup = false
+                    onDismissRequest()
+                    onProfileSelected(profile)
+                }
+                ProfileBiometricResult.Cancelled -> Unit
+                ProfileBiometricResult.FallbackRequested,
+                ProfileBiometricResult.Invalidated,
+                ProfileBiometricResult.Unavailable,
+                ProfileBiometricResult.NotConfigured,
+                ProfileBiometricResult.Failed,
+                -> routeProfileNormally(profile)
+            }
+        }
     }
 
     val popupAlpha = remember { Animatable(0f) }
@@ -672,11 +759,12 @@ private fun PopupProfileBubble(
                 contentAlignment = Alignment.Center,
             ) {
                 if (avatarImageUrl != null) {
-                    AsyncImage(
-                        model = avatarImageUrl,
+                    NuvioAsyncImage(
+                        imageUrl = avatarImageUrl,
                         contentDescription = profile.name,
-                        modifier = Modifier.size(48.dp).clip(tokens.shapes.avatar),
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
+                        animateIfPossible = true,
                     )
                 } else if (profile.name.isNotBlank()) {
                     Text(
@@ -750,12 +838,14 @@ fun ActiveProfileMiniAvatar(
     avatars: List<AvatarCatalogItem>,
     selected: Boolean,
     size: Int = 24,
+    iconColorOverride: Color? = null,
 ) {
     val tokens = MaterialTheme.nuvio
     if (profile == null) {
         Icon(
             imageVector = Icons.Rounded.Person,
             contentDescription = stringResource(Res.string.compose_nav_profile),
+            tint = iconColorOverride ?: LocalContentColor.current,
             modifier = Modifier.size(size.dp),
         )
         return
@@ -790,11 +880,12 @@ fun ActiveProfileMiniAvatar(
         contentAlignment = Alignment.Center,
     ) {
         if (avatarImageUrl != null) {
-            AsyncImage(
-                model = avatarImageUrl,
+            NuvioAsyncImage(
+                imageUrl = avatarImageUrl,
                 contentDescription = profile.name,
                 modifier = Modifier.size(size.dp).clip(tokens.shapes.avatar),
                 contentScale = ContentScale.Crop,
+                animateIfPossible = true,
             )
         } else if (profile.name.isNotBlank()) {
             Text(

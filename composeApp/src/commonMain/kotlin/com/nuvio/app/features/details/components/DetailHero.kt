@@ -52,8 +52,11 @@ import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.heroStretchHeight
 import com.nuvio.app.core.ui.heroStretchZoom
 import com.nuvio.app.features.details.MetaDetails
+import com.nuvio.app.features.player.MiniPlayerController
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
+import com.nuvio.app.core.ui.verticalBarWidth
 
 @Composable
 fun DetailHero(
@@ -79,7 +82,7 @@ fun DetailHero(
     BoxWithConstraints(
         modifier = modifier.fillMaxWidth(),
     ) {
-        val heroHeight = detailHeroHeight(maxWidth, isTablet)
+        val heroHeight = detailHeroHeight(maxWidth - verticalBarWidth(), isTablet)
         val trailerAlpha by animateFloatAsState(
             targetValue = if (heroTrailerReady) 1f else 0f,
             animationSpec = tween(durationMillis = 300),
@@ -146,7 +149,7 @@ fun DetailHero(
                     HeroTrailerPlayerSurface(
                         sourceUrl = heroTrailerSourceUrl,
                         sourceAudioUrl = heroTrailerSourceAudioUrl,
-                        playWhenReady = heroTrailerPlayWhenReady(),
+                        playWhenReady = heroTrailerPlayWhenReady() && !MiniPlayerController.isActive,
                         muted = heroTrailerMuted,
                         modifier = Modifier
                             .align(Alignment.TopCenter)
@@ -177,6 +180,7 @@ fun DetailHero(
                         targetState = heroTrailerMuted,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
+                            .padding(LocalVerticalBarPadding.current)
                             .padding(
                                 top = heroChromeTopPadding,
                                 end = if (isTablet) 32.dp else 22.dp,

@@ -27,7 +27,14 @@ actual object PlayerSettingsStorage {
     private const val resizeModeKey = "resize_mode"
     private const val holdToSpeedEnabledKey = "hold_to_speed_enabled"
     private const val holdToSpeedValueKey = "hold_to_speed_value"
+    private const val skipBackwardSecondsKey = "skip_backward_seconds"
+    private const val skipForwardSecondsKey = "skip_forward_seconds"
     private const val touchGesturesEnabledKey = "touch_gestures_enabled"
+    private const val swipeToSeekEnabledKey = "swipe_to_seek_enabled"
+    private const val seekPreviewEnabledKey = "seek_preview_enabled"
+    private const val movieRecommendationsEnabledKey = "movie_recommendations_enabled"
+    private const val autoShowSubtitlesOnRewindEnabledKey = "auto_show_subtitles_on_rewind_enabled"
+    private const val autoShowSubtitlesOnMuteEnabledKey = "auto_show_subtitles_on_mute_enabled"
     private const val externalPlayerEnabledKey = "external_player_enabled"
     private const val externalPlayerForwardSubtitlesKey = "external_player_forward_subtitles"
     private const val externalPlayerSendSkipSegmentsKey = "external_player_send_skip_segments"
@@ -38,9 +45,12 @@ actual object PlayerSettingsStorage {
     private const val secondaryPreferredSubtitleLanguageKey = "secondary_preferred_subtitle_language"
     private const val subtitleTextColorKey = "subtitle_text_color"
     private const val subtitleBackgroundColorKey = "subtitle_background_color"
+    private const val subtitleCustomFontKey = "subtitle_custom_font"
     private const val subtitleOutlineColorKey = "subtitle_outline_color"
     private const val subtitleOutlineEnabledKey = "subtitle_outline_enabled"
     private const val subtitleOutlineWidthKey = "subtitle_outline_width"
+    private const val subtitleShadowEnabledKey = "subtitle_shadow_enabled"
+    private const val subtitleShadowStrengthKey = "subtitle_shadow_strength"
     private const val subtitleBoldKey = "subtitle_bold"
     private const val subtitleFontSizeSpKey = "subtitle_font_size_sp"
     private const val subtitleBottomOffsetKey = "subtitle_bottom_offset"
@@ -56,17 +66,7 @@ actual object PlayerSettingsStorage {
     private const val decoderPriorityKey = "decoder_priority"
     private const val mapDV7ToHevcKey = "map_dv7_to_hevc"
     private const val tunnelingEnabledKey = "tunneling_enabled"
-    private const val exoNativeMemoryEnabledKey = "exo_native_memory_enabled"
-    private const val vodCacheEnabledKey = "vod_cache_enabled"
-    private const val vodCacheSizeModeKey = "vod_cache_size_mode"
-    private const val vodCacheSizeMbKey = "vod_cache_size_mb"
-    private const val bufferEngineEnabledKey = "buffer_engine_enabled"
-    private const val minBufferMsKey = "min_buffer_ms"
-    private const val maxBufferMsKey = "max_buffer_ms"
-    private const val bufferForPlaybackMsKey = "buffer_for_playback_ms"
-    private const val bufferForPlaybackAfterRebufferMsKey = "buffer_for_playback_after_rebuffer_ms"
-    private const val backBufferDurationMsKey = "back_buffer_duration_ms"
-    private const val targetBufferSizeMbKey = "target_buffer_size_mb"
+    private const val androidAudioPassthroughEnabledKey = "android_audio_passthrough_enabled"
     private const val streamAutoPlayModeKey = "stream_auto_play_mode"
     private const val streamAutoPlaySourceKey = "stream_auto_play_source"
     private const val streamAutoPlaySelectedAddonsKey = "stream_auto_play_selected_addons"
@@ -89,8 +89,11 @@ actual object PlayerSettingsStorage {
     private const val nextEpisodeThresholdPercentKey = "next_episode_threshold_percent_v2"
     private const val nextEpisodeThresholdMinutesBeforeEndKey = "next_episode_threshold_minutes_before_end_v2"
     private const val preloadNextEpisodeSourcesKey = "preload_next_episode_sources"
+    private const val miniPlayerEnabledKey = "mini_player_enabled"
+    private const val privateViewingEnabledKey = "private_viewing_enabled"
     private const val useLibassKey = "use_libass"
     private const val libassRenderTypeKey = "libass_render_type"
+    private const val useLibmpvAssKey = "use_libmpv_ass"
     private const val iosVideoOutputPresetKey = "ios_video_output_preset"
     private const val iosToneMappingModeKey = "ios_tone_mapping_mode"
     private const val iosTargetPrimariesKey = "ios_target_primaries"
@@ -163,8 +166,10 @@ actual object PlayerSettingsStorage {
         nextEpisodeThresholdPercentKey,
         nextEpisodeThresholdMinutesBeforeEndKey,
         preloadNextEpisodeSourcesKey,
+        miniPlayerEnabledKey,
         useLibassKey,
         libassRenderTypeKey,
+        useLibmpvAssKey,
         iosVideoOutputPresetKey,
         iosToneMappingModeKey,
         iosTargetPrimariesKey,
@@ -322,10 +327,48 @@ actual object PlayerSettingsStorage {
         NSUserDefaults.standardUserDefaults.setFloat(speed, forKey = ProfileScopedKey.of(holdToSpeedValueKey))
     }
 
+    actual fun loadSkipBackwardSeconds(): Int? = loadInt(skipBackwardSecondsKey)
+
+    actual fun saveSkipBackwardSeconds(seconds: Int) = saveInt(skipBackwardSecondsKey, seconds)
+
+    actual fun loadSkipForwardSeconds(): Int? = loadInt(skipForwardSecondsKey)
+
+    actual fun saveSkipForwardSeconds(seconds: Int) = saveInt(skipForwardSecondsKey, seconds)
+
     actual fun loadTouchGesturesEnabled(): Boolean? = loadBoolean(touchGesturesEnabledKey)
 
     actual fun saveTouchGesturesEnabled(enabled: Boolean) {
         saveBoolean(touchGesturesEnabledKey, enabled)
+    }
+
+    actual fun loadSwipeToSeekEnabled(): Boolean? = loadBoolean(swipeToSeekEnabledKey)
+
+    actual fun saveSwipeToSeekEnabled(enabled: Boolean) {
+        saveBoolean(swipeToSeekEnabledKey, enabled)
+    }
+
+    actual fun loadSeekPreviewEnabled(): Boolean? = loadBoolean(seekPreviewEnabledKey)
+
+    actual fun saveSeekPreviewEnabled(enabled: Boolean) {
+        saveBoolean(seekPreviewEnabledKey, enabled)
+    }
+
+    actual fun loadMovieRecommendationsEnabled(): Boolean? = loadBoolean(movieRecommendationsEnabledKey)
+
+    actual fun saveMovieRecommendationsEnabled(enabled: Boolean) {
+        saveBoolean(movieRecommendationsEnabledKey, enabled)
+    }
+
+    actual fun loadAutoShowSubtitlesOnRewindEnabled(): Boolean? = loadBoolean(autoShowSubtitlesOnRewindEnabledKey)
+
+    actual fun saveAutoShowSubtitlesOnRewindEnabled(enabled: Boolean) {
+        saveBoolean(autoShowSubtitlesOnRewindEnabledKey, enabled)
+    }
+
+    actual fun loadAutoShowSubtitlesOnMuteEnabled(): Boolean? = loadBoolean(autoShowSubtitlesOnMuteEnabledKey)
+
+    actual fun saveAutoShowSubtitlesOnMuteEnabled(enabled: Boolean) {
+        saveBoolean(autoShowSubtitlesOnMuteEnabledKey, enabled)
     }
 
     actual fun loadExternalPlayerEnabled(): Boolean? {
@@ -488,6 +531,38 @@ actual object PlayerSettingsStorage {
         saveInt(subtitleOutlineWidthKey, width)
     }
 
+    actual fun loadSubtitleCustomFont(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(subtitleCustomFontKey))
+
+    actual fun saveSubtitleCustomFont(fileName: String?) {
+        val key = ProfileScopedKey.of(subtitleCustomFontKey)
+        if (fileName.isNullOrBlank()) {
+            NSUserDefaults.standardUserDefaults.removeObjectForKey(key)
+        } else {
+            NSUserDefaults.standardUserDefaults.setObject(fileName, forKey = key)
+        }
+    }
+
+    actual fun loadSubtitleShadowEnabled(): Boolean? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(subtitleShadowEnabledKey)
+        return if (defaults.objectForKey(key) != null) {
+            defaults.boolForKey(key)
+        } else {
+            null
+        }
+    }
+
+    actual fun saveSubtitleShadowEnabled(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(subtitleShadowEnabledKey))
+    }
+
+    actual fun loadSubtitleShadowStrength(): Int? = loadInt(subtitleShadowStrengthKey)
+
+    actual fun saveSubtitleShadowStrength(strength: Int) {
+        saveInt(subtitleShadowStrengthKey, strength)
+    }
+
     actual fun loadSubtitleBold(): Boolean? = loadBoolean(subtitleBoldKey)
 
     actual fun saveSubtitleBold(enabled: Boolean) {
@@ -624,6 +699,20 @@ actual object PlayerSettingsStorage {
         NSUserDefaults.standardUserDefaults.setInteger(priority.toLong(), forKey = ProfileScopedKey.of(decoderPriorityKey))
     }
 
+    actual fun loadAndroidAudioPassthroughEnabled(): Boolean? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(androidAudioPassthroughEnabledKey)
+        return if (defaults.objectForKey(key) != null) {
+            defaults.boolForKey(key)
+        } else {
+            null
+        }
+    }
+
+    actual fun saveAndroidAudioPassthroughEnabled(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(androidAudioPassthroughEnabledKey))
+    }
+
     actual fun loadMapDV7ToHevc(): Boolean? {
         val defaults = NSUserDefaults.standardUserDefaults
         val key = ProfileScopedKey.of(mapDV7ToHevcKey)
@@ -651,61 +740,6 @@ actual object PlayerSettingsStorage {
     actual fun saveTunnelingEnabled(enabled: Boolean) {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(tunnelingEnabledKey))
     }
-
-    actual fun loadExoNativeMemoryEnabled(): Boolean? = loadBoolean(exoNativeMemoryEnabledKey)
-
-    actual fun saveExoNativeMemoryEnabled(enabled: Boolean) {
-        saveBoolean(exoNativeMemoryEnabledKey, enabled)
-    }
-
-    actual fun loadVodCacheEnabled(): Boolean? = loadBoolean(vodCacheEnabledKey)
-
-    actual fun saveVodCacheEnabled(enabled: Boolean) {
-        saveBoolean(vodCacheEnabledKey, enabled)
-    }
-
-    actual fun loadVodCacheSizeMode(): String? =
-        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(vodCacheSizeModeKey))
-
-    actual fun saveVodCacheSizeMode(mode: String) {
-        NSUserDefaults.standardUserDefaults.setObject(mode, forKey = ProfileScopedKey.of(vodCacheSizeModeKey))
-    }
-
-    actual fun loadVodCacheSizeMb(): Int? = loadInt(vodCacheSizeMbKey)
-
-    actual fun saveVodCacheSizeMb(sizeMb: Int) {
-        saveInt(vodCacheSizeMbKey, sizeMb)
-    }
-
-    actual fun loadBufferEngineEnabled(): Boolean? = loadBoolean(bufferEngineEnabledKey)
-
-    actual fun saveBufferEngineEnabled(enabled: Boolean) {
-        saveBoolean(bufferEngineEnabledKey, enabled)
-    }
-
-    actual fun loadMinBufferMs(): Int? = loadInt(minBufferMsKey)
-
-    actual fun saveMinBufferMs(value: Int) = saveInt(minBufferMsKey, value)
-
-    actual fun loadMaxBufferMs(): Int? = loadInt(maxBufferMsKey)
-
-    actual fun saveMaxBufferMs(value: Int) = saveInt(maxBufferMsKey, value)
-
-    actual fun loadBufferForPlaybackMs(): Int? = loadInt(bufferForPlaybackMsKey)
-
-    actual fun saveBufferForPlaybackMs(value: Int) = saveInt(bufferForPlaybackMsKey, value)
-
-    actual fun loadBufferForPlaybackAfterRebufferMs(): Int? = loadInt(bufferForPlaybackAfterRebufferMsKey)
-
-    actual fun saveBufferForPlaybackAfterRebufferMs(value: Int) = saveInt(bufferForPlaybackAfterRebufferMsKey, value)
-
-    actual fun loadBackBufferDurationMs(): Int? = loadInt(backBufferDurationMsKey)
-
-    actual fun saveBackBufferDurationMs(value: Int) = saveInt(backBufferDurationMsKey, value)
-
-    actual fun loadTargetBufferSizeMb(): Int? = loadInt(targetBufferSizeMbKey)
-
-    actual fun saveTargetBufferSizeMb(value: Int) = saveInt(targetBufferSizeMbKey, value)
 
     actual fun loadStreamAutoPlayMode(): String? {
         val defaults = NSUserDefaults.standardUserDefaults
@@ -963,11 +997,22 @@ actual object PlayerSettingsStorage {
     actual fun saveNextEpisodeThresholdMinutesBeforeEnd(minutes: Float) {
         NSUserDefaults.standardUserDefaults.setFloat(minutes, forKey = ProfileScopedKey.of(nextEpisodeThresholdMinutesBeforeEndKey))
     }
-
     actual fun loadPreloadNextEpisodeSources(): Boolean? = loadBoolean(preloadNextEpisodeSourcesKey)
 
     actual fun savePreloadNextEpisodeSources(enabled: Boolean) {
         saveBoolean(preloadNextEpisodeSourcesKey, enabled)
+    }
+
+    actual fun loadMiniPlayerEnabled(): Boolean? = loadBoolean(miniPlayerEnabledKey)
+
+    actual fun saveMiniPlayerEnabled(enabled: Boolean) {
+        saveBoolean(miniPlayerEnabledKey, enabled)
+    }
+
+    actual fun loadPrivateViewingEnabled(): Boolean? = loadBoolean(privateViewingEnabledKey)
+
+    actual fun savePrivateViewingEnabled(enabled: Boolean) {
+        saveBoolean(privateViewingEnabledKey, enabled)
     }
 
     actual fun loadUseLibass(): Boolean? = null
@@ -977,6 +1022,58 @@ actual object PlayerSettingsStorage {
     actual fun loadLibassRenderType(): String? = null
 
     actual fun saveLibassRenderType(renderType: String) {}
+
+    actual fun loadUseLibmpvAss(): Boolean? = null
+
+    actual fun saveUseLibmpvAss(enabled: Boolean) {}
+
+    actual fun loadExoNativeMemoryEnabled(): Boolean? = null
+
+    actual fun saveExoNativeMemoryEnabled(value: Boolean) {}
+
+    actual fun loadCustomPlaybackBuffersEnabled(): Boolean? = null
+
+    actual fun saveCustomPlaybackBuffersEnabled(value: Boolean) {}
+
+    actual fun loadVodDiskCacheEnabled(): Boolean? = null
+
+    actual fun saveVodDiskCacheEnabled(value: Boolean) {}
+
+    actual fun loadVodDiskCacheAutoSize(): Boolean? = null
+
+    actual fun saveVodDiskCacheAutoSize(value: Boolean) {}
+
+    actual fun loadPlaybackMinBufferSeconds(): Int? = null
+
+    actual fun savePlaybackMinBufferSeconds(value: Int) {}
+
+    actual fun loadPlaybackMaxBufferSeconds(): Int? = null
+
+    actual fun savePlaybackMaxBufferSeconds(value: Int) {}
+
+    actual fun loadPlaybackStartBufferSeconds(): Int? = null
+
+    actual fun savePlaybackStartBufferSeconds(value: Int) {}
+
+    actual fun loadPlaybackRebufferSeconds(): Int? = null
+
+    actual fun savePlaybackRebufferSeconds(value: Int) {}
+
+    actual fun loadPlaybackBackBufferSeconds(): Int? = null
+
+    actual fun savePlaybackBackBufferSeconds(value: Int) {}
+
+    actual fun loadPlaybackTargetBufferMb(): Int? = null
+
+    actual fun savePlaybackTargetBufferMb(value: Int) {}
+
+    actual fun loadVodDiskCacheSizeMb(): Int? = null
+
+    actual fun saveVodDiskCacheSizeMb(value: Int) {}
+
+    actual fun loadLibassRenderScale(): String? = null
+
+    actual fun saveLibassRenderScale(scale: String) {}
 
     actual fun loadIosVideoOutputPreset(): String? =
         NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(iosVideoOutputPresetKey))
@@ -1088,6 +1185,10 @@ actual object PlayerSettingsStorage {
         loadHoldToSpeedEnabled()?.let { put(holdToSpeedEnabledKey, encodeSyncBoolean(it)) }
         loadHoldToSpeedValue()?.let { put(holdToSpeedValueKey, encodeSyncFloat(it)) }
         loadTouchGesturesEnabled()?.let { put(touchGesturesEnabledKey, encodeSyncBoolean(it)) }
+        loadSwipeToSeekEnabled()?.let { put(swipeToSeekEnabledKey, encodeSyncBoolean(it)) }
+        loadMovieRecommendationsEnabled()?.let { put(movieRecommendationsEnabledKey, encodeSyncBoolean(it)) }
+        loadAutoShowSubtitlesOnRewindEnabled()?.let { put(autoShowSubtitlesOnRewindEnabledKey, encodeSyncBoolean(it)) }
+        loadAutoShowSubtitlesOnMuteEnabled()?.let { put(autoShowSubtitlesOnMuteEnabledKey, encodeSyncBoolean(it)) }
         loadExternalPlayerEnabled()?.let { put(externalPlayerEnabledKey, encodeSyncBoolean(it)) }
         loadExternalPlayerForwardSubtitles()?.let { put(externalPlayerForwardSubtitlesKey, encodeSyncBoolean(it)) }
         loadExternalPlayerId()?.let { put(externalPlayerIdKey, encodeSyncString(it)) }
@@ -1137,8 +1238,10 @@ actual object PlayerSettingsStorage {
         loadNextEpisodeThresholdPercent()?.let { put(nextEpisodeThresholdPercentKey, encodeSyncFloat(it)) }
         loadNextEpisodeThresholdMinutesBeforeEnd()?.let { put(nextEpisodeThresholdMinutesBeforeEndKey, encodeSyncFloat(it)) }
         loadPreloadNextEpisodeSources()?.let { put(preloadNextEpisodeSourcesKey, encodeSyncBoolean(it)) }
+        loadMiniPlayerEnabled()?.let { put(miniPlayerEnabledKey, encodeSyncBoolean(it)) }
         loadUseLibass()?.let { put(useLibassKey, encodeSyncBoolean(it)) }
         loadLibassRenderType()?.let { put(libassRenderTypeKey, encodeSyncString(it)) }
+        loadUseLibmpvAss()?.let { put(useLibmpvAssKey, encodeSyncBoolean(it)) }
         loadIosVideoOutputPreset()?.let { put(iosVideoOutputPresetKey, encodeSyncString(it)) }
         loadIosToneMappingMode()?.let { put(iosToneMappingModeKey, encodeSyncString(it)) }
         loadIosTargetPrimaries()?.let { put(iosTargetPrimariesKey, encodeSyncString(it)) }
@@ -1169,6 +1272,10 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncBoolean(holdToSpeedEnabledKey)?.let(::saveHoldToSpeedEnabled)
         payload.decodeSyncFloat(holdToSpeedValueKey)?.let(::saveHoldToSpeedValue)
         payload.decodeSyncBoolean(touchGesturesEnabledKey)?.let(::saveTouchGesturesEnabled)
+        payload.decodeSyncBoolean(swipeToSeekEnabledKey)?.let(::saveSwipeToSeekEnabled)
+        payload.decodeSyncBoolean(movieRecommendationsEnabledKey)?.let(::saveMovieRecommendationsEnabled)
+        payload.decodeSyncBoolean(autoShowSubtitlesOnRewindEnabledKey)?.let(::saveAutoShowSubtitlesOnRewindEnabled)
+        payload.decodeSyncBoolean(autoShowSubtitlesOnMuteEnabledKey)?.let(::saveAutoShowSubtitlesOnMuteEnabled)
         payload.decodeSyncBoolean(externalPlayerEnabledKey)?.let(::saveExternalPlayerEnabled)
         payload.decodeSyncBoolean(externalPlayerForwardSubtitlesKey)?.let(::saveExternalPlayerForwardSubtitles)
         payload.decodeSyncString(externalPlayerIdKey)?.let(::saveExternalPlayerId)
@@ -1218,8 +1325,10 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncFloat(nextEpisodeThresholdPercentKey)?.let(::saveNextEpisodeThresholdPercent)
         payload.decodeSyncFloat(nextEpisodeThresholdMinutesBeforeEndKey)?.let(::saveNextEpisodeThresholdMinutesBeforeEnd)
         payload.decodeSyncBoolean(preloadNextEpisodeSourcesKey)?.let(::savePreloadNextEpisodeSources)
+        payload.decodeSyncBoolean(miniPlayerEnabledKey)?.let(::saveMiniPlayerEnabled)
         payload.decodeSyncBoolean(useLibassKey)?.let(::saveUseLibass)
         payload.decodeSyncString(libassRenderTypeKey)?.let(::saveLibassRenderType)
+        payload.decodeSyncBoolean(useLibmpvAssKey)?.let(::saveUseLibmpvAss)
         payload.decodeSyncString(iosVideoOutputPresetKey)?.let(::saveIosVideoOutputPreset)
         payload.decodeSyncString(iosToneMappingModeKey)?.let(::saveIosToneMappingMode)
         payload.decodeSyncString(iosTargetPrimariesKey)?.let(::saveIosTargetPrimaries)

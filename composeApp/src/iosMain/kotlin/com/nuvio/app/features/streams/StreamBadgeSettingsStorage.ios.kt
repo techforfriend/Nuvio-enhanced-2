@@ -14,11 +14,14 @@ actual object StreamBadgeSettingsStorage {
     private const val streamBadgeRulesKey = "stream_badge_rules"
     private const val showFileSizeBadgesKey = "show_file_size_badges"
     private const val showAddonLogoKey = "show_addon_logo"
+    private const val showStreamSearchKey = "show_stream_search"
     private const val showInPlayerKey = "show_badges_in_player"
+    private const val playerBadgeSourceKey = "player_badge_source"
     private const val streamBackgroundModeKey = "stream_background_mode"
     private const val streamBadgePlacementKey = "stream_badge_placement"
+    private const val pinnedStreamSourcesKey = "pinned_stream_sources"
     private const val legacyDebridStreamBadgeRulesKey = "debrid_stream_badge_rules"
-    private val syncKeys = listOf(streamBadgeRulesKey, showFileSizeBadgesKey, showInPlayerKey, streamBadgePlacementKey, streamBackgroundModeKey)
+    private val syncKeys = listOf(streamBadgeRulesKey, showFileSizeBadgesKey, showInPlayerKey, playerBadgeSourceKey, streamBadgePlacementKey, streamBackgroundModeKey, pinnedStreamSourcesKey)
 
     actual fun loadStreamBadgeRules(): String? = loadString(streamBadgeRulesKey)
 
@@ -38,10 +41,22 @@ actual object StreamBadgeSettingsStorage {
         saveBoolean(showAddonLogoKey, enabled)
     }
 
+    actual fun loadShowStreamSearch(): Boolean? = loadBoolean(showStreamSearchKey)
+
+    actual fun saveShowStreamSearch(enabled: Boolean) {
+        saveBoolean(showStreamSearchKey, enabled)
+    }
+
     actual fun loadShowInPlayer(): Boolean? = loadBoolean(showInPlayerKey)
 
     actual fun saveShowInPlayer(enabled: Boolean) {
         saveBoolean(showInPlayerKey, enabled)
+    }
+
+    actual fun loadPlayerBadgeSource(): String? = loadString(playerBadgeSourceKey)
+
+    actual fun savePlayerBadgeSource(source: String) {
+        saveString(playerBadgeSourceKey, source)
     }
 
     actual fun loadStreamBadgePlacement(): String? = loadString(streamBadgePlacementKey)
@@ -56,6 +71,12 @@ actual object StreamBadgeSettingsStorage {
         saveString(streamBadgePlacementKey, placement)
     }
 
+    actual fun loadPinnedStreamSources(): String? = loadString(pinnedStreamSourcesKey)
+
+    actual fun savePinnedStreamSources(sources: String) {
+        saveString(pinnedStreamSourcesKey, sources)
+    }
+
     actual fun loadLegacyDebridStreamBadgeRules(): String? =
         loadString(legacyDebridStreamBadgeRulesKey)
 
@@ -63,49 +84,35 @@ actual object StreamBadgeSettingsStorage {
         NSUserDefaults.standardUserDefaults.removeObjectForKey(ProfileScopedKey.of(legacyDebridStreamBadgeRulesKey))
     }
 
-    private fun loadString(key: String): String? {
-        val defaults = NSUserDefaults.standardUserDefaults
-        val scoped = defaults.stringForKey(ProfileScopedKey.of(key))?.trim()
-        if (!scoped.isNullOrEmpty()) return scoped
-        val profile1 = defaults.stringForKey(ProfileScopedKey.of(key, 1))?.trim()
-        if (!profile1.isNullOrEmpty()) return profile1
-        return defaults.stringForKey(key)?.trim()
-    }
+    private fun loadString(key: String): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(key))
 
     private fun saveString(key: String, value: String) {
-        val defaults = NSUserDefaults.standardUserDefaults
-        defaults.setObject(value, forKey = ProfileScopedKey.of(key))
-        defaults.setObject(value, forKey = key)
+        NSUserDefaults.standardUserDefaults.setObject(value, forKey = ProfileScopedKey.of(key))
     }
 
     private fun loadBoolean(key: String): Boolean? {
         val defaults = NSUserDefaults.standardUserDefaults
         val scopedKey = ProfileScopedKey.of(key)
-        if (defaults.objectForKey(scopedKey) != null) {
-            return defaults.boolForKey(scopedKey)
+        return if (defaults.objectForKey(scopedKey) != null) {
+            defaults.boolForKey(scopedKey)
+        } else {
+            null
         }
-        val profile1Key = ProfileScopedKey.of(key, 1)
-        if (defaults.objectForKey(profile1Key) != null) {
-            return defaults.boolForKey(profile1Key)
-        }
-        if (defaults.objectForKey(key) != null) {
-            return defaults.boolForKey(key)
-        }
-        return null
     }
 
     private fun saveBoolean(key: String, enabled: Boolean) {
-        val defaults = NSUserDefaults.standardUserDefaults
-        defaults.setBool(enabled, forKey = ProfileScopedKey.of(key))
-        defaults.setBool(enabled, forKey = key)
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(key))
     }
 
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {
         loadStreamBadgeRules()?.let { put(streamBadgeRulesKey, encodeSyncString(it)) }
         loadShowFileSizeBadges()?.let { put(showFileSizeBadgesKey, encodeSyncBoolean(it)) }
         loadShowInPlayer()?.let { put(showInPlayerKey, encodeSyncBoolean(it)) }
+        loadPlayerBadgeSource()?.let { put(playerBadgeSourceKey, encodeSyncString(it)) }
         loadStreamBadgePlacement()?.let { put(streamBadgePlacementKey, encodeSyncString(it)) }
         loadStreamBackgroundMode()?.let { put(streamBackgroundModeKey, encodeSyncString(it)) }
+        loadPinnedStreamSources()?.let { put(pinnedStreamSourcesKey, encodeSyncString(it)) }
     }
 
     actual fun replaceFromSyncPayload(payload: JsonObject) {
@@ -116,7 +123,9 @@ actual object StreamBadgeSettingsStorage {
         payload.decodeSyncString(streamBadgeRulesKey)?.let(::saveStreamBadgeRules)
         payload.decodeSyncBoolean(showFileSizeBadgesKey)?.let(::saveShowFileSizeBadges)
         payload.decodeSyncBoolean(showInPlayerKey)?.let(::saveShowInPlayer)
+        payload.decodeSyncString(playerBadgeSourceKey)?.let(::savePlayerBadgeSource)
         payload.decodeSyncString(streamBadgePlacementKey)?.let(::saveStreamBadgePlacement)
         payload.decodeSyncString(streamBackgroundModeKey)?.let(::saveStreamBackgroundMode)
+        payload.decodeSyncString(pinnedStreamSourcesKey)?.let(::savePinnedStreamSources)
     }
 }

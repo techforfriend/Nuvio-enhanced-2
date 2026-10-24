@@ -190,7 +190,7 @@ internal class SidecarSubtitleController(
                 activeSidecarGeneration == currentGeneration &&
                 view.getTag(R.id.player_view_sidecar_generation_tag) == currentGeneration
             ) {
-                view.setCues(active)
+                view.setCues(active.map(ExoSubtitleShadow::apply))
             }
         }
     }

@@ -11,7 +11,11 @@ import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.CachePolicy
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
+import com.nuvio.app.core.network.DnsPlatform
+import com.nuvio.app.core.network.SharedOkHttpClient
 import com.nuvio.app.core.poster.CustomPosterFallbackInterceptor
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
 
 /**
  * Custom Application class that implements [SingletonImageLoader.Factory] to guarantee
@@ -23,6 +27,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
+        DnsPlatform.initialize(this)
         com.nuvio.app.features.settings.NuvioEnhancedSettingsStorage.initialize(this)
         com.nuvio.app.features.cloudstream.CloudStreamPlatformStorage.initialize(this)
         com.nuvio.app.features.cloudstream.CloudStreamPlatformRuntime.initialize(this)
@@ -38,6 +43,9 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
                 add(SvgDecoder.Factory())
                 add(
                     KtorNetworkFetcherFactory(
+                        httpClient = {
+                            HttpClient(OkHttp) { engine { preconfigured = SharedOkHttpClient.base } }
+                        },
                         cacheStrategy = { CacheControlCacheStrategy() },
                     ),
                 )

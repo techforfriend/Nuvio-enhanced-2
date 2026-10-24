@@ -22,6 +22,10 @@ interface NuvioPlayerBridge {
     fun setSystemControlHandler(handler: PlayerSystemControlHandler?)
     fun getKeepsPlaybackInBackground(): Boolean
     fun retry()
+    fun isPictureInPictureSupported(): Boolean
+    fun startPictureInPicture()
+    fun setVideoZoom(scale: Double)
+    fun setExperimentalSinglePrimaryPictureInPictureEnabled(enabled: Boolean)
     fun updateNowPlayingMetadata(
         title: String,
         subtitle: String?,
@@ -45,7 +49,10 @@ interface NuvioPlayerBridge {
     )
     fun configureAudioOutput(audioOutput: String)
     fun setPlaybackSpeed(speed: Float)
+    fun getVolume(): Float
+    fun setVolume(volume: Float)
     fun setMuted(muted: Boolean)
+    fun setEmbeddedPreviewMode(enabled: Boolean)
     fun setResizeMode(mode: Int) // 0=Fit, 1=Fill, 2=Zoom
     fun syncVideoSurfaceLayout(width: Double, height: Double)
     fun getAudioTrackCount(): Int
@@ -67,11 +74,13 @@ interface NuvioPlayerBridge {
     fun clearExternalSubtitle()
     fun clearExternalSubtitleAndSelect(trackId: Int)
     fun setSubtitleDelayMs(delayMs: Int)
+    fun setSubtitleFontPath(path: String)
     fun applySubtitleStyle(
         textColor: String,
         backgroundColor: String,
         outlineColor: String,
         outlineSize: Float,
+        shadowOffset: Float,
         bold: Boolean,
         fontSize: Float,
         subPos: Int,
@@ -84,7 +93,12 @@ interface NuvioPlayerBridge {
     fun getPositionMs(): Long
     fun getBufferedMs(): Long
     fun getPlaybackSpeed(): Float
+    fun getVideoWidth(): Int
+    fun getVideoHeight(): Int
     fun getErrorMessage(): String
+    fun getMediaInfoJson(): String
+    fun setKeyboardShortcutsEnabled(enabled: Boolean)
+    fun setKeyboardShortcutHandler(handler: ((String) -> Unit)?)
     fun getProperty(name: String): String
     fun destroy()
 }

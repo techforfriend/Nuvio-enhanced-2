@@ -41,6 +41,8 @@ import nuvio.composeapp.generated.resources.settings_tmdb_module_details
 import nuvio.composeapp.generated.resources.settings_tmdb_module_details_description
 import nuvio.composeapp.generated.resources.settings_tmdb_module_episodes
 import nuvio.composeapp.generated.resources.settings_tmdb_module_episodes_description
+import nuvio.composeapp.generated.resources.settings_tmdb_module_episode_ratings
+import nuvio.composeapp.generated.resources.settings_tmdb_module_episode_ratings_description
 import nuvio.composeapp.generated.resources.settings_tmdb_module_more_like_this
 import nuvio.composeapp.generated.resources.settings_tmdb_module_more_like_this_description
 import nuvio.composeapp.generated.resources.settings_tmdb_module_networks
@@ -180,6 +182,15 @@ internal fun LazyListScope.tmdbSettingsContent(
                     checked = settings.useEpisodes,
                     enabled = enrichmentControlsEnabled,
                     onCheckedChange = TmdbSettingsRepository::setUseEpisodes,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                TmdbToggleRow(
+                    isTablet = isTablet,
+                    title = stringResource(Res.string.settings_tmdb_module_episode_ratings),
+                    description = stringResource(Res.string.settings_tmdb_module_episode_ratings_description),
+                    checked = settings.useEpisodeRatings,
+                    enabled = enrichmentControlsEnabled,
+                    onCheckedChange = TmdbSettingsRepository::setUseEpisodeRatings,
                 )
                 SettingsGroupDivider(isTablet = isTablet)
                 TmdbToggleRow(

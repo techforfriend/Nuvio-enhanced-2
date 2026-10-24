@@ -36,6 +36,14 @@ class VersionUtilsTest {
     }
 
     @Test
+    fun `same base version matches stable and prerelease forms`() {
+        assertTrue(VersionUtils.isSameBaseVersion("0.5.6-beta", "0.5.6"))
+        assertTrue(VersionUtils.isSameBaseVersion("v0.5.6-rc.1", "0.5.6+138"))
+        assertFalse(VersionUtils.isSameBaseVersion("0.5.7-beta", "0.5.6"))
+        assertFalse(VersionUtils.isSameBaseVersion("not-a-version", "0.5.6"))
+    }
+
+    @Test
     fun `current beta naming is recognized as prerelease`() {
         assertTrue(VersionUtils.isPrerelease("0.8.12-beta"))
     }

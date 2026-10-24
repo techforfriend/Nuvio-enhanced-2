@@ -72,6 +72,8 @@ import com.nuvio.app.features.simkl.SimklAuthRepository
 import com.nuvio.app.features.simkl.SimklAuthUiState
 import com.nuvio.app.features.simkl.SimklBrandAsset
 import com.nuvio.app.features.simkl.SimklConnectionMode
+import com.nuvio.app.features.simkl.SimklAuthenticationMethod
+import com.nuvio.app.features.simkl.SIMKL_PIN_VERIFICATION_URL
 import com.nuvio.app.features.simkl.SimklSyncRepository
 import com.nuvio.app.features.simkl.simklBrandPainter
 import com.nuvio.app.features.tracking.TrackingProviderId
@@ -80,12 +82,18 @@ import com.nuvio.app.features.trakt.TraktAuthRepository
 import com.nuvio.app.features.trakt.TraktAuthUiState
 import com.nuvio.app.features.trakt.TraktBrandAsset
 import com.nuvio.app.features.trakt.TraktConnectionMode
+import com.nuvio.app.features.trakt.TraktAuthenticationMethod
 import com.nuvio.app.features.trakt.traktBrandPainter
 import com.nuvio.app.features.watchprogress.WatchProgressSourceCoordinator
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.settings_mdblist_disconnect_description
+import nuvio.composeapp.generated.resources.settings_anilist_disconnect_description
+import nuvio.composeapp.generated.resources.anilist_logo
+import nuvio.composeapp.generated.resources.settings_wetrakr_disconnect_description
+import nuvio.composeapp.generated.resources.wetrakr_logo
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
+import nuvio.composeapp.generated.resources.settings_tracking_connect_with_code
 import nuvio.composeapp.generated.resources.action_collapse
 import nuvio.composeapp.generated.resources.action_expand
 import nuvio.composeapp.generated.resources.settings_simkl_authorization_expired
@@ -121,6 +129,7 @@ import nuvio.composeapp.generated.resources.settings_trakt_missing_credentials
 import nuvio.composeapp.generated.resources.settings_trakt_open_login
 import nuvio.composeapp.generated.resources.settings_trakt_save_actions_description
 import nuvio.composeapp.generated.resources.settings_trakt_sign_in_description
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 internal enum class TrackingBrand(val displayName: String) {
@@ -129,6 +138,8 @@ internal enum class TrackingBrand(val displayName: String) {
     SIMKL("Simkl"),
     MDBLIST("MDBList"),
     TMDB("TMDB"),
+    ANILIST("AniList"),
+    WETRAKR("WeTrakr"),
 }
 
 internal enum class TrackingConnectionCardMode {
@@ -142,6 +153,8 @@ internal fun isTrackingBrandAvailable(
     traktConnected: Boolean,
     simklConnected: Boolean,
     mdblistConnected: Boolean = false,
+    anilistConnected: Boolean = false,
+    wetrakrConnected: Boolean = false,
 ): Boolean = when (brand) {
     TrackingBrand.NUVIO,
     TrackingBrand.TMDB,
@@ -149,6 +162,8 @@ internal fun isTrackingBrandAvailable(
     TrackingBrand.TRAKT -> traktConnected
     TrackingBrand.SIMKL -> simklConnected
     TrackingBrand.MDBLIST -> mdblistConnected
+    TrackingBrand.ANILIST -> anilistConnected
+    TrackingBrand.WETRAKR -> wetrakrConnected
 }
 
 internal fun TraktConnectionMode.toTrackingConnectionCardMode(): TrackingConnectionCardMode = when (this) {
@@ -174,7 +189,19 @@ internal fun TrackingProviderCards(
         SimklSyncRepository.state
     }.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    val uriHandler = LocalUriHandler.current
     var showSyncInfo by rememberSaveable { mutableStateOf(false) }
+    var deviceCodeBrand by remember { mutableStateOf<TrackingBrand?>(null) }
+    val onTraktConnectWithCode: () -> Unit = {
+        TraktAuthRepository.setAuthenticationMethod(TraktAuthenticationMethod.DEVICE_CODE)
+        TraktAuthRepository.onConnectRequested()
+        deviceCodeBrand = TrackingBrand.TRAKT
+    }
+    val onSimklConnectWithCode: () -> Unit = {
+        SimklAuthRepository.setAuthenticationMethod(SimklAuthenticationMethod.DEVICE_CODE)
+        SimklAuthRepository.onConnectRequested()
+        deviceCodeBrand = TrackingBrand.SIMKL
+    }
     val onSimklSyncRequested: () -> Unit = {
         scope.launch {
             WatchProgressSourceCoordinator.refreshProviderAndActiveSource(
@@ -193,6 +220,7 @@ internal fun TrackingProviderCards(
     ) {
         TraktProviderCard(
             uiState = traktUiState,
+            onConnectWithCodeRequested = onTraktConnectWithCode,
             modifier = Modifier.fillMaxWidth(),
         )
         SimklProviderCard(
@@ -201,9 +229,38 @@ internal fun TrackingProviderCards(
             syncErrorMessage = syncState.errorMessage,
             onSyncRequested = onSimklSyncRequested,
             onInfoRequested = { showSyncInfo = true },
+            onConnectWithCodeRequested = onSimklConnectWithCode,
             modifier = Modifier.fillMaxWidth(),
         )
         MdbListProviderCard(Modifier.fillMaxWidth())
+        AniListProviderCard(Modifier.fillMaxWidth())
+        WeTrakrProviderCard(Modifier.fillMaxWidth())
+    }
+
+    deviceCodeBrand?.let { brand ->
+        val isTrakt = brand == TrackingBrand.TRAKT
+        TrackingDeviceCodeSheet(
+            userCode = if (isTrakt) {
+                TraktAuthRepository.pendingDeviceUserCode()
+            } else {
+                SimklAuthRepository.pendingDeviceUserCode()
+            },
+            verificationUrl = if (isTrakt) TraktAuthRepository.ACTIVATE_URL else SIMKL_PIN_VERIFICATION_URL,
+            isConnected = if (isTrakt) {
+                traktUiState.mode == TraktConnectionMode.CONNECTED
+            } else {
+                simklUiState.mode == SimklConnectionMode.CONNECTED
+            },
+            onOpenVerificationPage = { url -> uriHandler.openUri(url) },
+            onCancel = {
+                if (isTrakt) {
+                    TraktAuthRepository.onCancelAuthorization()
+                } else {
+                    SimklAuthRepository.onCancelAuthorization()
+                }
+            },
+            onDismiss = { deviceCodeBrand = null },
+        )
     }
 
     if (showSyncInfo) {
@@ -214,6 +271,7 @@ internal fun TrackingProviderCards(
 @Composable
 private fun TraktProviderCard(
     uiState: TraktAuthUiState,
+    onConnectWithCodeRequested: () -> Unit,
     modifier: Modifier,
 ) {
     TrackingProviderCard(
@@ -237,7 +295,11 @@ private fun TraktProviderCard(
             uiState.mode == TraktConnectionMode.CONNECTED
         },
         errorMessage = uiState.errorMessage,
-        onConnectRequested = TraktAuthRepository::onConnectRequested,
+        onConnectRequested = {
+            TraktAuthRepository.setAuthenticationMethod(TraktAuthenticationMethod.BROWSER_REDIRECT)
+            TraktAuthRepository.onConnectRequested()
+        },
+        onConnectWithCodeRequested = onConnectWithCodeRequested,
         onResumeAuthorization = {
             TraktAuthRepository.pendingAuthorizationUrl()
                 ?: TraktAuthRepository.onConnectRequested()
@@ -255,6 +317,7 @@ private fun SimklProviderCard(
     syncErrorMessage: String?,
     onSyncRequested: () -> Unit,
     onInfoRequested: () -> Unit,
+    onConnectWithCodeRequested: () -> Unit,
     modifier: Modifier,
 ) {
     TrackingProviderCard(
@@ -280,7 +343,11 @@ private fun SimklProviderCard(
         errorMessage = simklErrorMessage(uiState.error) ?: syncErrorMessage,
         websiteLabel = stringResource(Res.string.settings_simkl_visit),
         websiteUrl = SIMKL_WEBSITE_URL,
-        onConnectRequested = SimklAuthRepository::onConnectRequested,
+        onConnectRequested = {
+            SimklAuthRepository.setAuthenticationMethod(SimklAuthenticationMethod.BROWSER_REDIRECT)
+            SimklAuthRepository.onConnectRequested()
+        },
+        onConnectWithCodeRequested = onConnectWithCodeRequested,
         onResumeAuthorization = {
             SimklAuthRepository.pendingAuthorizationUrl()
                 ?: SimklAuthRepository.onConnectRequested()
@@ -318,6 +385,7 @@ internal fun TrackingProviderCard(
     websiteLabel: String? = null,
     websiteUrl: String? = null,
     onConnectRequested: suspend () -> String?,
+    onConnectWithCodeRequested: (() -> Unit)? = null,
     onResumeAuthorization: suspend () -> String?,
     onCancelAuthorization: () -> Unit,
     onSyncRequested: (() -> Unit)? = null,
@@ -498,6 +566,20 @@ internal fun TrackingProviderCard(
                                 enabled = credentialsConfigured && !isLoading,
                                 onClick = { actionScope.launch { openUrl(onConnectRequested()) } },
                             )
+                            onConnectWithCodeRequested?.let { connectWithCode ->
+                                OutlinedButton(
+                                    onClick = connectWithCode,
+                                    enabled = credentialsConfigured && !isLoading,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = Color.White,
+                                    ),
+                                ) {
+                                    Text(
+                                        text = stringResource(Res.string.settings_tracking_connect_with_code),
+                                    )
+                                }
+                            }
                             if (!credentialsConfigured) {
                                 TrackingBrandMessage(
                                     text = missingCredentialsMessage,
@@ -677,6 +759,8 @@ private fun TrackingDisconnectDialog(
                 TrackingBrand.SIMKL ->
                     stringResource(Res.string.settings_simkl_disconnect_description)
                 TrackingBrand.MDBLIST -> stringResource(Res.string.settings_mdblist_disconnect_description)
+                TrackingBrand.ANILIST -> stringResource(Res.string.settings_anilist_disconnect_description)
+                TrackingBrand.WETRAKR -> stringResource(Res.string.settings_wetrakr_disconnect_description)
                 TrackingBrand.NUVIO,
                 TrackingBrand.TMDB,
                 -> stringResource(
@@ -732,6 +816,18 @@ internal fun TrackingBrandGlyph(
             modifier = modifier,
             contentScale = ContentScale.Fit,
         )
+        TrackingBrand.ANILIST -> Image(
+            painter = painterResource(Res.drawable.anilist_logo),
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = ContentScale.Fit,
+        )
+        TrackingBrand.WETRAKR -> Image(
+            painter = painterResource(Res.drawable.wetrakr_logo),
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = ContentScale.Fit,
+        )
         TrackingBrand.NUVIO -> Icon(
             imageVector = Icons.Rounded.Sync,
             contentDescription = contentDescription,
@@ -750,11 +846,13 @@ private fun TrackingBrandWordmark(
         TrackingBrand.TRAKT -> traktBrandPainter(TraktBrandAsset.Wordmark)
         TrackingBrand.SIMKL -> simklBrandPainter(SimklBrandAsset.Wordmark)
         TrackingBrand.MDBLIST -> integrationLogoPainter(IntegrationLogo.MdbList)
+        TrackingBrand.ANILIST -> painterResource(Res.drawable.anilist_logo)
+        TrackingBrand.WETRAKR -> painterResource(Res.drawable.wetrakr_logo)
         TrackingBrand.NUVIO,
         TrackingBrand.TMDB,
         -> return
     }
-    if (brand == TrackingBrand.MDBLIST) {
+    if (brand == TrackingBrand.MDBLIST || brand == TrackingBrand.ANILIST || brand == TrackingBrand.WETRAKR) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Image(painter, contentDescription = null, modifier = Modifier.size(32.dp))
             Text(contentDescription, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Bold)
@@ -771,7 +869,10 @@ private fun TrackingBrandWordmark(
             TrackingBrand.SIMKL -> Modifier
                 .width(124.dp)
                 .height(30.dp)
-            TrackingBrand.MDBLIST -> Modifier.width(130.dp).height(32.dp)
+            TrackingBrand.MDBLIST,
+            TrackingBrand.ANILIST,
+            TrackingBrand.WETRAKR,
+            -> Modifier.width(130.dp).height(32.dp)
             TrackingBrand.NUVIO,
             TrackingBrand.TMDB,
             -> Modifier
@@ -790,6 +891,12 @@ private fun TrackingBrand.cardBrush(): Brush = when (this) {
     )
     TrackingBrand.SIMKL -> Brush.linearGradient(
         colors = listOf(Color(0xFF050505), Color(0xFF292929), Color(0xFF111111)),
+    )
+    TrackingBrand.ANILIST -> Brush.linearGradient(
+        colors = listOf(Color(0xFF0B1622), Color(0xFF152232), Color(0xFF0B1622)),
+    )
+    TrackingBrand.WETRAKR -> Brush.linearGradient(
+        colors = listOf(Color(0xFF0A0A0C), Color(0xFF1F1C0A), Color(0xFF0A0A0C)),
     )
     TrackingBrand.NUVIO,
     TrackingBrand.TMDB,

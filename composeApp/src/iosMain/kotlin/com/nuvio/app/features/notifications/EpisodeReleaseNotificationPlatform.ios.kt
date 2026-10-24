@@ -10,7 +10,9 @@ import io.ktor.client.call.body
 import io.ktor.client.engine.darwin.Darwin
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.get
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import platform.Foundation.NSCalendar
 import platform.Foundation.NSDate
 import platform.Foundation.NSDateComponents
@@ -19,6 +21,9 @@ import platform.Foundation.NSUserDefaults
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSURL
 import platform.Foundation.timeIntervalSince1970
+import platform.UIKit.UIApplication
+import platform.UIKit.UIBackgroundTaskIdentifier
+import platform.UIKit.UIBackgroundTaskInvalid
 import platform.UserNotifications.UNNotificationAttachment
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
@@ -39,6 +44,7 @@ import kotlin.coroutines.resume
 internal actual object EpisodeReleaseNotificationPlatform {
     private const val scheduledIdsKey = "episode_release_notification_scheduled_ids"
     private const val attachmentDirectoryName = "episode_release_notification_attachments"
+    private const val maxPendingNotifications = 60
     private val httpClient = HttpClient(Darwin) {
         install(HttpTimeout) {
             requestTimeoutMillis = 15_000
@@ -65,34 +71,64 @@ internal actual object EpisodeReleaseNotificationPlatform {
     }
 
     actual suspend fun scheduleEpisodeReleaseNotifications(requests: List<EpisodeReleaseNotificationRequest>) {
-        clearScheduledEpisodeReleaseNotifications()
+        val backgroundTask = beginBackgroundTask()
+        try {
+            val center = UNUserNotificationCenter.currentNotificationCenter()
+            val nowSeconds = NSDate().timeIntervalSince1970
 
-        val center = UNUserNotificationCenter.currentNotificationCenter()
-        val scheduledIds = mutableListOf<String>()
+            val upcoming = requests
+                .distinctBy(EpisodeReleaseNotificationRequest::requestId)
+                .mapNotNull { request ->
+                    val dateComponents = buildDateComponents(request.releaseDateIso) ?: return@mapNotNull null
+                    val scheduledDate = NSCalendar.currentCalendar.dateFromComponents(dateComponents)
+                        ?: return@mapNotNull null
+                    if (scheduledDate.timeIntervalSince1970 <= nowSeconds) return@mapNotNull null
+                    Triple(request, dateComponents, scheduledDate.timeIntervalSince1970)
+                }
+                .sortedBy { (_, _, fireAtSeconds) -> fireAtSeconds }
+                .take(maxPendingNotifications)
 
-        requests.forEach { request ->
-            val dateComponents = buildDateComponents(request.releaseDateIso) ?: return@forEach
-            val scheduledDate = NSCalendar.currentCalendar.dateFromComponents(dateComponents) ?: return@forEach
-            if (scheduledDate.timeIntervalSince1970 <= NSDate().timeIntervalSince1970) return@forEach
+            val upcomingIds = upcoming.mapTo(hashSetOf()) { (request, _, _) -> request.requestId }
+            val pendingById = pendingRequestsById()
 
-            val content = buildNotificationContent(request)
-            val trigger = UNCalendarNotificationTrigger.triggerWithDateMatchingComponents(
-                dateComponents = dateComponents,
-                repeats = false,
+            val staleIds = trackedScheduledIds().filter { identifier -> identifier !in upcomingIds }
+            if (staleIds.isNotEmpty()) {
+                center.removePendingNotificationRequestsWithIdentifiers(staleIds)
+            }
+
+            val scheduledIds = mutableListOf<String>()
+            upcoming.forEach { (request, dateComponents, _) ->
+                val existing = pendingById[request.requestId]
+                if (existing != null &&
+                    existing.content.title == request.notificationTitle &&
+                    existing.content.body == request.notificationBody
+                ) {
+                    scheduledIds += request.requestId
+                    return@forEach
+                }
+
+                val content = buildNotificationContent(request)
+                val trigger = UNCalendarNotificationTrigger.triggerWithDateMatchingComponents(
+                    dateComponents = dateComponents,
+                    repeats = false,
+                )
+                val notificationRequest = UNNotificationRequest.requestWithIdentifier(
+                    identifier = request.requestId,
+                    content = content,
+                    trigger = trigger,
+                )
+                if (addRequest(notificationRequest)) {
+                    scheduledIds += request.requestId
+                }
+            }
+
+            NSUserDefaults.standardUserDefaults.setObject(
+                scheduledIds.joinToString(separator = "|"),
+                forKey = ProfileScopedKey.of(scheduledIdsKey),
             )
-            val notificationRequest = UNNotificationRequest.requestWithIdentifier(
-                identifier = request.requestId,
-                content = content,
-                trigger = trigger,
-            )
-            center.addNotificationRequest(notificationRequest) { _ -> }
-            scheduledIds += request.requestId
+        } finally {
+            endBackgroundTask(backgroundTask)
         }
-
-        NSUserDefaults.standardUserDefaults.setObject(
-            scheduledIds.joinToString(separator = "|"),
-            forKey = ProfileScopedKey.of(scheduledIdsKey),
-        )
     }
 
     actual suspend fun clearScheduledEpisodeReleaseNotifications() {
@@ -102,6 +138,42 @@ internal actual object EpisodeReleaseNotificationPlatform {
                 .removePendingNotificationRequestsWithIdentifiers(identifiers)
         }
         NSUserDefaults.standardUserDefaults.removeObjectForKey(ProfileScopedKey.of(scheduledIdsKey))
+    }
+
+    private suspend fun pendingRequestsById(): Map<String, UNNotificationRequest> =
+        suspendCancellableCoroutine { continuation ->
+            UNUserNotificationCenter.currentNotificationCenter()
+                .getPendingNotificationRequestsWithCompletionHandler { pending ->
+                    val byId = pending.orEmpty()
+                        .filterIsInstance<UNNotificationRequest>()
+                        .associateBy { request -> request.identifier }
+                    continuation.resume(byId)
+                }
+        }
+
+    private suspend fun addRequest(request: UNNotificationRequest): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            UNUserNotificationCenter.currentNotificationCenter().addNotificationRequest(request) { error ->
+                continuation.resume(error == null)
+            }
+        }
+
+    private suspend fun beginBackgroundTask(): UIBackgroundTaskIdentifier = withContext(Dispatchers.Main) {
+        var identifier: UIBackgroundTaskIdentifier = UIBackgroundTaskInvalid
+        identifier = UIApplication.sharedApplication.beginBackgroundTaskWithExpirationHandler {
+            if (identifier != UIBackgroundTaskInvalid) {
+                UIApplication.sharedApplication.endBackgroundTask(identifier)
+                identifier = UIBackgroundTaskInvalid
+            }
+        }
+        identifier
+    }
+
+    private suspend fun endBackgroundTask(identifier: UIBackgroundTaskIdentifier) {
+        if (identifier == UIBackgroundTaskInvalid) return
+        withContext(Dispatchers.Main) {
+            UIApplication.sharedApplication.endBackgroundTask(identifier)
+        }
     }
 
     actual suspend fun showTestNotification(request: EpisodeReleaseNotificationRequest) {

@@ -1,5 +1,6 @@
 package com.nuvio.app.features.mdblist
 
+import com.nuvio.app.core.logging.InAppLogger
 import com.nuvio.app.features.details.MetaDetails
 
 object MdbListMetadataService {
@@ -43,6 +44,11 @@ object MdbListMetadataService {
         settings: MdbListSettings,
     ): MetaDetails {
         if (!shouldFetchForMeta(meta, fallbackItemId, settings)) {
+            InAppLogger.debug(
+                "Metadata/MDBList",
+                "skip metaId=${meta.id} fallback=$fallbackItemId enabled=${settings.enabled} " +
+                    "providers=${settings.enabledProvidersInPriorityOrder().joinToString(",")}",
+            )
             return meta.copy(externalRatings = emptyList())
         }
         val credential = settings.credential ?: return meta.copy(externalRatings = emptyList())
@@ -54,6 +60,11 @@ object MdbListMetadataService {
         val mediaType = toMdbListMediaType(meta.type)
         val enabledProviders = settings.enabledProvidersInPriorityOrder()
 
+        InAppLogger.info(
+            "Metadata/MDBList",
+            "fetch ratings imdb=$imdbId mediaType=$mediaType providers=${enabledProviders.joinToString(",")}",
+        )
+
         val ratings = repository.getRatings(
             imdbId = imdbId,
             mediaType = mediaType,
@@ -61,6 +72,10 @@ object MdbListMetadataService {
             providers = enabledProviders,
         )
 
+        InAppLogger.info(
+            "Metadata/MDBList",
+            "ratings result imdb=$imdbId mediaType=$mediaType count=${ratings.size}",
+        )
         return meta.copy(externalRatings = ratings)
     }
 

@@ -1,22 +1,43 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import com.nuvio.app.navigation.LocalUseNativeNavigation
 import co.touchlab.kermit.Logger
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -25,67 +46,86 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
+import com.nuvio.app.core.format.resolveReleaseInfoForDisplay
+import com.nuvio.app.core.ui.platformPhysicalTopInset
 import com.nuvio.app.core.ui.NuvioPrimaryButton
 import com.nuvio.app.core.ui.NuvioSurfaceCard
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
+import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvio
-import com.nuvio.app.features.home.MetaPreview
-import com.nuvio.app.features.home.buildHomeConciergeState
-import com.nuvio.app.features.home.buildHomeReleaseRadarItems
-import com.nuvio.app.features.home.components.CollectionCardRemoteImage
-import com.nuvio.app.features.home.components.HomeConciergeSection
+import com.nuvio.app.core.ui.themePalette
+import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.features.details.MetaDetailsRepository
+import com.nuvio.app.features.details.MetaLookupOutcome
 import com.nuvio.app.features.details.MetaDetails
-import com.nuvio.app.features.details.FavoritePerson
-import com.nuvio.app.features.details.FavoritePeopleRepository
-import com.nuvio.app.features.settings.filteredByNuvioEnhancedReleaseRadar
+import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.library.LibraryItem
 import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.library.LibraryUiState
+import com.nuvio.app.features.library.LibraryUpcomingEpisode
+import com.nuvio.app.features.library.libraryUpcomingEpisodesFlow
+import com.nuvio.app.features.library.forceRefreshLibraryReleaseSchedule
+import com.nuvio.app.features.library.warmLibraryReleaseSchedule
 import com.nuvio.app.features.profiles.AvatarCatalogItem
 import com.nuvio.app.features.profiles.AvatarRepository
 import com.nuvio.app.features.profiles.NuvioProfile
+import com.nuvio.app.features.profiles.ProfileBackgroundBackdrop
 import com.nuvio.app.features.profiles.ProfileRepository
-import com.nuvio.app.features.profiles.ProfileRemoteBackgroundImage
-import com.nuvio.app.features.profiles.profileBackgroundImageUrl
 import com.nuvio.app.features.profiles.parseHexColor
 import com.nuvio.app.features.profiles.profileAvatarImageUrl
 import com.nuvio.app.features.watched.WatchedClock
@@ -94,45 +134,32 @@ import com.nuvio.app.features.watched.WatchedRepository
 import com.nuvio.app.features.watched.WatchedUiState
 import com.nuvio.app.features.watched.watchedItemKey
 import com.nuvio.app.features.watchprogress.CurrentDateProvider
-import com.nuvio.app.features.watchprogress.ContinueWatchingItem
 import com.nuvio.app.features.watchprogress.WatchProgressEntry
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import com.nuvio.app.features.watchprogress.WatchProgressUiState
-import com.nuvio.app.features.watchprogress.isLiveTvProgressEntry
-import com.nuvio.app.features.watchprogress.profileContinueWatchingEntries
-import com.nuvio.app.features.watchprogress.toContinueWatchingItem
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.roundToInt
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.*
-import nuvio.composeapp.generated.resources.compose_nav_profile
-import nuvio.composeapp.generated.resources.home_hero_type_movie
-import nuvio.composeapp.generated.resources.home_hero_type_series
-import nuvio.composeapp.generated.resources.profile_insights_edit_profile
-import nuvio.composeapp.generated.resources.profile_insights_hours
-import nuvio.composeapp.generated.resources.profile_insights_minutes
-import nuvio.composeapp.generated.resources.profile_insights_resume_progress
-import nuvio.composeapp.generated.resources.profile_insights_section_overview
-import nuvio.composeapp.generated.resources.profile_insights_section_taste
-import nuvio.composeapp.generated.resources.profile_insights_smart_resume_empty_subtitle
-import nuvio.composeapp.generated.resources.profile_insights_smart_resume_empty_title
-import nuvio.composeapp.generated.resources.profile_insights_stat_completed
-import nuvio.composeapp.generated.resources.profile_insights_stat_completed_caption
-import nuvio.composeapp.generated.resources.profile_insights_stat_continue
-import nuvio.composeapp.generated.resources.profile_insights_stat_continue_caption
-import nuvio.composeapp.generated.resources.profile_insights_stat_library
-import nuvio.composeapp.generated.resources.profile_insights_stat_library_caption
-import nuvio.composeapp.generated.resources.profile_insights_stat_recent
-import nuvio.composeapp.generated.resources.profile_insights_stat_recent_caption
-import nuvio.composeapp.generated.resources.profile_insights_stat_time
-import nuvio.composeapp.generated.resources.profile_insights_stat_time_caption
-import nuvio.composeapp.generated.resources.profile_insights_stat_upcoming
-import nuvio.composeapp.generated.resources.profile_insights_stat_upcoming_caption
-import nuvio.composeapp.generated.resources.profile_insights_subtitle
-import nuvio.composeapp.generated.resources.profile_insights_switch_profile
-import nuvio.composeapp.generated.resources.profile_insights_taste_empty
-import nuvio.composeapp.generated.resources.profile_insights_taste_subtitle
-import nuvio.composeapp.generated.resources.profile_insights_taste_title
-import nuvio.composeapp.generated.resources.profile_insights_title
 import org.jetbrains.compose.resources.stringResource
 
 private val profileInsightsLog = Logger.withTag("ProfileInsights")
@@ -141,10 +168,8 @@ internal fun LazyListScope.profileInsightsContent(
     isTablet: Boolean,
     onSwitchProfile: (() -> Unit)?,
     onEditProfile: (() -> Unit)?,
-    onPosterClick: ((MetaPreview) -> Unit)? = null,
-    onContinueWatchingClick: ((ContinueWatchingItem) -> Unit)? = null,
-    onFavoritePersonClick: ((FavoritePerson) -> Unit)? = null,
-    onFavoritePeopleViewAllClick: (() -> Unit)? = null,
+    onPosterClick: ((MetaPreview) -> Unit)?,
+    onBack: (() -> Unit)? = null,
 ) {
     item {
         ProfileInsightsBody(
@@ -152,21 +177,7 @@ internal fun LazyListScope.profileInsightsContent(
             onSwitchProfile = onSwitchProfile,
             onEditProfile = onEditProfile,
             onPosterClick = onPosterClick,
-            onContinueWatchingClick = onContinueWatchingClick,
-            onFavoritePersonClick = onFavoritePersonClick,
-            onFavoritePeopleViewAllClick = onFavoritePeopleViewAllClick,
-        )
-    }
-}
-
-internal fun LazyListScope.favoritePeopleContent(
-    isTablet: Boolean,
-    onFavoritePersonClick: ((FavoritePerson) -> Unit)? = null,
-) {
-    item {
-        ProfileFavoritePeopleFullPage(
-            isTablet = isTablet,
-            onFavoritePersonClick = onFavoritePersonClick,
+            onBack = onBack,
         )
     }
 }
@@ -177,9 +188,7 @@ private fun ProfileInsightsBody(
     onSwitchProfile: (() -> Unit)?,
     onEditProfile: (() -> Unit)?,
     onPosterClick: ((MetaPreview) -> Unit)?,
-    onContinueWatchingClick: ((ContinueWatchingItem) -> Unit)?,
-    onFavoritePersonClick: ((FavoritePerson) -> Unit)?,
-    onFavoritePeopleViewAllClick: (() -> Unit)?,
+    onBack: (() -> Unit)? = null,
 ) {
     val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
     val avatars by AvatarRepository.avatars.collectAsStateWithLifecycle()
@@ -196,15 +205,13 @@ private fun ProfileInsightsBody(
         LibraryRepository.ensureLoaded()
         LibraryRepository.uiState
     }.collectAsStateWithLifecycle()
-    val favoritePeopleState by remember {
-        FavoritePeopleRepository.ensureLoaded()
-        FavoritePeopleRepository.uiState
-    }.collectAsStateWithLifecycle()
-    val nuvioEnhancedSettings by remember {
-        NuvioEnhancedSettingsRepository.ensureLoaded()
-        NuvioEnhancedSettingsRepository.uiState
-    }.collectAsStateWithLifecycle()
     val todayIsoDate = remember { CurrentDateProvider.todayIsoDate() }
+    val upcomingEpisodes by remember {
+        libraryUpcomingEpisodesFlow(days = PROFILE_UPCOMING_EPISODE_DAYS)
+    }.collectAsStateWithLifecycle(initialValue = emptyList())
+    LaunchedEffect(libraryState.items) {
+        warmLibraryReleaseSchedule(libraryState.items)
+    }
 
     LaunchedEffect(Unit) {
         AvatarRepository.fetchAvatars()
@@ -223,37 +230,14 @@ private fun ProfileInsightsBody(
         ?.trim()
         ?.takeIf { it.isNotBlank() }
         ?: profileNameFallback
-    val stats = remember(activeProfileIndex, watchProgressState, watchedState, fullyWatchedSeriesKeys, libraryState, todayIsoDate) {
-        runCatching {
-            buildProfileInsightsStats(
-                watchProgressState = watchProgressState,
-                watchedState = watchedState,
-                fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-                libraryState = libraryState,
-                todayIsoDate = todayIsoDate,
-            )
-        }.onFailure { error ->
-            profileInsightsLog.e(error) { "Failed to build profile insights stats profile=$activeProfileIndex" }
-        }.getOrElse {
-            emptyProfileInsightsStats()
-        }
-    }
-    val continueWatchingItems = remember(activeProfileIndex, watchProgressState.entries) {
-        runCatching {
-            watchProgressState.entries
-                .profileContinueWatchingEntries(limit = ProfileConciergeContinueWatchingLimit)
-                .map(WatchProgressEntry::toContinueWatchingItem)
-        }.onFailure { error ->
-            profileInsightsLog.e(error) { "Failed to build profile continue watching items profile=$activeProfileIndex" }
-        }.getOrElse {
-            emptyList<ContinueWatchingItem>()
-        }
-    }
     val continueTitle = stringResource(Res.string.profile_insights_stat_continue)
+    val watchedTitle = stringResource(Res.string.profile_insights_stat_watched)
     val completedTitle = stringResource(Res.string.profile_insights_stat_completed)
+    val ongoingTitle = stringResource(Res.string.profile_insights_stat_ongoing)
     val libraryTitle = stringResource(Res.string.profile_insights_stat_library)
     val upcomingTitle = stringResource(Res.string.profile_insights_stat_upcoming)
-    val insightCollections = remember(
+    val core by produceState(
+        ProfileInsightsSnapshotCache.coreFor(activeProfileIndex),
         activeProfileIndex,
         watchProgressState,
         watchedState,
@@ -261,164 +245,164 @@ private fun ProfileInsightsBody(
         libraryState,
         todayIsoDate,
         continueTitle,
+        watchedTitle,
         completedTitle,
+        ongoingTitle,
         libraryTitle,
         upcomingTitle,
     ) {
-        runCatching {
-            buildProfileInsightCollections(
-                watchProgressState = watchProgressState,
-                watchedState = watchedState,
-                fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-                libraryState = libraryState,
-                todayIsoDate = todayIsoDate,
-                continueTitle = continueTitle,
-                completedTitle = completedTitle,
-                libraryTitle = libraryTitle,
-                upcomingTitle = upcomingTitle,
-            )
-        }.onFailure { error ->
-            profileInsightsLog.e(error) { "Failed to build profile insight collections profile=$activeProfileIndex" }
-        }.getOrElse {
-            emptyProfileInsightCollections(
-                continueTitle = continueTitle,
-                completedTitle = completedTitle,
-                libraryTitle = libraryTitle,
-                upcomingTitle = upcomingTitle,
-            )
+        val profileIndex = activeProfileIndex
+        val progressSnapshot = watchProgressState
+        val watchedSnapshot = watchedState
+        val fullyWatchedSnapshot = fullyWatchedSeriesKeys
+        val librarySnapshot = libraryState
+        val computed = withContext(Dispatchers.Default) {
+            try {
+                buildProfileInsightsCore(
+                    profileIndex = profileIndex,
+                    watchProgressState = progressSnapshot,
+                    watchedState = watchedSnapshot,
+                    fullyWatchedSeriesKeys = fullyWatchedSnapshot,
+                    libraryState = librarySnapshot,
+                    todayIsoDate = todayIsoDate,
+                    continueTitle = continueTitle,
+                    watchedTitle = watchedTitle,
+                    completedTitle = completedTitle,
+                    ongoingTitle = ongoingTitle,
+                    libraryTitle = libraryTitle,
+                    upcomingTitle = upcomingTitle,
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                profileInsightsLog.e(error) { "Failed to build profile insights profile=$profileIndex" }
+                null
+            }
         }
+        if (computed != null) {
+            ProfileInsightsSnapshotCache.rememberCore(computed)
+            value = computed
+        }
+    }
+    val activeCore = core?.takeIf { snapshot -> snapshot.profileIndex == activeProfileIndex }
+    val titleFacts by ProfileTitleFactsStore.facts.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) {
+        ProfileTitleFactsStore.ensureLoaded()
+    }
+    val resolvedStats by produceState(
+        ProfileInsightsSnapshotCache.statsFor(activeCore),
+        activeCore,
+        titleFacts,
+    ) {
+        val source = activeCore
+        if (source == null) {
+            value = null
+            return@produceState
+        }
+        val factsSnapshot = titleFacts
+        val computed = withContext(Dispatchers.Default) { source.resolveStats(factsSnapshot) }
+        ProfileInsightsSnapshotCache.rememberStats(source, computed)
+        value = computed
+    }
+    val stats = remember(resolvedStats, upcomingEpisodes) {
+        (resolvedStats ?: emptyProfileInsightsStats()).copy(upcomingCount = upcomingEpisodes.size)
+    }
+    val hydrationRequest = activeCore?.hydrationRequest
+    LaunchedEffect(hydrationRequest) {
+        hydrationRequest?.let { request -> ProfileTitleFactsStore.hydrate(request) }
+    }
+    val refreshContext = ProfileInsightsRefreshContext(
+        profileId = activeProfileIndex,
+        libraryItems = libraryState.items,
+        hydrationRequest = hydrationRequest,
+    )
+    SideEffect {
+        ProfileInsightsRefresher.bind(refreshContext)
+    }
+    DisposableEffect(Unit) {
+        onDispose { ProfileInsightsRefresher.unbind() }
+    }
+    val isRefreshing by ProfileInsightsRefresher.isRefreshing.collectAsStateWithLifecycle()
+    val refreshedAtByProfile by ProfileTitleFactsStore.refreshedAtByProfile.collectAsStateWithLifecycle()
+    val failedFactKeys by ProfileTitleFactsStore.failedKeys.collectAsStateWithLifecycle()
+    val failedGenreTitleCount = remember(hydrationRequest, failedFactKeys, titleFacts) {
+        hydrationRequest?.genreTargetKeys?.count { key ->
+            key in failedFactKeys && titleFacts[key]?.genres.isNullOrEmpty()
+        } ?: 0
+    }
+    val factsProgress = remember(hydrationRequest, failedFactKeys, titleFacts) {
+        hydrationRequest?.let { request -> profileTitleFactsProgress(request, titleFacts, failedFactKeys) }
+    }
+    val emptyCollections = remember(
+        continueTitle,
+        watchedTitle,
+        completedTitle,
+        ongoingTitle,
+        libraryTitle,
+        upcomingTitle,
+    ) {
+        emptyProfileInsightCollections(
+            continueTitle = continueTitle,
+            watchedTitle = watchedTitle,
+            completedTitle = completedTitle,
+            ongoingTitle = ongoingTitle,
+            libraryTitle = libraryTitle,
+            upcomingTitle = upcomingTitle,
+        )
+    }
+    val baseInsightCollections = activeCore?.collections ?: emptyCollections
+    val insightCollections = remember(baseInsightCollections, upcomingEpisodes, upcomingTitle) {
+        baseInsightCollections + (
+            ProfileInsightCollectionKind.Upcoming to ProfileInsightCollection(
+                title = upcomingTitle,
+                subtitle = "",
+                items = upcomingEpisodes.map(LibraryUpcomingEpisode::toProfileInsightPosterItem),
+            )
+        )
     }
     var selectedInsightCollection by remember { mutableStateOf<ProfileInsightCollection?>(null) }
     LaunchedEffect(activeProfileIndex) {
         selectedInsightCollection = null
     }
-    val profileRadarItems = remember(
-        activeProfileIndex,
-        todayIsoDate,
-        continueWatchingItems,
-        libraryState.items,
-        nuvioEnhancedSettings,
-    ) {
-        if (!nuvioEnhancedSettings.releaseRadarHomeSignalsEnabled) {
-            emptyList()
-        } else {
-            runCatching {
-                buildHomeReleaseRadarItems(
-                    todayIsoDate = todayIsoDate,
-                    continueWatchingItems = continueWatchingItems,
-                    libraryItems = libraryState.items,
-                    catalogSections = emptyList(),
-                    resolvedLibraryDetails = emptyMap(),
-                ).filteredByNuvioEnhancedReleaseRadar(nuvioEnhancedSettings)
-            }.onFailure { error ->
-                profileInsightsLog.e(error) { "Failed to build profile radar items profile=$activeProfileIndex" }
-            }.getOrElse {
-                emptyList()
-            }
-        }
+    val isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean = { kind ->
+        insightCollections[kind]?.items?.isNotEmpty() == true
     }
-    val conciergeState = remember(
-        activeProfileIndex,
-        profileName,
-        continueWatchingItems,
-        profileRadarItems,
-        libraryState.items,
-        nuvioEnhancedSettings,
-    ) {
-        if (!nuvioEnhancedSettings.enhancedHomeFeaturesEnabled || !nuvioEnhancedSettings.nuvioConciergeEnabled) {
-            null
-        } else {
-            runCatching {
-                buildHomeConciergeState(
-                    profileName = profileName,
-                    continueWatchingItems = continueWatchingItems,
-                    releaseRadarItems = profileRadarItems,
-                    libraryItems = libraryState.items,
-                    catalogSections = emptyList(),
-                    smartResumeEnabled = nuvioEnhancedSettings.smartResumeEnabled,
-                    releaseRadarEnabled = nuvioEnhancedSettings.releaseRadarHomeSignalsEnabled,
-                    profileStatsEnabled = nuvioEnhancedSettings.profileStatsEnabled,
-                )
-            }.onFailure { error ->
-                profileInsightsLog.e(error) { "Failed to build profile concierge state profile=$activeProfileIndex" }
-            }.getOrNull()
-        }
+    val onCollectionClick: (ProfileInsightCollectionKind) -> Unit = { kind ->
+        selectedInsightCollection = insightCollections[kind]
+            ?.takeIf { collection -> collection.items.isNotEmpty() }
     }
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(if (isTablet) 18.dp else 14.dp),
-    ) {
-        if (onSwitchProfile != null || onEditProfile != null) {
-            ProfileManagementActions(
-                isTablet = isTablet,
-                onSwitchProfile = onSwitchProfile,
-                onEditProfile = onEditProfile,
-            )
-        }
+    Column(modifier = Modifier.fillMaxWidth()) {
         ProfileInsightsHero(
             profile = activeProfile,
             avatarItem = avatarItem,
             profileName = profileName,
+            isTablet = isTablet,
             stats = stats,
-            isTablet = isTablet,
+            isCollectionAvailable = isCollectionAvailable,
+            onCollectionClick = onCollectionClick,
+            onEditProfile = onEditProfile,
+            onSwitchProfile = onSwitchProfile,
+            onBack = onBack.takeUnless { isTablet },
         )
-        if (favoritePeopleState.people.isNotEmpty() && onFavoritePersonClick != null) {
-            SettingsSection(
-                title = stringResource(Res.string.profile_insights_favorite_people_title),
-                isTablet = isTablet,
-                actions = {
-                    if (
-                        favoritePeopleState.displayPeople.size > ProfileFavoritePeopleInlineLimit &&
-                        onFavoritePeopleViewAllClick != null
-                    ) {
-                        ProfileFavoritePeopleSeeAllButton(
-                            isTablet = isTablet,
-                            onClick = onFavoritePeopleViewAllClick,
-                        )
-                    }
-                },
-            ) {
-                ProfileFavoritePeopleRail(
-                    people = favoritePeopleState.displayPeople,
-                    isTablet = isTablet,
-                    onPersonClick = onFavoritePersonClick,
-                )
-            }
-        }
-        SettingsSection(
-            title = stringResource(Res.string.profile_insights_section_overview),
-            isTablet = isTablet,
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = if (isTablet) 18.dp else 14.dp),
+            verticalArrangement = Arrangement.spacedBy(if (isTablet) 18.dp else 14.dp),
         ) {
-            ProfileInsightsStatsGrid(
-                stats = stats,
-                isTablet = isTablet,
-                isCollectionAvailable = { kind ->
-                    insightCollections[kind]?.items?.isNotEmpty() == true
-                },
-                onCollectionClick = { kind ->
-                    selectedInsightCollection = insightCollections[kind]
-                        ?.takeIf { collection -> collection.items.isNotEmpty() }
-                },
+            ProfileInsightsRefreshStatusRow(
+                refreshedAtEpochMs = refreshedAtByProfile[activeProfileIndex],
+                failedGenreTitleCount = failedGenreTitleCount,
+                factsProgress = factsProgress,
+                isRefreshing = isRefreshing,
+                onRefresh = ProfileInsightsRefresher::refresh,
             )
-        }
-        SettingsSection(
-            title = stringResource(Res.string.profile_insights_section_taste),
-            isTablet = isTablet,
-        ) {
-            ProfileTasteCard(stats = stats)
-        }
-        if (conciergeState != null) {
+            ProfileWatchTimeRow(stats = stats)
             SettingsSection(
-                title = "Nuvio Concierge",
+                title = stringResource(Res.string.profile_insights_section_taste),
                 isTablet = isTablet,
             ) {
-                HomeConciergeSection(
-                    state = conciergeState,
-                    sectionPadding = 0.dp,
-                    onPosterClick = onPosterClick,
-                    onContinueWatchingClick = onContinueWatchingClick,
-                )
+                ProfileTasteCard(stats = stats, factsProgress = factsProgress)
             }
         }
     }
@@ -428,179 +412,236 @@ private fun ProfileInsightsBody(
             collection = collection,
             isTablet = isTablet,
             onDismiss = { selectedInsightCollection = null },
+            onPosterClick = onPosterClick,
         )
     }
 
 }
 
 @Composable
-private fun ProfileFavoritePeopleFullPage(
-    isTablet: Boolean,
-    onFavoritePersonClick: ((FavoritePerson) -> Unit)?,
-) {
-    val favoritePeopleState by remember {
-        FavoritePeopleRepository.ensureLoaded()
-        FavoritePeopleRepository.uiState
-    }.collectAsStateWithLifecycle()
-    val columns = if (isTablet) 5 else 3
-    val rows = remember(favoritePeopleState.people, favoritePeopleState.pinnedPersonIds, columns) {
-        favoritePeopleState.displayPeople.chunked(columns)
-    }
-    val pinnedIds = remember(favoritePeopleState.pinnedPersonIds) {
-        favoritePeopleState.pinnedPersonIds.toSet()
-    }
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(if (isTablet) 24.dp else 20.dp),
-    ) {
-        rows.forEach { rowPeople ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(if (isTablet) 16.dp else 12.dp),
-                verticalAlignment = Alignment.Top,
-            ) {
-                rowPeople.forEach { person ->
-                    ProfileFavoritePersonCompactItem(
-                        person = person,
-                        isTablet = isTablet,
-                        onClick = { onFavoritePersonClick?.invoke(person) },
-                        isPinned = person.tmdbId in pinnedIds,
-                        onTogglePinned = { FavoritePeopleRepository.togglePinned(person.tmdbId) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                repeat(columns - rowPeople.size) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProfileFavoritePeopleRail(
-    people: List<FavoritePerson>,
-    isTablet: Boolean,
-    onPersonClick: (FavoritePerson) -> Unit,
-) {
-    val tokens = MaterialTheme.nuvio
-    val shape = RoundedCornerShape(if (isTablet) 28.dp else 24.dp)
-    val visiblePeople = people.take(ProfileFavoritePeopleInlineLimit)
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = tokens.colors.surfaceElevated.copy(alpha = 0.62f),
-        shape = shape,
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.07f)),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.035f),
-                            tokens.colors.accent.copy(alpha = 0.045f),
-                            Color.Transparent,
-                        ),
-                    ),
-                )
-                .padding(horizontal = if (isTablet) 20.dp else 14.dp, vertical = if (isTablet) 18.dp else 15.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(if (isTablet) 16.dp else 10.dp),
-                verticalAlignment = Alignment.Top,
-            ) {
-                visiblePeople.forEach { person ->
-                    ProfileFavoritePersonCompactItem(
-                        person = person,
-                        isTablet = isTablet,
-                        onClick = { onPersonClick(person) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProfileFavoritePeopleSeeAllButton(
-    isTablet: Boolean,
+private fun ProfileHeaderIconButton(
+    icon: ImageVector,
+    contentDescription: String,
     onClick: () -> Unit,
 ) {
-    val tokens = MaterialTheme.nuvio
-    Surface(
+    Box(
         modifier = Modifier
-            .size(if (isTablet) 42.dp else 38.dp)
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.14f))
+            .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape)
             .clickable(onClick = onClick),
-        color = tokens.colors.surfaceElevated.copy(alpha = 0.88f),
-        shape = CircleShape,
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                contentDescription = null,
-                modifier = Modifier.size(if (isTablet) 24.dp else 22.dp),
-                tint = tokens.colors.textSecondary,
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = Color.White,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
+@Composable
+private fun ProfileInsightsHero(
+    profile: NuvioProfile?,
+    avatarItem: AvatarCatalogItem?,
+    profileName: String,
+    isTablet: Boolean,
+    stats: ProfileInsightsStats,
+    isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
+    onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
+    onEditProfile: (() -> Unit)?,
+    onSwitchProfile: (() -> Unit)?,
+    onBack: (() -> Unit)? = null,
+) {
+    if (isTablet) {
+        ProfileInsightsHeroBounded(
+            profile = profile,
+            avatarItem = avatarItem,
+            profileName = profileName,
+            stats = stats,
+            isCollectionAvailable = isCollectionAvailable,
+            onCollectionClick = onCollectionClick,
+            onEditProfile = onEditProfile,
+            onSwitchProfile = onSwitchProfile,
+        )
+    } else {
+        ProfileInsightsHeroCinematic(
+            profile = profile,
+            avatarItem = avatarItem,
+            profileName = profileName,
+            stats = stats,
+            isCollectionAvailable = isCollectionAvailable,
+            onCollectionClick = onCollectionClick,
+            onEditProfile = onEditProfile,
+            onSwitchProfile = onSwitchProfile,
+            onBack = onBack,
+        )
+    }
+}
+
+@Composable
+private fun ProfileInsightsHeroBounded(
+    profile: NuvioProfile?,
+    avatarItem: AvatarCatalogItem?,
+    profileName: String,
+    stats: ProfileInsightsStats,
+    isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
+    onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
+    onEditProfile: (() -> Unit)?,
+    onSwitchProfile: (() -> Unit)?,
+) {
+    val tokens = MaterialTheme.nuvio
+    val accent = profile?.avatarColorHex?.let(::parseHexColor) ?: tokens.colors.accent
+    val avatarImageUrl = remember(profile, avatarItem) {
+        profile?.let { profileAvatarImageUrl(it, avatarItem) }
+    }
+    val shape = RoundedCornerShape(34.dp)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(320.dp)
+            .clip(shape)
+            .border(1.dp, Color.White.copy(alpha = 0.12f), shape),
+    ) {
+        if (profile != null) {
+            ProfileBackgroundBackdrop(profile = profile, modifier = Modifier.matchParentSize())
+        } else {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(Color(0xFF0E1727), accent.copy(alpha = 0.42f), tokens.colors.surface),
+                        ),
+                    ),
+            )
+        }
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.20f), Color.Black.copy(alpha = 0.88f)),
+                        startY = 0f,
+                        endY = Float.POSITIVE_INFINITY,
+                    ),
+                ),
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomStart)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            ProfileHeroAvatar(
+                profileName = profileName,
+                avatarImageUrl = avatarImageUrl,
+                avatarColor = accent,
+                avatarBackgroundColor = avatarItem?.bgColor?.let(::parseHexColor) ?: accent,
+                isTablet = true,
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(28.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (onSwitchProfile != null) {
+                    ProfileHeaderIconButton(
+                        icon = Icons.Rounded.People,
+                        contentDescription = stringResource(Res.string.profile_insights_switch_profile),
+                        onClick = onSwitchProfile,
+                    )
+                }
+                Text(
+                    text = stringResource(Res.string.profile_insights_title, profileName),
+                    style = MaterialTheme.typography.displaySmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (onEditProfile != null) {
+                    ProfileHeaderIconButton(
+                        icon = Icons.Rounded.Edit,
+                        contentDescription = stringResource(Res.string.profile_insights_edit_profile),
+                        onClick = onEditProfile,
+                    )
+                }
+            }
+            ProfileMetricPillRow(
+                stats = stats,
+                isCollectionAvailable = isCollectionAvailable,
+                onCollectionClick = onCollectionClick,
+                centerWhenFits = true,
             )
         }
     }
 }
 
 @Composable
-private fun ProfileFavoritePersonCompactItem(
-    person: FavoritePerson,
-    isTablet: Boolean,
-    onClick: () -> Unit,
-    isPinned: Boolean = false,
-    onTogglePinned: (() -> Unit)? = null,
-    modifier: Modifier = Modifier,
+private fun ProfileInsightsHeroCinematic(
+    profile: NuvioProfile?,
+    avatarItem: AvatarCatalogItem?,
+    profileName: String,
+    stats: ProfileInsightsStats,
+    isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
+    onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
+    onEditProfile: (() -> Unit)?,
+    onSwitchProfile: (() -> Unit)?,
+    onBack: (() -> Unit)? = null,
 ) {
     val tokens = MaterialTheme.nuvio
-    val avatarSize = if (isTablet) 82.dp else 70.dp
-    val heartSize = if (isTablet) 27.dp else 24.dp
-    val pinSize = if (isTablet) 27.dp else 24.dp
+    val accent = profile?.avatarColorHex?.let(::parseHexColor) ?: tokens.colors.accent
+    val avatarImageUrl = remember(profile, avatarItem) {
+        profile?.let { profileAvatarImageUrl(it, avatarItem) }
+    }
 
-    Column(
-        modifier = modifier
-            .clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(if (isTablet) 9.dp else 8.dp),
+    val bleedsUnderNativeNavBar = LocalUseNativeNavigation.current
+    val floatingChromeTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f),
     ) {
-        Box(
-            modifier = Modifier
-                .size(avatarSize + 8.dp),
-            contentAlignment = Alignment.Center,
-        ) {
+        BoxWithConstraints(modifier = Modifier.matchParentSize()) {
+            val leftInset = tokens.spacing.screenHorizontal + 40.dp
+            val rightInset = tokens.spacing.screenHorizontal + 160.dp
+            val bleedWidth = maxWidth + leftInset + rightInset
+            val topExtension = if (bleedsUnderNativeNavBar) 56.dp else 0.dp
+            val extendedHeight = maxHeight + topExtension
+
             Box(
                 modifier = Modifier
-                    .size(avatarSize)
-                    .clip(CircleShape)
-                    .background(tokens.colors.surfaceElevated)
-                    .border(1.dp, Color.White.copy(alpha = 0.13f), CircleShape),
+                    .requiredWidth(bleedWidth)
+                    .requiredHeight(extendedHeight)
+                    .offset(x = -leftInset, y = -topExtension),
             ) {
-                if (!person.photo.isNullOrBlank()) {
-                    AsyncImage(
-                        model = person.photo,
-                        contentDescription = person.name,
+                if (profile != null) {
+                    ProfileBackgroundBackdrop(
+                        profile = profile,
                         modifier = Modifier.matchParentSize(),
-                        contentScale = ContentScale.Crop,
                     )
                 } else {
                     Box(
-                        modifier = Modifier.matchParentSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = person.name.take(1).uppercase(),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = tokens.colors.textSecondary,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        Color(0xFF0E1727),
+                                        accent.copy(alpha = 0.42f),
+                                        tokens.colors.surface,
+                                    ),
+                                ),
+                            ),
+                    )
                 }
                 Box(
                     modifier = Modifier
@@ -610,304 +651,101 @@ private fun ProfileFavoritePersonCompactItem(
                                 colors = listOf(
                                     Color.Transparent,
                                     Color.Black.copy(alpha = 0.20f),
+                                    Color.Black.copy(alpha = 0.88f),
                                 ),
+                                startY = 0f,
+                                endY = Float.POSITIVE_INFINITY,
                             ),
                         ),
                 )
             }
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .size(heartSize),
-                color = tokens.colors.surface.copy(alpha = 0.90f),
-                shape = CircleShape,
-                border = BorderStroke(1.dp, tokens.colors.accent.copy(alpha = 0.48f)),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Rounded.Favorite,
-                        contentDescription = null,
-                        modifier = Modifier.size(if (isTablet) 15.dp else 13.dp),
-                        tint = tokens.colors.accent,
-                    )
-                }
-            }
-            if (onTogglePinned != null) {
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .size(pinSize)
-                        .clickable(onClick = onTogglePinned),
-                    color = tokens.colors.surface.copy(alpha = 0.92f),
-                    shape = CircleShape,
-                    border = BorderStroke(
-                        1.dp,
-                        if (isPinned) {
-                            tokens.colors.accent.copy(alpha = 0.62f)
-                        } else {
-                            Color.White.copy(alpha = 0.16f)
-                        },
-                    ),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = if (isPinned) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                            contentDescription = null,
-                            modifier = Modifier.size(if (isTablet) 15.dp else 13.dp),
-                            tint = if (isPinned) tokens.colors.accent else tokens.colors.textSecondary,
-                        )
-                    }
-                }
-            }
-        }
-        Text(
-            text = person.name,
-            style = if (isTablet) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium,
-            color = tokens.colors.textPrimary,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 2,
-            textAlign = TextAlign.Center,
-            overflow = TextOverflow.Ellipsis,
-        )
-        person.knownFor?.takeIf { it.isNotBlank() }?.let { knownFor ->
-            Text(
-                text = knownFor,
-                style = MaterialTheme.typography.bodySmall,
-                color = tokens.colors.textSecondary,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                textAlign = TextAlign.Center,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ProfileFavoritePeopleSheet(
-    people: List<FavoritePerson>,
-    isTablet: Boolean,
-    onDismiss: () -> Unit,
-    onPersonClick: (FavoritePerson) -> Unit,
-) {
-    val tokens = MaterialTheme.nuvio
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    NuvioModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = if (isTablet) 24.dp else 18.dp)
-                .padding(bottom = 22.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
-        ) {
-            Text(
-                text = stringResource(Res.string.profile_insights_favorite_people_title),
-                style = MaterialTheme.typography.titleLarge,
-                color = tokens.colors.textPrimary,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(if (isTablet) 112.dp else 86.dp),
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = if (isTablet) 600.dp else 460.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
-            ) {
-                items(
-                    items = people,
-                    key = { person -> person.tmdbId },
-                ) { person ->
-                    Box(contentAlignment = Alignment.TopCenter) {
-                        ProfileFavoritePersonCompactItem(
-                            person = person,
-                            isTablet = isTablet,
-                            onClick = { onPersonClick(person) },
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-@Composable
-private fun ProfileManagementActions(
-    isTablet: Boolean,
-    onSwitchProfile: (() -> Unit)?,
-    onEditProfile: (() -> Unit)?,
-) {
-    val tokens = MaterialTheme.nuvio
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = tokens.spacing.controlGap),
-        horizontalArrangement = Arrangement.spacedBy(if (isTablet) 14.dp else 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (onSwitchProfile != null) {
-            NuvioPrimaryButton(
-                text = stringResource(Res.string.profile_insights_switch_profile),
-                onClick = onSwitchProfile,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        if (onEditProfile != null) {
-            OutlinedButton(
-                onClick = onEditProfile,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(54.dp),
-                shape = tokens.shapes.button,
-                border = BorderStroke(1.dp, tokens.colors.borderSubtle),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = tokens.colors.textPrimary,
-                ),
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Edit,
-                    contentDescription = null,
-                    tint = tokens.colors.accent,
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(Res.string.profile_insights_edit_profile),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProfileInsightsHero(
-    profile: NuvioProfile?,
-    avatarItem: AvatarCatalogItem?,
-    profileName: String,
-    stats: ProfileInsightsStats,
-    isTablet: Boolean,
-) {
-    val tokens = MaterialTheme.nuvio
-    val accent = profile?.avatarColorHex?.let(::parseHexColor) ?: tokens.colors.accent
-    val avatarImageUrl = remember(profile, avatarItem) {
-        profile?.let { profileAvatarImageUrl(it, avatarItem) }
-    }
-    val shape = RoundedCornerShape(if (isTablet) 34.dp else 28.dp)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        Color(0xFF0E1727),
-                        accent.copy(alpha = 0.42f),
-                        tokens.colors.surface,
-                    ),
-                ),
-            )
-            .border(1.dp, Color.White.copy(alpha = 0.12f), shape),
-    ) {
-        ProfileRemoteBackgroundImage(
-            imageUrl = profile?.let(::profileBackgroundImageUrl),
-            profileIndex = profile?.profileIndex,
-            modifier = Modifier.matchParentSize(),
-            alpha = 0.22f,
-        )
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            accent.copy(alpha = 0.34f),
-                            Color.Transparent,
-                        ),
-                        radius = 760f,
-                    ),
-                ),
-        )
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.Black.copy(alpha = 0.04f),
-                            Color.Black.copy(alpha = 0.56f),
-                        ),
-                    ),
-                ),
-        )
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(if (isTablet) 24.dp else 18.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                    .align(Alignment.BottomStart)
+                    .padding(horizontal = 18.dp)
+                    .padding(bottom = 140.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 ProfileHeroAvatar(
                     profileName = profileName,
                     avatarImageUrl = avatarImageUrl,
                     avatarColor = accent,
                     avatarBackgroundColor = avatarItem?.bgColor?.let(::parseHexColor) ?: accent,
-                    isTablet = isTablet,
+                    isTablet = false,
                 )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                Text(
+                    text = stringResource(Res.string.profile_insights_title, profileName),
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            ProfileMetricPillRow(
+                stats = stats,
+                isCollectionAvailable = isCollectionAvailable,
+                onCollectionClick = onCollectionClick,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(bottom = 18.dp),
+                edgeInset = 18.dp,
+            )
+
+            if (onBack != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(top = floatingChromeTop, start = 18.dp),
                 ) {
-                    Text(
-                        text = stringResource(Res.string.profile_insights_title, profileName),
-                        style = if (isTablet) {
-                            MaterialTheme.typography.headlineMedium
-                        } else {
-                            MaterialTheme.typography.headlineSmall
-                        },
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                    ProfileHeaderIconButton(
+                        icon = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = stringResource(Res.string.action_back),
+                        onClick = onBack,
                     )
-                    Text(
-                        text = stringResource(Res.string.profile_insights_subtitle),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.74f),
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
+                }
+                Text(
+                    text = stringResource(Res.string.compose_settings_page_profile),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = floatingChromeTop + 9.dp),
+                )
+            }
+
+            if (onEditProfile != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 140.dp, end = 18.dp),
+                ) {
+                    ProfileHeaderIconButton(
+                        icon = Icons.Rounded.Edit,
+                        contentDescription = stringResource(Res.string.profile_insights_edit_profile),
+                        onClick = onEditProfile,
                     )
                 }
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                ProfileHeroMetric(
-                    value = stats.continueCount.toString(),
-                    label = stringResource(Res.string.profile_insights_stat_continue),
-                    modifier = Modifier.weight(1f),
-                )
-                ProfileHeroMetric(
-                    value = stats.libraryCount.toString(),
-                    label = stringResource(Res.string.profile_insights_stat_library),
-                    modifier = Modifier.weight(1f),
-                )
-                ProfileHeroMetric(
-                    value = stats.upcomingCount.toString(),
-                    label = stringResource(Res.string.profile_insights_stat_upcoming),
-                    modifier = Modifier.weight(1f),
-                )
+
+            if (onSwitchProfile != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(bottom = 140.dp, start = 18.dp),
+                ) {
+                    ProfileHeaderIconButton(
+                        icon = Icons.Rounded.People,
+                        contentDescription = stringResource(Res.string.profile_insights_switch_profile),
+                        onClick = onSwitchProfile,
+                    )
+                }
             }
         }
     }
@@ -937,7 +775,7 @@ private fun ProfileHeroAvatar(
         contentAlignment = Alignment.Center,
     ) {
         if (!avatarImageUrl.isNullOrBlank()) {
-            CollectionCardRemoteImage(
+            NuvioAsyncImage(
                 imageUrl = avatarImageUrl,
                 contentDescription = profileName,
                 modifier = Modifier
@@ -958,59 +796,158 @@ private fun ProfileHeroAvatar(
 }
 
 @Composable
-private fun ProfileInsightPill(
-    text: String,
-    icon: ImageVector,
+private fun ProfileMetricPillRow(
+    stats: ProfileInsightsStats,
+    isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
+    onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
+    modifier: Modifier = Modifier,
+    edgeInset: Dp = 18.dp,
+    centerWhenFits: Boolean = false,
 ) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
-            .background(Color.White.copy(alpha = 0.12f))
-            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(999.dp))
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(7.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(15.dp),
-            tint = Color.White,
-        )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.White,
-            fontWeight = FontWeight.SemiBold,
-        )
+    val pills = listOf(
+        ProfileMetricPillSpec(
+            icon = Icons.Rounded.PlayArrow,
+            value = stats.continueCount.toString(),
+            label = stringResource(Res.string.profile_insights_hero_continue),
+            collectionKind = ProfileInsightCollectionKind.Continue,
+        ),
+        ProfileMetricPillSpec(
+            icon = Icons.Rounded.CollectionsBookmark,
+            value = stats.libraryCount.toString(),
+            label = stringResource(Res.string.profile_insights_hero_library),
+            collectionKind = ProfileInsightCollectionKind.Library,
+        ),
+        ProfileMetricPillSpec(
+            icon = Icons.Rounded.CalendarMonth,
+            value = stats.upcomingCount.toString(),
+            label = stringResource(Res.string.profile_insights_hero_upcoming),
+            collectionKind = ProfileInsightCollectionKind.Upcoming,
+        ),
+        ProfileMetricPillSpec(
+            icon = Icons.Rounded.Movie,
+            value = stats.watchedMovieCount.toString(),
+            label = stringResource(Res.string.profile_insights_hero_watched),
+            collectionKind = ProfileInsightCollectionKind.Watched,
+        ),
+        ProfileMetricPillSpec(
+            icon = Icons.Rounded.Favorite,
+            value = stats.completedCount.toString(),
+            label = stringResource(Res.string.profile_insights_stat_completed),
+            collectionKind = ProfileInsightCollectionKind.Completed,
+        ),
+        ProfileMetricPillSpec(
+            icon = Icons.Rounded.Sync,
+            value = stats.ongoingSeriesCount.toString(),
+            label = stringResource(Res.string.profile_insights_stat_ongoing),
+            collectionKind = ProfileInsightCollectionKind.Ongoing,
+        ),
+        ProfileMetricPillSpec(
+            icon = Icons.Rounded.Tv,
+            value = stats.episodesWatchedCount.toString(),
+            label = stringResource(Res.string.profile_insights_hero_episodes),
+            collectionKind = null,
+        ),
+    )
+
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val pillCount = pills.size
+        val contentWidth = ProfileMetricPillWidth * pillCount + ProfileMetricPillGap * (pillCount - 1)
+        val fits = contentWidth + edgeInset * 2 <= maxWidth
+        val pillContent: @Composable () -> Unit = {
+            pills.forEach { pill ->
+                ProfileMetricPill(
+                    spec = pill,
+                    onClick = pill.collectionKind
+                        ?.takeIf(isCollectionAvailable)
+                        ?.let { kind -> { onCollectionClick(kind) } },
+                )
+            }
+        }
+        if (fits && centerWhenFits) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(ProfileMetricPillGap, Alignment.CenterHorizontally),
+            ) { pillContent() }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .profileHorizontalEdgeFade(edgeInset)
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(ProfileMetricPillGap),
+            ) {
+                Spacer(modifier = Modifier.width((edgeInset - ProfileMetricPillGap).coerceAtLeast(0.dp)))
+                pillContent()
+                Spacer(modifier = Modifier.width((edgeInset - ProfileMetricPillGap).coerceAtLeast(0.dp)))
+            }
+        }
     }
 }
 
+private val ProfileMetricPillWidth = 96.dp
+private val ProfileMetricPillGap = 10.dp
+
+private fun Modifier.profileHorizontalEdgeFade(fadeWidth: Dp): Modifier =
+    if (fadeWidth <= 0.dp) this else this
+        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        .drawWithContent {
+            drawContent()
+            val fade = fadeWidth.toPx().coerceAtMost(size.width / 2f)
+            drawRect(
+                brush = Brush.horizontalGradient(
+                    0f to Color.Transparent,
+                    (fade / size.width) to Color.Black,
+                    (1f - fade / size.width) to Color.Black,
+                    1f to Color.Transparent,
+                ),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+
+private data class ProfileMetricPillSpec(
+    val icon: ImageVector,
+    val value: String,
+    val label: String,
+    val collectionKind: ProfileInsightCollectionKind?,
+)
+
 @Composable
-private fun ProfileHeroMetric(
-    value: String,
-    label: String,
-    modifier: Modifier = Modifier,
+private fun ProfileMetricPill(
+    spec: ProfileMetricPillSpec,
+    onClick: (() -> Unit)?,
 ) {
     Column(
-        modifier = modifier
+        modifier = Modifier
+            .width(ProfileMetricPillWidth)
             .clip(RoundedCornerShape(18.dp))
-            .background(Color.White.copy(alpha = 0.10f))
-            .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(18.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+            .background(Color.White.copy(alpha = 0.14f))
+            .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(18.dp))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 12.dp, vertical = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        Icon(
+            imageVector = spec.icon,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = Color.White,
+        )
         Text(
-            text = value,
+            text = spec.value,
+            autoSize = TextAutoSize.StepBased(
+                minFontSize = 14.sp,
+                maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
+            ),
             style = MaterialTheme.typography.titleLarge,
             color = Color.White,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
         )
         Text(
-            text = label,
+            text = spec.label,
             style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.70f),
+            color = Color.White.copy(alpha = 0.72f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -1018,145 +955,41 @@ private fun ProfileHeroMetric(
 }
 
 @Composable
-private fun ProfileInsightsStatsGrid(
-    stats: ProfileInsightsStats,
-    isTablet: Boolean,
-    isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
-    onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
-) {
-    val tiles = listOf(
-        ProfileInsightTile(
-            icon = Icons.Rounded.PlayArrow,
-            value = stats.continueCount.toString(),
-            label = stringResource(Res.string.profile_insights_stat_continue),
-            caption = stringResource(Res.string.profile_insights_stat_continue_caption),
-            collectionKind = ProfileInsightCollectionKind.Continue,
-        ),
-        ProfileInsightTile(
-            icon = Icons.Rounded.Favorite,
-            value = stats.completedCount.toString(),
-            label = stringResource(Res.string.profile_insights_stat_completed),
-            caption = stringResource(Res.string.profile_insights_stat_completed_caption),
-            collectionKind = ProfileInsightCollectionKind.Completed,
-        ),
-        ProfileInsightTile(
-            icon = Icons.Rounded.CollectionsBookmark,
-            value = stats.libraryCount.toString(),
-            label = stringResource(Res.string.profile_insights_stat_library),
-            caption = stringResource(Res.string.profile_insights_stat_library_caption),
-            collectionKind = ProfileInsightCollectionKind.Library,
-        ),
-        ProfileInsightTile(
-            icon = Icons.Rounded.AutoAwesome,
-            value = profileInsightDurationLabel(stats.trackedDurationMs),
-            label = stringResource(Res.string.profile_insights_stat_time),
-            caption = stringResource(Res.string.profile_insights_stat_time_caption),
-        ),
-        ProfileInsightTile(
-            icon = Icons.Rounded.Notifications,
-            value = stats.recentActivityCount.toString(),
-            label = stringResource(Res.string.profile_insights_stat_recent),
-            caption = stringResource(Res.string.profile_insights_stat_recent_caption),
-        ),
-        ProfileInsightTile(
-            icon = Icons.Rounded.CollectionsBookmark,
-            value = stats.upcomingCount.toString(),
-            label = stringResource(Res.string.profile_insights_stat_upcoming),
-            caption = stringResource(Res.string.profile_insights_stat_upcoming_caption),
-            collectionKind = ProfileInsightCollectionKind.Upcoming,
-        ),
-    )
-    val columns = if (isTablet) 3 else 2
-
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        tiles.chunked(columns).forEach { rowTiles ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                rowTiles.forEach { tile ->
-                    ProfileInsightStatCard(
-                        tile = tile,
-                        onClick = tile.collectionKind
-                            ?.takeIf(isCollectionAvailable)
-                            ?.let { kind -> { onCollectionClick(kind) } },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                repeat(columns - rowTiles.size) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProfileInsightStatCard(
-    tile: ProfileInsightTile,
-    onClick: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-) {
+private fun ProfileWatchTimeRow(stats: ProfileInsightsStats) {
     val tokens = MaterialTheme.nuvio
     Surface(
-        modifier = modifier
-            .heightIn(min = 116.dp)
-            .then(
-                if (onClick != null) {
-                    Modifier.clickable(onClick = onClick)
-                } else {
-                    Modifier
-                },
-            ),
+        modifier = Modifier.fillMaxWidth(),
         color = tokens.colors.surface,
-        shape = RoundedCornerShape(22.dp),
+        shape = tokens.shapes.card,
         border = BorderStroke(1.dp, tokens.colors.borderSubtle),
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = tile.value,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = tokens.colors.textPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                )
-                Surface(
-                    modifier = Modifier.size(34.dp),
-                    color = tokens.colors.accent.copy(alpha = tokens.opacity.pressed),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = tile.icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = tokens.colors.accent,
-                        )
-                    }
-                }
-            }
             Text(
-                text = tile.label,
-                style = MaterialTheme.typography.bodyMedium,
+                text = stringResource(Res.string.profile_insights_stat_time),
+                style = MaterialTheme.typography.titleMedium,
                 color = tokens.colors.textPrimary,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
             )
             Text(
-                text = tile.caption,
-                style = MaterialTheme.typography.labelSmall,
+                text = profileInsightDurationLabel(stats.trackedDurationMs),
+                style = MaterialTheme.typography.displayMedium,
+                color = tokens.colors.textPrimary,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+            )
+            Text(
+                text = stringResource(Res.string.profile_insights_stat_time_caption),
+                style = MaterialTheme.typography.bodySmall,
                 color = tokens.colors.textMuted,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
             )
         }
     }
@@ -1168,6 +1001,7 @@ private fun ProfileInsightCollectionSheet(
     collection: ProfileInsightCollection,
     isTablet: Boolean,
     onDismiss: () -> Unit,
+    onPosterClick: ((MetaPreview) -> Unit)?,
 ) {
     val tokens = MaterialTheme.nuvio
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -1203,7 +1037,7 @@ private fun ProfileInsightCollectionSheet(
                 columns = GridCells.Adaptive(if (isTablet) 132.dp else 104.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = if (isTablet) 640.dp else 520.dp),
+                    .weight(1f, fill = false),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
@@ -1211,7 +1045,15 @@ private fun ProfileInsightCollectionSheet(
                     items = collection.items,
                     key = { item -> item.id },
                 ) { item ->
-                    ProfileInsightPosterTile(item = item)
+                    ProfileInsightPosterTile(
+                        item = item,
+                        onClick = onPosterClick?.let { callback ->
+                            { preview ->
+                                onDismiss()
+                                callback(preview)
+                            }
+                        },
+                    )
                 }
             }
         }
@@ -1221,25 +1063,69 @@ private fun ProfileInsightCollectionSheet(
 @Composable
 private fun ProfileInsightPosterTile(
     item: ProfileInsightPosterItem,
+    onClick: ((MetaPreview) -> Unit)?,
 ) {
     val tokens = MaterialTheme.nuvio
+    val unknownLabel = stringResource(Res.string.generic_unknown)
     val initialImageUrl = remember(item.id, item.imageUrl) {
         item.imageUrl?.trim()?.takeIf { it.isNotBlank() }
     }
-    val cachedImageUrl = remember(item.id, item.lookupType, item.lookupId, initialImageUrl) {
-        initialImageUrl ?: profileCachedArtworkUrl(item.lookupType, item.lookupId)
+    val initialReleaseInfo = remember(item.id, item.releaseInfo) {
+        item.releaseInfo?.trim()?.takeIf { it.isNotBlank() }
+    }
+    val cachedMeta = remember(item.id, item.lookupType, item.lookupId) {
+        profileCachedMeta(item.lookupType, item.lookupId)
+    }
+    val cachedImageUrl = remember(item.id, initialImageUrl, cachedMeta) {
+        initialImageUrl ?: cachedMeta.profileMetaArtworkUrl()
+    }
+    val cachedReleaseInfo = remember(item.id, initialReleaseInfo, cachedMeta) {
+        initialReleaseInfo ?: cachedMeta?.releaseInfo?.trim()?.takeIf { it.isNotBlank() }
     }
     var resolvedImageUrl by remember(item.id, cachedImageUrl) {
         mutableStateOf(cachedImageUrl)
     }
-
-    LaunchedEffect(item.id, item.lookupType, item.lookupId, cachedImageUrl) {
-        resolvedImageUrl = cachedImageUrl
-        if (cachedImageUrl != null) return@LaunchedEffect
-        resolvedImageUrl = profileFetchArtworkUrl(item.lookupType, item.lookupId)
+    var resolvedReleaseInfo by remember(item.id, cachedReleaseInfo) {
+        mutableStateOf(cachedReleaseInfo)
     }
 
+    LaunchedEffect(item.id, item.lookupType, item.lookupId, cachedImageUrl, cachedReleaseInfo) {
+        resolvedImageUrl = cachedImageUrl
+        resolvedReleaseInfo = cachedReleaseInfo
+        if (cachedImageUrl != null && cachedReleaseInfo != null) return@LaunchedEffect
+        val (artwork, releaseInfo) = profileFetchPosterMetadata(item.lookupType, item.lookupId)
+        resolvedImageUrl = cachedImageUrl ?: artwork
+        resolvedReleaseInfo = cachedReleaseInfo ?: releaseInfo
+    }
+
+    val cleanType = item.lookupType?.trim()?.takeIf { it.isNotBlank() }
+    val cleanId = item.lookupId?.trim()?.takeIf { it.isNotBlank() }
+    val displayReleaseInfo = resolveReleaseInfoForDisplay(
+        stored = initialReleaseInfo,
+        hydrated = resolvedReleaseInfo,
+        fallback = unknownLabel,
+    )
+    val detailLine = listOfNotNull(
+        displayReleaseInfo,
+        item.secondaryText?.trim()?.takeIf { it.isNotBlank() },
+    ).joinToString(" • ")
+
     Column(
+        modifier = if (onClick != null && cleanType != null && cleanId != null) {
+            Modifier.clickable {
+                onClick(
+                    MetaPreview(
+                        id = cleanId,
+                        type = cleanType,
+                        name = item.title,
+                        poster = resolvedImageUrl,
+                        releaseInfo = resolvedReleaseInfo,
+                    ),
+                )
+            }
+        } else {
+            Modifier
+        },
         verticalArrangement = Arrangement.spacedBy(7.dp),
     ) {
         Box(
@@ -1252,7 +1138,7 @@ private fun ProfileInsightPosterTile(
             contentAlignment = Alignment.Center,
         ) {
             if (resolvedImageUrl != null) {
-                CollectionCardRemoteImage(
+                NuvioAsyncImage(
                     imageUrl = resolvedImageUrl.orEmpty(),
                     contentDescription = item.title,
                     modifier = Modifier.fillMaxSize(),
@@ -1276,141 +1162,25 @@ private fun ProfileInsightPosterTile(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-        item.subtitle?.let { subtitle ->
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.labelSmall,
-                color = tokens.colors.textMuted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+        Text(
+            text = detailLine,
+            style = MaterialTheme.typography.labelSmall,
+            color = tokens.colors.textMuted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
 @Composable
-private fun ProfileSmartResumeCard(signal: SmartResumeSignal?) {
-    val tokens = MaterialTheme.nuvio
-    NuvioSurfaceCard {
-        if (signal == null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                ProfileSmartResumeArtwork(
-                    imageUrl = null,
-                    title = "",
-                )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text(
-                        text = stringResource(Res.string.profile_insights_smart_resume_empty_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = tokens.colors.textPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = stringResource(Res.string.profile_insights_smart_resume_empty_subtitle),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = tokens.colors.textMuted,
-                    )
-                }
-            }
-            return@NuvioSurfaceCard
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ProfileSmartResumeArtwork(
-                imageUrl = signal.imageUrl,
-                title = signal.title,
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = signal.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = tokens.colors.textPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                signal.subtitle?.let { subtitle ->
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = tokens.colors.textMuted,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                LinearProgressIndicator(
-                    progress = { signal.progressFraction.coerceIn(0f, 1f) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(999.dp)),
-                    color = tokens.colors.accent,
-                    trackColor = tokens.colors.borderSubtle,
-                )
-                Text(
-                    text = stringResource(
-                        Res.string.profile_insights_resume_progress,
-                        (signal.progressFraction * 100f).roundToInt().coerceIn(1, 99),
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = tokens.colors.textMuted,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProfileSmartResumeArtwork(
-    imageUrl: String?,
-    title: String,
+private fun ProfileTasteCard(
+    stats: ProfileInsightsStats,
+    factsProgress: ProfileTitleFactsProgress? = null,
 ) {
     val tokens = MaterialTheme.nuvio
-    Box(
-        modifier = Modifier
-            .size(width = 92.dp, height = 62.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (!imageUrl.isNullOrBlank()) {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = title,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Rounded.PlayArrow,
-                contentDescription = null,
-                modifier = Modifier.size(26.dp),
-                tint = tokens.colors.accent,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ProfileTasteCard(stats: ProfileInsightsStats) {
-    val tokens = MaterialTheme.nuvio
     val fallbackType = when (stats.topType) {
-        "movie" -> stringResource(Res.string.home_hero_type_movie)
-        "series" -> stringResource(Res.string.home_hero_type_series)
+        "movie" -> stringResource(Res.string.profile_insights_type_movie)
+        "series" -> stringResource(Res.string.profile_insights_type_series)
         null -> null
         else -> stats.topType.fallbackDisplayLabel()
     }
@@ -1427,14 +1197,20 @@ private fun ProfileTasteCard(stats: ProfileInsightsStats) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Surface(
-                    modifier = Modifier.size(52.dp),
-                    color = tokens.colors.accent.copy(alpha = tokens.opacity.pressed),
+                    modifier = Modifier
+                        .size(52.dp)
+                        .background(
+                            brush = MaterialTheme.themePalette.accentBrush(alpha = tokens.opacity.pressed),
+                            shape = RoundedCornerShape(18.dp),
+                        ),
+                    color = Color.Transparent,
                     shape = RoundedCornerShape(18.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Rounded.AutoAwesome,
                             contentDescription = null,
+                            modifier = Modifier.gradientMask(MaterialTheme.themePalette.accentBrush()),
                             tint = tokens.colors.accent,
                         )
                     }
@@ -1465,10 +1241,19 @@ private fun ProfileTasteCard(stats: ProfileInsightsStats) {
                 }
             }
             if (stats.tasteSegments.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    stats.tasteSegments.forEach { segment ->
-                        ProfileTasteSegmentRow(segment = segment)
-                    }
+                ProfileTasteGenreDonut(segments = stats.tasteSegments)
+                if (factsProgress != null && factsProgress.genresPending) {
+                    Text(
+                        text = stringResource(
+                            Res.string.profile_insights_genre_partial,
+                            factsProgress.genreResolved,
+                            factsProgress.genreTotal,
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.nuvio.colors.textMuted,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
             ProfileTasteBalanceBar(stats = stats)
@@ -1496,39 +1281,262 @@ private fun ProfileTasteCard(stats: ProfileInsightsStats) {
     }
 }
 
+private const val PROFILE_TASTE_DONUT_MAX_GENRES = 7
+
+private val ProfileTasteDonutPalette = listOf(
+    Color(0xFFFF6384), // rose
+    Color(0xFFFF9F40), // orange
+    Color(0xFFFFCD56), // yellow
+    Color(0xFF4BC0C0), // teal
+    Color(0xFF36A2EB), // blue
+    Color(0xFF9966FF), // violet
+    Color(0xFFE879F9), // pink
+)
+private val ProfileTasteDonutOthersColor = Color(0xFF8A8A96)
+
+private class ProfileTasteDonutSlice(
+    val label: String,
+    val share: Float,
+    val color: Color,
+    val isOthers: Boolean = false,
+)
+
+private fun Float.profilePercentLabel(): String = "${(this * 100f).roundToInt().coerceIn(1, 100)}%"
+
 @Composable
-private fun ProfileTasteSegmentRow(segment: ProfileTasteSegment) {
-    val tokens = MaterialTheme.nuvio
-    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = segment.label,
-                style = MaterialTheme.typography.labelMedium,
-                color = tokens.colors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = "${(segment.share * 100f).roundToInt().coerceIn(1, 100)}%",
-                style = MaterialTheme.typography.labelSmall,
-                color = tokens.colors.textMuted,
-                maxLines = 1,
+private fun ProfileTasteGenreDonut(segments: List<ProfileTasteSegment>) {
+    val othersLabel = stringResource(Res.string.profile_insights_genre_others)
+    val topSegments = segments.take(PROFILE_TASTE_DONUT_MAX_GENRES)
+    val otherSegments = segments.drop(PROFILE_TASTE_DONUT_MAX_GENRES)
+    val slices = remember(segments, othersLabel) {
+        buildList {
+            topSegments.forEachIndexed { index, segment ->
+                add(
+                    ProfileTasteDonutSlice(
+                        label = segment.label,
+                        share = segment.share,
+                        color = ProfileTasteDonutPalette[index % ProfileTasteDonutPalette.size],
+                    ),
+                )
+            }
+            val othersShare = otherSegments.sumOf { it.share.toDouble() }.toFloat()
+            if (othersShare > 0f) {
+                add(
+                    ProfileTasteDonutSlice(
+                        label = othersLabel,
+                        share = othersShare,
+                        color = ProfileTasteDonutOthersColor,
+                        isOthers = true,
+                    ),
+                )
+            }
+        }
+    }
+    var othersExpanded by remember { mutableStateOf(false) }
+    val chartDescription = stringResource(
+        Res.string.profile_insights_genre_chart_description,
+        slices.joinToString(", ") { "${it.label} ${it.share.profilePercentLabel()}" },
+    )
+
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val wide = maxWidth >= 560.dp
+        val donutSize = if (wide) 220.dp else 188.dp
+        val donut: @Composable () -> Unit = {
+            ProfileTasteDonutCanvas(
+                slices = slices,
+                topLabel = topSegments.firstOrNull()?.label,
+                topShare = topSegments.firstOrNull()?.share,
+                modifier = Modifier
+                    .size(donutSize)
+                    .semantics { contentDescription = chartDescription },
             )
         }
-        LinearProgressIndicator(
-            progress = { segment.share.coerceIn(0f, 1f) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(5.dp)
-                .clip(RoundedCornerShape(999.dp)),
-            color = tokens.colors.accent,
-            trackColor = tokens.colors.borderSubtle,
-        )
+        val legend: @Composable (Modifier) -> Unit = { modifier ->
+            ProfileTasteDonutLegend(
+                slices = slices,
+                otherSegments = otherSegments,
+                othersExpanded = othersExpanded,
+                onToggleOthers = { othersExpanded = !othersExpanded },
+                columns = 2,
+                modifier = modifier,
+            )
+        }
+        if (wide) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(28.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                donut()
+                legend(Modifier.weight(1f))
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
+                donut()
+                legend(Modifier.fillMaxWidth())
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileTasteDonutCanvas(
+    slices: List<ProfileTasteDonutSlice>,
+    topLabel: String?,
+    topShare: Float?,
+    modifier: Modifier = Modifier,
+) {
+    val tokens = MaterialTheme.nuvio
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val strokeWidth = size.minDimension * 0.18f
+            val inset = strokeWidth / 2f
+            val arcSize = androidx.compose.ui.geometry.Size(
+                size.minDimension - strokeWidth,
+                size.minDimension - strokeWidth,
+            )
+            val total = slices.sumOf { it.share.toDouble() }.toFloat().takeIf { it > 0f } ?: return@Canvas
+            val gapDegrees = if (slices.size > 1) 1.6f else 0f
+            var startAngle = -90f
+            slices.forEach { slice ->
+                val sweep = slice.share / total * 360f
+                val drawnSweep = (sweep - gapDegrees).coerceAtLeast(0.5f)
+                drawArc(
+                    color = slice.color,
+                    startAngle = startAngle + gapDegrees / 2f,
+                    sweepAngle = drawnSweep,
+                    useCenter = false,
+                    topLeft = Offset(inset, inset),
+                    size = arcSize,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Butt),
+                )
+                startAngle += sweep
+            }
+        }
+        if (topLabel != null && topShare != null) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(horizontal = 40.dp),
+            ) {
+                Text(
+                    text = topShare.profilePercentLabel(),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = tokens.colors.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                )
+                Text(
+                    text = topLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = tokens.colors.textMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileTasteDonutLegend(
+    slices: List<ProfileTasteDonutSlice>,
+    otherSegments: List<ProfileTasteSegment>,
+    othersExpanded: Boolean,
+    onToggleOthers: () -> Unit,
+    columns: Int,
+    modifier: Modifier = Modifier,
+) {
+    val tokens = MaterialTheme.nuvio
+    Column(
+        modifier = modifier.animateContentSize(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        slices.chunked(columns).forEach { rowSlices ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                rowSlices.forEach { slice ->
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .then(
+                                if (slice.isOthers) Modifier.clickable(onClick = onToggleOthers) else Modifier,
+                            )
+                            .padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(slice.color),
+                        )
+                        Text(
+                            text = if (slice.isOthers) {
+                                "${slice.label} ${if (othersExpanded) "▴" else "▾"}"
+                            } else {
+                                slice.label
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            color = tokens.colors.textPrimary,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            text = slice.share.profilePercentLabel(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = tokens.colors.textMuted,
+                            maxLines = 1,
+                        )
+                    }
+                }
+                repeat(columns - rowSlices.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+        if (othersExpanded && otherSegments.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(tokens.colors.borderSubtle.copy(alpha = 0.35f))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                otherSegments.forEach { segment ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = segment.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = tokens.colors.textMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            text = segment.share.profilePercentLabel(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = tokens.colors.textMuted,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1562,29 +1570,19 @@ private fun ProfileTasteBalanceBar(stats: ProfileInsightsStats) {
                 .background(tokens.colors.borderSubtle),
         ) {
             val movieLeaning = stats.movieShare >= 0.5f
+            val accentBrush = MaterialTheme.themePalette.accentBrush()
+            val mutedBrush = SolidColor(tokens.colors.textMuted.copy(alpha = 0.42f))
             Box(
                 modifier = Modifier
                     .weight(stats.movieShare.coerceIn(0.05f, 0.95f))
                     .fillMaxSize()
-                    .background(
-                        if (movieLeaning) {
-                            tokens.colors.accent
-                        } else {
-                            tokens.colors.textMuted.copy(alpha = 0.42f)
-                        },
-                    ),
+                    .background(if (movieLeaning) accentBrush else mutedBrush),
             )
             Box(
                 modifier = Modifier
                     .weight((1f - stats.movieShare).coerceIn(0.05f, 0.95f))
                     .fillMaxSize()
-                    .background(
-                        if (movieLeaning) {
-                            tokens.colors.textMuted.copy(alpha = 0.42f)
-                        } else {
-                            tokens.colors.accent
-                        },
-                    ),
+                    .background(if (movieLeaning) mutedBrush else accentBrush),
             )
         }
         Row(
@@ -1592,14 +1590,27 @@ private fun ProfileTasteBalanceBar(stats: ProfileInsightsStats) {
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = stringResource(Res.string.home_hero_type_movie),
+                text = stringResource(Res.string.profile_insights_type_movie),
                 style = MaterialTheme.typography.labelSmall,
                 color = tokens.colors.textMuted,
             )
             Text(
-                text = stringResource(Res.string.home_hero_type_series),
+                text = stringResource(Res.string.profile_insights_type_series),
                 style = MaterialTheme.typography.labelSmall,
                 color = tokens.colors.textMuted,
+            )
+        }
+        stats.movieWatchTimeShare?.let { movieTimeShare ->
+            val moviePercent = (movieTimeShare * 100f).roundToInt().coerceIn(0, 100)
+            Text(
+                text = stringResource(
+                    Res.string.profile_insights_type_watch_time_split,
+                    moviePercent,
+                    100 - moviePercent,
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = tokens.colors.textMuted,
+                maxLines = 1,
             )
         }
     }
@@ -1614,8 +1625,8 @@ private fun ProfileTasteDnaChip(
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(tokens.colors.accent.copy(alpha = tokens.opacity.pressed))
-            .border(1.dp, tokens.colors.accent.copy(alpha = 0.22f), RoundedCornerShape(999.dp))
+            .background(MaterialTheme.themePalette.accentBrush(alpha = tokens.opacity.pressed))
+            .border(1.dp, MaterialTheme.themePalette.accentBrush(alpha = 0.22f), RoundedCornerShape(999.dp))
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1623,7 +1634,9 @@ private fun ProfileTasteDnaChip(
         Icon(
             imageVector = Icons.Rounded.AutoAwesome,
             contentDescription = null,
-            modifier = Modifier.size(14.dp),
+            modifier = Modifier
+                .size(14.dp)
+                .gradientMask(MaterialTheme.themePalette.accentBrush()),
             tint = tokens.colors.accent,
         )
         Text(
@@ -1639,25 +1652,101 @@ private fun ProfileTasteDnaChip(
 
 @Composable
 private fun profileInsightDurationLabel(durationMs: Long): String {
-    val minutes = (durationMs / ProfileInsightsMinuteMs).coerceAtLeast(0L)
-    return if (minutes >= 60L) {
-        stringResource(Res.string.profile_insights_hours, ((minutes + 30L) / 60L).toInt())
+    val totalMinutes = (durationMs / ProfileInsightsMinuteMs).coerceAtLeast(0L)
+    if (totalMinutes <= 0L) return stringResource(Res.string.profile_insights_minutes, 0)
+
+    val formatted = if (totalMinutes < 60L) {
+        stringResource(Res.string.profile_insights_minutes, totalMinutes.toInt())
     } else {
-        stringResource(Res.string.profile_insights_minutes, minutes.toInt())
+        val totalHours = (totalMinutes + 30L) / 60L
+        val days = totalHours / 24L
+        val hours = totalHours % 24L
+        when {
+            days > 0L && hours > 0L ->
+                stringResource(Res.string.profile_insights_days_hours, days.toInt(), hours.toInt())
+            days > 0L -> stringResource(Res.string.profile_insights_days, days.toInt())
+            else -> stringResource(Res.string.profile_insights_hours, totalHours.toInt())
+        }
+    }
+    return "~$formatted"
+}
+
+private class ProfileInsightsCore(
+    val profileIndex: Int,
+    private val baseStats: ProfileInsightsStats,
+    val collections: Map<ProfileInsightCollectionKind, ProfileInsightCollection>,
+    private val typeBalance: ProfileTypeBalance,
+    private val libraryGenresByKey: Map<String, List<String>>,
+    private val progressDurationByKey: Map<String, Long>,
+    private val watchedDurationRefs: List<ProfileWatchedDurationRef>,
+    val hydrationRequest: ProfileTitleHydrationRequest,
+) {
+    fun resolveStats(facts: Map<String, ProfileTitleFacts>): ProfileInsightsStats {
+        val watchTime = profileWatchTimeSplit(
+            progressDurationByKey = progressDurationByKey,
+            watchedDurationRefs = watchedDurationRefs,
+            facts = facts,
+        )
+        val segments = buildProfileWatchedTitleGenreSegments(
+            titleKeys = typeBalance.titleKeys,
+            libraryGenresByKey = libraryGenresByKey,
+            facts = facts,
+        )
+        return baseStats.copy(
+            trackedDurationMs = watchTime.totalMs,
+            movieWatchTimeShare = watchTime.movieShare,
+            tasteSegments = segments,
+            topGenre = segments.firstOrNull()?.label,
+        )
     }
 }
 
-private fun buildProfileInsightsStats(
+private data class ProfileTitleHydrationRequest(
+    val seedKeys: List<String>,
+    val genreTitleKeys: List<String>,
+    val genreTargetKeys: List<String>,
+    val fetchTargetKeys: List<String>,
+)
+
+private object ProfileInsightsSnapshotCache {
+    private var core: ProfileInsightsCore? = null
+    private var statsSource: ProfileInsightsCore? = null
+    private var stats: ProfileInsightsStats? = null
+
+    fun coreFor(profileIndex: Int): ProfileInsightsCore? =
+        core?.takeIf { snapshot -> snapshot.profileIndex == profileIndex }
+
+    fun rememberCore(snapshot: ProfileInsightsCore) {
+        core = snapshot
+    }
+
+    fun statsFor(source: ProfileInsightsCore?): ProfileInsightsStats? =
+        stats?.takeIf { source != null && statsSource === source }
+
+    fun rememberStats(source: ProfileInsightsCore, resolved: ProfileInsightsStats) {
+        statsSource = source
+        stats = resolved
+    }
+}
+
+private fun buildProfileInsightsCore(
+    profileIndex: Int,
     watchProgressState: WatchProgressUiState,
     watchedState: WatchedUiState,
     fullyWatchedSeriesKeys: Set<String>,
     libraryState: LibraryUiState,
     todayIsoDate: String,
-): ProfileInsightsStats {
+    continueTitle: String,
+    watchedTitle: String,
+    completedTitle: String,
+    ongoingTitle: String,
+    libraryTitle: String,
+    upcomingTitle: String,
+): ProfileInsightsCore {
     val now = WatchedClock.nowEpochMs()
     val recentCutoff = now - ProfileInsightsRecentWindowMs
     val progressEntries = watchProgressState.entries
-        .filterNot(WatchProgressEntry::isLiveTvProgressEntry)
+        .filter(WatchProgressEntry::isProfileInsightProgressEntry)
         .map(WatchProgressEntry::normalizedCompletion)
         .distinctBy { entry ->
             listOf(
@@ -1668,59 +1757,57 @@ private fun buildProfileInsightsStats(
                 entry.episodeNumber,
             ).joinToString("|")
         }
-    val continueEntries = progressEntries.profileContinueWatchingEntries()
+    val continueEntries = progressEntries.profileInsightContinueWatchingEntries()
     val libraryItems = libraryState.items.filter(LibraryItem::isProfileInsightContent)
     val watchedItems = watchedState.items.filter(WatchedItem::isProfileInsightContent)
-    val completedContentItems = buildProfileCompletedContentItems(
+    val watchedBuckets = buildProfileWatchedContentBuckets(
         watchedItems = watchedItems,
         fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
         libraryItems = libraryItems,
         progressEntries = progressEntries,
     )
+    val completedContentItems = watchedBuckets.completedItems
+    val watchedMovieItems = watchedBuckets.watchedMovieItems
+    val ongoingSeriesItems = watchedBuckets.ongoingSeriesItems
     val normalizedTypes = libraryItems.map { item -> item.type } +
         progressEntries.map { entry -> entry.parentMetaType } +
         watchedItems.map { item -> item.type }
-    val typedCounts = normalizedTypes
-        .mapNotNull(String::profileNormalizedType)
-        .groupingBy { type -> type }
-        .eachCount()
-    val movieCount = typedCounts["movie"] ?: 0
-    val seriesCount = typedCounts["series"] ?: 0
-    val movieSeriesTotal = (movieCount + seriesCount).coerceAtLeast(0)
-    val movieShare = if (movieSeriesTotal > 0) {
-        movieCount.toFloat() / movieSeriesTotal.toFloat()
-    } else {
-        0.5f
-    }
+    val typeBalance = buildProfileTypeBalance(
+        watchedItems = watchedItems,
+        progressEntries = progressEntries,
+        fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+    )
+    val movieSeriesTotal = typeBalance.titleTotal
+    val movieShare = typeBalance.movieShare
+    val libraryGenresByKey = profileLibraryGenresByKey(libraryItems)
+    val lastActivityByTitleKey = profileLastActivityByTitleKey(watchedItems, progressEntries)
+    val watchedDurationRefs = profileWatchedDurationRefs(watchedItems)
+    val trackedTitleKeys = (typeBalance.titleKeys + watchedDurationRefs.map { ref -> ref.titleKey }).distinct()
     val recentActivityCount = profileRecentActivityCount(
         watchedItems = watchedItems,
         progressEntries = progressEntries,
         recentCutoff = recentCutoff,
     )
+    val upcomingLibraryCount = libraryItems.count { item ->
+        item.profileReleaseIsoDate()?.let { releaseDate -> releaseDate >= todayIsoDate } == true
+    }
 
-    return ProfileInsightsStats(
+    val baseStats = ProfileInsightsStats(
         continueCount = continueEntries.size,
+        watchedMovieCount = watchedMovieItems.size,
         completedCount = completedContentItems.size,
+        episodesWatchedCount = watchedItems.profileWatchedEpisodeCount(),
+        ongoingSeriesCount = ongoingSeriesItems.size,
         libraryCount = libraryItems.size,
-        trackedDurationMs = profileTrackedDurationMs(
-            watchedItems = watchedItems,
-            progressEntries = progressEntries,
-        ),
+        // Resolved against title facts in ProfileInsightsCore.resolveStats().
+        trackedDurationMs = 0L,
         recentActivityCount = recentActivityCount,
-        upcomingCount = libraryItems.count { item ->
-            item.profileReleaseIsoDate()?.let { releaseDate -> releaseDate >= todayIsoDate } == true
-        },
-        smartResume = continueEntries
-            .asSequence()
-            .filter { entry -> entry.isResumable && entry.progressFraction in 0.05f..0.92f }
-            .sortedByDescending { entry -> entry.lastUpdatedEpochMs }
-            .map(WatchProgressEntry::toSmartResumeSignal)
-            .firstOrNull(),
-        topGenre = libraryItems.profileTopGenre(),
+        upcomingCount = upcomingLibraryCount,
+        topGenre = null,
         topType = normalizedTypes
             .mapNotNull(String::profileNormalizedType)
             .profileMostCommonValue(),
-        tasteSegments = libraryItems.profileTopGenreSegments(limit = 3),
+        tasteSegments = emptyList(),
         movieShare = movieShare,
         typeBalanceLabel = when {
             movieSeriesTotal == 0 -> ProfileTasteBalanceLabel.Learning
@@ -1731,36 +1818,62 @@ private fun buildProfileInsightsStats(
         dnaChips = buildProfileTasteDnaChips(
             libraryCount = libraryItems.size,
             continueCount = continueEntries.size,
-            completedCount = completedContentItems.size,
+            completedCount = watchedMovieItems.size + completedContentItems.size,
             recentActivityCount = recentActivityCount,
-            upcomingCount = libraryItems.count { item ->
-                item.profileReleaseIsoDate()?.let { releaseDate -> releaseDate >= todayIsoDate } == true
-            },
+            upcomingCount = upcomingLibraryCount,
             movieShare = movieShare,
             movieSeriesTotal = movieSeriesTotal,
+        ),
+    )
+
+    return ProfileInsightsCore(
+        profileIndex = profileIndex,
+        baseStats = baseStats,
+        collections = buildProfileInsightCollections(
+            watchProgressState = watchProgressState,
+            libraryState = libraryState,
+            watchedBuckets = watchedBuckets,
+            continueTitle = continueTitle,
+            watchedTitle = watchedTitle,
+            completedTitle = completedTitle,
+            ongoingTitle = ongoingTitle,
+            libraryTitle = libraryTitle,
+            upcomingTitle = upcomingTitle,
+        ),
+        typeBalance = typeBalance,
+        libraryGenresByKey = libraryGenresByKey,
+        progressDurationByKey = profileProgressDurationByActivityKey(progressEntries),
+        watchedDurationRefs = watchedDurationRefs,
+        hydrationRequest = ProfileTitleHydrationRequest(
+            seedKeys = trackedTitleKeys,
+            genreTitleKeys = typeBalance.titleKeys,
+            genreTargetKeys = typeBalance.titleKeys
+                .filter { key -> key !in libraryGenresByKey }
+                .sortedByDescending { key -> lastActivityByTitleKey[key] ?: 0L },
+            fetchTargetKeys = trackedTitleKeys.sortedByDescending { key -> lastActivityByTitleKey[key] ?: 0L },
         ),
     )
 }
 
 private fun buildProfileInsightCollections(
     watchProgressState: WatchProgressUiState,
-    watchedState: WatchedUiState,
-    fullyWatchedSeriesKeys: Set<String>,
     libraryState: LibraryUiState,
-    todayIsoDate: String,
+    watchedBuckets: ProfileWatchedContentBuckets,
     continueTitle: String,
+    watchedTitle: String,
     completedTitle: String,
+    ongoingTitle: String,
     libraryTitle: String,
     upcomingTitle: String,
 ): Map<ProfileInsightCollectionKind, ProfileInsightCollection> {
     val continueItems = watchProgressState.entries
-        .profileContinueWatchingEntries()
+        .profileInsightContinueWatchingEntries()
         .asSequence()
         .map { entry ->
             ProfileInsightPosterItem(
                 id = "continue:${entry.parentMetaId}:${entry.videoId}",
                 title = entry.title.trim().takeIf { it.isNotBlank() } ?: entry.parentMetaId,
-                subtitle = entry.profileEpisodeLine(),
+                secondaryText = entry.profileEpisodeLine(),
                 imageUrl = entry.poster ?: entry.episodeThumbnail ?: entry.background,
                 lookupType = entry.parentMetaType,
                 lookupId = entry.parentMetaId,
@@ -1768,19 +1881,41 @@ private fun buildProfileInsightCollections(
         }
         .toList()
 
-    val completedItems = buildProfileCompletedContentItems(
-        watchedItems = watchedState.items,
-        fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-        libraryItems = libraryState.items,
-        progressEntries = watchProgressState.entries,
-    )
+    val watchedMovieItems = watchedBuckets.watchedMovieItems
         .asSequence()
-        .sortedByDescending { item -> item.markedAtEpochMs }
+        .map { item ->
+            ProfileInsightPosterItem(
+                id = "watched:${item.kind}:${item.id}",
+                title = item.title,
+                releaseInfo = item.releaseInfo,
+                imageUrl = item.imageUrl,
+                lookupType = item.kind,
+                lookupId = item.id,
+            )
+        }
+        .toList()
+
+    val completedItems = watchedBuckets.completedItems
+        .asSequence()
         .map { item ->
             ProfileInsightPosterItem(
                 id = "completed:${item.kind}:${item.id}",
                 title = item.title,
-                subtitle = item.subtitle,
+                releaseInfo = item.releaseInfo,
+                imageUrl = item.imageUrl,
+                lookupType = item.kind,
+                lookupId = item.id,
+            )
+        }
+        .toList()
+
+    val ongoingItems = watchedBuckets.ongoingSeriesItems
+        .asSequence()
+        .map { item ->
+            ProfileInsightPosterItem(
+                id = "ongoing:${item.kind}:${item.id}",
+                title = item.title,
+                releaseInfo = item.releaseInfo,
                 imageUrl = item.imageUrl,
                 lookupType = item.kind,
                 lookupId = item.id,
@@ -1796,7 +1931,7 @@ private fun buildProfileInsightCollections(
             ProfileInsightPosterItem(
                 id = "library:${item.id}:${item.type}",
                 title = item.name.trim().takeIf { it.isNotBlank() } ?: item.id,
-                subtitle = item.releaseInfo?.trim()?.takeIf { it.isNotBlank() },
+                releaseInfo = item.releaseInfo?.trim()?.takeIf { it.isNotBlank() },
                 imageUrl = item.poster ?: item.banner,
                 lookupType = item.type,
                 lookupId = item.id,
@@ -1804,22 +1939,6 @@ private fun buildProfileInsightCollections(
         }
         .toList()
 
-    val upcomingItems = libraryState.items
-        .asSequence()
-        .filter(LibraryItem::isProfileInsightContent)
-        .filter { item -> item.profileReleaseIsoDate()?.let { releaseDate -> releaseDate >= todayIsoDate } == true }
-        .sortedBy { item -> item.profileReleaseIsoDate().orEmpty() }
-        .map { item ->
-            ProfileInsightPosterItem(
-                id = "upcoming:${item.id}:${item.type}",
-                title = item.name.trim().takeIf { it.isNotBlank() } ?: item.id,
-                subtitle = item.releaseInfo?.trim()?.takeIf { it.isNotBlank() },
-                imageUrl = item.poster ?: item.banner,
-                lookupType = item.type,
-                lookupId = item.id,
-            )
-        }
-        .toList()
 
     return mapOf(
         ProfileInsightCollectionKind.Continue to ProfileInsightCollection(
@@ -1827,10 +1946,20 @@ private fun buildProfileInsightCollections(
             subtitle = "",
             items = continueItems,
         ),
+        ProfileInsightCollectionKind.Watched to ProfileInsightCollection(
+            title = watchedTitle,
+            subtitle = "",
+            items = watchedMovieItems,
+        ),
         ProfileInsightCollectionKind.Completed to ProfileInsightCollection(
             title = completedTitle,
             subtitle = "",
             items = completedItems,
+        ),
+        ProfileInsightCollectionKind.Ongoing to ProfileInsightCollection(
+            title = ongoingTitle,
+            subtitle = "",
+            items = ongoingItems,
         ),
         ProfileInsightCollectionKind.Library to ProfileInsightCollection(
             title = libraryTitle,
@@ -1840,7 +1969,7 @@ private fun buildProfileInsightCollections(
         ProfileInsightCollectionKind.Upcoming to ProfileInsightCollection(
             title = upcomingTitle,
             subtitle = "",
-            items = upcomingItems,
+            items = emptyList(),
         ),
     )
 }
@@ -1848,12 +1977,14 @@ private fun buildProfileInsightCollections(
 private fun emptyProfileInsightsStats(): ProfileInsightsStats =
     ProfileInsightsStats(
         continueCount = 0,
+        watchedMovieCount = 0,
         completedCount = 0,
+        episodesWatchedCount = 0,
+        ongoingSeriesCount = 0,
         libraryCount = 0,
         trackedDurationMs = 0L,
         recentActivityCount = 0,
         upcomingCount = 0,
-        smartResume = null,
         topGenre = null,
         topType = null,
         tasteSegments = emptyList(),
@@ -1864,7 +1995,9 @@ private fun emptyProfileInsightsStats(): ProfileInsightsStats =
 
 private fun emptyProfileInsightCollections(
     continueTitle: String,
+    watchedTitle: String,
     completedTitle: String,
+    ongoingTitle: String,
     libraryTitle: String,
     upcomingTitle: String,
 ): Map<ProfileInsightCollectionKind, ProfileInsightCollection> =
@@ -1874,8 +2007,18 @@ private fun emptyProfileInsightCollections(
             subtitle = "",
             items = emptyList(),
         ),
+        ProfileInsightCollectionKind.Watched to ProfileInsightCollection(
+            title = watchedTitle,
+            subtitle = "",
+            items = emptyList(),
+        ),
         ProfileInsightCollectionKind.Completed to ProfileInsightCollection(
             title = completedTitle,
+            subtitle = "",
+            items = emptyList(),
+        ),
+        ProfileInsightCollectionKind.Ongoing to ProfileInsightCollection(
+            title = ongoingTitle,
             subtitle = "",
             items = emptyList(),
         ),
@@ -1891,12 +2034,18 @@ private fun emptyProfileInsightCollections(
         ),
     )
 
-private fun buildProfileCompletedContentItems(
+private data class ProfileWatchedContentBuckets(
+    val watchedMovieItems: List<ProfileCompletedContentItem>,
+    val completedItems: List<ProfileCompletedContentItem>,
+    val ongoingSeriesItems: List<ProfileCompletedContentItem>,
+)
+
+private fun buildProfileWatchedContentBuckets(
     watchedItems: List<WatchedItem>,
     fullyWatchedSeriesKeys: Set<String>,
     libraryItems: List<LibraryItem>,
     progressEntries: List<WatchProgressEntry> = emptyList(),
-): List<ProfileCompletedContentItem> {
+): ProfileWatchedContentBuckets {
     val libraryByContentKey = libraryItems
         .mapNotNull { item ->
             val kind = item.type.profileCompletedContentKind() ?: return@mapNotNull null
@@ -1905,7 +2054,7 @@ private fun buildProfileCompletedContentItems(
         }
         .toMap()
     val progressByContentKey = progressEntries
-        .filterNot(WatchProgressEntry::isLiveTvProgressEntry)
+        .filter(WatchProgressEntry::isProfileInsightProgressEntry)
         .map(WatchProgressEntry::normalizedCompletion)
         .mapNotNull { entry ->
             val kind = entry.parentMetaType.profileCompletedContentKind() ?: return@mapNotNull null
@@ -1936,22 +2085,24 @@ private fun buildProfileCompletedContentItems(
                     ?: libraryItem?.name?.trim()?.takeIf { it.isNotBlank() }
                     ?: progressItem?.title?.trim()?.takeIf { it.isNotBlank() }
                     ?: item.id,
-                subtitle = item.releaseInfo?.trim()?.takeIf { it.isNotBlank() }
+                releaseInfo = item.releaseInfo?.trim()?.takeIf { it.isNotBlank() }
                     ?: libraryItem?.releaseInfo?.trim()?.takeIf { it.isNotBlank() },
                 imageUrl = item.poster
                     ?: libraryItem?.poster
                     ?: libraryItem?.banner
-                    ?: progressItem?.profileArtworkUrl()
-                    ?: profileCachedArtworkUrl("movie", item.id),
+                    ?: progressItem?.profileArtworkUrl(),
                 markedAtEpochMs = item.markedAtEpochMs,
             )
         }
 
-    val seriesItems = eligibleItems
+    val completedSeriesItems = mutableListOf<ProfileCompletedContentItem>()
+    val ongoingSeriesItems = mutableListOf<ProfileCompletedContentItem>()
+
+    eligibleItems
         .asSequence()
         .filter { item -> item.type.profileCompletedContentKind() == "series" }
         .groupBy { item -> "series:${item.id}" }
-        .mapNotNull { (key, group) ->
+        .forEach { (key, group) ->
             val topLevelMarker = group
                 .filterNot { item -> item.season != null || item.episode != null }
                 .maxByOrNull(WatchedItem::markedAtEpochMs)
@@ -1959,43 +2110,90 @@ private fun buildProfileCompletedContentItems(
                 !topLevelMarker.type.equals("tv", ignoreCase = true)
             val hasFullyWatchedMarker = hasTopLevelSeriesMarker ||
                 group.any { item -> watchedItemKey(item.type, item.id) in fullyWatchedSeriesKeys }
-            if (!hasFullyWatchedMarker) return@mapNotNull null
-
-            val representative = topLevelMarker ?: group.maxByOrNull(WatchedItem::markedAtEpochMs)
-                ?: return@mapNotNull null
             val libraryItem = libraryByContentKey[key]
             val progressItem = progressByContentKey[key]
-            ProfileCompletedContentItem(
-                id = representative.id,
-                kind = "series",
-                title = topLevelMarker?.name?.trim()?.takeIf { it.isNotBlank() }
-                    ?: libraryItem?.name?.trim()?.takeIf { it.isNotBlank() }
-                    ?: progressItem?.title?.trim()?.takeIf { it.isNotBlank() }
-                    ?: representative.name.trim().takeIf { it.isNotBlank() }
-                    ?: representative.id,
-                subtitle = topLevelMarker?.releaseInfo?.trim()?.takeIf { it.isNotBlank() }
-                    ?: libraryItem?.releaseInfo?.trim()?.takeIf { it.isNotBlank() }
-                    ?: representative.releaseInfo?.trim()?.takeIf { it.isNotBlank() },
-                imageUrl = topLevelMarker?.poster
-                    ?: libraryItem?.poster
-                    ?: libraryItem?.banner
-                    ?: progressItem?.profileArtworkUrl()
-                    ?: representative.poster
-                    ?: profileCachedArtworkUrl("series", representative.id),
-                markedAtEpochMs = group.maxOf { item -> item.markedAtEpochMs },
-            )
+
+            if (hasFullyWatchedMarker) {
+                val representative = topLevelMarker ?: group.maxByOrNull(WatchedItem::markedAtEpochMs)
+                    ?: return@forEach
+                completedSeriesItems += ProfileCompletedContentItem(
+                    id = representative.id,
+                    kind = "series",
+                    title = topLevelMarker?.name?.trim()?.takeIf { it.isNotBlank() }
+                        ?: libraryItem?.name?.trim()?.takeIf { it.isNotBlank() }
+                        ?: progressItem?.title?.trim()?.takeIf { it.isNotBlank() }
+                        ?: representative.name.trim().takeIf { it.isNotBlank() }
+                        ?: representative.id,
+                    releaseInfo = topLevelMarker?.releaseInfo?.trim()?.takeIf { it.isNotBlank() }
+                        ?: libraryItem?.releaseInfo?.trim()?.takeIf { it.isNotBlank() }
+                        ?: representative.releaseInfo?.trim()?.takeIf { it.isNotBlank() },
+                    imageUrl = topLevelMarker?.poster
+                        ?: libraryItem?.poster
+                        ?: libraryItem?.banner
+                        ?: progressItem?.profileArtworkUrl()
+                        ?: representative.poster,
+                    markedAtEpochMs = group.maxOf { item -> item.markedAtEpochMs },
+                )
+            } else {
+                val hasEpisodeActivity = group.any { item -> item.season != null && item.episode != null }
+                if (!hasEpisodeActivity) return@forEach
+                val representative = group.maxByOrNull(WatchedItem::markedAtEpochMs) ?: return@forEach
+                ongoingSeriesItems += ProfileCompletedContentItem(
+                    id = representative.id,
+                    kind = "series",
+                    title = libraryItem?.name?.trim()?.takeIf { it.isNotBlank() }
+                        ?: progressItem?.title?.trim()?.takeIf { it.isNotBlank() }
+                        ?: representative.name.trim().takeIf { it.isNotBlank() }
+                        ?: representative.id,
+                    releaseInfo = libraryItem?.releaseInfo?.trim()?.takeIf { it.isNotBlank() }
+                        ?: representative.releaseInfo?.trim()?.takeIf { it.isNotBlank() },
+                    imageUrl = libraryItem?.poster
+                        ?: libraryItem?.banner
+                        ?: progressItem?.profileArtworkUrl()
+                        ?: representative.poster,
+                    markedAtEpochMs = group.maxOf { item -> item.markedAtEpochMs },
+                )
+            }
         }
 
-    return (movieItems + seriesItems).sortedByDescending(ProfileCompletedContentItem::markedAtEpochMs)
-}
-
-private fun WatchProgressEntry.toSmartResumeSignal(): SmartResumeSignal =
-    SmartResumeSignal(
-        title = title.trim().takeIf { it.isNotBlank() } ?: parentMetaId,
-        subtitle = profileEpisodeLine(),
-        imageUrl = episodeThumbnail ?: background ?: poster,
-        progressFraction = progressFraction,
+    return ProfileWatchedContentBuckets(
+        watchedMovieItems = movieItems.sortedByDescending(ProfileCompletedContentItem::markedAtEpochMs),
+        completedItems = completedSeriesItems.sortedByDescending(ProfileCompletedContentItem::markedAtEpochMs),
+        ongoingSeriesItems = ongoingSeriesItems.sortedByDescending(ProfileCompletedContentItem::markedAtEpochMs),
     )
+}
+private fun List<WatchedItem>.profileWatchedEpisodeCount(): Int =
+    asSequence()
+        .filter { item -> item.type.profileCompletedContentKind() == "series" }
+        .filter { item -> item.season != null && item.episode != null }
+        .map { item -> Triple(item.id, item.season, item.episode) }
+        .distinct()
+        .count()
+
+private fun WatchProgressEntry.isProfileInsightProgressEntry(): Boolean =
+    parentMetaType.profileCompletedContentKind() != null &&
+        !parentMetaId.isLikelyProfileLiveTvValue() &&
+        !title.isLikelyProfileLiveTvValue()
+
+private fun List<WatchProgressEntry>.profileInsightContinueWatchingEntries(): List<WatchProgressEntry> =
+    asSequence()
+        .filter(WatchProgressEntry::isProfileInsightProgressEntry)
+        .map(WatchProgressEntry::normalizedCompletion)
+        .filterNot(WatchProgressEntry::isEffectivelyCompleted)
+        .filter { entry ->
+            entry.lastPositionMs > 0L || (entry.normalizedProgressPercent ?: 0f) > 0f
+        }
+        .distinctBy { entry ->
+            listOf(
+                entry.parentMetaType,
+                entry.parentMetaId,
+                entry.videoId,
+                entry.seasonNumber,
+                entry.episodeNumber,
+            ).joinToString("|")
+        }
+        .sortedByDescending(WatchProgressEntry::lastUpdatedEpochMs)
+        .toList()
 
 private fun WatchProgressEntry.profileEpisodeLine(): String? {
     val episodeCode = if (seasonNumber != null && episodeNumber != null) {
@@ -2013,35 +2211,165 @@ private fun WatchProgressEntry.profileEpisodeLine(): String? {
 }
 
 private fun WatchProgressEntry.profileTrackedDurationMs(): Long {
-    if (durationMs <= 0L) return lastPositionMs.coerceAtLeast(0L)
-    if (isEffectivelyCompleted) return durationMs
-    if (lastPositionMs > 0L) return lastPositionMs.coerceIn(0L, durationMs)
+    val effectiveDurationMs = if (durationMs > 0L) {
+        durationMs
+    } else {
+        profileFallbackDurationMs(
+            kind = parentMetaType.profileCompletedContentKind(),
+            isEpisode = isEpisode,
+        )
+    }
+    if (effectiveDurationMs <= 0L) return lastPositionMs.coerceAtLeast(0L)
+    if (isEffectivelyCompleted) return effectiveDurationMs
+    if (lastPositionMs > 0L) return lastPositionMs.coerceIn(0L, effectiveDurationMs)
     val explicitPercent = normalizedProgressPercent ?: return 0L
-    return (durationMs * (explicitPercent / 100f)).toLong().coerceIn(0L, durationMs)
+    return (effectiveDurationMs * (explicitPercent / 100f)).toLong().coerceIn(0L, effectiveDurationMs)
 }
 
-private fun profileTrackedDurationMs(
+private fun profileProgressDurationByActivityKey(
+    progressEntries: List<WatchProgressEntry>,
+): Map<String, Long> {
+    val durationByKey = HashMap<String, Long>()
+    progressEntries.forEach { entry ->
+        val key = entry.profileActivityKey() ?: return@forEach
+        val durationMs = entry.profileTrackedDurationMs()
+        if (durationMs > (durationByKey[key] ?: 0L)) durationByKey[key] = durationMs
+    }
+    return durationByKey
+}
+
+private class ProfileWatchedDurationRef(
+    val activityKey: String,
+    val titleKey: String,
+    val isMovie: Boolean,
+    val season: Int?,
+    val episode: Int?,
+)
+
+private fun profileWatchedDurationRefs(watchedItems: List<WatchedItem>): List<ProfileWatchedDurationRef> {
+    val seenKeys = HashSet<String>()
+    return watchedItems.mapNotNull { item ->
+        val activityKey = item.profileActivityKey() ?: return@mapNotNull null
+        if (!seenKeys.add(activityKey)) return@mapNotNull null
+        val kind = item.type.profileCompletedContentKind() ?: return@mapNotNull null
+        ProfileWatchedDurationRef(
+            activityKey = activityKey,
+            titleKey = "$kind:${item.id.trim()}",
+            isMovie = kind == "movie",
+            season = item.season,
+            episode = item.episode,
+        )
+    }
+}
+
+private fun ProfileWatchedDurationRef.estimatedDurationMs(facts: ProfileTitleFacts?): Long {
+    val minutes = when {
+        isMovie && season == null && episode == null ->
+            facts?.runtimeMinutes?.toLong() ?: ProfileInsightsFallbackMovieMinutes
+        !isMovie && season != null && episode != null ->
+            facts?.episodeRuntimeMinutes?.get(profileEpisodeKey(season, episode))?.toLong()
+                ?: ProfileInsightsFallbackEpisodeMinutes
+        else -> return 0L
+    }
+    return minutes * ProfileInsightsMinuteMs
+}
+
+private class ProfileWatchTimeSplit(
+    val movieMs: Long,
+    val seriesMs: Long,
+) {
+    val totalMs: Long get() = movieMs + seriesMs
+
+    val movieShare: Float?
+        get() = if (totalMs > 0L) movieMs.toFloat() / totalMs.toFloat() else null
+}
+
+private fun profileWatchTimeSplit(
+    progressDurationByKey: Map<String, Long>,
+    watchedDurationRefs: List<ProfileWatchedDurationRef>,
+    facts: Map<String, ProfileTitleFacts>,
+): ProfileWatchTimeSplit {
+    val durationByKey = HashMap(progressDurationByKey)
+    watchedDurationRefs.forEach { ref ->
+        val durationMs = ref.estimatedDurationMs(facts[ref.titleKey])
+        if (durationMs > (durationByKey[ref.activityKey] ?: 0L)) durationByKey[ref.activityKey] = durationMs
+    }
+    var movieMs = 0L
+    var seriesMs = 0L
+    durationByKey.forEach { (key, durationMs) ->
+        when (key.substringBefore(':')) {
+            "movie" -> movieMs += durationMs
+            "series" -> seriesMs += durationMs
+        }
+    }
+    return ProfileWatchTimeSplit(movieMs = movieMs, seriesMs = seriesMs)
+}
+
+private fun buildProfileTypeBalance(
     watchedItems: List<WatchedItem>,
     progressEntries: List<WatchProgressEntry>,
-): Long {
-    val progressDurationByKey = progressEntries
-        .asSequence()
-        .mapNotNull { entry ->
-            entry.profileTrackableActivityKey()?.let { key -> key to entry.profileTrackedDurationMs() }
-        }
-        .groupBy({ it.first }, { it.second })
-        .mapValues { (_, durations) -> durations.maxOrNull() ?: 0L }
+    fullyWatchedSeriesKeys: Set<String>,
+): ProfileTypeBalance {
+    val watchedMovieIds = mutableSetOf<String>()
+    val completedSeriesIds = mutableSetOf<String>()
+    val engagedEpisodesBySeries = mutableMapOf<String, MutableSet<String>>()
 
-    val watchedDurationByKey = watchedItems
-        .asSequence()
-        .mapNotNull { item ->
-            item.profileTrackableActivityKey()?.let { key -> key to item.profileCachedWatchedDurationMs() }
+    watchedItems.forEach { item ->
+        val id = item.id.trim().takeIf { it.isNotBlank() } ?: return@forEach
+        when (item.type.profileCompletedContentKind()) {
+            "movie" -> if (item.season == null && item.episode == null) watchedMovieIds += id
+            "series" -> {
+                if (item.season != null && item.episode != null) {
+                    engagedEpisodesBySeries.getOrPut(id) { mutableSetOf() } += "${item.season}:${item.episode}"
+                } else if (!item.type.equals("tv", ignoreCase = true)) {
+                    completedSeriesIds += id
+                }
+                if (watchedItemKey(item.type, item.id) in fullyWatchedSeriesKeys) {
+                    completedSeriesIds += id
+                }
+            }
         }
-        .filter { (key, duration) -> duration > 0L && key !in progressDurationByKey }
-        .groupBy({ it.first }, { it.second })
-        .mapValues { (_, durations) -> durations.maxOrNull() ?: 0L }
+    }
+    progressEntries.forEach { entry ->
+        val id = entry.parentMetaId.trim().takeIf { it.isNotBlank() } ?: return@forEach
+        when (entry.parentMetaType.profileCompletedContentKind()) {
+            "movie" -> if (entry.isEffectivelyCompleted) watchedMovieIds += id
+            "series" -> {
+                val season = entry.seasonNumber
+                val episode = entry.episodeNumber
+                if (season != null && episode != null && entry.profileTrackedDurationMs() > 0L) {
+                    engagedEpisodesBySeries.getOrPut(id) { mutableSetOf() } += "$season:$episode"
+                }
+            }
+        }
+    }
 
-    return progressDurationByKey.values.sum() + watchedDurationByKey.values.sum()
+    val engagedSeriesIds = completedSeriesIds + engagedEpisodesBySeries
+        .filterValues { episodes -> episodes.size >= PROFILE_SERIES_MIN_ENGAGED_EPISODES }
+        .keys
+
+    return ProfileTypeBalance(
+        movieTitleIds = watchedMovieIds.toSet(),
+        seriesTitleIds = engagedSeriesIds.toSet(),
+    )
+}
+
+private const val PROFILE_SERIES_MIN_ENGAGED_EPISODES = 2
+
+private data class ProfileTypeBalance(
+    val movieTitleIds: Set<String>,
+    val seriesTitleIds: Set<String>,
+) {
+    val movieTitleCount: Int get() = movieTitleIds.size
+    val seriesTitleCount: Int get() = seriesTitleIds.size
+
+    val titleTotal: Int get() = movieTitleCount + seriesTitleCount
+
+    val movieShare: Float
+        get() = if (titleTotal > 0) movieTitleCount.toFloat() / titleTotal.toFloat() else 0.5f
+
+    val titleKeys: List<String> =
+        movieTitleIds.map { id -> "movie:$id" } + seriesTitleIds.map { id -> "series:$id" }
 }
 
 private fun WatchProgressEntry.profileArtworkUrl(): String? =
@@ -2049,32 +2377,30 @@ private fun WatchProgressEntry.profileArtworkUrl(): String? =
         ?: background?.takeIf { it.isNotBlank() }
         ?: episodeThumbnail?.takeIf { it.isNotBlank() }
 
-private suspend fun profileFetchArtworkUrl(type: String?, id: String?): String? {
-    for ((lookupType, lookupId) in profileMetaLookupCandidates(type, id)) {
-        profileCachedArtworkUrl(lookupType, lookupId)?.let { return it }
+private suspend fun profileFetchPosterMetadata(type: String?, id: String?): Pair<String?, String?> {
+    var artwork: String? = null
+    var releaseInfo: String? = null
 
-        val hydratedMeta = runCatching {
-            MetaDetailsRepository.fetch(type = lookupType, id = lookupId)
-        }.onFailure { error ->
-            profileInsightsLog.w(error) {
-                "Failed to hydrate profile poster for $lookupType/$lookupId"
+    for ((lookupType, lookupId) in profileMetaLookupCandidates(type, id)) {
+        val meta = MetaDetailsRepository.peek(type = lookupType, id = lookupId)
+            ?: runCatching {
+                MetaDetailsRepository.fetch(type = lookupType, id = lookupId)
+            }.onFailure { error ->
+                profileInsightsLog.w(error) {
+                    "Failed to hydrate profile metadata for $lookupType/$lookupId"
+                }
+            }.getOrNull()
+
+        if (meta != null) {
+            artwork = artwork ?: meta.profileMetaArtworkUrl()
+            releaseInfo = releaseInfo ?: meta.releaseInfo?.trim()?.takeIf { it.isNotBlank() }
+            if (artwork != null && releaseInfo != null) {
+                return artwork to releaseInfo
             }
-        }.getOrNull()
-
-        hydratedMeta.profileMetaArtworkUrl()?.let { return it }
+        }
     }
 
-    return null
-}
-
-private fun profileCachedArtworkUrl(type: String?, id: String?): String? {
-    for ((lookupType, lookupId) in profileMetaLookupCandidates(type, id)) {
-        MetaDetailsRepository.peek(type = lookupType, id = lookupId)
-            .profileMetaArtworkUrl()
-            ?.let { return it }
-    }
-
-    return null
+    return artwork to releaseInfo
 }
 
 private fun MetaDetails?.profileMetaArtworkUrl(): String? =
@@ -2136,10 +2462,6 @@ private fun WatchProgressEntry.profileActivityKey(): String? {
     return "$kind:$contentId:${seasonNumber ?: -1}:${episodeNumber ?: -1}"
 }
 
-private fun WatchedItem.profileTrackableActivityKey(): String? = profileActivityKey()
-
-private fun WatchProgressEntry.profileTrackableActivityKey(): String? = profileActivityKey()
-
 private fun WatchedItem.isProfileTrackableActivity(): Boolean {
     val kind = type.profileCompletedContentKind() ?: return false
     return kind == "movie" || (kind == "series" && season != null && episode != null)
@@ -2150,18 +2472,11 @@ private fun WatchProgressEntry.isProfileTrackableActivity(): Boolean {
     return kind == "movie" || (kind == "series" && seasonNumber != null && episodeNumber != null)
 }
 
-private fun WatchedItem.profileCachedWatchedDurationMs(): Long {
-    val kind = type.profileCompletedContentKind() ?: return 0L
-    val meta = profileCachedMeta(type, id) ?: return 0L
-    val minutes = when {
-        kind == "movie" && season == null && episode == null -> profileParseRuntimeMinutes(meta.runtime)
-        kind == "series" && season != null && episode != null -> meta.videos
-            .firstOrNull { video -> video.season == season && video.episode == episode }
-            ?.runtime
-            ?.takeIf { runtime -> runtime > 0 }
-        else -> null
-    } ?: return 0L
-    return minutes.toLong() * ProfileInsightsMinuteMs
+private fun profileFallbackDurationMs(kind: String?, isEpisode: Boolean): Long = when {
+    kind == null -> 0L
+    kind == "movie" && !isEpisode -> ProfileInsightsFallbackMovieMinutes * ProfileInsightsMinuteMs
+    kind == "series" && isEpisode -> ProfileInsightsFallbackEpisodeMinutes * ProfileInsightsMinuteMs
+    else -> 0L
 }
 
 private fun profileCachedMeta(type: String?, id: String?): MetaDetails? {
@@ -2193,34 +2508,663 @@ private fun profileParseRuntimeMinutes(value: String?): Int? {
         ?.coerceAtLeast(0)
 }
 
-private fun List<LibraryItem>.profileTopGenre(): String? =
-    asSequence()
-        .flatMap { item -> item.genres.asSequence() }
-        .map { genre -> genre.trim() }
-        .filter { genre -> genre.isNotBlank() }
-        .groupingBy { genre -> genre }
-        .eachCount()
-        .maxByOrNull { (_, count) -> count }
-        ?.key
+private fun profileLastActivityByTitleKey(
+    watchedItems: List<WatchedItem>,
+    progressEntries: List<WatchProgressEntry>,
+): Map<String, Long> {
+    val lastActivity = HashMap<String, Long>()
+    fun record(kind: String?, id: String, epochMs: Long) {
+        val cleanKind = kind ?: return
+        val key = "$cleanKind:${id.trim()}"
+        if (epochMs > (lastActivity[key] ?: Long.MIN_VALUE)) lastActivity[key] = epochMs
+    }
+    watchedItems.forEach { item -> record(item.type.profileCompletedContentKind(), item.id, item.markedAtEpochMs) }
+    progressEntries.forEach { entry ->
+        record(entry.parentMetaType.profileCompletedContentKind(), entry.parentMetaId, entry.lastUpdatedEpochMs)
+    }
+    return lastActivity
+}
 
-private fun List<LibraryItem>.profileTopGenreSegments(limit: Int): List<ProfileTasteSegment> {
-    val counts = asSequence()
-        .flatMap { item -> item.genres.asSequence() }
+private fun profileLibraryGenresByKey(libraryItems: List<LibraryItem>): Map<String, List<String>> =
+    libraryItems
+        .mapNotNull { item ->
+            val kind = item.type.profileCompletedContentKind() ?: return@mapNotNull null
+            val genres = item.genres.profileCleanGenres()
+            if (genres.isEmpty()) null else "$kind:${item.id.trim()}" to genres
+        }
+        .toMap()
+
+private fun buildProfileWatchedTitleGenreSegments(
+    titleKeys: List<String>,
+    libraryGenresByKey: Map<String, List<String>>,
+    facts: Map<String, ProfileTitleFacts>,
+): List<ProfileTasteSegment> {
+    val counts = HashMap<String, Int>()
+    titleKeys.forEach { key ->
+        val genres = libraryGenresByKey[key]
+            ?: facts[key]?.genres?.takeIf { it.isNotEmpty() }
+            ?: return@forEach
+        genres.forEach { genre -> counts[genre] = (counts[genre] ?: 0) + 1 }
+    }
+
+    val total = counts.values.sum().coerceAtLeast(1)
+    return counts.toList()
+        .sortedByDescending { (_, count) -> count }
+        .map { (genre, count) ->
+            ProfileTasteSegment(label = genre, share = count.toFloat() / total.toFloat())
+        }
+}
+
+// Addons and TMDB name genres differently ("Sci-Fi" vs "Science Fiction", TV-only combined
+// genres such as "Action & Adventure"). Normalize so every device and source counts alike.
+private val profileGenreAliases = mapOf(
+    "sci-fi" to "Science Fiction",
+    "sci fi" to "Science Fiction",
+    "scifi" to "Science Fiction",
+    "science-fiction" to "Science Fiction",
+    "science fiction" to "Science Fiction",
+)
+
+private fun List<String>.profileCleanGenres(): List<String> =
+    flatMap { genre -> genre.split('&') }
         .map { genre -> genre.trim() }
         .filter { genre -> genre.isNotBlank() }
-        .groupingBy { genre -> genre }
-        .eachCount()
-        .toList()
-        .sortedByDescending { (_, count) -> count }
-    val total = counts.sumOf { (_, count) -> count }.coerceAtLeast(1)
-    return counts
-        .take(limit)
-        .map { (genre, count) ->
-            ProfileTasteSegment(
-                label = genre,
-                share = count.toFloat() / total.toFloat(),
-            )
+        .map { genre -> profileGenreAliases[genre.lowercase()] ?: genre }
+        .distinctBy { genre -> genre.lowercase() }
+
+private class ProfileTitleFacts(
+    val genres: List<String>,
+    val runtimeMinutes: Int?,
+    val episodeRuntimeMinutes: Map<Long, Int>,
+    val resolvedAtEpochMs: Long,
+    // Seeded from the shared meta cache: runtimes only. Its genres may be TMDB-enriched or
+    // localized, so it is still fetched from the addon to keep genres consistent across devices.
+    val partial: Boolean = false,
+)
+
+private fun profileEpisodeKey(season: Int, episode: Int): Long =
+    (season.toLong() shl 32) or (episode.toLong() and 0xFFFFFFFFL)
+
+private fun profileEpisodeKeySeason(key: Long): Int = (key shr 32).toInt()
+
+private fun profileEpisodeKeyEpisode(key: Long): Int = key.toInt()
+
+private fun MetaDetails.toProfileTitleFacts(
+    resolvedAtEpochMs: Long,
+    partial: Boolean = false,
+): ProfileTitleFacts =
+    ProfileTitleFacts(
+        genres = if (partial) emptyList() else genres.profileCleanGenres(),
+        runtimeMinutes = profileParseRuntimeMinutes(runtime)?.takeIf { minutes -> minutes > 0 },
+        episodeRuntimeMinutes = buildMap {
+            videos.forEach { video ->
+                val season = video.season ?: return@forEach
+                val episode = video.episode ?: return@forEach
+                val minutes = video.runtime?.takeIf { it > 0 } ?: return@forEach
+                val key = profileEpisodeKey(season, episode)
+                if (key !in this) put(key, minutes)
+            }
+        },
+        resolvedAtEpochMs = resolvedAtEpochMs,
+        partial = partial,
+    )
+
+private fun String.profileSplitTitleKey(): Pair<String, String>? {
+    val kind = substringBefore(':', missingDelimiterValue = "").takeIf { it.isNotBlank() } ?: return null
+    val id = substringAfter(':', missingDelimiterValue = "").takeIf { it.isNotBlank() } ?: return null
+    return kind to id
+}
+
+@Serializable
+private data class StoredProfileTitleFacts(
+    @SerialName("v") val version: Int = PROFILE_TITLE_FACTS_STORAGE_VERSION,
+    @SerialName("t") val titles: Map<String, StoredProfileTitle> = emptyMap(),
+    @SerialName("f") val failures: Map<String, Long> = emptyMap(),
+    @SerialName("u") val refreshedAtByProfile: Map<String, Long> = emptyMap(),
+    @SerialName("s") val fullSnapshotAtByProfile: Map<String, Long> = emptyMap(),
+)
+
+@Serializable
+private data class StoredProfileTitle(
+    @SerialName("g") val genres: List<String> = emptyList(),
+    @SerialName("r") val runtimeMinutes: Int? = null,
+    @SerialName("e") val episodeRuntimes: List<Int> = emptyList(),
+    @SerialName("a") val resolvedAtEpochMs: Long = 0L,
+    @SerialName("p") val partial: Boolean = false,
+)
+
+private const val PROFILE_TITLE_FACTS_STORAGE_VERSION = 1
+
+private fun ProfileTitleFacts.toStored(): StoredProfileTitle =
+    StoredProfileTitle(
+        genres = genres,
+        runtimeMinutes = runtimeMinutes,
+        episodeRuntimes = buildList(episodeRuntimeMinutes.size * 3) {
+            episodeRuntimeMinutes.forEach { (key, minutes) ->
+                add(profileEpisodeKeySeason(key))
+                add(profileEpisodeKeyEpisode(key))
+                add(minutes)
+            }
+        },
+        resolvedAtEpochMs = resolvedAtEpochMs,
+        partial = partial,
+    )
+
+private fun StoredProfileTitle.toFacts(): ProfileTitleFacts =
+    ProfileTitleFacts(
+        genres = genres.profileCleanGenres(),
+        runtimeMinutes = runtimeMinutes,
+        episodeRuntimeMinutes = buildMap {
+            var index = 0
+            while (index + 2 < episodeRuntimes.size) {
+                put(profileEpisodeKey(episodeRuntimes[index], episodeRuntimes[index + 1]), episodeRuntimes[index + 2])
+                index += 3
+            }
+        },
+        resolvedAtEpochMs = resolvedAtEpochMs,
+        partial = partial,
+    )
+
+private object ProfileTitleFactsStore {
+    private const val FETCH_CONCURRENCY = 4
+    private const val PUBLISH_BATCH_SIZE = 8
+    private const val SEED_YIELD_INTERVAL = 48
+    private const val SAVE_DEBOUNCE_MS = 1_500L
+
+    private const val FACTS_MAX_AGE_MS = 30L * 24L * 60L * 60L * 1000L
+
+    private const val FAILURE_RETRY_AFTER_MS = 3L * 24L * 60L * 60L * 1000L
+
+    private val json = Json { ignoreUnknownKeys = true }
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    private const val FETCH_BUDGET_PER_WINDOW = 150
+    private const val FETCH_BUDGET_WINDOW_MS = 60L * 60_000L
+    private var budgetWindowStartedAtEpochMs = 0L
+    private var fetchesInWindow = 0
+    private var pausedUntilEpochMs = 0L
+    private var lastRequest: ProfileTitleHydrationRequest? = null
+    private var resumeJob: Job? = null
+    private val fullSnapshotAtByProfile = mutableMapOf<Int, Long>()
+
+    private val _facts = MutableStateFlow<Map<String, ProfileTitleFacts>>(emptyMap())
+    val facts: StateFlow<Map<String, ProfileTitleFacts>> = _facts.asStateFlow()
+
+    private val failures = mutableMapOf<String, Long>()
+    private val _failedKeys = MutableStateFlow<Set<String>>(emptySet())
+    val failedKeys: StateFlow<Set<String>> = _failedKeys.asStateFlow()
+
+    private val _refreshedAtByProfile = MutableStateFlow<Map<Int, Long>>(emptyMap())
+    val refreshedAtByProfile: StateFlow<Map<Int, Long>> = _refreshedAtByProfile.asStateFlow()
+
+    private val attemptedFetchKeys = mutableSetOf<String>()
+
+    private var loaded = false
+    private var loading: Deferred<StoredProfileTitleFacts?>? = null
+    private var saveJob: Job? = null
+
+    suspend fun ensureLoaded() {
+        if (loaded) return
+        val job = loading ?: ioScope.async { readFromDisk() }.also { loading = it }
+        val stored = job.await()
+        if (loaded) return
+        loaded = true
+        loading = null
+        if (stored == null) return
+        val restored = stored.titles.mapValues { (_, title) -> title.toFacts() }
+        _facts.value = restored + _facts.value
+        stored.failures.forEach { (key, failedAt) ->
+            if (key !in failures) failures[key] = failedAt
         }
+        syncFailedKeys()
+        val restoredRefreshes = stored.refreshedAtByProfile.mapNotNull { (profileId, refreshedAt) ->
+            profileId.toIntOrNull()?.let { it to refreshedAt }
+        }.toMap()
+        _refreshedAtByProfile.value = restoredRefreshes + _refreshedAtByProfile.value
+        stored.fullSnapshotAtByProfile.forEach { (profileId, snapshotAt) ->
+            val index = profileId.toIntOrNull() ?: return@forEach
+            if (index !in fullSnapshotAtByProfile) fullSnapshotAtByProfile[index] = snapshotAt
+        }
+    }
+
+    fun fullSnapshotAt(profileId: Int): Long? = fullSnapshotAtByProfile[profileId]
+
+    fun markFullSnapshot(profileId: Int, snapshotAtEpochMs: Long) {
+        fullSnapshotAtByProfile[profileId] = snapshotAtEpochMs
+        scheduleSave()
+    }
+
+    suspend fun clearAll() {
+        ensureLoaded()
+        resumeJob?.cancel()
+        resumeJob = null
+        _facts.value = emptyMap()
+        failures.clear()
+        attemptedFetchKeys.clear()
+        // A clear should visibly start over; the clear itself is limited to once an hour.
+        budgetWindowStartedAtEpochMs = WatchedClock.nowEpochMs()
+        fetchesInWindow = 0
+        syncFailedKeys()
+        scheduleSave()
+        lastRequest?.let { request -> mainScope.launch { hydrate(request) } }
+    }
+
+    fun clearFailures() {
+        if (failures.isEmpty()) return
+        failures.keys.forEach(attemptedFetchKeys::remove)
+        failures.clear()
+        syncFailedKeys()
+        scheduleSave()
+    }
+
+    fun markRefreshed(profileId: Int, refreshedAtEpochMs: Long) {
+        _refreshedAtByProfile.value = _refreshedAtByProfile.value + (profileId to refreshedAtEpochMs)
+        scheduleSave()
+    }
+
+    private fun syncFailedKeys() {
+        _failedKeys.value = failures.keys.toSet()
+    }
+
+    suspend fun hydrate(request: ProfileTitleHydrationRequest) {
+        lastRequest = request
+        ensureLoaded()
+        seedFromMetaCache(request.seedKeys)
+        fetchMissingFacts(request.fetchTargetKeys)
+    }
+
+    private fun ProfileTitleFacts?.isStale(now: Long): Boolean =
+        this == null || now - resolvedAtEpochMs > FACTS_MAX_AGE_MS
+
+    private fun ProfileTitleFacts?.needsFetch(now: Long): Boolean =
+        this == null || partial || isStale(now)
+
+    private suspend fun seedFromMetaCache(keys: List<String>) {
+        val now = WatchedClock.nowEpochMs()
+        val pending = mutableMapOf<String, ProfileTitleFacts>()
+        keys.forEachIndexed { index, key ->
+            if (index > 0 && index % SEED_YIELD_INTERVAL == 0) yield()
+            if (!_facts.value[key].isStale(now)) return@forEachIndexed
+            val (kind, id) = key.profileSplitTitleKey() ?: return@forEachIndexed
+            profileCachedMeta(kind, id)?.let { meta -> pending[key] = meta.toProfileTitleFacts(now, partial = true) }
+        }
+        publish(pending)
+    }
+
+    private suspend fun fetchMissingFacts(keys: List<String>) {
+        val now = WatchedClock.nowEpochMs()
+        if (now < pausedUntilEpochMs) {
+            scheduleResume(pausedUntilEpochMs)
+            return
+        }
+        if (now - budgetWindowStartedAtEpochMs >= FETCH_BUDGET_WINDOW_MS) {
+            budgetWindowStartedAtEpochMs = now
+            fetchesInWindow = 0
+        }
+        val candidates = keys.filter { key ->
+            key !in attemptedFetchKeys &&
+                _facts.value[key].needsFetch(now) &&
+                failures[key]?.let { failedAt -> now - failedAt < FAILURE_RETRY_AFTER_MS } != true
+        }
+        if (candidates.isEmpty()) return
+        val remainingBudget = FETCH_BUDGET_PER_WINDOW - fetchesInWindow
+        if (remainingBudget <= 0) {
+            scheduleResume(budgetWindowStartedAtEpochMs + FETCH_BUDGET_WINDOW_MS)
+            return
+        }
+        val targets = candidates.take(remainingBudget)
+        val pending = mutableMapOf<String, ProfileTitleFacts>()
+        val permits = Semaphore(FETCH_CONCURRENCY)
+        try {
+            coroutineScope {
+                targets.forEach { key ->
+                    launch {
+                        permits.withPermit {
+                            // An addon started rate-limiting while we waited for a permit.
+                            if (WatchedClock.nowEpochMs() < pausedUntilEpochMs) return@withPermit
+                            val (kind, id) = key.profileSplitTitleKey() ?: return@withPermit
+                            if (!attemptedFetchKeys.add(key)) return@withPermit
+                            fetchesInWindow += 1
+                            var settled = false
+                            try {
+                                val outcome = MetaDetailsRepository.fetchLightweight(type = kind, id = id)
+                                settled = true
+                                when (outcome) {
+                                    is MetaLookupOutcome.Loaded -> {
+                                        if (failures.remove(key) != null) syncFailedKeys()
+                                        pending[key] = outcome.meta.toProfileTitleFacts(WatchedClock.nowEpochMs())
+                                        if (pending.size >= PUBLISH_BATCH_SIZE) publish(pending)
+                                    }
+                                    is MetaLookupOutcome.Throttled -> {
+                                        // Not the title's fault: retry it once the addon allows.
+                                        attemptedFetchKeys.remove(key)
+                                        pausedUntilEpochMs = maxOf(pausedUntilEpochMs, outcome.retryAtEpochMs)
+                                    }
+                                    MetaLookupOutcome.Unavailable -> attemptedFetchKeys.remove(key)
+                                    MetaLookupOutcome.Failed -> recordFailure(key)
+                                }
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: Throwable) {
+                                settled = true
+                                recordFailure(key)
+                                profileInsightsLog.w(error) { "Failed to hydrate title facts for $kind/$id" }
+                            } finally {
+                                // Cancelled mid-flight (e.g. the tab was left): allow a retry next time.
+                                if (!settled) attemptedFetchKeys.remove(key)
+                            }
+                        }
+                    }
+                }
+            }
+        } finally {
+            publish(pending)
+        }
+        val afterRun = WatchedClock.nowEpochMs()
+        when {
+            pausedUntilEpochMs > afterRun -> scheduleResume(pausedUntilEpochMs)
+            candidates.size > targets.size -> scheduleResume(budgetWindowStartedAtEpochMs + FETCH_BUDGET_WINDOW_MS)
+        }
+    }
+
+    private fun scheduleResume(atEpochMs: Long) {
+        if (resumeJob?.isActive == true) return
+        resumeJob = mainScope.launch {
+            delay((atEpochMs - WatchedClock.nowEpochMs()).coerceAtLeast(1_000L))
+            lastRequest?.let { request -> hydrate(request) }
+        }
+    }
+
+    private fun recordFailure(key: String) {
+        failures[key] = WatchedClock.nowEpochMs()
+        syncFailedKeys()
+        scheduleSave()
+    }
+
+    private fun publish(pending: MutableMap<String, ProfileTitleFacts>) {
+        if (pending.isEmpty()) return
+        _facts.value = _facts.value + pending
+        pending.clear()
+        scheduleSave()
+    }
+
+    private fun scheduleSave() {
+        if (!loaded) return
+        val factsSnapshot = _facts.value
+        val failuresSnapshot = failures.toMap()
+        val refreshedSnapshot = _refreshedAtByProfile.value
+        val fullSnapshotTimes = fullSnapshotAtByProfile.toMap()
+        saveJob?.cancel()
+        saveJob = ioScope.launch {
+            delay(SAVE_DEBOUNCE_MS)
+            writeToDisk(factsSnapshot, failuresSnapshot, refreshedSnapshot, fullSnapshotTimes)
+        }
+    }
+
+    private fun readFromDisk(): StoredProfileTitleFacts? =
+        try {
+            ProfileTitleFactsStorage.load()
+                ?.takeIf { it.isNotBlank() }
+                ?.let { payload -> json.decodeFromString(StoredProfileTitleFacts.serializer(), payload) }
+                ?.takeIf { stored -> stored.version == PROFILE_TITLE_FACTS_STORAGE_VERSION }
+        } catch (error: Throwable) {
+            profileInsightsLog.w(error) { "Discarding unreadable profile title facts cache" }
+            null
+        }
+
+    private fun writeToDisk(
+        factsSnapshot: Map<String, ProfileTitleFacts>,
+        failuresSnapshot: Map<String, Long>,
+        refreshedSnapshot: Map<Int, Long>,
+        fullSnapshotTimes: Map<Int, Long>,
+    ) {
+        val now = WatchedClock.nowEpochMs()
+        val stored = StoredProfileTitleFacts(
+            titles = factsSnapshot.mapValues { (_, facts) -> facts.toStored() },
+            failures = failuresSnapshot.filterValues { failedAt -> now - failedAt < FAILURE_RETRY_AFTER_MS },
+            refreshedAtByProfile = refreshedSnapshot.mapKeys { (profileId, _) -> profileId.toString() },
+            fullSnapshotAtByProfile = fullSnapshotTimes.mapKeys { (profileId, _) -> profileId.toString() },
+        )
+        try {
+            ProfileTitleFactsStorage.save(json.encodeToString(StoredProfileTitleFacts.serializer(), stored))
+        } catch (error: Throwable) {
+            profileInsightsLog.w(error) { "Failed to persist profile title facts cache" }
+        }
+    }
+}
+
+// How far genre/runtime hydration has got, so partial numbers are not mistaken for final ones.
+private class ProfileTitleFactsProgress(
+    val detailsResolved: Int,
+    val detailsTotal: Int,
+    val detailsPending: Boolean,
+    val genreResolved: Int,
+    val genreTotal: Int,
+    val genresPending: Boolean,
+)
+
+private fun profileTitleFactsProgress(
+    request: ProfileTitleHydrationRequest,
+    facts: Map<String, ProfileTitleFacts>,
+    failedKeys: Set<String>,
+): ProfileTitleFactsProgress {
+    fun isFetched(key: String) = facts[key]?.partial == false
+    val detailsResolved = request.fetchTargetKeys.count(::isFetched)
+    val detailsFailed = request.fetchTargetKeys.count { key -> !isFetched(key) && key in failedKeys }
+    val genreTargets = request.genreTargetKeys.toHashSet()
+    val genreResolved = request.genreTitleKeys.count { key -> key !in genreTargets || isFetched(key) }
+    val genreFailed = request.genreTitleKeys.count { key -> key in genreTargets && !isFetched(key) && key in failedKeys }
+    return ProfileTitleFactsProgress(
+        detailsResolved = detailsResolved,
+        detailsTotal = request.fetchTargetKeys.size,
+        detailsPending = detailsResolved + detailsFailed < request.fetchTargetKeys.size,
+        genreResolved = genreResolved,
+        genreTotal = request.genreTitleKeys.size,
+        genresPending = genreResolved + genreFailed < request.genreTitleKeys.size,
+    )
+}
+
+internal suspend fun clearProfileInsightTitleFacts() {
+    ProfileTitleFactsStore.clearAll()
+}
+
+private class ProfileInsightsRefreshContext(
+    val profileId: Int,
+    val libraryItems: List<LibraryItem>,
+    val hydrationRequest: ProfileTitleHydrationRequest?,
+)
+
+private object ProfileInsightsRefresher {
+    private const val COOLDOWN_MS = 30_000L
+    private const val FULL_SNAPSHOT_INTERVAL_MS = 24L * 60L * 60_000L
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private var context: ProfileInsightsRefreshContext? = null
+    private var job: Job? = null
+    private var lastStartedAtEpochMs = 0L
+
+    fun bind(context: ProfileInsightsRefreshContext) {
+        this.context = context
+    }
+
+    fun unbind() {
+        context = null
+    }
+
+    fun refresh() {
+        val target = context ?: return
+        if (job?.isActive == true) return
+        val now = WatchedClock.nowEpochMs()
+        if (now - lastStartedAtEpochMs < COOLDOWN_MS) return
+        lastStartedAtEpochMs = now
+        job = scope.launch {
+            _isRefreshing.value = true
+            try {
+                ProfileTitleFactsStore.ensureLoaded()
+                ProfileTitleFactsStore.clearFailures()
+                val lastFullSnapshotAt = ProfileTitleFactsStore.fullSnapshotAt(target.profileId)
+                val fullSnapshot = lastFullSnapshotAt == null || now - lastFullSnapshotAt >= FULL_SNAPSHOT_INTERVAL_MS
+                coroutineScope {
+                    launch {
+                        runRefreshStep("watched") {
+                            if (fullSnapshot) {
+                                WatchedRepository.forceSnapshotRefreshFromServer(target.profileId)
+                            } else {
+                                WatchedRepository.pullFromServer(target.profileId)
+                            }
+                        }
+                    }
+                    launch {
+                        runRefreshStep("progress") {
+                            if (fullSnapshot) {
+                                WatchProgressRepository.forceSnapshotRefreshFromServer(target.profileId)
+                            } else {
+                                WatchProgressRepository.pullFromServer(target.profileId)
+                            }
+                        }
+                    }
+                    launch {
+                        runRefreshStep("calendar") { forceRefreshLibraryReleaseSchedule(target.libraryItems) }
+                    }
+                    launch {
+                        runRefreshStep("titles") { target.hydrationRequest?.let { ProfileTitleFactsStore.hydrate(it) } }
+                    }
+                }
+                if (fullSnapshot) ProfileTitleFactsStore.markFullSnapshot(target.profileId, now)
+                ProfileTitleFactsStore.markRefreshed(target.profileId, WatchedClock.nowEpochMs())
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+
+    private suspend fun runRefreshStep(name: String, block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            profileInsightsLog.w(error) { "Profile insights refresh step failed: $name" }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun ProfileInsightsPullToRefresh(
+    enabled: Boolean,
+    content: @Composable () -> Unit,
+) {
+    if (enabled) {
+        val isRefreshing by ProfileInsightsRefresher.isRefreshing.collectAsStateWithLifecycle()
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = ProfileInsightsRefresher::refresh,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            content()
+        }
+    } else {
+        content()
+    }
+}
+
+@Composable
+private fun ProfileInsightsRefreshStatusRow(
+    refreshedAtEpochMs: Long?,
+    failedGenreTitleCount: Int,
+    factsProgress: ProfileTitleFactsProgress?,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    val now by produceState(WatchedClock.nowEpochMs()) {
+        while (true) {
+            delay(60_000L)
+            value = WatchedClock.nowEpochMs()
+        }
+    }
+    val statusText = when {
+        isRefreshing -> stringResource(Res.string.profile_insights_refreshing)
+        refreshedAtEpochMs == null -> stringResource(Res.string.profile_insights_pull_to_refresh)
+        else -> {
+            val elapsedMinutes = ((now - refreshedAtEpochMs).coerceAtLeast(0L) / ProfileInsightsMinuteMs).toInt()
+            when {
+                elapsedMinutes < 1 -> stringResource(Res.string.profile_insights_updated_just_now)
+                elapsedMinutes < 60 -> stringResource(Res.string.profile_insights_updated_minutes, elapsedMinutes)
+                elapsedMinutes < 24 * 60 -> stringResource(Res.string.profile_insights_updated_hours, elapsedMinutes / 60)
+                else -> stringResource(Res.string.profile_insights_updated_days, elapsedMinutes / (24 * 60))
+            }
+        }
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = statusText,
+                style = MaterialTheme.typography.labelSmall,
+                color = tokens.colors.textMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (factsProgress != null && factsProgress.detailsPending) {
+                Text(
+                    text = stringResource(
+                        Res.string.profile_insights_details_progress,
+                        factsProgress.detailsResolved,
+                        factsProgress.detailsTotal,
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = tokens.colors.textMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (failedGenreTitleCount > 0 && !isRefreshing) {
+                Text(
+                    text = if (failedGenreTitleCount == 1) {
+                        stringResource(Res.string.profile_insights_genre_failures_single)
+                    } else {
+                        stringResource(Res.string.profile_insights_genre_failures, failedGenreTitleCount)
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        IconButton(
+            onClick = onRefresh,
+            enabled = !isRefreshing,
+            modifier = Modifier.size(36.dp),
+        ) {
+            if (isRefreshing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    strokeWidth = 2.dp,
+                    color = tokens.colors.textMuted,
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.Refresh,
+                    contentDescription = stringResource(Res.string.profile_insights_refresh),
+                    modifier = Modifier.size(20.dp),
+                    tint = tokens.colors.textMuted,
+                )
+            }
+        }
+    }
 }
 
 private fun buildProfileTasteDnaChips(
@@ -2375,37 +3319,41 @@ private fun String.fallbackDisplayLabel(): String {
 private data class ProfileInsightsStats(
     val continueCount: Int,
     val completedCount: Int,
+    val ongoingSeriesCount: Int,
     val libraryCount: Int,
     val trackedDurationMs: Long,
     val recentActivityCount: Int,
     val upcomingCount: Int,
-    val smartResume: SmartResumeSignal?,
+    val watchedMovieCount: Int = 0,
+    val episodesWatchedCount: Int = 0,
     val topGenre: String?,
     val topType: String?,
     val tasteSegments: List<ProfileTasteSegment>,
     val movieShare: Float,
+    val movieWatchTimeShare: Float? = null,
     val typeBalanceLabel: ProfileTasteBalanceLabel,
     val dnaChips: List<ProfileTasteDnaChip>,
 )
 
-private data class SmartResumeSignal(
-    val title: String,
-    val subtitle: String?,
-    val imageUrl: String?,
-    val progressFraction: Float,
-)
 
-private data class ProfileInsightTile(
-    val icon: ImageVector,
-    val value: String,
-    val label: String,
-    val caption: String,
-    val collectionKind: ProfileInsightCollectionKind? = null,
-)
+private const val PROFILE_UPCOMING_EPISODE_DAYS = 7
+
+private fun LibraryUpcomingEpisode.toProfileInsightPosterItem(): ProfileInsightPosterItem =
+    ProfileInsightPosterItem(
+        id = "upcoming:$key",
+        title = item.name.trim().takeIf { it.isNotBlank() } ?: item.id,
+        secondaryText = subtitle,
+        releaseInfo = dateIso,
+        imageUrl = item.poster ?: imageUrl ?: item.banner,
+        lookupType = item.type,
+        lookupId = item.id,
+    )
 
 private enum class ProfileInsightCollectionKind {
     Continue,
+    Watched,
     Completed,
+    Ongoing,
     Library,
     Upcoming,
 }
@@ -2419,7 +3367,8 @@ private data class ProfileInsightCollection(
 private data class ProfileInsightPosterItem(
     val id: String,
     val title: String,
-    val subtitle: String?,
+    val secondaryText: String? = null,
+    val releaseInfo: String? = null,
     val imageUrl: String?,
     val lookupType: String? = null,
     val lookupId: String? = null,
@@ -2429,7 +3378,7 @@ private data class ProfileCompletedContentItem(
     val id: String,
     val kind: String,
     val title: String,
-    val subtitle: String?,
+    val releaseInfo: String?,
     val imageUrl: String?,
     val markedAtEpochMs: Long,
 )
@@ -2483,9 +3432,10 @@ private fun ProfileTasteDnaChip.localizedLabel(): String =
 
 private const val ProfileInsightsMinuteMs = 60_000L
 private const val ProfileInsightsRecentWindowMs = 7L * 24L * 60L * 60L * 1000L
-private const val ProfileFavoritePeopleInlineLimit = 3
+
+private const val ProfileInsightsFallbackMovieMinutes = 115L
+private const val ProfileInsightsFallbackEpisodeMinutes = 42L
 private val profileHourTokenRegex = Regex("""(?i)(\d+)\s*h(?:ours?)?""")
 private val profileMinuteTokenRegex = Regex("""(?i)(\d+)\s*m(?:in(?:ute)?s?)?""")
 private val profileHourMinuteColonRegex = Regex("""^\s*(\d+)\s*:\s*(\d{1,2})\s*$""")
 private val profileDigitsOnlyRegex = Regex("""^\s*(\d+)\s*$""")
-private const val ProfileConciergeContinueWatchingLimit = 36

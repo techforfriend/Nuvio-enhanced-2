@@ -9,6 +9,8 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAddCheckCircle
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,6 +25,7 @@ import com.nuvio.app.core.ui.NuvioBottomSheetActionRow
 import com.nuvio.app.core.ui.NuvioBottomSheetDivider
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
+import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.nuvioSafeBottomPadding
 import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
 import com.nuvio.app.features.details.MetaVideo
@@ -45,6 +48,8 @@ fun EpisodeWatchedActionSheet(
     onToggleSeasonWatched: () -> Unit,
     showPlayManually: Boolean = false,
     onPlayManually: (() -> Unit)? = null,
+    userRating: Int? = null,
+    onRate: (() -> Unit)? = null,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
@@ -111,6 +116,18 @@ fun EpisodeWatchedActionSheet(
                     }
                 },
             )
+            if (onRate != null) {
+                UserRatingActionRow(
+                    title = stringResource(Res.string.user_rating_rate_episode),
+                    userRating = userRating,
+                    onClick = {
+                        onRate()
+                        coroutineScope.launch {
+                            dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
+                        }
+                    },
+                )
+            }
             if (showPlayManually && onPlayManually != null) {
                 NuvioBottomSheetActionRow(
                     icon = Icons.Default.PlayArrow,
@@ -136,6 +153,8 @@ fun SeasonWatchedActionSheet(
     onDismiss: () -> Unit,
     onToggleSeasonWatched: () -> Unit,
     onMarkPreviousSeasonsWatched: () -> Unit,
+    userRating: Int? = null,
+    onRate: (() -> Unit)? = null,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
@@ -177,6 +196,18 @@ fun SeasonWatchedActionSheet(
                     }
                 },
             )
+            if (onRate != null) {
+                UserRatingActionRow(
+                    title = stringResource(Res.string.user_rating_rate_season, seasonLabel),
+                    userRating = userRating,
+                    onClick = {
+                        onRate()
+                        coroutineScope.launch {
+                            dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
+                        }
+                    },
+                )
+            }
             if (canMarkPreviousSeasons) {
                 NuvioBottomSheetActionRow(
                     icon = Icons.Default.DoneAll,
@@ -191,6 +222,31 @@ fun SeasonWatchedActionSheet(
             }
         }
     }
+}
+
+@Composable
+private fun UserRatingActionRow(
+    title: String,
+    userRating: Int?,
+    onClick: () -> Unit,
+) {
+    NuvioBottomSheetActionRow(
+        icon = if (userRating != null) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+        title = title,
+        onClick = onClick,
+        trailingContent = if (userRating != null) {
+            {
+                Text(
+                    text = stringResource(Res.string.user_rating_value, userRating),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.nuvio.colors.accent,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        } else {
+            null
+        },
+    )
 }
 
 @Composable

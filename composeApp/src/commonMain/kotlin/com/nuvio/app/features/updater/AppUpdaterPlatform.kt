@@ -14,6 +14,10 @@ expect object AppUpdaterPlatform {
 
     fun setUpdateChannel(channel: String)
 
+    fun getWhatsNewCache(): String?
+
+    fun setWhatsNewCache(payload: String?)
+
     fun deleteDownloadedApk(path: String)
 
     suspend fun downloadApk(

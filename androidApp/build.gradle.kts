@@ -118,6 +118,13 @@ android {
         noCompress += "cvr"
     }
 
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+
     splits {
         abi {
             isEnable = buildsReleaseApks

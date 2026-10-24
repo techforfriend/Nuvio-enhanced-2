@@ -25,6 +25,7 @@ import com.nuvio.app.core.poster.CustomPosterUrlStorage
 import com.nuvio.app.core.ui.PosterCardStyleStorage
 import com.nuvio.app.features.settings.ThemeSettingsStorage
 import com.nuvio.app.features.settings.ThemeSettingsRepository
+import com.nuvio.app.features.streams.PinnedStreamSourcesRepository
 import com.nuvio.app.features.streams.StreamBadgeSettingsRepository
 import com.nuvio.app.features.streams.StreamBadgeSettingsStorage
 import com.nuvio.app.features.tmdb.TmdbSettingsStorage
@@ -205,7 +206,6 @@ object ProfileSettingsSync {
             ThemeSettingsRepository.amoledEnabled.map { "amoled" },
             ThemeSettingsRepository.liquidGlassNativeTabBarEnabled.map { "liquid_glass_tab_bar" },
             ThemeSettingsRepository.navBarGlowEnabled.map { "nav_bar_glow_enabled" },
-            ThemeSettingsRepository.navBarStyle.map { "nav_bar_style" },
             PosterCardStyleRepository.uiState.map { "poster_card_style" },
             CustomPosterUrlRepository.pattern.map { "custom_poster_url" },
             CustomPosterUrlRepository.enabledScreens.map { "custom_poster_screens" },
@@ -325,6 +325,7 @@ object ProfileSettingsSync {
 
         StreamBadgeSettingsStorage.replaceFromSyncPayload(blob.features.streamBadgeSettings)
         StreamBadgeSettingsRepository.onProfileChanged()
+        PinnedStreamSourcesRepository.onProfileChanged()
 
         DebridSettingsStorage.replaceFromSyncPayload(
             preservingLocalProfileCredentials(

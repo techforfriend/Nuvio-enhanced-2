@@ -1,5 +1,6 @@
 package com.nuvio.app.core.ui
 
+import com.nuvio.app.features.settings.NuvioTabBarBehavior
 import com.nuvio.app.features.profiles.AvatarRepository
 import com.nuvio.app.features.profiles.AvatarCatalogItem
 import com.nuvio.app.features.profiles.MAX_PROFILES
@@ -14,8 +15,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
@@ -25,6 +29,7 @@ internal enum class NativeNavigationTab {
     Search,
     LiveTv,
     Library,
+    LiveTv,
     Settings,
     ;
 
@@ -38,6 +43,17 @@ internal object NativeTabBridge {
     private val _requestedTabs = MutableSharedFlow<NativeNavigationTab>(extraBufferCapacity = 1)
     val requestedTabs: SharedFlow<NativeNavigationTab> = _requestedTabs.asSharedFlow()
 
+    private val _activeTab = MutableStateFlow(NativeNavigationTab.Home)
+    val activeTab: StateFlow<NativeNavigationTab> = _activeTab.asStateFlow()
+
+    fun markActiveTab(tab: NativeNavigationTab) {
+        _activeTab.value = tab
+    }
+
+    fun requestPopToRoot(tabName: String) {
+        swiftPopToRootListener?.invoke(tabName)
+    }
+
     fun requestTab(tabName: String) {
         _requestedTabs.tryEmit(NativeNavigationTab.fromName(tabName))
     }
@@ -47,15 +63,26 @@ internal object NativeTabBridge {
     }
 
     fun publishTabBarVisible(visible: Boolean) {
-        publishNativeTabBarVisible(visible && isLiquidGlassNativeTabBarSupported())
+        val supported = isLiquidGlassNativeTabBarSupported()
+        swiftTabBarVisibilityListener?.invoke(visible && supported)
+        publishNativeTabBarVisible(visible && supported)
     }
 
     fun publishLiquidGlassEnabled(enabled: Boolean) {
         publishLiquidGlassNativeTabBarEnabled(enabled && isLiquidGlassNativeTabBarSupported())
     }
 
-    fun publishAccentColor(hexColor: String) {
-        publishNativeTabAccentColor(hexColor)
+    fun publishTabBarBehavior(behavior: NuvioTabBarBehavior) {
+        val supported = isLiquidGlassNativeTabBarSupported()
+        publishLiquidGlassNativeTabBarEnabled(behavior.isEnabled && supported)
+        publishNativeTabBarBehavior(if (supported) behavior.key else NuvioTabBarBehavior.OFF.key)
+    }
+
+    fun publishAccentColor(hexColor: String, gradientHexColors: List<String> = listOf(hexColor)) {
+        publishNativeTabAccentColor(
+            hexColor = hexColor,
+            gradientHexColors = gradientHexColors.ifEmpty { listOf(hexColor) },
+        )
     }
 
     fun publishTabTitles(
@@ -80,7 +107,22 @@ internal object NativeTabBridge {
             avatarBackgroundColorHex = avatarBackgroundColorHex,
         )
     }
+
+    private val _profileTabIconFrame = MutableStateFlow<ProfileTabIconFrame?>(null)
+
+    val profileTabIconFrame: StateFlow<ProfileTabIconFrame?> = _profileTabIconFrame.asStateFlow()
+
+    fun receiveProfileTabIconFrame(xDp: Float, yDp: Float, widthDp: Float, heightDp: Float) {
+        _profileTabIconFrame.value = ProfileTabIconFrame(xDp, yDp, widthDp, heightDp)
+    }
 }
+
+internal data class ProfileTabIconFrame(
+    val xDp: Float,
+    val yDp: Float,
+    val widthDp: Float,
+    val heightDp: Float,
+)
 
 data class NativeProfileOption(
     val profileIndex: Int,
@@ -193,19 +235,44 @@ class NativeProfileSwitcherController {
     }
 }
 
+private var swiftTabBarVisibilityListener: ((Boolean) -> Unit)? = null
+
+fun observeNativeTabBarVisible(listener: (Boolean) -> Unit) {
+    swiftTabBarVisibilityListener = listener
+}
+
+private var swiftPopToRootListener: ((String) -> Unit)? = null
+
+fun observeNativePopToRoot(listener: (String) -> Unit) {
+    swiftPopToRootListener = listener
+}
+
 fun nativeTabSelect(tabName: String) {
     NativeTabBridge.requestTab(tabName)
+}
+
+fun publishProfileTabIconFrame(xDp: Float, yDp: Float, widthDp: Float, heightDp: Float) {
+    NativeTabBridge.receiveProfileTabIconFrame(xDp, yDp, widthDp, heightDp)
+}
+
+fun nativeTabVisibilityChanged(tabName: String) {
+    NativeTabBridge.markActiveTab(NativeNavigationTab.fromName(tabName))
+    if (NativeNavigationTab.fromName(tabName) != NativeNavigationTab.Home) {
+        com.nuvio.app.features.home.components.HomeHeroTrailerPlaybackController.forceStop()
+    }
 }
 
 internal expect fun isLiquidGlassNativeTabBarSupported(): Boolean
 
 internal expect fun publishLiquidGlassNativeTabBarEnabled(enabled: Boolean)
 
+internal expect fun publishNativeTabBarBehavior(behaviorKey: String)
+
 internal expect fun publishNativeTabBarVisible(visible: Boolean)
 
 internal expect fun publishNativeSelectedTab(tabName: String)
 
-internal expect fun publishNativeTabAccentColor(hexColor: String)
+internal expect fun publishNativeTabAccentColor(hexColor: String, gradientHexColors: List<String>)
 
 internal expect fun publishNativeTabTitles(
     home: String,

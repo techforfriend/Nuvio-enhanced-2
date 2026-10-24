@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.cloud_library_playback_disabled
 import nuvio.composeapp.generated.resources.cloud_library_provider_unavailable
@@ -97,6 +98,7 @@ object CloudLibraryRepository {
     )
     private val _uiState = MutableStateFlow(CloudLibraryUiState())
     private var loadedConnectionKeys: List<CloudConnectionKey> = emptyList()
+    private var restoredConnectionKeys: List<CloudConnectionKey> = emptyList()
     val uiState = _uiState.asStateFlow()
 
     fun ensureLoaded() {
@@ -110,11 +112,15 @@ object CloudLibraryRepository {
         if (current.isRefreshing) return
         val connectedKeys = connectedCloudConnectionKeys()
         if (!current.isLoaded || connectedKeys != loadedConnectionKeys) {
-            refresh()
+            refreshInternal(cachedKeys = connectedKeys)
         }
     }
 
     fun refresh() {
+        refreshInternal(cachedKeys = null)
+    }
+
+    private fun refreshInternal(cachedKeys: List<CloudConnectionKey>?) {
         DebridSettingsRepository.ensureLoaded()
         if (!DebridSettingsRepository.snapshot().cloudLibraryEnabled) {
             loadedConnectionKeys = emptyList()
@@ -129,9 +135,14 @@ object CloudLibraryRepository {
             )
         }
         scope.launch {
-            val refreshed = store.refresh()
+            if (cachedKeys != null) {
+                restoreCachedState(cachedKeys)
+            }
+            val previous = _uiState.value
+            val refreshed = store.refresh().keepingItemsOnFailure(previous)
             loadedConnectionKeys = connectedCloudConnectionKeys()
             _uiState.value = refreshed
+            CloudLibraryCacheStore.save(loadedConnectionKeys.cacheSignature(), refreshed.providers)
         }
     }
 
@@ -173,6 +184,11 @@ object CloudLibraryRepository {
             return CloudLibraryPlaybackTargetLookupResult.NotConnected(
                 providerName = DebridProviders.displayName(providerId),
             )
+        }
+
+        val connectedKeys = connectedCloudConnectionKeys()
+        if (connectedKeys != loadedConnectionKeys && connectedKeys != restoredConnectionKeys) {
+            restoreCachedState(connectedKeys)
         }
 
         _uiState.value.findPlaybackTargetForProgress(
@@ -245,17 +261,56 @@ object CloudLibraryRepository {
                 providers = current.providers.map { it.copy(isLoading = true, errorMessage = null) },
             )
         }
-        val refreshed = store.refresh()
+        val previous = _uiState.value
+        val refreshed = store.refresh().keepingItemsOnFailure(previous)
         loadedConnectionKeys = connectedCloudConnectionKeys()
         _uiState.value = refreshed
+        CloudLibraryCacheStore.save(loadedConnectionKeys.cacheSignature(), refreshed.providers)
         return refreshed
     }
+
+    private suspend fun restoreCachedState(keys: List<CloudConnectionKey>) {
+        if (keys.isEmpty()) return
+        val cachedProviders = withContext(Dispatchers.Default) {
+            CloudLibraryCacheStore.load(keys.cacheSignature())
+        } ?: return
+        if (connectedCloudConnectionKeys() != keys) return
+        restoredConnectionKeys = keys
+        _uiState.update { current ->
+            current.copy(
+                isLoaded = true,
+                isEnabled = true,
+                providers = cachedProviders.map { providerState ->
+                    providerState.copy(isLoading = current.isRefreshing)
+                },
+            )
+        }
+    }
+
+    private fun List<CloudConnectionKey>.cacheSignature(): List<String> =
+        map { key -> "${key.providerId}:${key.apiKeyHash}" }
 
     private data class CloudConnectionKey(
         val providerId: String,
         val apiKeyHash: Int,
     )
 }
+
+internal fun CloudLibraryUiState.keepingItemsOnFailure(
+    previous: CloudLibraryUiState,
+): CloudLibraryUiState =
+    copy(
+        providers = providers.map { providerState ->
+            if (providerState.errorMessage.isNullOrBlank() || providerState.items.isNotEmpty()) {
+                return@map providerState
+            }
+            val previousItems = previous.providers
+                .firstOrNull { it.providerId == providerState.providerId }
+                ?.items
+                .orEmpty()
+            if (previousItems.isEmpty()) providerState else providerState.copy(items = previousItems)
+        },
+    )
 
 internal fun CloudLibraryUiState.findPlaybackTargetForProgress(
     contentId: String,

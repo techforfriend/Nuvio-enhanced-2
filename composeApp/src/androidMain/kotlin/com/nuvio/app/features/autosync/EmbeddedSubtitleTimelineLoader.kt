@@ -107,6 +107,7 @@ internal object EmbeddedSubtitleTimelineLoader {
     private const val ID_CUE_DURATION = 0xB2L
 
     private val httpClient = OkHttpClient.Builder()
+        .dns(com.nuvio.app.core.network.NuvioDns)
         .connectTimeout(3, TimeUnit.SECONDS)
         .readTimeout(4, TimeUnit.SECONDS)
         .callTimeout(5, TimeUnit.SECONDS)

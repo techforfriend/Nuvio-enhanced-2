@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,20 +43,24 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalLayoutDirection
 import coil3.compose.AsyncImage
-import com.nuvio.app.core.ui.platformPhysicalTopInset
 import com.nuvio.app.core.ui.shimmer
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
 import com.nuvio.app.isIos
-import dev.chrisbanes.haze.HazeInputScale
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
+import com.nuvio.app.core.ui.glass.LocalLiquidGlassBackdrop
+import com.nuvio.app.core.ui.glass.liquidGlassSurface
+import com.nuvio.app.core.ui.glass.nuvioBackdropSource
+import com.nuvio.app.core.ui.glass.rememberNuvioBackdrop
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun TabletStreamsLayout(
     isEpisode: Boolean,
+    showSearchField: Boolean,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
     title: String,
     logo: String?,
     poster: String?,
@@ -69,14 +76,10 @@ internal fun TabletStreamsLayout(
     resumeProgressFraction: Float?,
     onStreamSelected: (stream: StreamItem, resumePositionMs: Long?, resumeProgressFraction: Float?) -> Unit,
     onStreamLongPress: (StreamItem) -> Unit,
-    pinnedSourceIds: List<String> = emptyList(),
-    sourcePinningEnabled: Boolean = false,
-    onSourcePinRequested: (AddonStreamGroup) -> Unit = {},
-    onSourceUnpinRequested: (AddonStreamGroup) -> Unit = {},
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val hazeState = rememberHazeState()
+    val streamsPanelBackdrop = rememberNuvioBackdrop()
     val tabletBackdrop = remember(background, poster) {
         background ?: poster
     }
@@ -104,7 +107,7 @@ internal fun TabletStreamsLayout(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .hazeSource(state = hazeState),
+                .nuvioBackdropSource(streamsPanelBackdrop),
         ) {
             if (tabletBackdrop != null) {
                 AsyncImage(
@@ -142,90 +145,110 @@ internal fun TabletStreamsLayout(
             )
         }
 
-        Row(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .weight(0.4f)
-                    .fillMaxHeight()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (isEpisode && seasonNumber != null && episodeNumber != null) {
-                    TabletEpisodeInfoPanel(
-                        logo = logo,
-                        seasonNumber = seasonNumber,
-                        episodeNumber = episodeNumber,
-                        episodeTitle = episodeTitle,
-                        showTitle = title,
-                    )
-                } else {
-                    TabletMovieInfoPanel(
-                        title = title,
-                        logo = logo,
-                    )
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .weight(0.6f)
-                    .fillMaxHeight()
-                    .padding(
-                        top = if (isIos) platformPhysicalTopInset() + 60.dp else 60.dp,
-                        end = 12.dp,
-                        bottom = 12.dp,
-                    ),
-            ) {
+        val verticalBar = LocalVerticalBarPadding.current
+        val layoutDirection = LocalLayoutDirection.current
+        CompositionLocalProvider(LocalLiquidGlassBackdrop provides streamsPanelBackdrop) {
+            Row(modifier = Modifier.fillMaxSize()) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(24.dp))
-                        .hazeEffect(state = hazeState) {
-                            inputScale = HazeInputScale.Fixed(0.66f)
-                            blurRadius = 56.dp
-                        }
-                        .background(Color.Black.copy(alpha = 0.36f)),
+                        .weight(0.4f)
+                        .fillMaxHeight()
+                        .padding(start = verticalBar.calculateStartPadding(layoutDirection))
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Column(
+                    if (isEpisode && seasonNumber != null && episodeNumber != null) {
+                        TabletEpisodeInfoPanel(
+                            logo = logo,
+                            seasonNumber = seasonNumber,
+                            episodeNumber = episodeNumber,
+                            episodeTitle = episodeTitle,
+                            showTitle = title,
+                        )
+                    } else {
+                        TabletMovieInfoPanel(
+                            title = title,
+                            logo = logo,
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(0.6f)
+                        .fillMaxHeight()
+                        .padding(end = verticalBar.calculateEndPadding(layoutDirection))
+                        .padding(
+                            top = if (isIos) 20.dp else 60.dp,
+                            end = 12.dp,
+                            bottom = 12.dp,
+                        ),
+                ) {
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(16.dp),
+                            .clip(RoundedCornerShape(24.dp))
+                            .liquidGlassSurface(
+                                backdrop = streamsPanelBackdrop,
+                                shape = RoundedCornerShape(24.dp),
+                                tint = Color.Transparent,
+                                fallback = Color.Transparent,
+                                blurRadius = 56.dp,
+                                refractionHeight = 20.dp,
+                                refractionAmount = 40.dp,
+                            )
+                            .background(Color.Black.copy(alpha = 0.36f)),
                     ) {
-                        if ((resumePositionMs != null && resumePositionMs > 0L) || (resumeProgressFraction != null && resumeProgressFraction > 0f)) {
-                            ResumeBanner(
-                                positionMs = resumePositionMs,
-                                progressFraction = resumeProgressFraction,
-                                modifier = Modifier.padding(bottom = 8.dp),
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                        ) {
+                            if ((resumePositionMs != null && resumePositionMs > 0L) || (resumeProgressFraction != null && resumeProgressFraction > 0f)) {
+                                ResumeBanner(
+                                    positionMs = resumePositionMs,
+                                    progressFraction = resumeProgressFraction,
+                                    modifier = Modifier.padding(bottom = 8.dp),
+                                )
+                            }
+
+                            ProviderFilterRow(
+                                groups = uiState.groups,
+                                selectedFilter = uiState.selectedFilter,
+                                onFilterSelected = { addonId -> StreamsRepository.selectFilter(addonId) },
+                                onRefresh = onRefresh,
+                            )
+
+                            ActiveScrapersStatusBlock(
+                                groups = uiState.groups,
+                                modifier = Modifier.padding(bottom = 4.dp),
+                            )
+
+                            if (showSearchField) {
+                                StreamSearchField(
+                                    query = searchQuery,
+                                    onQueryChange = onSearchQueryChange,
+                                    modifier = Modifier.padding(bottom = 8.dp),
+                                )
+                            }
+
+                            val listUiState = rememberStreamSearchResult(uiState, searchQuery, showSearchField)
+                            if (listUiState.isEmptyBecauseOfSearch) {
+                                StreamSearchEmptyBlock(modifier = Modifier.weight(1f))
+                                return@Column
+                            }
+
+                            StreamList(
+                                uiState = listUiState.uiState,
+                                debridEnabled = debridEnabled,
+                                appendInstantServiceToDefaultName = appendInstantServiceToDefaultName,
+                                onStreamSelected = onStreamSelected,
+                                onStreamLongPress = onStreamLongPress,
+                                resumePositionMs = resumePositionMs,
+                                resumeProgressFraction = resumeProgressFraction,
+                                modifier = Modifier.weight(1f),
                             )
                         }
-
-                        ProviderFilterRow(
-                            groups = uiState.groups,
-                            selectedFilter = uiState.selectedFilter,
-                            pinnedSourceIds = pinnedSourceIds,
-                            sourcePinningEnabled = sourcePinningEnabled,
-                            onSourcePinRequested = onSourcePinRequested,
-                            onSourceUnpinRequested = onSourceUnpinRequested,
-                            onFilterSelected = { addonId -> StreamsRepository.selectFilter(addonId) },
-                            onRefresh = onRefresh,
-                        )
-
-                        ActiveScrapersStatusBlock(
-                            groups = uiState.groups,
-                            modifier = Modifier.padding(bottom = 4.dp),
-                        )
-
-                        StreamList(
-                            uiState = uiState,
-                            debridEnabled = debridEnabled,
-                            appendInstantServiceToDefaultName = appendInstantServiceToDefaultName,
-                            pinnedSourceIds = pinnedSourceIds,
-                            onStreamSelected = onStreamSelected,
-                            onStreamLongPress = onStreamLongPress,
-                            resumePositionMs = resumePositionMs,
-                            resumeProgressFraction = resumeProgressFraction,
-                            modifier = Modifier.weight(1f),
-                        )
                     }
                 }
             }

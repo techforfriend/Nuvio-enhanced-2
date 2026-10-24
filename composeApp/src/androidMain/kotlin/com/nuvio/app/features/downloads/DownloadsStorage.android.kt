@@ -7,6 +7,7 @@ import com.nuvio.app.core.storage.ProfileScopedKey
 internal actual object DownloadsStorage {
     private const val preferencesName = "nuvio_downloads"
     private const val payloadKey = "downloads_payload"
+    private const val downloadLocationUriKey = "download_location_uri"
 
     private var preferences: SharedPreferences? = null
 
@@ -24,17 +25,25 @@ internal actual object DownloadsStorage {
             ?.apply()
     }
 
-    fun loadExternalFolderUri(): String? =
-        preferences?.getString(ProfileScopedKey.of("external_folder_uri"), null)
+    actual fun getDownloadLocationUri(): String? =
+        preferences?.getString(ProfileScopedKey.of(downloadLocationUriKey), null)
 
-    fun saveExternalFolderUri(uri: String?) {
+    actual fun setDownloadLocationUri(uri: String?) {
         preferences
             ?.edit()
-            ?.let { editor ->
+            ?.run {
                 if (uri == null) {
-                    editor.remove(ProfileScopedKey.of("external_folder_uri"))
+                    remove(ProfileScopedKey.of(downloadLocationUriKey))
                 } else {
-                    editor.putString(ProfileScopedKey.of("external_folder_uri"), uri)
+                    putString(ProfileScopedKey.of(downloadLocationUriKey), uri)
+                }
+            }
+            ?.apply()
+    }
+
+    fun loadExternalFolderUri(): String? = getDownloadLocationUri()
+    fun saveExternalFolderUri(uri: String?) {
+        setDownloadLocationUri(uri)
                 }
             }
             ?.apply()
