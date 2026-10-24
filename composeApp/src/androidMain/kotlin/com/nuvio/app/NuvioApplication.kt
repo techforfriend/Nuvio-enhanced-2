@@ -28,6 +28,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         DnsPlatform.initialize(this)
+        com.nuvio.app.features.updater.AndroidAppUpdaterPlatform.initialize(this)
         com.nuvio.app.features.settings.NuvioEnhancedSettingsStorage.initialize(this)
         com.nuvio.app.features.cloudstream.CloudStreamPlatformStorage.initialize(this)
         com.nuvio.app.features.cloudstream.CloudStreamPlatformRuntime.initialize(this)

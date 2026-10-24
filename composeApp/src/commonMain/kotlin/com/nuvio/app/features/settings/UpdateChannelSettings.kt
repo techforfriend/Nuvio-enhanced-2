@@ -29,15 +29,21 @@ import com.nuvio.app.core.ui.DialogButton
 import com.nuvio.app.core.ui.DialogButtons
 import com.nuvio.app.core.ui.DialogSurface
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.features.updater.AppUpdaterPlatform
 import com.nuvio.app.features.updater.UpdateChannel
 import com.nuvio.app.features.updater.UpdatePreferences
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun UpdateChannelSettingsRow(isTablet: Boolean) {
-    val channel by UpdatePreferences.shared.channel.collectAsState()
+    if (!AppUpdaterPlatform.isSupported) return
+    val channel by runCatching { UpdatePreferences.shared.channel }
+        .getOrDefault(MutableStateFlow(UpdateChannel.STABLE).asStateFlow())
+        .collectAsState()
     var showDialog by rememberSaveable { mutableStateOf(false) }
     val tokens = MaterialTheme.nuvio
     SettingsNavigationRow(
@@ -68,7 +74,7 @@ internal fun UpdateChannelSettingsRow(isTablet: Boolean) {
                             selected = option == channel,
                             role = Role.RadioButton,
                             onClick = {
-                                UpdatePreferences.shared.setChannel(option)
+                                runCatching { UpdatePreferences.shared.setChannel(option) }
                                 showDialog = false
                             },
                         ).padding(vertical = 12.dp),
