@@ -150,11 +150,15 @@ fun normalizeCloudStreamRepositoryUrl(rawUrl: String): String {
         }
     }
 
+    val query = value.substringAfter('?', missingDelimiterValue = "")
     val withoutQuery = value.substringBefore('?')
     val lastSegment = withoutQuery.substringAfterLast('/')
-    if (!lastSegment.contains('.')) {
-        value = value.trimEnd('/') + "/repo.json"
+    val normalizedBase = if (!lastSegment.contains('.')) {
+        withoutQuery.trimEnd('/') + "/repo.json"
+    } else {
+        withoutQuery
     }
+    value = if (query.isNotEmpty()) "$normalizedBase?$query" else normalizedBase
     return normalizeHttpUrlPath(value)
 }
 

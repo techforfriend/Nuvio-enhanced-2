@@ -50,11 +50,12 @@ actual object CloudStreamRepository {
         mutableMapOf<String, Deferred<Result<List<CloudStreamPlaybackSource>>>>()
     private val loadLinksCache = LinkedHashMap<String, CachedCloudStreamLinks>(16, 0.75f, true)
     private val loadLinksCacheMutex = Mutex()
-    private val loadResultCache = LinkedHashMap<String, CloudStreamLoadItem>(16, 0.75f, true)
+    private val loadResultCache = LinkedHashMap<String, CachedCloudStreamLoadItem>(16, 0.75f, true)
     private val loadResultCacheMutex = Mutex()
     private const val LOAD_LINKS_CACHE_MAX_ENTRIES = 16
     private const val LOAD_LINKS_CACHE_TTL_MS = 120_000L
     private const val LOAD_RESULT_CACHE_MAX_ENTRIES = 16
+    private const val LOAD_RESULT_CACHE_TTL_MS = 600_000L
     private const val REPOSITORY_DISCOVERY_CONCURRENCY = 6
     private const val PROVIDER_REQUEST_CONCURRENCY = 4
 
@@ -424,8 +425,8 @@ actual object CloudStreamRepository {
         RuntimeDiagnostics.recordLog("cs-mainpage-start id=$providerId page=$normalizedPage")
 
         val request = synchronized(mainPageRequestMutex) {
-            mainPageRequests[requestKey]?.takeIf { it.isActive || it.isCompleted }
-                ?: scope.async(start = CoroutineStart.LAZY) {
+            mainPageRequests[requestKey]?.takeIf { it.isActive && !it.isCancelled }
+                ?: scope.async(start = CoroutineStart.DEFAULT) {
                     providerResult(providerId) { getMainPage(normalizedPage) }
                 }.also { deferred ->
                     mainPageRequests[requestKey] = deferred
@@ -486,8 +487,9 @@ actual object CloudStreamRepository {
     actual suspend fun load(providerId: String, data: String): Result<CloudStreamLoadItem> {
         initialize()
         val cacheKey = "$providerId\\u0000$data"
+        val now = currentEpochMillis()
         loadResultCacheMutex.withLock {
-            loadResultCache[cacheKey]
+            loadResultCache[cacheKey]?.takeIf { it.expiresAtEpochMs > now }?.item
         }?.let { cached ->
             RuntimeDiagnostics.recordLog("cs-load-cache-hit id=$providerId dataLength=${data.length}")
             return Result.success(cached)
@@ -506,8 +508,12 @@ actual object CloudStreamRepository {
         return providerResult(providerId) { load(data) }
             .onSuccess { item ->
                 loadResultCacheMutex.withLock {
-                    loadResultCache[cacheKey] = item
-                    loadResultCache["$providerId\\u0000${item.data}"] = item
+                    val entry = CachedCloudStreamLoadItem(
+                        item = item,
+                        expiresAtEpochMs = currentEpochMillis() + LOAD_RESULT_CACHE_TTL_MS,
+                    )
+                    loadResultCache[cacheKey] = entry
+                    loadResultCache["$providerId\\u0000${item.data}"] = entry
                     while (loadResultCache.size > LOAD_RESULT_CACHE_MAX_ENTRIES) {
                         loadResultCache.remove(loadResultCache.entries.first().key)
                     }
@@ -541,8 +547,8 @@ actual object CloudStreamRepository {
 
         var created = false
         val request = loadLinksRequestMutex.withLock {
-            loadLinksRequests[requestKey]
-                ?: scope.async(start = CoroutineStart.LAZY) {
+            loadLinksRequests[requestKey]?.takeIf { it.isActive && !it.isCancelled }
+                ?: scope.async(start = CoroutineStart.DEFAULT) {
                     providerResult(providerId) { loadLinks(data) }
                 }.also { deferred ->
                     loadLinksRequests[requestKey] = deferred
@@ -575,16 +581,33 @@ actual object CloudStreamRepository {
     }
 
     private data class CachedCloudStreamLinks(
-    val sources: List<CloudStreamPlaybackSource>,
-    val expiresAtEpochMs: Long,
-)
+        val sources: List<CloudStreamPlaybackSource>,
+        val expiresAtEpochMs: Long,
+    )
 
-private fun cancelInFlightLoadLinksRequests() {
+    private data class CachedCloudStreamLoadItem(
+        val item: CloudStreamLoadItem,
+        val expiresAtEpochMs: Long,
+    )
+
+    private fun cancelInFlightLoadLinksRequests() {
+        val inFlight = runCatching {
+            if (loadLinksRequestMutex.tryLock()) {
+                try {
+                    loadLinksRequests.values.toList().also { loadLinksRequests.clear() }
+                } finally {
+                    loadLinksRequestMutex.unlock()
+                }
+            } else {
+                emptyList()
+            }
+        }.getOrDefault(emptyList())
+        inFlight.forEach { it.cancel() }
         scope.launch {
-            val requests = loadLinksRequestMutex.withLock {
+            val remaining = loadLinksRequestMutex.withLock {
                 loadLinksRequests.values.toList().also { loadLinksRequests.clear() }
             }
-            requests.forEach { it.cancel() }
+            remaining.forEach { it.cancel() }
         }
     }
 

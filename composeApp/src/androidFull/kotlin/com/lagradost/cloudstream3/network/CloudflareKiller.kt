@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.mvvm.safe
 import com.lagradost.nicehttp.Requests.Companion.await
 import com.lagradost.nicehttp.cookies
 import java.net.URI
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.runBlocking
 import okhttp3.Headers
 import okhttp3.Interceptor
@@ -43,11 +44,12 @@ class CloudflareKiller : Interceptor {
         safe { CookieManager.getInstance().removeAllCookies(null) }
     }
 
-    val savedCookies: MutableMap<String, Map<String, String>> = mutableMapOf()
+    val savedCookies: MutableMap<String, Map<String, String>> = ConcurrentHashMap()
 
     fun getCookieHeaders(url: String): Headers {
         val userAgentHeaders = WebViewResolver.webViewUserAgent?.let { mapOf("user-agent" to it) }.orEmpty()
-        return getHeaders(userAgentHeaders, savedCookies[URI(url).host].orEmpty())
+        val host = runCatching { URI(url).host }.getOrNull()
+        return getHeaders(userAgentHeaders, host?.let { savedCookies[it] }.orEmpty())
     }
 
     override fun intercept(chain: Interceptor.Chain): Response = runBlocking {
