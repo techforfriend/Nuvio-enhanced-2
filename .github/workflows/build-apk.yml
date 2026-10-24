@@ -60,26 +60,23 @@ jobs:
           path: build-apks/*.apk
           retention-days: 14
 
-      - name: Publish GitHub Stable Release
+      - name: Publish GitHub Testing Release
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.3-enhanced-stable
-          name: "Nuvio Enhanced v0.6.3 Stable Release"
+          tag_name: v0.6.4-beta.1-testing
+          name: "Nuvio Enhanced v0.6.4 Testing Release (Volume Boost)"
           body: |
-            ## What's New in v0.6.3
+            ## What's New in v0.6.4 (Testing Release)
             **by RAJA JI**
 
             ### 🌟 What's New:
-            - **Player Live Stream Badges:** Real-time video/audio codec, resolution, and quality badges displayed directly in the player timeline/controls during active playback.
-            - **Center Controls Stability on Pause:** Fixed center playback controls (play/pause, seek) hiding or glitching unexpectedly when paused; controls stay reliably visible and responsive on pause.
-            - **Watch Party Chat Companion:** Live watch party companion improvements and plain text source handling.
-            - **Binge Group Matching & Library Custom Posters:** Improved episode binge group matching algorithm and fixed custom library posters in catalog/collection views.
-            - **Live TV Navigation Toggle:** Added on/off switch in Enhanced Settings (`App Experience` / `System`) to customize navigation bar visibility.
-            - **Continue Watching & Stream Link Persistence:** Fixed profile login issue where Continue Watching progress and cached stream link memory could reset upon login.
-            - **New Localizations:** Added Brazilian Portuguese (`pt-BR`), Hungarian (`hu`), and Vietnamese (`vi`) translations.
+            - **Digital Volume Boost (Up to 200%):** Integrated Android hardware-accelerated Loudness Enhancer for ExoPlayer and digital audio amplification for libmpv. Dialogue in movies and shows with 5.1/7.1 surround sound is now significantly clearer and louder on phone speakers.
+            - **Smart Swipe Volume Boost Indicator:** Swiping up on the right side of the screen now smoothly continues beyond 100% up to 200% with a dedicated golden amber boost indicator and real-time percentage feedback.
+            - **Enhanced Settings Toggle:** Added Volume Boost switch in Enhanced Settings (`Player` category) to easily enable or disable audio boost.
+            - **Player & System Stability Fixes:** Fixed Live TV LazyColumn duplicate key playlist crash, Continue Watching progress sync, custom layout constraints, and extension popup scroll.
           draft: false
-          prerelease: false
+          prerelease: true
           files: build-apks/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

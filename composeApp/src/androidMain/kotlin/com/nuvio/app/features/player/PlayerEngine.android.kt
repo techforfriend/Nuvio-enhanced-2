@@ -505,6 +505,13 @@ private fun ExoPlayerSurface(
         onDispose { nowPlayingController.release() }
     }
 
+    DisposableEffect(exoPlayer) {
+        val cleanupAudioBoost = PlayerAudioBoostBridge.attachExoPlayer(exoPlayer)
+        onDispose {
+            cleanupAudioBoost()
+        }
+    }
+
     LaunchedEffect(exoPlayer, resolvedMediaItem, initialPositionRequestKey) {
         val mediaItem = resolvedMediaItem
         val requestedStartPositionMs = fallbackStartPositionMs
@@ -1141,6 +1148,16 @@ private fun LibmpvPlayerSurface(
         onDispose { nowPlayingController?.release() }
     }
 
+    DisposableEffect(playerViewRef) {
+        val view = playerViewRef ?: return@DisposableEffect onDispose {}
+        val cleanupAudioBoost = PlayerAudioBoostBridge.attachLibmpv { volumeDouble ->
+            view.setBoostVolume(volumeDouble)
+        }
+        onDispose {
+            cleanupAudioBoost()
+        }
+    }
+
     val audioFocus = remember(context) {
         PlayerAudioFocus(context) { playerViewRef?.setPaused(true) }
     }
@@ -1460,6 +1477,7 @@ private class NuvioLibmpvView(
         mpv.setPropertyBoolean("keep-open", true)
         mpv.setPropertyBoolean("input-default-bindings", true)
         mpv.setPropertyBoolean("audio-fallback-to-null", true)
+        mpv.setOptionString("volume-max", "200")
     }
 
     override fun postInitOptions() = Unit
@@ -1532,6 +1550,12 @@ private class NuvioLibmpvView(
 
     fun setPaused(paused: Boolean) {
         executeMpv { setPausedNow(paused) }
+    }
+
+    fun setBoostVolume(volumePercent: Double) {
+        executeMpv {
+            mpv.setPropertyDouble("volume", volumePercent)
+        }
     }
 
     fun seekToMs(positionMs: Long) {

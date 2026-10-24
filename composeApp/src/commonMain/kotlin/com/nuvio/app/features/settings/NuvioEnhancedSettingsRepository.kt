@@ -49,6 +49,8 @@ internal data class NuvioEnhancedSettingsUiState(
     val randomNextEpisodeEnabled: Boolean = false,
     val androidMemorySafeBufferEnabled: Boolean = false,
     val nextEpisodeButtonEnabled: Boolean = false,
+    val volumeBoostEnabled: Boolean = true,
+    val maxVolumeBoostPercent: Int = 200,
     val showContinueWatchingReadyBadge: Boolean = true,
     val releaseRadarLibraryOnly: Boolean = true,
     val releaseRadarWindowDays: Int = 30,
@@ -136,6 +138,7 @@ internal enum class NuvioEnhancedFeature(
     StreamSourcePinning("stream_source_pinning"),
     BackgroundStreamPrefetch("background_stream_prefetch"),
     ContentWarnings("content_warnings"),
+    VolumeBoost("volume_boost_v1"),
     AnimeTracking("anime_tracking_v1", showInEnhancedSettings = false),
 }
 
@@ -193,6 +196,8 @@ private data class StoredNuvioEnhancedSettings(
     val randomNextEpisodeEnabled: Boolean = false,
     val androidMemorySafeBufferEnabled: Boolean = false,
     val nextEpisodeButtonEnabled: Boolean = false,
+    val volumeBoostEnabled: Boolean = true,
+    val maxVolumeBoostPercent: Int = 200,
     val showContinueWatchingReadyBadge: Boolean = true,
     val releaseRadarLibraryOnly: Boolean = true,
     val releaseRadarWindowDays: Int = 30,
@@ -438,6 +443,14 @@ internal object NuvioEnhancedSettingsRepository {
         copy(nextEpisodeButtonEnabled = enabled)
     }
 
+    fun setVolumeBoostEnabled(enabled: Boolean) = update {
+        copy(volumeBoostEnabled = enabled)
+    }
+
+    fun setMaxVolumeBoostPercent(percent: Int) = update {
+        copy(maxVolumeBoostPercent = percent.coerceIn(100, 200))
+    }
+
     fun setStatusBarVisible(visible: Boolean) = update {
         copy(statusBarVisible = visible)
     }
@@ -530,6 +543,8 @@ internal object NuvioEnhancedSettingsRepository {
             randomNextEpisodeEnabled = stored.randomNextEpisodeEnabled,
             androidMemorySafeBufferEnabled = stored.androidMemorySafeBufferEnabled,
             nextEpisodeButtonEnabled = stored.nextEpisodeButtonEnabled,
+            volumeBoostEnabled = stored.volumeBoostEnabled,
+            maxVolumeBoostPercent = stored.maxVolumeBoostPercent,
             showContinueWatchingReadyBadge = stored.showContinueWatchingReadyBadge,
             releaseRadarLibraryOnly = stored.releaseRadarLibraryOnly,
             releaseRadarWindowDays = stored.releaseRadarWindowDays.coerceIn(7, 45),
