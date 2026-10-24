@@ -20,7 +20,7 @@ internal object ReleaseSelector {
                 prerelease = isPrerelease(release, version)
             )
         }
-        .filter { candidate -> channel == UpdateChannel.BETA || !candidate.prerelease }
+        .filter { candidate -> candidate.prerelease }
         .sortedByDescending(ReleaseCandidate::version)
         .map(ReleaseCandidate::release)
         .toList()

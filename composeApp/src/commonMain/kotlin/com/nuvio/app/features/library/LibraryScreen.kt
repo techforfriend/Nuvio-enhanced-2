@@ -253,6 +253,7 @@ fun LibraryScreen(
         } else {
             0
         }
+    val enhancedLibraryContent = rememberLibraryEnhancedContent(uiState.items)
     var serverShelves by remember { mutableStateOf<List<LibraryServerShelf>?>(null) }
     var serverShelvesRequest by remember { mutableStateOf(0) }
     var selectedProviderId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -689,18 +690,24 @@ fun LibraryScreen(
                             }
                         }
                         when (displaySettings.layoutMode) {
-                            LibraryLayoutMode.HORIZONTAL -> librarySections(
-                                displaySections = librarySectionsDisplay,
-                                releaseInfoFor = releaseInfoFor,
-                                watchedKeys = watchedUiState.watchedKeys,
-                                fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-                                sortOption = effectiveSortOption,
-                                posterPattern = effectivePosterPattern,
-                                onPosterClick = onPosterClick,
-                                onSectionViewAllClick = onSectionViewAllClick,
-                                onPosterLongClick = onPosterLongClick,
-                                onDisintegrated = disintegration::onExited,
-                            )
+                            LibraryLayoutMode.HORIZONTAL -> {
+                                libraryEnhancedSections(
+                                    content = enhancedLibraryContent,
+                                    onPosterClick = onPosterClick,
+                                )
+                                librarySections(
+                                    displaySections = librarySectionsDisplay,
+                                    releaseInfoFor = releaseInfoFor,
+                                    watchedKeys = watchedUiState.watchedKeys,
+                                    fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                                    sortOption = effectiveSortOption,
+                                    posterPattern = effectivePosterPattern,
+                                    onPosterClick = onPosterClick,
+                                    onSectionViewAllClick = onSectionViewAllClick,
+                                    onPosterLongClick = onPosterLongClick,
+                                    onDisintegrated = disintegration::onExited,
+                                )
+                            }
                             LibraryLayoutMode.VERTICAL -> libraryVerticalContent(
                                 projection = verticalProjection,
                                 columns = gridColumns,

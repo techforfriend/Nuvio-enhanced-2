@@ -1188,7 +1188,7 @@ fun HomeScreen(
                                     modifier = Modifier,
                                     viewportHeight = maxHeight,
                                     mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
-                                    heroStyle = homeSettingsUiState.heroStyle,
+                                    heroStyle = if (enhancedSettings.originalNuvioHeroBannerEnabled) HomeHeroStyle.FULL_BLEED else homeSettingsUiState.heroStyle,
                                     listState = homeListState,
                                     stretchPx = { heroStretchState.stretchPx },
                                     // animateCollectionGifs doubles as "Home is the visible route" — it already
@@ -1198,8 +1198,16 @@ fun HomeScreen(
                                         animateCollectionGifs,
                                     trailerStartDelaySeconds = homeSettingsUiState.heroTrailerStartDelaySeconds,
                                     trailerStartUnmuted = homeSettingsUiState.heroTrailerStartUnmuted,
-                                    showImdbRating = homeHeroState.showImdbRating,
-                                    showMdbListRatings = homeHeroState.showMdbListRatings,
+                                    showImdbRating = homeHeroState.showImdbRating && enhancedSettings.showHeroRatings,
+                                    showMdbListRatings = homeHeroState.showMdbListRatings && enhancedSettings.showHeroRatings,
+                                    preferredArtworkSource = if (enhancedSettings.posterArtHeroEnabled && !enhancedSettings.originalNuvioHeroBannerEnabled) {
+                                        NuvioHeroArtworkSource.Poster
+                                    } else {
+                                        enhancedSettings.heroArtworkSource
+                                    },
+                                    showHeroOverview = enhancedSettings.showHeroOverview,
+                                    showHeroDetailsButton = enhancedSettings.showHeroDetailsButton,
+                                    heroRefreshHapticsEnabled = enhancedSettings.heroRefreshHapticsEnabled,
                                     onItemClick = onPosterClick,
                                     onActiveArtworkChange = onActiveHeroArtworkChange,
                                 )

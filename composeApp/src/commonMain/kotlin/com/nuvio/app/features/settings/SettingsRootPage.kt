@@ -245,17 +245,6 @@ internal fun LazyListScope.settingsRootContent(
                 title = stringResource(Res.string.compose_settings_root_about_section),
                 isTablet = isTablet,
             ) {
-                SettingsGroup(isTablet = isTablet) {
-                    if (showSupportersContributorsPage) {
-                        SettingsNavigationRow(
-                            title = stringResource(Res.string.compose_settings_page_supporters_contributors),
-                            description = stringResource(Res.string.about_supporters_contributors_subtitle),
-                            icon = Icons.Rounded.Favorite,
-                            isTablet = isTablet,
-                            onClick = onSupportersContributorsClick,
-                        )
-                        SettingsGroupDivider(isTablet = isTablet)
-                    }
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_whats_new),
                         description = stringResource(Res.string.whats_new_root_description),
@@ -279,17 +268,9 @@ internal fun LazyListScope.settingsRootContent(
                         isTablet = isTablet,
                         onClick = onLicensesAttributionsClick,
                     )
-                    if (onCheckForUpdatesClick != null && com.nuvio.app.features.updater.AppUpdaterPlatform.isSupported) {
+                    if (com.nuvio.app.features.updater.AppUpdaterPlatform.isSupported) {
                         SettingsGroupDivider(isTablet = isTablet)
                         UpdateChannelSettingsRow(isTablet = isTablet)
-                        SettingsGroupDivider(isTablet = isTablet)
-                        SettingsNavigationRow(
-                            title = stringResource(Res.string.compose_settings_root_check_updates_title),
-                            description = stringResource(Res.string.compose_settings_root_check_updates_description),
-                            icon = Icons.Rounded.CloudDownload,
-                            isTablet = isTablet,
-                            onClick = onCheckForUpdatesClick,
-                        )
                     }
                     if (onTestUpdateBannerClick != null) {
                         SettingsGroupDivider(isTablet = isTablet)

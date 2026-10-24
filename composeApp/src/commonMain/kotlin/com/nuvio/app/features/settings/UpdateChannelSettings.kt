@@ -42,7 +42,7 @@ import org.jetbrains.compose.resources.stringResource
 internal fun UpdateChannelSettingsRow(isTablet: Boolean) {
     if (!AppUpdaterPlatform.isSupported) return
     val channel by runCatching { UpdatePreferences.shared.channel }
-        .getOrDefault(MutableStateFlow(UpdateChannel.STABLE).asStateFlow())
+        .getOrDefault(MutableStateFlow(UpdateChannel.BETA).asStateFlow())
         .collectAsState()
     var showDialog by rememberSaveable { mutableStateOf(false) }
     val tokens = MaterialTheme.nuvio
@@ -68,7 +68,7 @@ internal fun UpdateChannelSettingsRow(isTablet: Boolean) {
             Column(
                 modifier = Modifier.selectableGroup().verticalScroll(rememberScrollState()),
             ) {
-                UpdateChannel.entries.forEach { option ->
+                UpdateChannel.entries.filter { it != UpdateChannel.STABLE }.forEach { option ->
                     Row(
                         modifier = Modifier.fillMaxWidth().selectable(
                             selected = option == channel,

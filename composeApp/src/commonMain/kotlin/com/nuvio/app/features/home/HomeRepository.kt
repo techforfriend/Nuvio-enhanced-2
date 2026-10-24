@@ -92,6 +92,7 @@ object HomeRepository {
     private var snapshotSaveJob: Job? = null
     private var lastRefreshAddonSignature: List<String>? = null
     private var collectionHeroResolving: Boolean = false
+    private var lastCompletedRequestKey: String? = null
 
     fun preloadSnapshot() {
         val profileKey = HomeSnapshotStore.currentProfileKey() ?: return
@@ -130,7 +131,9 @@ object HomeRepository {
         }
         currentRequestKey = requestKey
 
-        if (!force && activeRequestKey == requestKey && _uiState.value.isLoading) return
+        if (!force && (activeRequestKey == requestKey && _uiState.value.isLoading || (lastCompletedRequestKey == requestKey && _uiState.value.sections.isNotEmpty()))) {
+            return
+        }
         activeRequestKey = requestKey
         snapshotGeneration++
 
@@ -170,6 +173,7 @@ object HomeRepository {
             }
             if (pendingRequests.isEmpty()) {
                 lastErrorMessage = cloudResult.errorMessage
+                lastCompletedRequestKey = requestKey
                 activeRequestKey = null
                 publishCurrentState(
                     isLoading = false,
@@ -223,6 +227,7 @@ object HomeRepository {
 
             cachedSections = loadedSections.toMap()
             lastErrorMessage = firstErrorMessage
+            lastCompletedRequestKey = requestKey
             activeRequestKey = null
             publishCurrentState(
                 isLoading = false,
@@ -271,6 +276,7 @@ object HomeRepository {
         snapshotSaveJob = null
         lastRefreshAddonSignature = null
         collectionHeroResolving = false
+        lastCompletedRequestKey = null
         _uiState.value = HomeUiState()
         restoreSnapshot()
     }

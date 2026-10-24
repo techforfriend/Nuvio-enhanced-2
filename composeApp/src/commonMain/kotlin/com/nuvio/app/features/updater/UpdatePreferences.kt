@@ -7,14 +7,14 @@ import kotlinx.coroutines.flow.asStateFlow
 internal class UpdatePreferences(versionName: String = AppVersionConfig.VERSION_NAME) {
     private val storedChannel = runCatching {
         UpdateChannel.fromStoredValue(AppUpdaterPlatform.getUpdateChannel())
-    }.getOrNull()
-    private val _channel = MutableStateFlow(storedChannel ?: UpdateChannel.defaultForVersion(versionName))
+    }.getOrNull()?.takeIf { it != UpdateChannel.STABLE }
+    private val _channel = MutableStateFlow(storedChannel ?: UpdateChannel.BETA)
     val channel = _channel.asStateFlow()
 
     init {
         runCatching {
-            if (storedChannel == null && AppUpdaterPlatform.isSupported) {
-                AppUpdaterPlatform.setUpdateChannel(_channel.value.storedValue)
+            if ((storedChannel == null || AppUpdaterPlatform.getUpdateChannel() == UpdateChannel.STABLE.storedValue) && AppUpdaterPlatform.isSupported) {
+                AppUpdaterPlatform.setUpdateChannel(UpdateChannel.BETA.storedValue)
             }
         }
     }

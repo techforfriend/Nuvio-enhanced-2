@@ -67,8 +67,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.build.TrailerPlaybackMode
 import com.nuvio.app.core.diagnostics.CrashDiagnostics
-import com.nuvio.app.core.network.DnsOverHttpsProvider
-import com.nuvio.app.core.network.DnsOverHttpsSettingsRepository
+import com.nuvio.app.features.livetv.LiveTvRepository
 import com.nuvio.app.core.sync.ProfileSettingsSync
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.ui.NuvioTokens
@@ -125,9 +124,9 @@ private fun NuvioEnhancedSettingsPageContent(
         HomeCatalogSettingsRepository.snapshot()
         HomeCatalogSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
-    val dnsOverHttpsSettings by remember {
-        DnsOverHttpsSettingsRepository.ensureLoaded()
-        DnsOverHttpsSettingsRepository.uiState
+    val liveTvUiState by remember {
+        LiveTvRepository.ensureLoaded()
+        LiveTvRepository.uiState
     }.collectAsStateWithLifecycle()
     val detailSettings by remember {
         MetaScreenSettingsRepository.ensureLoaded()
@@ -991,11 +990,12 @@ private fun NuvioEnhancedSettingsPageContent(
                     SettingsSwitchRow(
                         title = stringResource(Res.string.nuvio_enhanced_live_tv_title),
                         description = stringResource(Res.string.nuvio_enhanced_live_tv_desc),
-                        checked = settings.liveTvEnabled,
+                        checked = liveTvUiState.showInNavigation,
                         isTablet = isTablet,
                         highlighted = isNew(NuvioEnhancedFeature.LiveTvControls),
                         onCheckedChange = {
                             markSeen(NuvioEnhancedFeature.LiveTvControls)
+                            LiveTvRepository.setNavigationEnabled(it)
                             NuvioEnhancedSettingsRepository.setLiveTvEnabled(it)
                         },
                     )
@@ -1021,29 +1021,6 @@ private fun NuvioEnhancedSettingsPageContent(
                     )
                 }
             }
-
-            SettingsSection(
-            title = stringResource(Res.string.nuvio_enhanced_section_network),
-            isTablet = isTablet,
-        ) {
-            SettingsGroup(isTablet = isTablet) {
-                DnsOverHttpsProvider.entries.forEachIndexed { index, provider ->
-                    if (index > 0) {
-                        SettingsGroupDivider(isTablet = isTablet)
-                    }
-                    EnhancedDnsProviderRow(
-                        provider = provider,
-                        selected = provider == dnsOverHttpsSettings.provider,
-                        isTablet = isTablet,
-                        highlighted = isNew(NuvioEnhancedFeature.NetworkControls),
-                        onClick = {
-                            markSeen(NuvioEnhancedFeature.NetworkControls)
-                            DnsOverHttpsSettingsRepository.setProvider(provider)
-                        },
-                    )
-                }
-            }
-        }
 
         SettingsSection(
             title = stringResource(Res.string.nuvio_enhanced_section_backup_import),
@@ -1268,103 +1245,7 @@ private fun NuvioEnhancedSettingsPageContent(
     }
 }
 
-@Composable
-private fun EnhancedDnsProviderRow(
-    provider: DnsOverHttpsProvider,
-    selected: Boolean,
-    isTablet: Boolean,
-    highlighted: Boolean,
-    onClick: () -> Unit,
-) {
-    val tokens = MaterialTheme.nuvio
-    val iconSize = if (isTablet) 42.dp else 36.dp
-    val rowShape = RoundedCornerShape(if (isTablet) NuvioTokens.Radius.lg else NuvioTokens.Radius.md)
-    val rowColor = when {
-        selected -> tokens.colors.accent.copy(alpha = 0.13f)
-        highlighted -> tokens.colors.accent.copy(alpha = 0.08f)
-        else -> Color.Transparent
-    }
-    val borderColor = when {
-        selected -> tokens.colors.accent.copy(alpha = 0.86f)
-        highlighted -> tokens.colors.accent.copy(alpha = 0.72f)
-        else -> Color.Transparent
-    }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(rowColor, rowShape)
-            .border(tokens.borders.hairline, borderColor, rowShape)
-            .nuvioKeyboardFocusIndicator(rowShape)
-            .clickable(onClick = onClick)
-            .padding(
-                horizontal = if (isTablet) 20.dp else 16.dp,
-                vertical = if (isTablet) 16.dp else 14.dp,
-            ),
-        horizontalArrangement = Arrangement.spacedBy(if (isTablet) 16.dp else 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Surface(
-            modifier = Modifier.size(iconSize),
-            color = if (selected) {
-                tokens.colors.accent.copy(alpha = 0.22f)
-            } else {
-                tokens.colors.accent.copy(alpha = tokens.opacity.pressed)
-            },
-            shape = tokens.shapes.compactCard,
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Link,
-                    contentDescription = null,
-                    tint = tokens.colors.accent,
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = provider.label,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = tokens.colors.textPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
-                )
-                if (highlighted) {
-                    EnhancedNewBadge()
-                }
-            }
-            Text(
-                text = if (selected) {
-                    stringResource(Res.string.settings_advanced_doh_selected)
-                } else {
-                    stringResource(Res.string.settings_advanced_doh_description)
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = tokens.colors.textMuted,
-            )
-        }
-
-        if (selected) {
-            Icon(
-                imageVector = Icons.Rounded.CheckCircle,
-                contentDescription = stringResource(Res.string.settings_advanced_doh_selected),
-                tint = tokens.colors.accent,
-            )
-        }
-    }
-}
 
 private data class EnhancedChoiceOption<T>(
     val value: T,
