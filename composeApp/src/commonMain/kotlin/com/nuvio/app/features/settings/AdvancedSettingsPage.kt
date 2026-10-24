@@ -125,43 +125,6 @@ internal fun LazyListScope.advancedSettingsContent(
             }
         }
     }
-    if (SentrySettingsRepository.isSupported) {
-        item {
-            val sentryEnabledFlow = remember {
-                SentrySettingsRepository.ensureLoaded()
-                SentrySettingsRepository.enabled
-            }
-            val sentryEnabled by sentryEnabledFlow.collectAsStateWithLifecycle()
-            var showSentryDialog by rememberSaveable { mutableStateOf(false) }
-
-            SettingsSection(
-                title = stringResource(Res.string.settings_advanced_section_diagnostics),
-                isTablet = isTablet,
-            ) {
-                SettingsGroup(isTablet = isTablet) {
-                    SettingsSwitchRow(
-                        title = stringResource(Res.string.settings_advanced_sentry_reports),
-                        description = stringResource(Res.string.settings_advanced_sentry_reports_subtitle),
-                        checked = sentryEnabled,
-                        isTablet = isTablet,
-                        onCheckedChange = { showSentryDialog = true },
-                    )
-                }
-            }
-
-            if (showSentryDialog) {
-                SentrySettingsDialog(
-                    enabled = sentryEnabled,
-                    onConfirm = {
-                        SentrySettingsRepository.setEnabled(!sentryEnabled)
-                    },
-                    onDismiss = {
-                        showSentryDialog = false
-                    },
-                )
-            }
-        }
-    }
     item {
         SettingsConfigBackupSection(isTablet = isTablet)
     }

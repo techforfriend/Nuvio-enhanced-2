@@ -2,6 +2,7 @@ package com.nuvio.app.features.settings
 
 import com.nuvio.app.features.home.HomeReleaseRadarCategory
 import com.nuvio.app.features.home.HomeReleaseRadarItem
+import com.nuvio.app.features.livetv.LiveTvRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -300,8 +301,11 @@ internal object NuvioEnhancedSettingsRepository {
         copy(profileStatsEnabled = enabled)
     }
 
-    fun setLiveTvEnabled(enabled: Boolean) = update {
-        copy(liveTvEnabled = enabled)
+    fun setLiveTvEnabled(enabled: Boolean) {
+        runCatching { LiveTvRepository.setNavigationEnabled(enabled) }
+        update {
+            copy(liveTvEnabled = enabled)
+        }
     }
 
     fun setStreamSourcePinningEnabled(enabled: Boolean) = update {

@@ -35,12 +35,17 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.nuvio.app.features.settings.NuvioHeroArtworkSource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -209,6 +214,10 @@ internal fun HomeHeroSection(
     trailerStartUnmuted: Boolean = false,
     showImdbRating: Boolean = true,
     showMdbListRatings: Boolean = false,
+    preferredArtworkSource: NuvioHeroArtworkSource? = null,
+    showHeroOverview: Boolean = true,
+    showHeroDetailsButton: Boolean = true,
+    heroRefreshHapticsEnabled: Boolean = true,
     onItemClick: ((MetaPreview) -> Unit)? = null,
     onActiveArtworkChange: ((String?) -> Unit)? = null,
 ) {
@@ -225,6 +234,12 @@ internal fun HomeHeroSection(
         )
     }
     val coroutineScope = rememberCoroutineScope()
+    val hapticFeedback = LocalHapticFeedback.current
+    LaunchedEffect(pagerState.currentPage) {
+        if (heroRefreshHapticsEnabled && items.size > 1) {
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+    }
     val autoScrollPage = pagerState.settledPage
     val effectiveTrailerPlaybackEnabled = trailerPlaybackEnabled &&
         AppFeaturePolicy.heroTrailerPlaybackSupported &&
@@ -302,6 +317,8 @@ internal fun HomeHeroSection(
                 baseLayout
             }
             val effectiveArtworkSource = when {
+                preferredArtworkSource == NuvioHeroArtworkSource.Poster -> HomeHeroArtworkSource.POSTER
+                preferredArtworkSource == NuvioHeroArtworkSource.Backdrop -> HomeHeroArtworkSource.BACKDROP
                 !isCardStyle -> HomeHeroArtworkSource.BACKDROP
                 heroUsesWideArtwork(maxWidth, viewportHeight, baseLayout.isTablet) ->
                     HomeHeroArtworkSource.BACKDROP
@@ -611,6 +628,8 @@ internal fun HomeHeroSection(
                                             layout = layout,
                                             showImdbRating = showImdbRating,
                                             showMdbListRatings = showMdbListRatings,
+                                            showHeroOverview = showHeroOverview,
+                                            showHeroDetailsButton = showHeroDetailsButton,
                                             onItemClick = onItemClick,
                                         )
                                     }
@@ -793,6 +812,8 @@ private fun HeroContentBlock(
     layout: HomeHeroLayout,
     showImdbRating: Boolean,
     showMdbListRatings: Boolean,
+    showHeroOverview: Boolean,
+    showHeroDetailsButton: Boolean,
     onItemClick: ((MetaPreview) -> Unit)?,
 ) {
     var logoLoadError by remember(item.type, item.id, item.logo) {
@@ -876,7 +897,7 @@ private fun HeroContentBlock(
             showMdbListRatings = showMdbListRatings,
         )
 
-        if (synopsis != null) {
+        if (synopsis != null && showHeroOverview) {
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = synopsis,
@@ -887,6 +908,35 @@ private fun HeroContentBlock(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+
+        if (showHeroDetailsButton && onItemClick != null) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Surface(
+                onClick = { onItemClick(item) },
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
+                modifier = Modifier.padding(top = 2.dp),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Info,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onBackground,
+                    )
+                    Text(
+                        text = "Details",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
+            }
         }
     }
 }

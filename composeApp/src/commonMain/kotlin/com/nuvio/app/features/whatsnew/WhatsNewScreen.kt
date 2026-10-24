@@ -626,7 +626,7 @@ private fun ReleaseCard(
                 expanded = expanded,
                 onToggle = { expanded = !expanded },
                 allowToggle = release.notes.size > previewNoteCount,
-                showGithub = true,
+                showGithub = false,
             )
         }
     }
@@ -719,7 +719,7 @@ private fun ReleaseHistoryRow(
                     expanded = true,
                     onToggle = {},
                     allowToggle = false,
-                    showGithub = true,
+                    showGithub = false,
                 )
             }
         }
