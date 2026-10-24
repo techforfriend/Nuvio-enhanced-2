@@ -731,8 +731,8 @@ private fun ProfileIdentityCard(
             ) {
                 if (selectedBackgroundUrl != null) {
                     NuvioAsyncImage(
-                        model = selectedBackgroundUrl,
-                        contentDescription = null,
+                        imageUrl = selectedBackgroundUrl,
+                        contentDescription = "",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                     )
