@@ -38,40 +38,68 @@ object AndroidAppUpdaterPlatform {
         .followSslRedirects(true)
         .build()
 
+    @Volatile
     private var appContext: Context? = null
 
     fun initialize(context: Context) {
         appContext = context.applicationContext
     }
 
+    private fun getContext(): Context? {
+        if (appContext == null) {
+            runCatching {
+                val activityThreadClass = Class.forName("android.app.ActivityThread")
+                val method = activityThreadClass.getMethod("currentApplication")
+                val app = method.invoke(null) as? Context
+                if (app != null) {
+                    appContext = app.applicationContext
+                }
+            }
+        }
+        return appContext
+    }
+
     fun getSupportedAbis(): List<String> = Build.SUPPORTED_ABIS?.toList().orEmpty()
 
     fun isDebugBuild(): Boolean {
-        val context = appContext ?: return false
-        return context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+        val context = getContext() ?: return false
+        return runCatching {
+            context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+        }.getOrDefault(false)
     }
 
-    fun getIgnoredTag(): String? =
-        preferences().getString(ignoredTagKey, null)
+    fun getIgnoredTag(): String? = runCatching {
+        preferences()?.getString(ignoredTagKey, null)
+    }.getOrNull()
 
     fun setIgnoredTag(tag: String?) {
-        preferences().edit().apply {
-            if (tag == null) remove(ignoredTagKey) else putString(ignoredTagKey, tag)
-        }.apply()
+        runCatching {
+            preferences()?.edit()?.apply {
+                if (tag == null) remove(ignoredTagKey) else putString(ignoredTagKey, tag)
+            }?.apply()
+        }
     }
 
-    fun getUpdateChannel(): String? = preferences().getString(updateChannelKey, null)
+    fun getUpdateChannel(): String? = runCatching {
+        preferences()?.getString(updateChannelKey, null)
+    }.getOrNull()
 
     fun setUpdateChannel(channel: String) {
-        preferences().edit().putString(updateChannelKey, channel).apply()
+        runCatching {
+            preferences()?.edit()?.putString(updateChannelKey, channel)?.apply()
+        }
     }
 
-    fun getWhatsNewCache(): String? = preferences().getString(whatsNewCacheKey, null)
+    fun getWhatsNewCache(): String? = runCatching {
+        preferences()?.getString(whatsNewCacheKey, null)
+    }.getOrNull()
 
     fun setWhatsNewCache(payload: String?) {
-        preferences().edit().apply {
-            if (payload == null) remove(whatsNewCacheKey) else putString(whatsNewCacheKey, payload)
-        }.apply()
+        runCatching {
+            preferences()?.edit()?.apply {
+                if (payload == null) remove(whatsNewCacheKey) else putString(whatsNewCacheKey, payload)
+            }?.apply()
+        }
     }
 
     fun deleteDownloadedApk(path: String) {
@@ -140,13 +168,13 @@ object AndroidAppUpdaterPlatform {
     }
 
     fun openUnknownSourcesSettings() {
-        val context = appContext ?: return
+        val context = getContext() ?: return
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val intent = Intent(
             Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
             Uri.parse("package:${context.packageName}"),
         ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
+        runCatching { context.startActivity(intent) }
     }
 
     fun installDownloadedApk(path: String): Result<Unit> = runCatching {
@@ -168,8 +196,8 @@ object AndroidAppUpdaterPlatform {
         context.startActivity(intent)
     }
 
-    private fun preferences() = requireContext().getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
+    private fun preferences() = getContext()?.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
 
     private fun requireContext(): Context =
-        requireNotNull(appContext) { "AndroidAppUpdaterPlatform.initialize must be called before use." }
+        getContext() ?: requireNotNull(appContext) { "AndroidAppUpdaterPlatform.initialize must be called before use." }
 }

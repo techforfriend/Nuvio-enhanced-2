@@ -279,7 +279,7 @@ internal fun LazyListScope.settingsRootContent(
                         isTablet = isTablet,
                         onClick = onLicensesAttributionsClick,
                     )
-                    if (onCheckForUpdatesClick != null) {
+                    if (onCheckForUpdatesClick != null && com.nuvio.app.features.updater.AppUpdaterPlatform.isSupported) {
                         SettingsGroupDivider(isTablet = isTablet)
                         UpdateChannelSettingsRow(isTablet = isTablet)
                         SettingsGroupDivider(isTablet = isTablet)
@@ -358,7 +358,7 @@ internal fun LazyListScope.settingsRootContent(
                 text = stringResource(
                     Res.string.compose_about_version_format,
                     AppVersionConfig.VERSION_NAME,
-                    AppVersionConfig.VERSION_CODE,
+                    AppVersionConfig.VERSION_CODE.toString(),
                 ),
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.bodySmall,
