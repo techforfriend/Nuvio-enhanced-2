@@ -132,8 +132,6 @@ import com.nuvio.app.features.library.librarySectionItemKey
 import com.nuvio.app.features.library.showTrackingMembershipRewriteFeedback
 import com.nuvio.app.features.library.toLibraryItem
 import com.nuvio.app.features.library.toMetaPreview
-import com.nuvio.app.features.livetv.LiveTvChannel
-import com.nuvio.app.features.livetv.LiveTvRepository
 import com.nuvio.app.features.membership.MemberAccessRepository
 import com.nuvio.app.features.notifications.EpisodeReleaseNotificationsRepository
 import com.nuvio.app.features.p2p.P2pSettingsRepository
@@ -470,7 +468,6 @@ internal fun MainAppContent(
                 searchFocusRequestCount++
                 searchScrollToTopRequests.tryEmit(Unit)
             }
-            AppScreenTab.LiveTv -> {}
             AppScreenTab.Library -> libraryScrollToTopRequests.tryEmit(Unit)
             AppScreenTab.LiveTv -> liveTvScrollToTopRequests.tryEmit(Unit)
             AppScreenTab.Settings -> settingsRootActionRequests.tryEmit(Unit)
@@ -1001,33 +998,6 @@ internal fun MainAppContent(
                 parentMetaType = item.parentMetaType,
                 initialPositionMs = resumeEntry?.lastPositionMs?.takeIf { it > 0L } ?: 0L,
                 initialProgressFraction = resumeEntry?.progressFraction?.takeIf { it > 0f },
-            )
-            if (playerSettingsUiState.externalPlayerEnabled) {
-                coroutineScope.launch { openExternalPlayback(playerLaunch) }
-                return
-            }
-            val launchId = PlayerLaunchStore.put(playerLaunch)
-            navController.navigate(PlayerRoute(launchId = launchId, title = playerLaunch.title))
-        }
-
-        fun openLiveTvChannel(
-            channel: LiveTvChannel,
-            recordRecent: Boolean = true,
-        ) {
-            if (recordRecent) {
-                LiveTvRepository.recordRecentChannel(channel)
-            }
-            val playerLaunch = PlayerLaunch(
-                profileId = activePlaybackProfileId,
-                title = channel.name,
-                sourceUrl = channel.streamUrl,
-                sourceHeaders = channel.headers,
-                streamType = channel.streamType,
-                logo = channel.logoUrl,
-                streamTitle = channel.name,
-                providerName = channel.group.ifBlank { "Live TV" },
-                parentMetaId = channel.id.ifBlank { channel.streamUrl },
-                parentMetaType = "live-tv",
             )
             if (playerSettingsUiState.externalPlayerEnabled) {
                 coroutineScope.launch { openExternalPlayback(playerLaunch) }
@@ -1720,7 +1690,6 @@ internal fun MainAppContent(
                                     }
                                 },
                                 onDownloadsClick = { navController.navigate(DownloadsRoute(downloadsTitle)) },
-                                onLiveTvChannelClick = ::openLiveTvChannel,
                                 onContinueWatchingClick = onContinueWatchingClick,
                                 onContinueWatchingLongPress = onContinueWatchingLongPress,
                                 onLiveTvChannelClick = onLiveTvChannelClick,

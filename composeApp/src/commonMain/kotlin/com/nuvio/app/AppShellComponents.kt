@@ -153,7 +153,6 @@ internal data class AppTabActions(
     val onCloudFilePlay: ((CloudLibraryItem, CloudLibraryFile) -> Unit)? = null,
     val onConnectCloudClick: (() -> Unit)? = null,
     val onDownloadsClick: () -> Unit = {},
-    val onLiveTvChannelClick: ((LiveTvChannel) -> Unit)? = null,
     val onContinueWatchingClick: ((ContinueWatchingItem) -> Unit)? = null,
     val onContinueWatchingLongPress: ((ContinueWatchingItem) -> Unit)? = null,
     val onLiveTvChannelClick: (LiveTvChannel) -> Unit = {},
@@ -222,13 +221,6 @@ internal fun AppTabHost(
                 )
             }
 
-            AppScreenTab.LiveTv -> {
-                LiveTvScreen(
-                    modifier = Modifier.fillMaxSize(),
-                    onChannelClick = { channel -> actions.onLiveTvChannelClick?.invoke(channel) },
-                )
-            }
-
             AppScreenTab.Library -> {
                 LibraryScreen(
                     modifier = Modifier.fillMaxSize(),
@@ -249,6 +241,7 @@ internal fun AppTabHost(
 
             AppScreenTab.LiveTv -> {
                 LiveTvScreen(
+                    modifier = Modifier.fillMaxSize(),
                     scrollToTopRequests = requests.liveTvScrollToTopRequests,
                     onChannelClick = actions.onLiveTvChannelClick,
                 )
@@ -279,8 +272,6 @@ internal fun AppTabHost(
                     onTestUpdateBannerClick = actions.onTestUpdateBannerClick,
                     onCollectionsClick = actions.onCollectionsSettingsClick,
                     onWatchPartyClick = actions.onWatchPartySettingsClick,
-                    onPosterClick = actions.onPosterClick,
-                    onContinueWatchingItemClick = actions.onContinueWatchingClick,
                 )
             }
         }

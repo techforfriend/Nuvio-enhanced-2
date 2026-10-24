@@ -44,8 +44,5 @@ internal actual object DownloadsStorage {
     fun loadExternalFolderUri(): String? = getDownloadLocationUri()
     fun saveExternalFolderUri(uri: String?) {
         setDownloadLocationUri(uri)
-                }
-            }
-            ?.apply()
     }
 }

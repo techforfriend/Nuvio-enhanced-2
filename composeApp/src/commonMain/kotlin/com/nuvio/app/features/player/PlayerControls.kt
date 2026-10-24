@@ -22,6 +22,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeContent
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -443,10 +448,6 @@ internal fun PlayerControlsShell(
                             playbackSpeed = playbackSnapshot.playbackSpeed,
                             isPlaying = playbackSnapshot.isPlaying,
                             metrics = metrics,
-                            badges = badges,
-                            onSourceLineHeightChanged = { height ->
-                                sourceLineHeight = with(density) { height.toDp() }
-                            },
                         )
                     }
                     PlayerTimeline(
