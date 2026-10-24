@@ -18,12 +18,17 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
@@ -54,6 +59,7 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.collections_tab_all
 import nuvio.composeapp.generated.resources.streams_refresh
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.glass.ambientLiquidGlass
 
 @Composable
 internal fun PlayerSidePanel(
@@ -99,12 +105,20 @@ internal fun PlayerSidePanel(
                         .width(resolvedWidth)
                         .fillMaxHeight()
                         .clip(shape)
-                        .background(tokens.colors.surfaceElevated)
+                        .ambientLiquidGlass(
+                            shape = shape,
+                            tint = tokens.colors.surfaceElevated.copy(alpha = tokens.colors.surfaceElevated.alpha * 0.72f),
+                            fallback = tokens.colors.surfaceElevated,
+                            blurRadius = 28.dp,
+                            refractionHeight = 10.dp,
+                            refractionAmount = 18.dp,
+                        )
                         .clickable(
                             interactionSource = panelInteraction,
                             indication = null,
                             onClick = {},
-                        ),
+                        )
+                        .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.End)),
                     content = content,
                 )
             }

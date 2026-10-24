@@ -1,5 +1,7 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.features.whatsnew.WhatsNewSettingsScreen
+import com.nuvio.app.navigation.LocalUseNativeNavigation
 import com.nuvio.app.core.build.AppFeaturePolicy
 
 import androidx.compose.foundation.background
@@ -72,7 +74,9 @@ import com.nuvio.app.features.debrid.DebridSettings
 import com.nuvio.app.features.debrid.DebridSettingsRepository
 import com.nuvio.app.features.home.HomeCatalogSettingsItem
 import com.nuvio.app.features.home.HomeCatalogSettingsRepository
+import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.buildAddonCatalogRefreshSignature
+import com.nuvio.app.features.livetv.LiveTvRepository
 import com.nuvio.app.features.mdblist.MdbListSettings
 import com.nuvio.app.features.mdblist.MdbListSettingsRepository
 import com.nuvio.app.features.mdblist.MdbListTracker
@@ -90,10 +94,10 @@ import com.nuvio.app.features.trakt.TraktCommentsSettings
 import com.nuvio.app.features.tracking.TrackingSettingsRepository
 import com.nuvio.app.features.tracking.TrackingSettingsUiState
 import com.nuvio.app.features.tmdb.TmdbSettings
+import com.nuvio.app.features.details.OmdbSettingsRepository
 import com.nuvio.app.features.tmdb.TmdbSettingsRepository
 import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesRepository
 import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesUiState
-import com.nuvio.app.navigation.LocalUseNativeNavigation
 import com.nuvio.app.features.party.PartyRepository
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_settings_page_root
@@ -142,6 +146,8 @@ fun SettingsScreen(
     onExternalBack: (() -> Unit)? = null,
     showInternalHeader: Boolean = true,
     onSwitchProfile: (() -> Unit)? = null,
+    onEditProfile: (() -> Unit)? = null,
+    onPosterClick: ((MetaPreview) -> Unit)? = null,
     onHomescreenClick: () -> Unit = {},
     onMetaScreenClick: () -> Unit = {},
     onContinueWatchingClick: () -> Unit = {},
@@ -150,6 +156,7 @@ fun SettingsScreen(
     onAccountClick: () -> Unit = {},
     onSupportersContributorsClick: () -> Unit = {},
     onLicensesAttributionsClick: () -> Unit = {},
+    onWhatsNewClick: () -> Unit = {},
     onCheckForUpdatesClick: (() -> Unit)? = null,
     onTestUpdateBannerClick: (() -> Unit)? = null,
     onCollectionsClick: () -> Unit = {},
@@ -174,12 +181,17 @@ fun SettingsScreen(
             ThemeSettingsRepository.selectedTheme
         }.collectAsStateWithLifecycle()
         val amoledEnabled by remember { ThemeSettingsRepository.amoledEnabled }.collectAsStateWithLifecycle()
-        val liquidGlassNativeTabBarEnabled by remember {
-            ThemeSettingsRepository.liquidGlassNativeTabBarEnabled
+        val dynamicArtworkBackgroundEnabled by remember {
+            ThemeSettingsRepository.dynamicArtworkBackgroundEnabled
         }.collectAsStateWithLifecycle()
-        val useNativeNavigation = LocalUseNativeNavigation.current
-        val liquidGlassNativeTabBarSupported = remember(useNativeNavigation) {
-            !useNativeNavigation && isLiquidGlassNativeTabBarSupported()
+        val showCatalogAccentEnabled by remember {
+            ThemeSettingsRepository.showCatalogAccentEnabled
+        }.collectAsStateWithLifecycle()
+        val tabBarBehavior by remember {
+            ThemeSettingsRepository.tabBarBehavior
+        }.collectAsStateWithLifecycle()
+        val liquidGlassNativeTabBarSupported = remember {
+            isLiquidGlassNativeTabBarSupported()
         }
         val selectedAppLanguage by remember { ThemeSettingsRepository.selectedAppLanguage }.collectAsStateWithLifecycle()
         val navBarStyle by remember { ThemeSettingsRepository.navBarStyle }.collectAsStateWithLifecycle()
@@ -194,6 +206,10 @@ fun SettingsScreen(
         val tmdbSettings by remember {
             TmdbSettingsRepository.ensureLoaded()
             TmdbSettingsRepository.uiState
+        }.collectAsStateWithLifecycle()
+        val omdbApiKey by remember {
+            OmdbSettingsRepository.ensureLoaded()
+            OmdbSettingsRepository.apiKey
         }.collectAsStateWithLifecycle()
         val mdbListSettings by remember {
             MdbListSettingsRepository.ensureLoaded()
@@ -255,6 +271,10 @@ fun SettingsScreen(
         }.collectAsStateWithLifecycle()
         val profileSettingsState by remember {
             ProfileRepository.state
+        }.collectAsStateWithLifecycle()
+        val liveTvUiState by remember {
+            LiveTvRepository.ensureLoaded()
+            LiveTvRepository.uiState
         }.collectAsStateWithLifecycle()
 
         LaunchedEffect(homescreenCatalogRefreshKey) {
@@ -355,6 +375,11 @@ fun SettingsScreen(
         } else {
             onLicensesAttributionsClick
         }
+        val openWhatsNew = if (onNavigatePage != null) {
+            { openPage(SettingsPage.WhatsNew) }
+        } else {
+            onWhatsNewClick
+        }
 
         LaunchedEffect(page, currentPage) {
             if (page.name != currentPage) {
@@ -419,14 +444,19 @@ fun SettingsScreen(
                         tunnelingEnabled = playerSettingsUiState.tunnelingEnabled,
                         useLibass = playerSettingsUiState.useLibass,
                         libassRenderType = playerSettingsUiState.libassRenderType,
+                        libassRenderScale = playerSettingsUiState.libassRenderScale,
                         rememberLastProfileEnabled = profileSettingsState.rememberLastProfileEnabled,
                         selectedTheme = selectedTheme,
                         onThemeSelected = ThemeSettingsRepository::setTheme,
                         amoledEnabled = amoledEnabled,
                         onAmoledToggle = ThemeSettingsRepository::setAmoled,
+                        dynamicArtworkBackgroundEnabled = dynamicArtworkBackgroundEnabled,
+                        onDynamicArtworkBackgroundToggle = ThemeSettingsRepository::setDynamicArtworkBackground,
+                        showCatalogAccentEnabled = showCatalogAccentEnabled,
+                        onShowCatalogAccentToggle = ThemeSettingsRepository::setShowCatalogAccent,
                         liquidGlassNativeTabBarSupported = liquidGlassNativeTabBarSupported,
-                        liquidGlassNativeTabBarEnabled = liquidGlassNativeTabBarEnabled,
-                        onLiquidGlassNativeTabBarToggle = ThemeSettingsRepository::setLiquidGlassNativeTabBar,
+                        tabBarBehavior = tabBarBehavior,
+                        onTabBarBehaviorSelected = ThemeSettingsRepository::setTabBarBehavior,
                         appIconState = appIconState,
                         onAppIconSelected = onAppIconSelected,
                         onAppIconFailureDismissed = AppIconRepository::clearFailure,
@@ -436,14 +466,19 @@ fun SettingsScreen(
                         onNavBarStyleSelected = ThemeSettingsRepository::setNavBarStyle,
                         episodeReleaseNotificationsUiState = episodeReleaseNotificationsUiState,
                         tmdbSettings = tmdbSettings,
+                        omdbApiKey = omdbApiKey,
                         mdbListSettings = mdbListSettings,
                         debridSettings = debridSettings,
+                        liveTvUiState = liveTvUiState,
                         traktAuthUiState = traktAuthUiState,
                         simklAuthUiState = simklAuthUiState,
                         traktCommentsEnabled = traktCommentsEnabled,
                         mdbListConnected = mdbListConnected,
                         trackingSettingsUiState = trackingSettingsUiState,
                         homescreenHeroEnabled = homescreenSettingsUiState.heroEnabled,
+                        homescreenHeroTrailerPlaybackEnabled = homescreenSettingsUiState.heroTrailerPlaybackEnabled,
+                        homescreenHeroTrailerStartDelaySeconds = homescreenSettingsUiState.heroTrailerStartDelaySeconds,
+                        homescreenHeroTrailerStartUnmuted = homescreenSettingsUiState.heroTrailerStartUnmuted,
                         homescreenShowCatalogType = homescreenSettingsUiState.showCatalogType,
                         homescreenHideUnreleasedContent = homescreenSettingsUiState.hideUnreleasedContent,
                         homescreenItems = homescreenSettingsUiState.items,
@@ -453,8 +488,11 @@ fun SettingsScreen(
                         continueWatchingPreferencesUiState = continueWatchingPreferencesUiState,
                         posterCardStyleUiState = posterCardStyleUiState,
                         onSwitchProfile = onSwitchProfile,
+                        onEditProfile = onEditProfile,
+                        onPosterClick = onPosterClick,
                         onSupportersContributorsClick = openSupportersContributors,
                         onLicensesAttributionsClick = openLicensesAttributions,
+                        onWhatsNewClick = openWhatsNew,
                         onCheckForUpdatesClick = onCheckForUpdatesClick,
                         onTestUpdateBannerClick = onTestUpdateBannerClick,
                         onCollectionsClick = onCollectionsClick,
@@ -490,14 +528,19 @@ fun SettingsScreen(
                         tunnelingEnabled = playerSettingsUiState.tunnelingEnabled,
                         useLibass = playerSettingsUiState.useLibass,
                         libassRenderType = playerSettingsUiState.libassRenderType,
+                        libassRenderScale = playerSettingsUiState.libassRenderScale,
                         rememberLastProfileEnabled = profileSettingsState.rememberLastProfileEnabled,
                         selectedTheme = selectedTheme,
                         onThemeSelected = ThemeSettingsRepository::setTheme,
                         amoledEnabled = amoledEnabled,
                         onAmoledToggle = ThemeSettingsRepository::setAmoled,
+                        dynamicArtworkBackgroundEnabled = dynamicArtworkBackgroundEnabled,
+                        onDynamicArtworkBackgroundToggle = ThemeSettingsRepository::setDynamicArtworkBackground,
+                        showCatalogAccentEnabled = showCatalogAccentEnabled,
+                        onShowCatalogAccentToggle = ThemeSettingsRepository::setShowCatalogAccent,
                         liquidGlassNativeTabBarSupported = liquidGlassNativeTabBarSupported,
-                        liquidGlassNativeTabBarEnabled = liquidGlassNativeTabBarEnabled,
-                        onLiquidGlassNativeTabBarToggle = ThemeSettingsRepository::setLiquidGlassNativeTabBar,
+                        tabBarBehavior = tabBarBehavior,
+                        onTabBarBehaviorSelected = ThemeSettingsRepository::setTabBarBehavior,
                         appIconState = appIconState,
                         onAppIconSelected = onAppIconSelected,
                         onAppIconFailureDismissed = AppIconRepository::clearFailure,
@@ -507,14 +550,19 @@ fun SettingsScreen(
                         onNavBarStyleSelected = ThemeSettingsRepository::setNavBarStyle,
                         episodeReleaseNotificationsUiState = episodeReleaseNotificationsUiState,
                         tmdbSettings = tmdbSettings,
+                        omdbApiKey = omdbApiKey,
                         mdbListSettings = mdbListSettings,
                         debridSettings = debridSettings,
+                        liveTvUiState = liveTvUiState,
                         traktAuthUiState = traktAuthUiState,
                         simklAuthUiState = simklAuthUiState,
                         traktCommentsEnabled = traktCommentsEnabled,
                         mdbListConnected = mdbListConnected,
                         trackingSettingsUiState = trackingSettingsUiState,
                         homescreenHeroEnabled = homescreenSettingsUiState.heroEnabled,
+                        homescreenHeroTrailerPlaybackEnabled = homescreenSettingsUiState.heroTrailerPlaybackEnabled,
+                        homescreenHeroTrailerStartDelaySeconds = homescreenSettingsUiState.heroTrailerStartDelaySeconds,
+                        homescreenHeroTrailerStartUnmuted = homescreenSettingsUiState.heroTrailerStartUnmuted,
                         homescreenShowCatalogType = homescreenSettingsUiState.showCatalogType,
                         homescreenHideUnreleasedContent = homescreenSettingsUiState.hideUnreleasedContent,
                         homescreenItems = homescreenSettingsUiState.items,
@@ -524,6 +572,8 @@ fun SettingsScreen(
                         continueWatchingPreferencesUiState = continueWatchingPreferencesUiState,
                         posterCardStyleUiState = posterCardStyleUiState,
                         onSwitchProfile = onSwitchProfile,
+                        onEditProfile = onEditProfile,
+                        onPosterClick = onPosterClick,
                         onHomescreenClick = openHomescreen,
                         onMetaScreenClick = openMetaScreen,
                         onContinueWatchingClick = openContinueWatching,
@@ -532,6 +582,7 @@ fun SettingsScreen(
                         onAccountClick = openAccount,
                         onSupportersContributorsClick = openSupportersContributors,
                         onLicensesAttributionsClick = openLicensesAttributions,
+                        onWhatsNewClick = openWhatsNew,
                         onCheckForUpdatesClick = onCheckForUpdatesClick,
                         onTestUpdateBannerClick = onTestUpdateBannerClick,
                         onCollectionsClick = onCollectionsClick,
@@ -573,14 +624,19 @@ private fun MobileSettingsScreen(
     tunnelingEnabled: Boolean,
     useLibass: Boolean,
     libassRenderType: String,
+    libassRenderScale: String,
     rememberLastProfileEnabled: Boolean,
     selectedTheme: AppTheme,
     onThemeSelected: (AppTheme) -> Unit,
     amoledEnabled: Boolean,
     onAmoledToggle: (Boolean) -> Unit,
+    dynamicArtworkBackgroundEnabled: Boolean,
+    onDynamicArtworkBackgroundToggle: (Boolean) -> Unit,
+    showCatalogAccentEnabled: Boolean,
+    onShowCatalogAccentToggle: (Boolean) -> Unit,
     liquidGlassNativeTabBarSupported: Boolean,
-    liquidGlassNativeTabBarEnabled: Boolean,
-    onLiquidGlassNativeTabBarToggle: (Boolean) -> Unit,
+    tabBarBehavior: NuvioTabBarBehavior,
+    onTabBarBehaviorSelected: (NuvioTabBarBehavior) -> Unit,
     appIconState: AppIconSettingsState,
     onAppIconSelected: (AppIconOption) -> Unit,
     onAppIconFailureDismissed: () -> Unit,
@@ -590,14 +646,19 @@ private fun MobileSettingsScreen(
     onNavBarStyleSelected: (NavBarStyle) -> Unit,
     episodeReleaseNotificationsUiState: EpisodeReleaseNotificationsUiState,
     tmdbSettings: TmdbSettings,
+    omdbApiKey: String,
     mdbListSettings: MdbListSettings,
     debridSettings: DebridSettings,
+    liveTvUiState: com.nuvio.app.features.livetv.LiveTvUiState,
     traktAuthUiState: TraktAuthUiState,
     simklAuthUiState: SimklAuthUiState,
     traktCommentsEnabled: Boolean,
     mdbListConnected: Boolean,
     trackingSettingsUiState: TrackingSettingsUiState,
     homescreenHeroEnabled: Boolean,
+    homescreenHeroTrailerPlaybackEnabled: Boolean,
+    homescreenHeroTrailerStartDelaySeconds: Int,
+    homescreenHeroTrailerStartUnmuted: Boolean,
     homescreenShowCatalogType: Boolean,
     homescreenHideUnreleasedContent: Boolean,
     homescreenItems: List<HomeCatalogSettingsItem>,
@@ -607,6 +668,8 @@ private fun MobileSettingsScreen(
     continueWatchingPreferencesUiState: ContinueWatchingPreferencesUiState,
     posterCardStyleUiState: PosterCardStyleUiState,
     onSwitchProfile: (() -> Unit)? = null,
+    onEditProfile: (() -> Unit)? = null,
+    onPosterClick: ((MetaPreview) -> Unit)? = null,
     onHomescreenClick: () -> Unit = {},
     onMetaScreenClick: () -> Unit = {},
     onContinueWatchingClick: () -> Unit = {},
@@ -615,6 +678,7 @@ private fun MobileSettingsScreen(
     onAccountClick: () -> Unit = {},
     onSupportersContributorsClick: () -> Unit = {},
     onLicensesAttributionsClick: () -> Unit = {},
+    onWhatsNewClick: () -> Unit = {},
     onCheckForUpdatesClick: (() -> Unit)? = null,
     onTestUpdateBannerClick: (() -> Unit)? = null,
     onCollectionsClick: () -> Unit = {},
@@ -626,6 +690,9 @@ private fun MobileSettingsScreen(
 ) {
     val saveableStateHolder = rememberSaveableStateHolder()
     saveableStateHolder.SaveableStateProvider(page.name) {
+        if (page == SettingsPage.WhatsNew) {
+            WhatsNewSettingsScreen(onBack = onNavigateBack)
+        } else {
         var settingsSearchQuery by rememberSaveable { mutableStateOf("") }
         var rootSearchVisible by rememberSaveable { mutableStateOf(false) }
         var rootSearchRevealAnimating by rememberSaveable { mutableStateOf(false) }
@@ -658,6 +725,7 @@ private fun MobileSettingsScreen(
                         }
                     }
                     SettingsPage.LicensesAttributions -> onLicensesAttributionsClick()
+                    SettingsPage.WhatsNew -> onWhatsNewClick()
                     SettingsPage.ContinueWatching -> onContinueWatchingClick()
                     SettingsPage.Addons -> onAddonsClick()
                     SettingsPage.Plugins -> {
@@ -667,6 +735,7 @@ private fun MobileSettingsScreen(
                     }
                     SettingsPage.Homescreen -> onHomescreenClick()
                     SettingsPage.MetaScreen -> onMetaScreenClick()
+                    SettingsPage.Downloads -> onPageChange(SettingsPage.Downloads)
                     else -> onPageChange(target.page)
                 }
                 SettingsSearchTarget.Collections -> onCollectionsClick()
@@ -689,11 +758,16 @@ private fun MobileSettingsScreen(
         }
 
         val watchPartyRowClick = watchPartyRow(onWatchPartyClick)
+        val profileDrawsOwnChrome = page == SettingsPage.Profile && showInternalHeader && !LocalUseNativeNavigation.current
+        ProfileInsightsPullToRefresh(enabled = page == SettingsPage.Profile) {
         NuvioScreen(
             modifier = Modifier.nestedScroll(rootSearchRevealConnection),
             listState = listState,
+            autoHidesNativeTabBar = true,
+            topPadding = if (page == SettingsPage.Profile) 0.dp else null,
         ) {
-            if (showInternalHeader) {
+            if (profileDrawsOwnChrome) {
+            } else if (showInternalHeader) {
                 stickyHeader {
                     val previousPage = page.previousPage()
                     NuvioScreenHeader(
@@ -740,6 +814,7 @@ private fun MobileSettingsScreen(
                             onTrackingClick = { onPageChange(SettingsPage.TraktAuthentication) },
                             onSupportersContributorsClick = onSupportersContributorsClick,
                             onLicensesAttributionsClick = onLicensesAttributionsClick,
+                            onWhatsNewClick = onWhatsNewClick,
                             onCheckForUpdatesClick = onCheckForUpdatesClick,
                             onTestUpdateBannerClick = onTestUpdateBannerClick,
                             onAccountClick = onAccountClick,
@@ -764,13 +839,7 @@ private fun MobileSettingsScreen(
                     onSwitchProfile = onSwitchProfile,
                     onEditProfile = onEditProfile,
                     onPosterClick = onPosterClick,
-                    onContinueWatchingClick = onContinueWatchingItemClick,
-                    onFavoritePersonClick = onFavoritePersonClick,
-                    onFavoritePeopleViewAllClick = { onPageChange(SettingsPage.FavoriteActors) },
-                )
-                SettingsPage.FavoriteActors -> favoritePeopleContent(
-                    isTablet = false,
-                    onFavoritePersonClick = onFavoritePersonClick,
+                    onBack = if (profileDrawsOwnChrome) onNavigateBack else null,
                 )
                 SettingsPage.SupportersContributors -> {
                     if (AppFeaturePolicy.supportersContributorsPageEnabled) {
@@ -780,6 +849,7 @@ private fun MobileSettingsScreen(
                 SettingsPage.LicensesAttributions -> licensesAttributionsContent(
                     isTablet = false,
                 )
+                SettingsPage.WhatsNew -> Unit
                 SettingsPage.Playback -> playbackSettingsContent(
                     isTablet = false,
                     showLoadingOverlay = showLoadingOverlay,
@@ -801,6 +871,7 @@ private fun MobileSettingsScreen(
                     tunnelingEnabled = tunnelingEnabled,
                     useLibass = useLibass,
                     libassRenderType = libassRenderType,
+                    libassRenderScale = libassRenderScale,
                 )
                 SettingsPage.Streams -> streamsSettingsContent(
                     isTablet = false,
@@ -811,9 +882,13 @@ private fun MobileSettingsScreen(
                     onThemeSelected = onThemeSelected,
                     amoledEnabled = amoledEnabled,
                     onAmoledToggle = onAmoledToggle,
+                    dynamicArtworkBackgroundEnabled = dynamicArtworkBackgroundEnabled,
+                    onDynamicArtworkBackgroundToggle = onDynamicArtworkBackgroundToggle,
+                    showCatalogAccentEnabled = showCatalogAccentEnabled,
+                    onShowCatalogAccentToggle = onShowCatalogAccentToggle,
                     liquidGlassNativeTabBarSupported = liquidGlassNativeTabBarSupported,
-                    liquidGlassNativeTabBarEnabled = liquidGlassNativeTabBarEnabled,
-                    onLiquidGlassNativeTabBarToggle = onLiquidGlassNativeTabBarToggle,
+                    tabBarBehavior = tabBarBehavior,
+                    onTabBarBehaviorSelected = onTabBarBehaviorSelected,
                     appIconState = appIconState,
                     onAppIconSelected = onAppIconSelected,
                     onAppIconFailureDismissed = onAppIconFailureDismissed,
@@ -831,10 +906,17 @@ private fun MobileSettingsScreen(
                 SettingsPage.Advanced -> advancedSettingsContent(
                     isTablet = false,
                     rememberLastProfileEnabled = rememberLastProfileEnabled,
+                    onDebugLogsClick = { onPageChange(SettingsPage.DebugLogs) },
+                )
+                SettingsPage.DebugLogs -> debugLogsSettingsContent(
+                    isTablet = false,
                 )
                 SettingsPage.Notifications -> notificationsSettingsContent(
                     isTablet = false,
                     uiState = episodeReleaseNotificationsUiState,
+                )
+                SettingsPage.Downloads -> downloadsSettingsContent(
+                    isTablet = false,
                 )
                 SettingsPage.ContinueWatching -> continueWatchingSettingsContent(
                     isTablet = false,
@@ -874,6 +956,9 @@ private fun MobileSettingsScreen(
                 SettingsPage.Homescreen -> homescreenSettingsContent(
                     isTablet = false,
                     heroEnabled = homescreenHeroEnabled,
+                    heroTrailerPlaybackEnabled = homescreenHeroTrailerPlaybackEnabled,
+                    heroTrailerStartDelaySeconds = homescreenHeroTrailerStartDelaySeconds,
+                    heroTrailerStartUnmuted = homescreenHeroTrailerStartUnmuted,
                     showCatalogType = homescreenShowCatalogType,
                     hideUnreleasedContent = homescreenHideUnreleasedContent,
                     items = homescreenItems,
@@ -886,17 +971,12 @@ private fun MobileSettingsScreen(
                 )
                 SettingsPage.Integrations -> integrationsContent(
                     isTablet = false,
+                    onDebridClick = { onPageChange(SettingsPage.Debrid) },
                     onTmdbClick = { onPageChange(SettingsPage.TmdbEnrichment) },
                     onMdbListClick = { onPageChange(SettingsPage.MdbListRatings) },
-                    onDebridClick = { onPageChange(SettingsPage.Debrid) },
-                )
-                SettingsPage.TmdbEnrichment -> tmdbSettingsContent(
-                    isTablet = false,
-                    settings = tmdbSettings,
-                )
-                SettingsPage.MdbListRatings -> mdbListSettingsContent(
-                    isTablet = false,
-                    settings = mdbListSettings,
+                    onOmdbClick = { onPageChange(SettingsPage.Omdb) },
+                    onLiveTvClick = { onPageChange(SettingsPage.LiveTv) },
+                    onDiscordClick = { onPageChange(SettingsPage.DiscordRpc) },
                 )
                 SettingsPage.Debrid -> debridSettingsContent(
                     isTablet = false,
@@ -911,8 +991,29 @@ private fun MobileSettingsScreen(
                     mdbListConnected = mdbListConnected,
                     onCommentsEnabledChange = TraktCommentsSettings::setEnabled,
                 )
+                SettingsPage.TmdbEnrichment -> tmdbSettingsContent(
+                    isTablet = false,
+                    settings = tmdbSettings,
+                )
+                SettingsPage.MdbListRatings -> mdbListSettingsContent(
+                    isTablet = false,
+                    settings = mdbListSettings,
+                )
+                SettingsPage.Omdb -> omdbSettingsContent(
+                    isTablet = false,
+                    apiKey = omdbApiKey,
+                )
+                SettingsPage.LiveTv -> liveTvSettingsContent(
+                    isTablet = false,
+                    uiState = liveTvUiState,
+                )
+                SettingsPage.DiscordRpc -> discordRpcSettingsContent(
+                    isTablet = false,
+                )
             }
         }
+        }
+    }
     }
 }
 
@@ -984,14 +1085,19 @@ private fun TabletSettingsScreen(
     tunnelingEnabled: Boolean,
     useLibass: Boolean,
     libassRenderType: String,
+    libassRenderScale: String,
     rememberLastProfileEnabled: Boolean,
     selectedTheme: AppTheme,
     onThemeSelected: (AppTheme) -> Unit,
     amoledEnabled: Boolean,
     onAmoledToggle: (Boolean) -> Unit,
+    dynamicArtworkBackgroundEnabled: Boolean,
+    onDynamicArtworkBackgroundToggle: (Boolean) -> Unit,
+    showCatalogAccentEnabled: Boolean,
+    onShowCatalogAccentToggle: (Boolean) -> Unit,
     liquidGlassNativeTabBarSupported: Boolean,
-    liquidGlassNativeTabBarEnabled: Boolean,
-    onLiquidGlassNativeTabBarToggle: (Boolean) -> Unit,
+    tabBarBehavior: NuvioTabBarBehavior,
+    onTabBarBehaviorSelected: (NuvioTabBarBehavior) -> Unit,
     appIconState: AppIconSettingsState,
     onAppIconSelected: (AppIconOption) -> Unit,
     onAppIconFailureDismissed: () -> Unit,
@@ -1001,14 +1107,19 @@ private fun TabletSettingsScreen(
     onNavBarStyleSelected: (NavBarStyle) -> Unit,
     episodeReleaseNotificationsUiState: EpisodeReleaseNotificationsUiState,
     tmdbSettings: TmdbSettings,
+    omdbApiKey: String,
     mdbListSettings: MdbListSettings,
     debridSettings: DebridSettings,
+    liveTvUiState: com.nuvio.app.features.livetv.LiveTvUiState,
     traktAuthUiState: TraktAuthUiState,
     simklAuthUiState: SimklAuthUiState,
     traktCommentsEnabled: Boolean,
     mdbListConnected: Boolean,
     trackingSettingsUiState: TrackingSettingsUiState,
     homescreenHeroEnabled: Boolean,
+    homescreenHeroTrailerPlaybackEnabled: Boolean,
+    homescreenHeroTrailerStartDelaySeconds: Int,
+    homescreenHeroTrailerStartUnmuted: Boolean,
     homescreenShowCatalogType: Boolean,
     homescreenHideUnreleasedContent: Boolean,
     homescreenItems: List<HomeCatalogSettingsItem>,
@@ -1018,8 +1129,11 @@ private fun TabletSettingsScreen(
     continueWatchingPreferencesUiState: ContinueWatchingPreferencesUiState,
     posterCardStyleUiState: PosterCardStyleUiState,
     onSwitchProfile: (() -> Unit)? = null,
+    onEditProfile: (() -> Unit)? = null,
+    onPosterClick: ((MetaPreview) -> Unit)? = null,
     onSupportersContributorsClick: () -> Unit = {},
     onLicensesAttributionsClick: () -> Unit = {},
+    onWhatsNewClick: () -> Unit = {},
     onCheckForUpdatesClick: (() -> Unit)? = null,
     onTestUpdateBannerClick: (() -> Unit)? = null,
     onCollectionsClick: () -> Unit = {},
@@ -1089,6 +1203,9 @@ private fun TabletSettingsScreen(
         }
 
         saveableStateHolder.SaveableStateProvider(page.name) {
+            if (page == SettingsPage.WhatsNew) {
+                WhatsNewSettingsScreen(onBack = onNavigateBack)
+            } else {
             var settingsSearchQuery by rememberSaveable { mutableStateOf("") }
             var rootSearchVisible by rememberSaveable { mutableStateOf(false) }
             var rootSearchRevealAnimating by rememberSaveable { mutableStateOf(false) }
@@ -1137,6 +1254,7 @@ private fun TabletSettingsScreen(
                 }
             }
             val watchPartyRowClick = watchPartyRow(onWatchPartyClick)
+            ProfileInsightsPullToRefresh(enabled = page == SettingsPage.Profile) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -1203,6 +1321,7 @@ private fun TabletSettingsScreen(
                                 onTrackingClick = { openInlinePage(SettingsPage.TraktAuthentication) },
                                 onSupportersContributorsClick = { openInlinePage(SettingsPage.SupportersContributors) },
                                 onLicensesAttributionsClick = { openInlinePage(SettingsPage.LicensesAttributions) },
+                                onWhatsNewClick = { openInlinePage(SettingsPage.WhatsNew) },
                                 onCheckForUpdatesClick = onCheckForUpdatesClick,
                                 onTestUpdateBannerClick = onTestUpdateBannerClick,
                                 onAccountClick = { openInlinePage(SettingsPage.Account) },
@@ -1232,13 +1351,6 @@ private fun TabletSettingsScreen(
                         onSwitchProfile = onSwitchProfile,
                         onEditProfile = onEditProfile,
                         onPosterClick = onPosterClick,
-                        onContinueWatchingClick = onContinueWatchingItemClick,
-                        onFavoritePersonClick = onFavoritePersonClick,
-                        onFavoritePeopleViewAllClick = { openInlinePage(SettingsPage.FavoriteActors) },
-                    )
-                    SettingsPage.FavoriteActors -> favoritePeopleContent(
-                        isTablet = true,
-                        onFavoritePersonClick = onFavoritePersonClick,
                     )
                     SettingsPage.SupportersContributors -> {
                         if (AppFeaturePolicy.supportersContributorsPageEnabled) {
@@ -1248,6 +1360,7 @@ private fun TabletSettingsScreen(
                     SettingsPage.LicensesAttributions -> licensesAttributionsContent(
                         isTablet = true,
                     )
+                    SettingsPage.WhatsNew -> Unit
                     SettingsPage.Playback -> playbackSettingsContent(
                         isTablet = true,
                         showLoadingOverlay = showLoadingOverlay,
@@ -1269,6 +1382,7 @@ private fun TabletSettingsScreen(
                         tunnelingEnabled = tunnelingEnabled,
                         useLibass = useLibass,
                         libassRenderType = libassRenderType,
+                    libassRenderScale = libassRenderScale,
                     )
                     SettingsPage.Streams -> streamsSettingsContent(
                         isTablet = true,
@@ -1279,9 +1393,13 @@ private fun TabletSettingsScreen(
                         onThemeSelected = onThemeSelected,
                         amoledEnabled = amoledEnabled,
                         onAmoledToggle = onAmoledToggle,
+                        dynamicArtworkBackgroundEnabled = dynamicArtworkBackgroundEnabled,
+                        onDynamicArtworkBackgroundToggle = onDynamicArtworkBackgroundToggle,
+                        showCatalogAccentEnabled = showCatalogAccentEnabled,
+                        onShowCatalogAccentToggle = onShowCatalogAccentToggle,
                         liquidGlassNativeTabBarSupported = liquidGlassNativeTabBarSupported,
-                        liquidGlassNativeTabBarEnabled = liquidGlassNativeTabBarEnabled,
-                        onLiquidGlassNativeTabBarToggle = onLiquidGlassNativeTabBarToggle,
+                        tabBarBehavior = tabBarBehavior,
+                        onTabBarBehaviorSelected = onTabBarBehaviorSelected,
                         appIconState = appIconState,
                         onAppIconSelected = onAppIconSelected,
                         onAppIconFailureDismissed = onAppIconFailureDismissed,
@@ -1299,10 +1417,17 @@ private fun TabletSettingsScreen(
                     SettingsPage.Advanced -> advancedSettingsContent(
                         isTablet = true,
                         rememberLastProfileEnabled = rememberLastProfileEnabled,
+                        onDebugLogsClick = { openInlinePage(SettingsPage.DebugLogs) },
+                    )
+                    SettingsPage.DebugLogs -> debugLogsSettingsContent(
+                        isTablet = true,
                     )
                     SettingsPage.Notifications -> notificationsSettingsContent(
                         isTablet = true,
                         uiState = episodeReleaseNotificationsUiState,
+                    )
+                    SettingsPage.Downloads -> downloadsSettingsContent(
+                        isTablet = true,
                     )
                     SettingsPage.ContinueWatching -> continueWatchingSettingsContent(
                         isTablet = true,
@@ -1342,6 +1467,9 @@ private fun TabletSettingsScreen(
                     SettingsPage.Homescreen -> homescreenSettingsContent(
                         isTablet = true,
                         heroEnabled = homescreenHeroEnabled,
+                        heroTrailerPlaybackEnabled = homescreenHeroTrailerPlaybackEnabled,
+                        heroTrailerStartDelaySeconds = homescreenHeroTrailerStartDelaySeconds,
+                        heroTrailerStartUnmuted = homescreenHeroTrailerStartUnmuted,
                         showCatalogType = homescreenShowCatalogType,
                         hideUnreleasedContent = homescreenHideUnreleasedContent,
                         items = homescreenItems,
@@ -1354,17 +1482,12 @@ private fun TabletSettingsScreen(
                     )
                     SettingsPage.Integrations -> integrationsContent(
                         isTablet = true,
+                        onDebridClick = { onPageChange(SettingsPage.Debrid) },
                         onTmdbClick = { onPageChange(SettingsPage.TmdbEnrichment) },
                         onMdbListClick = { onPageChange(SettingsPage.MdbListRatings) },
-                        onDebridClick = { onPageChange(SettingsPage.Debrid) },
-                    )
-                    SettingsPage.TmdbEnrichment -> tmdbSettingsContent(
-                        isTablet = true,
-                        settings = tmdbSettings,
-                    )
-                    SettingsPage.MdbListRatings -> mdbListSettingsContent(
-                        isTablet = true,
-                        settings = mdbListSettings,
+                        onOmdbClick = { onPageChange(SettingsPage.Omdb) },
+                        onLiveTvClick = { onPageChange(SettingsPage.LiveTv) },
+                        onDiscordClick = { onPageChange(SettingsPage.DiscordRpc) },
                     )
                     SettingsPage.Debrid -> debridSettingsContent(
                         isTablet = true,
@@ -1379,8 +1502,29 @@ private fun TabletSettingsScreen(
                         mdbListConnected = mdbListConnected,
                         onCommentsEnabledChange = TraktCommentsSettings::setEnabled,
                     )
+                    SettingsPage.TmdbEnrichment -> tmdbSettingsContent(
+                        isTablet = true,
+                        settings = tmdbSettings,
+                    )
+                    SettingsPage.MdbListRatings -> mdbListSettingsContent(
+                        isTablet = true,
+                        settings = mdbListSettings,
+                    )
+                    SettingsPage.Omdb -> omdbSettingsContent(
+                        isTablet = true,
+                        apiKey = omdbApiKey,
+                    )
+                    SettingsPage.LiveTv -> liveTvSettingsContent(
+                        isTablet = true,
+                        uiState = liveTvUiState,
+                    )
+                    SettingsPage.DiscordRpc -> discordRpcSettingsContent(
+                        isTablet = true,
+                    )
                 }
             }
+            }
+        }
         }
     }
 }

@@ -15,6 +15,7 @@ fun resolveProfileBackground(
     profile.profileBackgroundUrl?.trim()?.takeIf { it.isNotBlank() }?.let {
         return ProfileBackgroundSelection.Custom(it)
     }
+    if (!entitlements.includes(CosmeticEntitlement.PROFILE_BACKGROUNDS)) return null
     profile.profileBackgroundId?.trim()?.takeIf { it.isNotBlank() }?.let {
         return ProfileBackgroundSelection.Catalog(it)
     }

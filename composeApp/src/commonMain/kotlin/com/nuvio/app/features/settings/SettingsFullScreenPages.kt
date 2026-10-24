@@ -74,6 +74,9 @@ fun HomescreenSettingsScreen(
         homescreenSettingsContent(
             isTablet = false,
             heroEnabled = homescreenSettingsUiState.heroEnabled,
+            heroTrailerPlaybackEnabled = homescreenSettingsUiState.heroTrailerPlaybackEnabled,
+            heroTrailerStartDelaySeconds = homescreenSettingsUiState.heroTrailerStartDelaySeconds,
+            heroTrailerStartUnmuted = homescreenSettingsUiState.heroTrailerStartUnmuted,
             showCatalogType = homescreenSettingsUiState.showCatalogType,
             hideUnreleasedContent = homescreenSettingsUiState.hideUnreleasedContent,
             items = homescreenSettingsUiState.items,
@@ -82,6 +85,7 @@ fun HomescreenSettingsScreen(
         )
     }
 }
+
 
 @Composable
 fun MetaScreenSettingsScreen(

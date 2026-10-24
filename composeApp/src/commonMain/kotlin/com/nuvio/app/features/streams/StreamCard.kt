@@ -43,6 +43,11 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.SkeletonBlock
 import com.nuvio.app.features.debrid.DebridProviders
+import androidx.compose.ui.graphics.compositeOver
+import com.nuvio.app.core.ui.glass.ambientLiquidGlass
+import com.nuvio.app.core.ui.glass.isAmbientLiquidGlassActive
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Shadow
 
 internal val LocalStreamHighlight = staticCompositionLocalOf<(StreamItem) -> String?> { { null } }
 
@@ -83,12 +88,19 @@ internal fun StreamCard(
                 spotColor = Color.Black.copy(alpha = 0.04f),
             )
             .clip(cardShape)
-            .background(
-                if (isCurrent) {
+            .ambientLiquidGlass(
+                shape = cardShape,
+                tint = if (isCurrent) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                } else {
+                    Color.White.copy(alpha = 0.05f)
+                }.compositeOver(Color.Black.copy(alpha = StreamGlassTintAlpha)),
+                fallback = if (isCurrent) {
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                 } else {
                     Color.White.copy(alpha = 0.05f)
                 },
+                blurRadius = 18.dp,
             )
             .then(
                 if (isCurrent || outlined) {
@@ -148,8 +160,9 @@ internal fun StreamCard(
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontSize = 12.sp,
                         lineHeight = 18.sp,
+                        shadow = streamGlassTextShadow(),
                     ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Color.White,
                 )
             }
 
@@ -181,8 +194,8 @@ internal fun StreamCard(
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = stream.addonName,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, shadow = streamGlassTextShadow()),
+                    color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -239,6 +252,7 @@ private fun StreamNameWithInstantService(
         fontWeight = FontWeight.Bold,
         lineHeight = 20.sp,
         letterSpacing = 0.sp,
+        shadow = streamGlassTextShadow(),
     )
     val instantLabel = if (appendInstantServiceToDefaultName) {
         stream.instantServiceLabel()
@@ -259,7 +273,7 @@ private fun StreamNameWithInstantService(
             text = stream.streamLabel,
             modifier = Modifier.weight(1f, fill = false),
             style = nameStyle,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = Color.White,
         )
         AnimatedVisibility(
             visibleState = visibleState,
@@ -278,7 +292,7 @@ private fun StreamNameWithInstantService(
             Text(
                 text = " ${instantLabel.orEmpty()}",
                 style = nameStyle,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = Color.White,
             )
         }
         trailingContent()
@@ -303,6 +317,18 @@ private fun CurrentStreamBadge(label: String) {
         )
     }
 }
+
+internal const val StreamGlassTintAlpha = 0.55f
+
+private val StreamGlassTextShadow = Shadow(
+    color = Color.Black.copy(alpha = 0.6f),
+    offset = Offset(0f, 1f),
+    blurRadius = 4f,
+)
+
+@Composable
+internal fun streamGlassTextShadow(): Shadow? =
+    if (isAmbientLiquidGlassActive()) StreamGlassTextShadow else null
 
 private fun StreamItem.instantServiceLabel(): String? {
     val status = debridCacheStatus ?: return null

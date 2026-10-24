@@ -235,6 +235,15 @@ data class PlayerPlaybackSnapshot(
     val playbackSpeed: Float = 1f,
     val videoWidth: Int = 0,
     val videoHeight: Int = 0,
+    val mediaInfoJson: String = "{}",
+    val chapters: List<PlayerChapter> = emptyList(),
+    val castAvailable: Boolean = false,
+    val castDeviceName: String? = null,
+)
+
+data class PlayerChapter(
+    val title: String,
+    val startMs: Long,
 )
 
 /** A decoded video frame shown while the user drags the playback timeline. */

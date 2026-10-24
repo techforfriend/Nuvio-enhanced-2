@@ -119,6 +119,7 @@ import nuvio.composeapp.generated.resources.settings_debrid_prepare_instant_play
 import nuvio.composeapp.generated.resources.settings_debrid_prepare_stream_count
 import nuvio.composeapp.generated.resources.settings_debrid_prepare_stream_count_warning
 import nuvio.composeapp.generated.resources.settings_debrid_key_invalid
+import nuvio.composeapp.generated.resources.settings_debrid_use_api_key
 import nuvio.composeapp.generated.resources.settings_debrid_name_template
 import nuvio.composeapp.generated.resources.settings_debrid_name_template_description
 import nuvio.composeapp.generated.resources.settings_debrid_not_set
@@ -334,6 +335,14 @@ internal fun LazyListScope.debridSettingsContent(
                     onConnected = { token -> DebridSettingsRepository.setProviderApiKey(provider.id, token) },
                     onDisconnect = { DebridSettingsRepository.setProviderApiKey(provider.id, "") },
                     onDismiss = { activeDeviceAuthProviderId = null },
+                    onUseApiKey = if (provider.id == DebridProviders.TORBOX_ID) {
+                        {
+                            activeDeviceAuthProviderId = null
+                            activeApiKeyProviderId = provider.id
+                        }
+                    } else {
+                        null
+                    },
                 )
             }
 
@@ -1304,6 +1313,7 @@ private fun DebridDeviceAuthDialog(
     onConnected: (String) -> Unit,
     onDisconnect: () -> Unit,
     onDismiss: () -> Unit,
+    onUseApiKey: (() -> Unit)? = null,
 ) {
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
@@ -1523,6 +1533,15 @@ private fun DebridDeviceAuthDialog(
                     onClick = {
                         clearPendingDeviceAuthorization(provider.id)
                         restartNonce += 1
+                    },
+                )
+            }
+            if (!isConnected && onUseApiKey != null) {
+                DialogButton(
+                    text = stringResource(Res.string.settings_debrid_use_api_key),
+                    onClick = {
+                        clearPendingDeviceAuthorization(provider.id)
+                        onUseApiKey()
                     },
                 )
             }

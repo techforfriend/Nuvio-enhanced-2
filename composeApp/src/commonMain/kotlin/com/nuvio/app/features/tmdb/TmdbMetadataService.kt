@@ -7,6 +7,7 @@ import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.details.MetaPerson
 import com.nuvio.app.features.details.MetaTrailer
 import com.nuvio.app.features.details.MetaVideo
+import com.nuvio.app.features.details.MoreLikeThisPage
 import com.nuvio.app.features.details.MoreLikeThisSource
 import com.nuvio.app.features.details.PersonDetail
 import com.nuvio.app.features.home.MetaPreview
@@ -27,13 +28,15 @@ import kotlinx.serialization.json.Json
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
 
+internal const val TMDB_RECOMMENDATIONS_PAGE_SIZE = 20
+
 object TmdbMetadataService {
     private val log = Logger.withTag("TmdbMetadata")
     private val json = Json { ignoreUnknownKeys = true }
 
     private val enrichmentCache = mutableMapOf<String, TmdbEnrichment>()
     private val episodeCache = mutableMapOf<String, Map<Pair<Int, Int>, TmdbEpisodeEnrichment>>()
-    private val moreLikeThisCache = mutableMapOf<String, List<MetaPreview>>()
+    private val moreLikeThisCache = mutableMapOf<String, MoreLikeThisPage>()
     private val collectionCache = mutableMapOf<String, Pair<String?, List<MetaPreview>>>()
     private val trailerCache = mutableMapOf<String, List<MetaTrailer>>()
     private val personCache = mutableMapOf<String, PersonDetail>()
@@ -691,7 +694,7 @@ object TmdbMetadataService {
             ?: return meta
 
         val needsEpisodes = (
-            settings.useEpisodes || settings.useSeasonPosters
+            settings.useEpisodes || settings.useEpisodeRatings || settings.useSeasonPosters
         ) && tmdbType == "tv"
         val (enrichment, episodeMap) = coroutineScope {
             val enrichmentDeferred = async {
@@ -780,6 +783,8 @@ object TmdbMetadataService {
             networks = enrichment.networks,
             country = enrichment.countries.takeIf { it.isNotEmpty() }?.joinToString(", "),
             language = enrichment.language,
+            budget = enrichment.budget,
+            revenue = enrichment.revenue,
             moreLikeThis = enrichment.moreLikeThis,
             moreLikeThisSource = MoreLikeThisSource.TMDB.takeIf { enrichment.moreLikeThis.isNotEmpty() },
             collectionName = enrichment.collectionName,
@@ -822,6 +827,8 @@ object TmdbMetadataService {
                 runtime = enrichment.runtimeMinutes?.formatRuntime() ?: updated.runtime,
                 country = enrichment.countries.takeIf { it.isNotEmpty() }?.joinToString(", ") ?: updated.country,
                 language = enrichment.language ?: updated.language,
+                budget = enrichment.budget ?: updated.budget,
+                revenue = enrichment.revenue ?: updated.revenue,
             )
         }
 
@@ -877,6 +884,16 @@ object TmdbMetadataService {
                                 enrichmentForEpisode.runtimeMinutes ?: video.runtime
                             } else {
                                 video.runtime
+                            },
+                            tmdbRating = if (settings.useEpisodeRatings) {
+                                enrichmentForEpisode.voteAverage?.takeIf { it > 0.0 } ?: video.tmdbRating
+                            } else {
+                                null
+                            },
+                            imdbRating = if (settings.useEpisodeRatings) {
+                                enrichmentForEpisode.imdbVoteAverage?.takeIf { it > 0.0 } ?: video.imdbRating
+                            } else {
+                                null
                             },
                         )
                     }
@@ -967,7 +984,7 @@ object TmdbMetadataService {
                         tmdbId = numericId,
                         mediaType = mediaType,
                         language = normalizedLanguage,
-                    )
+                    ).items
                 } else {
                     emptyList()
                 }
@@ -1053,6 +1070,8 @@ object TmdbMetadataService {
                 .mapNotNull { it.iso31661?.trim()?.takeIf(String::isNotBlank) }
                 .ifEmpty { details.originCountry.filter(String::isNotBlank) },
             language = details.originalLanguage?.trim()?.takeIf(String::isNotBlank),
+            budget = details.budget?.takeIf { it > 0L },
+            revenue = details.revenue?.takeIf { it > 0L },
             productionCompanies = details.productionCompanies.mapNotNull { it.toMetaCompany() },
             networks = details.networks.mapNotNull { it.toMetaCompany() },
             collectionName = details.belongsToCollection?.name?.trim()?.takeIf(String::isNotBlank),
@@ -1164,6 +1183,7 @@ object TmdbMetadataService {
                                 seasonPoster = buildImageUrl(details.posterPath, "w500"),
                                 airDate = episode.airDate?.trim()?.takeIf(String::isNotBlank),
                                 runtimeMinutes = episode.runtime,
+                                voteAverage = episode.voteAverage?.takeIf { it > 0.0 },
                             )
                         }
                         .toMap()
@@ -1191,18 +1211,37 @@ object TmdbMetadataService {
         }.getOrNull()
     }
 
+    suspend fun fetchMoreLikeThisPage(
+        itemId: String,
+        itemType: String,
+        page: Int,
+        settings: TmdbSettings,
+    ): MoreLikeThisPage {
+        if (!settings.enabled || !settings.useMoreLikeThis) return MoreLikeThisPage()
+        val mediaType = normalizeMetaType(itemType)
+        if (mediaType != "movie" && mediaType != "tv") return MoreLikeThisPage()
+        val tmdbId = TmdbService.ensureTmdbId(itemId, mediaType)?.toIntOrNull() ?: return MoreLikeThisPage()
+        return fetchMoreLikeThis(
+            tmdbId = tmdbId,
+            mediaType = mediaType,
+            language = normalizeTmdbLanguage(settings.language),
+            page = page,
+        )
+    }
+
     private suspend fun fetchMoreLikeThis(
         tmdbId: Int,
         mediaType: String,
         language: String,
-    ): List<MetaPreview> {
-        val cacheKey = "$tmdbId:$mediaType:$language:recommendations"
+        page: Int = 1,
+    ): MoreLikeThisPage {
+        val cacheKey = "$tmdbId:$mediaType:$language:recommendations:$page"
         moreLikeThisCache[cacheKey]?.let { return it }
 
         val response = fetch<TmdbRecommendationResponse>(
             endpoint = "$mediaType/$tmdbId/recommendations",
-            query = mapOf("language" to language),
-        ) ?: return emptyList()
+            query = mapOf("language" to language, "page" to page.toString()),
+        ) ?: return MoreLikeThisPage()
 
         val items = response.results
             .filter { it.id > 0 }
@@ -1234,10 +1273,13 @@ object TmdbMetadataService {
                     imdbRating = recommendation.voteAverage?.formatRating(),
                 )
             }
-            .take(12)
 
-        moreLikeThisCache[cacheKey] = items
-        return items
+        val result = MoreLikeThisPage(
+            items = items,
+            hasMore = response.totalPages?.let { page < it } ?: false,
+        )
+        moreLikeThisCache[cacheKey] = result
+        return result
     }
 
     private suspend fun fetchCollection(
@@ -1418,6 +1460,8 @@ internal data class TmdbEnrichment(
     val status: String?,
     val countries: List<String>,
     val language: String?,
+    val budget: Long? = null,
+    val revenue: Long? = null,
     val productionCompanies: List<MetaCompany>,
     val networks: List<MetaCompany>,
     val collectionName: String? = null,
@@ -1443,6 +1487,8 @@ internal data class TmdbEnrichment(
             status != null ||
             countries.isNotEmpty() ||
             language != null ||
+            budget != null ||
+            revenue != null ||
             productionCompanies.isNotEmpty() ||
             networks.isNotEmpty() ||
             collectionItems.isNotEmpty() ||
@@ -1457,12 +1503,14 @@ private data class EnrichmentPayload(
 )
 
 internal data class TmdbEpisodeEnrichment(
-    val title: String?,
-    val overview: String?,
-    val thumbnail: String?,
+    val title: String? = null,
+    val overview: String? = null,
+    val thumbnail: String? = null,
     val seasonPoster: String? = null,
-    val airDate: String?,
-    val runtimeMinutes: Int?,
+    val airDate: String? = null,
+    val runtimeMinutes: Int? = null,
+    val voteAverage: Double? = null,
+    val imdbVoteAverage: Double? = null,
 )
 
 private fun normalizeMetaType(type: String): String =
@@ -1842,6 +1890,9 @@ private data class TmdbDetailsResponse(
     val networks: List<TmdbCompany> = emptyList(),
     @SerialName("belongs_to_collection") val belongsToCollection: TmdbCollectionRef? = null,
     @SerialName("number_of_seasons") val numberOfSeasons: Int? = null,
+    // Movies only. TMDB sends 0 rather than omitting the field when the figure is unknown.
+    val budget: Long? = null,
+    val revenue: Long? = null,
 )
 
 @Serializable
@@ -2025,6 +2076,8 @@ private data class TmdbCollectionRef(
 @Serializable
 private data class TmdbRecommendationResponse(
     val results: List<TmdbRecommendationItem> = emptyList(),
+    val page: Int? = null,
+    @SerialName("total_pages") val totalPages: Int? = null,
 )
 
 @Serializable
@@ -2073,6 +2126,7 @@ private data class TmdbEpisodeResponse(
     @SerialName("still_path") val stillPath: String? = null,
     @SerialName("air_date") val airDate: String? = null,
     val runtime: Int? = null,
+    @SerialName("vote_average") val voteAverage: Double? = null,
     @SerialName("episode_number") val episodeNumber: Int? = null,
 )
 

@@ -2,9 +2,11 @@ package com.nuvio.app.features.plugins.runtime.network
 
 import co.touchlab.kermit.Logger
 import com.dokar.quickjs.QuickJs
-import com.dokar.quickjs.binding.asyncFunction
+import com.dokar.quickjs.binding.function
+import com.nuvio.app.core.logging.InAppLogger
 import com.nuvio.app.features.addons.httpRequestRaw
 import com.nuvio.app.features.plugins.runtime.host.HostModule
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -21,7 +23,7 @@ internal class FetchBridge : HostModule {
     private val json = Json { ignoreUnknownKeys = true }
 
     override fun register(runtime: QuickJs) {
-        runtime.asyncFunction("__native_fetch") { args ->
+        runtime.function("__native_fetch") { args ->
             val url = args.getOrNull(0)?.toString() ?: ""
             val method = args.getOrNull(1)?.toString() ?: "GET"
             val headersJson = args.getOrNull(2)?.toString() ?: "{}"
@@ -30,10 +32,12 @@ internal class FetchBridge : HostModule {
             val followRedirects = args.getOrNull(5) as? Boolean ?: true
             try {
                 performNativeFetch(url, method, headersJson, bodyKind, body, followRedirects)
-            } catch (cancelled: kotlinx.coroutines.CancellationException) {
-                throw cancelled
             } catch (t: Throwable) {
                 log.e(t) { "Fetch bridge error for $method $url" }
+                InAppLogger.error(
+                    "PluginRuntime/Fetch",
+                    "$method ${InAppLogger.redactUrl(url)} failed: ${InAppLogger.throwableSummary(t)}",
+                )
                 JsonObject(
                     mapOf(
                         "ok" to JsonPrimitive(false),
@@ -49,7 +53,7 @@ internal class FetchBridge : HostModule {
         }
     }
 
-    private suspend fun performNativeFetch(
+    private fun performNativeFetch(
         url: String,
         method: String,
         headersJson: String,
@@ -62,14 +66,31 @@ internal class FetchBridge : HostModule {
             headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         }
 
-        val response = httpRequestRaw(
-            method = method,
-            url = url,
-            headers = headers,
-            body = if (bodyKind == "text") body else "",
-            followRedirects = followRedirects,
-            bodyBytes = decodeBinaryBody(bodyKind, body),
+        InAppLogger.info(
+            "PluginRuntime/Fetch",
+            "$method ${InAppLogger.redactUrl(url)} headers=${InAppLogger.headerKeys(headers)} " +
+                "bodyKind=$bodyKind bodyChars=${body.length} followRedirects=$followRedirects",
         )
+
+        val response = runBlocking {
+            httpRequestRaw(
+                method = method,
+                url = url,
+                headers = headers,
+                body = if (bodyKind == "text") body else "",
+                followRedirects = followRedirects,
+                bodyBytes = decodeBinaryBody(bodyKind, body),
+            )
+        }
+
+        val responseLogMessage = "$method ${InAppLogger.redactUrl(url)} -> ${response.status} ${response.statusText} " +
+            "responseUrl=${InAppLogger.redactUrl(response.url)} bodyChars=${response.body.length} " +
+            "responseHeaders=${responseHeaderKeys(response.headers)}"
+        if (response.status in 200..299) {
+            InAppLogger.info("PluginRuntime/Fetch", responseLogMessage)
+        } else {
+            InAppLogger.warn("PluginRuntime/Fetch", responseLogMessage)
+        }
 
         val responseHeaders = response.headers.mapKeys { (key, _) -> key.lowercase() }
             .mapValues { (_, value) -> truncateString(value, MAX_FETCH_HEADER_VALUE_CHARS) }
@@ -77,8 +98,8 @@ internal class FetchBridge : HostModule {
             mapOf(
                 "ok" to JsonPrimitive(response.status in 200..299),
                 "status" to JsonPrimitive(response.status),
-                "url" to JsonPrimitive(response.url),
                 "statusText" to JsonPrimitive(response.statusText),
+                "url" to JsonPrimitive(response.url),
                 "body" to JsonPrimitive(response.body),
                 "bodyBase64" to JsonPrimitive(encodeBase64(response.bodyBytes)),
                 "headers" to JsonObject(responseHeaders.mapValues { JsonPrimitive(it.value) }),
@@ -114,4 +135,12 @@ internal class FetchBridge : HostModule {
         if (end <= 0) return FETCH_TRUNCATION_SUFFIX.take(maxChars)
         return value.substring(0, end) + FETCH_TRUNCATION_SUFFIX
     }
+
+    private fun responseHeaderKeys(headers: Map<String, String>): String =
+        headers.keys
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .sortedBy { it.lowercase() }
+            .joinToString(separator = ",")
+            .ifBlank { "none" }
 }

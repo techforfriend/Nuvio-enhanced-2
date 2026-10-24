@@ -1,462 +1,387 @@
 package com.nuvio.app.features.livetv
 
-private const val XMLTV_PROGRAMME_OPEN = "<programme"
-private const val XMLTV_PROGRAMME_CLOSE = "</programme>"
-private const val XMLTV_CHANNEL_OPEN = "<channel"
-private const val XMLTV_CHANNEL_CLOSE = "</channel>"
-private const val XMLTV_TITLE_OPEN = "<title"
-private const val XMLTV_TITLE_CLOSE = "</title>"
-private const val MAX_XMLTV_CHANNEL_HEADER_CHARS = 16 * 1024 * 1024
-private const val MAX_XMLTV_CHANNELS = 100_000
-private const val MAX_XMLTV_ALIASES_PER_CHANNEL = 32
-private const val MAX_XMLTV_CHANNEL_BLOCK_CHARS = 64 * 1024
-private const val MAX_RETAINED_PROGRAMMES_PER_CHANNEL = 512
-private const val MAX_FUTURE_SCHEDULE_DAYS = 7L
-private const val MILLIS_PER_DAY = 24L * 60L * 60L * 1000L
+import com.nuvio.app.features.addons.httpGetTextWithHeaders
+import com.nuvio.app.features.addons.httpRequestRaw
 
-internal data class XmlTvChannelAliases(
-    val id: String,
-    val displayNames: Set<String>,
+internal const val LIVE_TV_EPG_PAST_WINDOW_MILLIS = 3L * 60L * 60L * 1000L
+internal const val LIVE_TV_EPG_FUTURE_WINDOW_MILLIS = 48L * 60L * 60L * 1000L
+private const val LIVE_TV_EPG_DEFAULT_DURATION_MILLIS = 60L * 60L * 1000L
+private const val LIVE_TV_EPG_MAX_DOWNLOAD_BYTES = 64 * 1024 * 1024
+private const val LIVE_TV_EPG_MAX_XML_BYTES = 160 * 1024 * 1024
+
+private val epgRequestHeaders = mapOf(
+    "Accept" to "application/xml, text/xml, application/gzip, application/octet-stream, */*",
+    "User-Agent" to "Nuvio/1.0",
 )
 
-internal fun extractXmlTvChannelAliases(
-    content: String,
-    onProgress: () -> Unit = {},
-): List<XmlTvChannelAliases> {
-    val boundedHeaderEnd = minOf(content.length, MAX_XMLTV_CHANNEL_HEADER_CHARS)
-    val programmeStart = content.findXmlTvOpeningTag("programme", 0, boundedHeaderEnd)
-    val headerEnd = programmeStart.takeIf { it >= 0 } ?: boundedHeaderEnd
-    val channels = mutableListOf<XmlTvChannelAliases>()
-    var searchIndex = 0
-
-    while (searchIndex < headerEnd && channels.size < MAX_XMLTV_CHANNELS) {
-        if (channels.size % 64 == 0) onProgress()
-        val channelStart = content.findXmlTvOpeningTag("channel", searchIndex, headerEnd)
-        if (channelStart < 0) break
-        val tagEnd = content.indexOf('>', channelStart + XMLTV_CHANNEL_OPEN.length)
-        if (tagEnd < 0 || tagEnd >= headerEnd) break
-        val channelEnd = content.indexOf(XMLTV_CHANNEL_CLOSE, tagEnd + 1, ignoreCase = true)
-        if (channelEnd < 0 || channelEnd > headerEnd) break
-        searchIndex = channelEnd + XMLTV_CHANNEL_CLOSE.length
-        if (channelEnd - channelStart > MAX_XMLTV_CHANNEL_BLOCK_CHARS) continue
-
-        val id = content.substring(channelStart + XMLTV_CHANNEL_OPEN.length, tagEnd)
-            .xmlTvAttribute("id")
-            ?.decodeFullXmlTvEntities()
-            ?.trim()
-            ?.takeIf(String::isNotBlank)
-            ?: continue
-        val displayNames = content.substring(tagEnd + 1, channelEnd)
-            .xmlTvElementTexts("display-name", 0, channelEnd - tagEnd - 1)
-            .take(MAX_XMLTV_ALIASES_PER_CHANNEL)
-            .toSet()
-        channels += XmlTvChannelAliases(id = id, displayNames = displayNames)
-    }
-
-    return channels
-}
-
-internal fun resolveXmlTvChannelIds(
-    channels: List<LiveTvChannel>,
-    providerChannels: List<XmlTvChannelAliases>,
-): List<LiveTvChannel> {
-    val exactIds = providerChannels.map(XmlTvChannelAliases::id).toSet()
-    val caseInsensitiveIds = providerChannels.uniqueIdsBy { it.id.lowercase() }
-    val exactAliases = providerChannels.uniqueIdsByAliases { alias -> alias.normalizedXmlTvName() }
-    val conservativeAliases = providerChannels.uniqueIdsByAliases { alias -> alias.conservativeXmlTvName() }
-
-    return channels.map { channel ->
-        val playlistId = channel.tvgId?.trim().orEmpty()
-        val providerId = playlistId.takeIf(exactIds::contains)
-            ?: caseInsensitiveIds[playlistId.lowercase()]
-            ?: exactAliases[channel.name.normalizedXmlTvName()]
-            ?: conservativeAliases[channel.name.conservativeXmlTvName()]
-        if (providerId == null || providerId == channel.tvgId) channel else channel.copy(tvgId = providerId)
-    }
-}
-
-private fun List<XmlTvChannelAliases>.uniqueIdsBy(
-    keySelector: (XmlTvChannelAliases) -> String,
-): Map<String, String> {
-    val ids = mutableMapOf<String, MutableSet<String>>()
-    forEach { channel ->
-        keySelector(channel).takeIf(String::isNotBlank)?.let { key ->
-            ids.getOrPut(key) { mutableSetOf() }.add(channel.id)
-        }
-    }
-    return ids.mapNotNull { (key, values) -> values.singleOrNull()?.let { key to it } }.toMap()
-}
-
-private fun List<XmlTvChannelAliases>.uniqueIdsByAliases(
-    keySelector: (String) -> String,
-): Map<String, String> {
-    val aliases = mutableMapOf<String, MutableSet<String>>()
-    forEach { channel ->
-        channel.displayNames.forEach { alias ->
-            keySelector(alias).takeIf(String::isNotBlank)?.let { key ->
-                aliases.getOrPut(key) { mutableSetOf() }.add(channel.id)
-            }
-        }
-    }
-    return aliases.mapNotNull { (key, values) -> values.singleOrNull()?.let { key to it } }.toMap()
-}
-
-private fun String.normalizedXmlTvName(): String =
-    decodeFullXmlTvEntities()
-        .lowercase()
-        .replace(XmlTvWhitespaceRegex, " ")
-        .trim()
-
-private fun String.conservativeXmlTvName(): String {
-    val tokens = normalizedXmlTvName()
-        .split(Regex("[^\\p{L}\\p{N}]+"))
-        .filter(String::isNotBlank)
-        .toMutableList()
-    while (tokens.lastOrNull() in XMLTV_QUALITY_SUFFIXES) tokens.removeAt(tokens.lastIndex)
-    return tokens.joinToString(separator = "")
-}
-
-private val XMLTV_QUALITY_SUFFIXES = setOf("sd", "hd", "fhd", "uhd", "2k", "4k", "8k")
-
-/**
- * Keeps current programmes for playlist channels and future programmes only for favorites.
- */
-internal fun parseXmlTvProgrammeSchedule(
-    content: String,
-    nowEpochMs: Long = LiveTvClock.nowEpochMs(),
-    relevantChannelIds: Set<String>? = null,
-    retainedScheduleChannelIds: Set<String>? = null,
-    onProgress: () -> Unit = {},
-): Map<String, List<LiveTvProgramme>> {
-    val liveState = LiveTvRepository.uiState.value
-    val loadedChannelIds = liveState.channels
-        .mapNotNull(LiveTvChannel::tvgId)
-        .map(String::trim)
-        .filter(String::isNotBlank)
-        .toSet()
-    val inferredRelevantChannelIds = if (liveState.channels.isEmpty()) null else loadedChannelIds
-    val favoriteChannelIds = liveState.channels
-        .asSequence()
-        .filter { channel -> channel.streamUrl in liveState.favoriteUrls }
-        .mapNotNull(LiveTvChannel::tvgId)
-        .map(String::trim)
-        .filter(String::isNotBlank)
-        .toSet()
-
-    val relevantIds = relevantChannelIds ?: inferredRelevantChannelIds
-    val futureIds = retainedScheduleChannelIds ?: favoriteChannelIds
-    val futureLimitEpochMs = nowEpochMs + MAX_FUTURE_SCHEDULE_DAYS * MILLIS_PER_DAY
-    val programmes = mutableMapOf<String, MutableList<LiveTvProgramme>>()
-    var searchIndex = 0
-    var parsedEntries = 0
-
-    while (true) {
-        if (parsedEntries % 64 == 0) onProgress()
-        val programmeStart = content.nextXmlTvProgrammeStart(searchIndex)
-        if (programmeStart < 0) break
-        val tagEnd = content.indexOf('>', startIndex = programmeStart + XMLTV_PROGRAMME_OPEN.length)
-        if (tagEnd < 0) break
-        val programmeEnd = content.indexOf(
-            string = XMLTV_PROGRAMME_CLOSE,
-            startIndex = tagEnd + 1,
-            ignoreCase = true,
-        )
-        if (programmeEnd < 0) break
-        searchIndex = programmeEnd + XMLTV_PROGRAMME_CLOSE.length
-        parsedEntries += 1
-
-        val attributes = content.substring(programmeStart + XMLTV_PROGRAMME_OPEN.length, tagEnd)
-        val channelId = attributes.xmlTvAttribute("channel")
-            ?.decodeFullXmlTvEntities()
-            ?.trim()
-            ?.takeIf(String::isNotBlank)
-            ?: continue
-        if (relevantIds != null && channelId !in relevantIds) continue
-
-        val rawStart = attributes.xmlTvAttribute("start").orEmpty()
-        val rawStop = attributes.xmlTvAttribute("stop").orEmpty()
-        val startEpochMs = LiveTvClock.parseXmlTvTimestamp(rawStart) ?: continue
-        val stopEpochMs = LiveTvClock.parseXmlTvTimestamp(rawStop) ?: continue
-        if (stopEpochMs <= startEpochMs || stopEpochMs <= nowEpochMs) continue
-
-        val isCurrent = nowEpochMs in startEpochMs until stopEpochMs
-        if (!isCurrent && (channelId !in futureIds || startEpochMs > futureLimitEpochMs)) continue
-
-        val channelProgrammes = programmes.getOrPut(channelId) { mutableListOf() }
-        if (channelProgrammes.size >= MAX_RETAINED_PROGRAMMES_PER_CHANNEL) continue
-
-        val titleStart = content.indexOf(
-            string = XMLTV_TITLE_OPEN,
-            startIndex = tagEnd + 1,
-            ignoreCase = true,
-        )
-        if (titleStart < 0 || titleStart >= programmeEnd) continue
-        val titleTagEnd = content.indexOf('>', startIndex = titleStart + XMLTV_TITLE_OPEN.length)
-        if (titleTagEnd < 0 || titleTagEnd >= programmeEnd) continue
-        val titleEnd = content.indexOf(
-            string = XMLTV_TITLE_CLOSE,
-            startIndex = titleTagEnd + 1,
-            ignoreCase = true,
-        )
-        if (titleEnd < 0 || titleEnd > programmeEnd) continue
-        val title = content.substring(titleTagEnd + 1, titleEnd)
-            .toXmlTvPlainText()
-            .takeIf(String::isNotBlank)
-            ?: continue
-
-        val contentStart = tagEnd + 1
-        val programmeContent = content.substring(contentStart, programmeEnd)
-        val programmeContentEnd = programmeContent.length
-        val subtitle = programmeContent.xmlTvElementText("sub-title", 0, programmeContentEnd)
-        val description = programmeContent.xmlTvElementText("desc", 0, programmeContentEnd)
-        val categories = programmeContent.xmlTvElementTexts("category", 0, programmeContentEnd)
-            .distinct()
-        val episodeElement = programmeContent.xmlTvElement("episode-num", 0, programmeContentEnd)
-        val episode = episodeElement?.content
-            ?.toXmlTvPlainText()
-            ?.takeIf(String::isNotBlank)
-            ?.let { value -> formatXmlTvEpisode(value, episodeElement.attributes.xmlTvAttribute("system")) }
-        val iconUrl = programmeContent.xmlTvOpeningTagAttributes("icon", 0, programmeContentEnd)
-            ?.xmlTvAttribute("src")
-            ?.decodeFullXmlTvEntities()
-            ?.trim()
-            ?.takeIf(String::isNotBlank)
-        val ratingElement = programmeContent.xmlTvElement("rating", 0, programmeContentEnd)
-        val rating = ratingElement?.content
-            ?.xmlTvElementText("value", 0, ratingElement.content.length)
-            ?.let { value ->
-                ratingElement.attributes.xmlTvAttribute("system")
-                    ?.trim()
-                    ?.takeIf(String::isNotBlank)
-                    ?.let { system -> "$value · $system" }
-                    ?: value
-            }
-        val credits = programmeContent.xmlTvCredits(0, programmeContentEnd)
-        val date = programmeContent.xmlTvElementText("date", 0, programmeContentEnd)
-            ?.let(::formatXmlTvDate)
-        val country = programmeContent.xmlTvElementText("country", 0, programmeContentEnd)
-        val language = programmeContent.xmlTvElementText("language", 0, programmeContentEnd)
-
-        channelProgrammes += LiveTvProgramme(
-            title = title,
-            startEpochMs = startEpochMs,
-            stopEpochMs = stopEpochMs,
-            timeLabel = "${rawStart.fullXmlTvTimePart()} - ${rawStop.fullXmlTvTimePart()}",
-            subtitle = subtitle,
-            description = description,
-            categories = categories,
-            episode = episode,
-            iconUrl = iconUrl,
-            rating = rating,
-            credits = credits,
-            date = date,
-            country = country,
-            language = language,
-            isNew = programmeContent.hasXmlTvOpeningTag("new", 0, programmeContentEnd),
-            isPremiere = programmeContent.hasXmlTvOpeningTag("premiere", 0, programmeContentEnd),
-            isPreviouslyShown = programmeContent.hasXmlTvOpeningTag("previously-shown", 0, programmeContentEnd),
-        )
-    }
-
-    return programmes.mapValues { (_, entries) ->
-        entries
-            .distinctBy { programme ->
-                Triple(programme.startEpochMs, programme.stopEpochMs, programme.title)
-            }
-            .sortedBy(LiveTvProgramme::startEpochMs)
-    }
-}
-
-private fun String.nextXmlTvProgrammeStart(startIndex: Int): Int {
-    var searchIndex = startIndex
-    while (searchIndex < length) {
-        val matchIndex = indexOf(XMLTV_PROGRAMME_OPEN, searchIndex, ignoreCase = true)
-        if (matchIndex < 0) return -1
-        val boundaryIndex = matchIndex + XMLTV_PROGRAMME_OPEN.length
-        if (boundaryIndex >= length || this[boundaryIndex].isWhitespace() || this[boundaryIndex] == '>') {
-            return matchIndex
-        }
-        searchIndex = boundaryIndex
-    }
-    return -1
-}
-
-private fun String.xmlTvAttribute(name: String): String? {
-    var searchIndex = 0
-    while (searchIndex < length) {
-        val nameIndex = indexOf(name, searchIndex, ignoreCase = true)
-        if (nameIndex < 0) return null
-        val nameEnd = nameIndex + name.length
-        val startsAtBoundary = nameIndex == 0 || !this[nameIndex - 1].isLetterOrDigit()
-        val endsAtBoundary = nameEnd >= length || !this[nameEnd].isLetterOrDigit()
-        if (!startsAtBoundary || !endsAtBoundary) {
-            searchIndex = nameEnd
-            continue
-        }
-
-        var cursor = nameEnd
-        while (cursor < length && this[cursor].isWhitespace()) cursor += 1
-        if (cursor >= length || this[cursor] != '=') {
-            searchIndex = nameEnd
-            continue
-        }
-        cursor += 1
-        while (cursor < length && this[cursor].isWhitespace()) cursor += 1
-        if (cursor >= length || (this[cursor] != '"' && this[cursor] != '\'')) return null
-        val quote = this[cursor]
-        val valueStart = cursor + 1
-        val valueEnd = indexOf(quote, startIndex = valueStart)
-        return if (valueEnd >= 0) substring(valueStart, valueEnd) else null
-    }
-    return null
-}
-
-private data class XmlTvElement(
-    val attributes: String,
-    val content: String,
-    val nextIndex: Int,
+internal data class LiveTvEpgGuide(
+    val programsByEpgKey: Map<String, List<LiveTvEpgProgram>> = emptyMap(),
+    val epgKeysByName: Map<String, String> = emptyMap(),
+    val programsByChannelId: Map<String, List<LiveTvEpgProgram>> = emptyMap(),
 )
 
-private fun String.xmlTvElement(name: String, startIndex: Int, endIndex: Int): XmlTvElement? {
-    val elementStart = findXmlTvOpeningTag(name, startIndex, endIndex)
-    if (elementStart < 0) return null
-    val tagEnd = indexOf('>', startIndex = elementStart + name.length + 1)
-    if (tagEnd < 0 || tagEnd >= endIndex) return null
-    val closeTag = "</$name>"
-    val contentEnd = indexOf(closeTag, startIndex = tagEnd + 1, ignoreCase = true)
-    if (contentEnd < 0 || contentEnd > endIndex) return null
-    return XmlTvElement(
-        attributes = substring(elementStart + name.length + 1, tagEnd),
-        content = substring(tagEnd + 1, contentEnd),
-        nextIndex = contentEnd + closeTag.length,
+internal suspend fun fetchXmltvGuide(url: String, nowMillis: Long): LiveTvEpgGuide {
+    val xml = downloadXmltv(url)
+    return parseXmltvGuide(
+        xml = xml,
+        windowStartMillis = nowMillis - LIVE_TV_EPG_PAST_WINDOW_MILLIS,
+        windowEndMillis = nowMillis + LIVE_TV_EPG_FUTURE_WINDOW_MILLIS,
     )
 }
 
-private fun String.xmlTvElementText(name: String, startIndex: Int, endIndex: Int): String? =
-    xmlTvElement(name, startIndex, endIndex)
-        ?.content
-        ?.toXmlTvPlainText()
-        ?.takeIf(String::isNotBlank)
-
-private fun String.xmlTvElementTexts(name: String, startIndex: Int, endIndex: Int): List<String> {
-    val values = mutableListOf<String>()
-    var searchIndex = startIndex
-    while (searchIndex < endIndex) {
-        val element = xmlTvElement(name, searchIndex, endIndex) ?: break
-        element.content.toXmlTvPlainText().takeIf(String::isNotBlank)?.let(values::add)
-        searchIndex = element.nextIndex
+private suspend fun downloadXmltv(url: String): String {
+    val path = url.substringBefore('#').substringBefore('?')
+    if (!path.endsWith(".gz", ignoreCase = true)) {
+        val text = httpGetTextWithHeaders(url, epgRequestHeaders)
+        if (!text.startsWith('\u001F')) return text
     }
-    return values
+    val response = httpRequestRaw(
+        method = "GET",
+        url = url,
+        headers = epgRequestHeaders,
+        body = "",
+        maxResponseBodyBytes = LIVE_TV_EPG_MAX_DOWNLOAD_BYTES,
+    )
+    require(response.status in 200..299) { "Guide request failed with HTTP ${response.status}" }
+    val bytes = response.bodyBytes
+    val isGzip = bytes.size >= 2 && bytes[0] == 0x1F.toByte() && bytes[1] == 0x8B.toByte()
+    val xmlBytes = if (isGzip) liveTvGunzip(bytes, LIVE_TV_EPG_MAX_XML_BYTES) else bytes
+    return xmlBytes.decodeToString()
 }
 
-private fun String.xmlTvOpeningTagAttributes(name: String, startIndex: Int, endIndex: Int): String? {
-    val elementStart = findXmlTvOpeningTag(name, startIndex, endIndex)
-    if (elementStart < 0) return null
-    val tagEnd = indexOf('>', startIndex = elementStart + name.length + 1)
-    if (tagEnd < 0 || tagEnd >= endIndex) return null
-    return substring(elementStart + name.length + 1, tagEnd).removeSuffix("/")
-}
-
-private fun String.hasXmlTvOpeningTag(name: String, startIndex: Int, endIndex: Int): Boolean =
-    findXmlTvOpeningTag(name, startIndex, endIndex) >= 0
-
-private fun String.findXmlTvOpeningTag(name: String, startIndex: Int, endIndex: Int): Int {
-    var searchIndex = startIndex
-    val prefix = "<$name"
-    while (searchIndex < endIndex) {
-        val matchIndex = indexOf(prefix, searchIndex, ignoreCase = true)
-        if (matchIndex < 0 || matchIndex >= endIndex) return -1
-        val boundaryIndex = matchIndex + prefix.length
-        if (
-            boundaryIndex < endIndex &&
-            (this[boundaryIndex].isWhitespace() || this[boundaryIndex] == '>' || this[boundaryIndex] == '/')
-        ) {
-            return matchIndex
+internal fun parseXmltvGuide(
+    xml: String,
+    windowStartMillis: Long,
+    windowEndMillis: Long,
+): LiveTvEpgGuide {
+    val keysByName = HashMap<String, String>()
+    val idKeysByName = HashMap<String, String>()
+    var index = 0
+    while (true) {
+        val start = xml.indexOf("<channel", index)
+        if (start < 0) break
+        if (!isXmlTagBoundary(xml.getOrNull(start + 8))) {
+            index = start + 8
+            continue
         }
-        searchIndex = boundaryIndex
-    }
-    return -1
-}
-
-private fun String.xmlTvCredits(startIndex: Int, endIndex: Int): List<LiveTvProgrammeCredit> {
-    val creditsElement = xmlTvElement("credits", startIndex, endIndex) ?: return emptyList()
-    return listOf("director", "actor", "writer", "presenter", "producer", "guest")
-        .flatMap { role ->
-            creditsElement.content.xmlTvElementTexts(role, 0, creditsElement.content.length)
-                .map { name -> LiveTvProgrammeCredit(role = role, name = name) }
-        }
-}
-
-private fun formatXmlTvEpisode(value: String, system: String?): String {
-    if (!system.equals("xmltv_ns", ignoreCase = true)) return value
-    val parts = value.split('.')
-    val season = parts.getOrNull(0)?.substringBefore('/')?.toIntOrNull()?.plus(1)
-    val episode = parts.getOrNull(1)?.substringBefore('/')?.toIntOrNull()?.plus(1)
-    return when {
-        season != null && episode != null -> "S${season.toString().padStart(2, '0')}E${episode.toString().padStart(2, '0')}"
-        season != null -> "Season $season"
-        else -> value
-    }
-}
-
-private fun formatXmlTvDate(value: String): String =
-    if (value.length == 8 && value.all(Char::isDigit)) {
-        "${value.substring(0, 4)}-${value.substring(4, 6)}-${value.substring(6, 8)}"
-    } else {
-        value
-    }
-
-internal fun mergeXmlTvProgrammeSchedules(
-    schedules: Iterable<Map<String, List<LiveTvProgramme>>>,
-): Map<String, List<LiveTvProgramme>> {
-    val merged = mutableMapOf<String, MutableList<LiveTvProgramme>>()
-    schedules.forEach { schedule ->
-        schedule.forEach { (channelId, programmes) ->
-            merged.getOrPut(channelId) { mutableListOf() }.addAll(programmes)
-        }
-    }
-    return merged.mapValues { (_, programmes) ->
-        programmes
-            .distinctBy { programme ->
-                Triple(programme.startEpochMs, programme.stopEpochMs, programme.title)
+        val tagEnd = xml.indexOf('>', start)
+        if (tagEnd < 0) break
+        val openTag = xml.substring(start, tagEnd)
+        val selfClosing = openTag.endsWith('/')
+        val close = if (selfClosing) tagEnd else xml.indexOf("</channel>", tagEnd).takeIf { it >= 0 } ?: break
+        index = close + 1
+        val id = readXmlAttribute(openTag, "id")?.let(::decodeXmlEntities)?.trim()?.takeIf(String::isNotBlank) ?: continue
+        val key = liveTvEpgKey(id)
+        if (!selfClosing) {
+            readXmlElementTexts(xml.substring(tagEnd + 1, close), "display-name").forEach { name ->
+                normalizeEpgChannelName(name).takeIf(String::isNotBlank)?.let { keysByName.getOrPut(it) { key } }
             }
-            .sortedBy(LiveTvProgramme::startEpochMs)
+        }
+        epgIdNameCandidates(id).forEach { candidate -> idKeysByName.getOrPut(candidate) { key } }
     }
+
+    val programs = HashMap<String, MutableList<LiveTvEpgProgram>>()
+    index = 0
+    while (true) {
+        val start = xml.indexOf("<programme", index)
+        if (start < 0) break
+        if (!isXmlTagBoundary(xml.getOrNull(start + 10))) {
+            index = start + 10
+            continue
+        }
+        val tagEnd = xml.indexOf('>', start)
+        if (tagEnd < 0) break
+        val openTag = xml.substring(start, tagEnd)
+        val selfClosing = openTag.endsWith('/')
+        val close = if (selfClosing) tagEnd else xml.indexOf("</programme>", tagEnd).takeIf { it >= 0 } ?: break
+        index = close + 1
+        if (selfClosing) continue
+        val channel = readXmlAttribute(openTag, "channel")?.let(::decodeXmlEntities)?.trim()?.takeIf(String::isNotBlank) ?: continue
+        val startMillis = readXmlAttribute(openTag, "start")?.let(::parseXmltvTime) ?: continue
+        val stopMillis = readXmlAttribute(openTag, "stop")?.let(::parseXmltvTime)
+        if (startMillis > windowEndMillis) continue
+        if (stopMillis != null && stopMillis < windowStartMillis) continue
+        val body = xml.substring(tagEnd + 1, close)
+        val title = readXmlElementTexts(body, "title", limit = 1).firstOrNull() ?: continue
+        programs.getOrPut(liveTvEpgKey(channel)) { mutableListOf() } += LiveTvEpgProgram(
+            title = title,
+            startMillis = startMillis,
+            endMillis = stopMillis ?: -1L,
+            description = readXmlElementTexts(body, "desc", limit = 1).firstOrNull(),
+            category = readXmlElementTexts(body, "category", limit = 1).firstOrNull(),
+        )
+    }
+
+    val finalized = programs
+        .mapValues { (_, list) -> finalizeEpgPrograms(list, windowStartMillis) }
+        .filterValues { it.isNotEmpty() }
+    idKeysByName.forEach { (name, key) -> keysByName.getOrPut(name) { key } }
+    return LiveTvEpgGuide(
+        programsByEpgKey = finalized,
+        epgKeysByName = keysByName.filterValues { it in finalized },
+    )
 }
 
-internal fun currentXmlTvProgrammes(
-    programmesByChannel: Map<String, List<LiveTvProgramme>>,
-    nowEpochMs: Long = LiveTvClock.nowEpochMs(),
-): Map<String, LiveTvProgramme> =
-    programmesByChannel.entries.mapNotNull { (channelId, programmes) ->
-        programmes
-            .firstOrNull { programme -> nowEpochMs in programme.startEpochMs until programme.stopEpochMs }
-            ?.let { programme -> channelId to programme }
-    }.toMap()
+internal fun finalizeEpgPrograms(
+    programs: List<LiveTvEpgProgram>,
+    windowStartMillis: Long,
+): List<LiveTvEpgProgram> {
+    val sorted = programs.sortedBy { it.startMillis }.distinctBy { it.startMillis }
+    return sorted.mapIndexed { index, program ->
+        if (program.endMillis > program.startMillis) {
+            program
+        } else {
+            val nextStart = sorted.getOrNull(index + 1)?.startMillis
+            program.copy(endMillis = nextStart ?: (program.startMillis + LIVE_TV_EPG_DEFAULT_DURATION_MILLIS))
+        }
+    }.filter { it.endMillis >= windowStartMillis }
+}
 
-private fun String.fullXmlTvTimePart(): String {
-    val digits = takeWhile(Char::isDigit)
-    return if (digits.length >= 12) {
-        "${digits.substring(8, 10)}:${digits.substring(10, 12)}"
+internal fun matchEpgToChannels(
+    channels: List<LiveTvChannel>,
+    guides: List<LiveTvEpgGuide>,
+): Map<String, List<LiveTvEpgProgram>> {
+    if (guides.isEmpty() || channels.isEmpty()) return emptyMap()
+    val result = HashMap<String, List<LiveTvEpgProgram>>()
+    channels.forEach { channel ->
+        val epgKey = channel.epgId?.trim()?.takeIf(String::isNotBlank)?.let(::liveTvEpgKey)
+        val nameKey = normalizeEpgChannelName(channel.name)
+        val programs = guides.firstNotNullOfOrNull { guide ->
+            guide.programsByChannelId[channel.id]?.takeIf { it.isNotEmpty() }
+        } ?: epgKey?.let { key ->
+            guides.firstNotNullOfOrNull { guide -> guide.programsByEpgKey[key] }
+        } ?: epgKey?.let { key ->
+            epgIdNameCandidates(key).firstNotNullOfOrNull { candidate ->
+                guides.firstNotNullOfOrNull { guide -> guide.epgKeysByName[candidate]?.let(guide.programsByEpgKey::get) }
+            }
+        } ?: nameKey.takeIf(String::isNotBlank)?.let { name ->
+            guides.firstNotNullOfOrNull { guide -> guide.epgKeysByName[name]?.let(guide.programsByEpgKey::get) }
+        }
+        if (!programs.isNullOrEmpty()) {
+            result[channel.id] = programs
+        }
+    }
+    return result
+}
+
+internal fun List<LiveTvEpgProgram>.currentProgram(nowMillis: Long): LiveTvEpgProgram? =
+    firstOrNull { it.isAiringAt(nowMillis) }
+
+internal fun List<LiveTvEpgProgram>.nextProgram(nowMillis: Long): LiveTvEpgProgram? =
+    firstOrNull { it.startMillis >= nowMillis }
+
+internal fun List<LiveTvEpgProgram>.upcomingPrograms(nowMillis: Long): List<LiveTvEpgProgram> =
+    filter { it.endMillis > nowMillis }
+
+internal fun liveTvEpgKey(value: String): String = value.trim().lowercase()
+
+internal fun normalizeEpgChannelName(value: String): String {
+    val withoutBrackets = StringBuilder(value.length)
+    var depth = 0
+    value.lowercase().forEach { char ->
+        when (char) {
+            '(', '[', '{' -> depth++
+            ')', ']', '}' -> if (depth > 0) depth--
+            else -> if (depth == 0) withoutBrackets.append(char)
+        }
+    }
+    var name = withoutBrackets.toString().trim()
+    val prefixSeparator = name.indexOfFirst { it == ':' || it == '|' }
+    if (prefixSeparator in 1..5 && prefixSeparator < name.length - 1) {
+        name = name.substring(prefixSeparator + 1)
+    }
+    val tokens = mutableListOf<String>()
+    val token = StringBuilder()
+    name.forEach { char ->
+        if (char.isLetterOrDigit()) {
+            token.append(char)
+        } else if (token.isNotEmpty()) {
+            tokens += token.toString()
+            token.clear()
+        }
+    }
+    if (token.isNotEmpty()) tokens += token.toString()
+    val filtered = tokens.filterNot { it in epgQualityTokens }
+    return (filtered.ifEmpty { tokens }).joinToString("")
+}
+
+private val epgQualityTokens = setOf(
+    "hd", "fhd", "uhd", "sd", "hq", "lq", "4k", "8k", "hevc", "h264", "h265",
+    "2160p", "1080p", "1080i", "720p", "576p", "480p", "50fps", "60fps", "backup", "raw",
+)
+
+private fun epgIdNameCandidates(id: String): List<String> {
+    val trimmed = id.trim()
+    val suffix = trimmed.substringAfterLast('.', missingDelimiterValue = "")
+    val withoutCountry = if (suffix.length in 2..3 && suffix.all(Char::isLetter)) {
+        trimmed.substringBeforeLast('.')
     } else {
-        ""
+        trimmed
+    }
+    return listOf(normalizeEpgChannelName(withoutCountry), normalizeEpgChannelName(trimmed))
+        .filter(String::isNotBlank)
+        .distinct()
+}
+
+internal fun parseXmltvTime(value: String): Long? {
+    val trimmed = value.trim()
+    val digits = trimmed.takeWhile(Char::isDigit)
+    if (digits.length < 12) return null
+    val year = digits.substring(0, 4).toIntOrNull() ?: return null
+    val month = digits.substring(4, 6).toIntOrNull()?.takeIf { it in 1..12 } ?: return null
+    val day = digits.substring(6, 8).toIntOrNull()?.takeIf { it in 1..31 } ?: return null
+    val hour = digits.substring(8, 10).toIntOrNull()?.takeIf { it in 0..23 } ?: return null
+    val minute = digits.substring(10, 12).toIntOrNull()?.takeIf { it in 0..59 } ?: return null
+    val second = if (digits.length >= 14) digits.substring(12, 14).toIntOrNull()?.coerceIn(0, 59) ?: 0 else 0
+    val rest = trimmed.substring(digits.length).trim()
+    var offsetMinutes = 0
+    if (rest.length >= 5 && (rest[0] == '+' || rest[0] == '-')) {
+        val offsetDigits = rest.substring(1).filter(Char::isDigit)
+        val offsetHours = offsetDigits.take(2).toIntOrNull()
+        val offsetMins = offsetDigits.drop(2).take(2).toIntOrNull() ?: 0
+        if (offsetHours != null) {
+            offsetMinutes = (offsetHours * 60 + offsetMins) * if (rest[0] == '-') -1 else 1
+        }
+    }
+    val epochDays = epgDaysFromCivil(year, month, day)
+    val epochSeconds = epochDays * 86_400L + hour * 3_600L + minute * 60L + second - offsetMinutes * 60L
+    return epochSeconds * 1000L
+}
+
+private fun epgDaysFromCivil(year: Int, month: Int, day: Int): Long {
+    val y = if (month <= 2) year - 1 else year
+    val era = (if (y >= 0) y else y - 399) / 400
+    val yearOfEra = y - era * 400
+    val dayOfYear = (153 * (if (month > 2) month - 3 else month + 9) + 2) / 5 + day - 1
+    val dayOfEra = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear
+    return era.toLong() * 146_097L + dayOfEra - 719_468L
+}
+
+private fun isXmlTagBoundary(char: Char?): Boolean =
+    char == null || char == '>' || char == '/' || char.isWhitespace()
+
+private fun readXmlAttribute(tag: String, name: String): String? {
+    var from = 0
+    while (true) {
+        val index = tag.indexOf(name, from)
+        if (index < 0) return null
+        var cursor = index + name.length
+        val before = tag.getOrNull(index - 1)
+        if (before == null || !before.isWhitespace()) {
+            from = cursor
+            continue
+        }
+        while (cursor < tag.length && tag[cursor].isWhitespace()) cursor++
+        if (tag.getOrNull(cursor) != '=') {
+            from = index + name.length
+            continue
+        }
+        cursor++
+        while (cursor < tag.length && tag[cursor].isWhitespace()) cursor++
+        val quote = tag.getOrNull(cursor)
+        if (quote != '"' && quote != '\'') {
+            from = cursor
+            continue
+        }
+        val end = tag.indexOf(quote, cursor + 1)
+        if (end < 0) return null
+        return tag.substring(cursor + 1, end)
     }
 }
 
-private fun String.decodeFullXmlTvEntities(): String =
-    replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&apos;", "'")
+private fun readXmlElementTexts(
+    body: String,
+    name: String,
+    limit: Int = Int.MAX_VALUE,
+): List<String> {
+    val results = mutableListOf<String>()
+    val open = "<$name"
+    val close = "</$name>"
+    var index = 0
+    while (results.size < limit) {
+        val start = body.indexOf(open, index)
+        if (start < 0) break
+        if (!isXmlTagBoundary(body.getOrNull(start + open.length))) {
+            index = start + open.length
+            continue
+        }
+        val tagEnd = body.indexOf('>', start)
+        if (tagEnd < 0) break
+        if (body[tagEnd - 1] == '/') {
+            index = tagEnd + 1
+            continue
+        }
+        val end = body.indexOf(close, tagEnd)
+        if (end < 0) break
+        val text = decodeXmlText(body.substring(tagEnd + 1, end)).trim()
+        if (text.isNotEmpty()) results += text
+        index = end + close.length
+    }
+    return results
+}
 
-private val XmlTvMarkupRegex = Regex("<[^>]+>")
-private val XmlTvWhitespaceRegex = Regex("\\s+")
+private fun decodeXmlText(raw: String): String {
+    if (!raw.contains("<![CDATA[")) return decodeXmlEntities(raw)
+    val builder = StringBuilder(raw.length)
+    var index = 0
+    while (index < raw.length) {
+        val cdataStart = raw.indexOf("<![CDATA[", index)
+        if (cdataStart < 0) {
+            builder.append(decodeXmlEntities(raw.substring(index)))
+            break
+        }
+        builder.append(decodeXmlEntities(raw.substring(index, cdataStart)))
+        val contentStart = cdataStart + 9
+        val cdataEnd = raw.indexOf("]]>", contentStart)
+        if (cdataEnd < 0) {
+            builder.append(raw.substring(contentStart))
+            break
+        }
+        builder.appendRange(raw, contentStart, cdataEnd)
+        index = cdataEnd + 3
+    }
+    return builder.toString()
+}
 
-private fun String.toXmlTvPlainText(): String =
-    removePrefix("<![CDATA[")
-        .removeSuffix("]]>")
-        .replace(XmlTvMarkupRegex, " ")
-        .decodeFullXmlTvEntities()
-        .replace(XmlTvWhitespaceRegex, " ")
-        .trim()
+internal fun decodeXmlEntities(value: String): String {
+    if ('&' !in value) return value
+    val builder = StringBuilder(value.length)
+    var index = 0
+    while (index < value.length) {
+        val char = value[index]
+        if (char == '&') {
+            val semicolon = value.indexOf(';', index + 1)
+            if (semicolon > index && semicolon - index <= 10) {
+                val entity = value.substring(index + 1, semicolon)
+                val decoded = when {
+                    entity == "amp" -> "&"
+                    entity == "lt" -> "<"
+                    entity == "gt" -> ">"
+                    entity == "quot" -> "\""
+                    entity == "apos" -> "'"
+                    entity.startsWith("#x") || entity.startsWith("#X") ->
+                        entity.substring(2).toIntOrNull(16)?.let(::xmlCodePointToString)
+                    entity.startsWith("#") -> entity.substring(1).toIntOrNull()?.let(::xmlCodePointToString)
+                    else -> null
+                }
+                if (decoded != null) {
+                    builder.append(decoded)
+                    index = semicolon + 1
+                    continue
+                }
+            }
+        }
+        builder.append(char)
+        index++
+    }
+    return builder.toString()
+}
+
+private fun xmlCodePointToString(codePoint: Int): String? = when (codePoint) {
+    in 0..0xFFFF -> codePoint.toChar().toString()
+    in 0x10000..0x10FFFF -> {
+        val value = codePoint - 0x10000
+        charArrayOf(((value shr 10) + 0xD800).toChar(), ((value and 0x3FF) + 0xDC00).toChar()).concatToString()
+    }
+    else -> null
+}

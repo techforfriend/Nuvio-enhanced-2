@@ -39,8 +39,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
+import com.kyant.backdrop.Backdrop
+import com.nuvio.app.core.ui.glass.liquidGlassSurface
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 
@@ -103,17 +103,20 @@ fun rememberNuvioNavBarScrollState(): NuvioNavBarScrollState {
     return androidx.compose.runtime.remember { NuvioNavBarScrollState() }
 }
 
+/** Beyond this the bar stops looking like a floating pill and starts looking like a toolbar. */
+private val NuvioNavigationBarMaxWidth = 560.dp
+
 /**
  * Floating pill-shaped navigation bar with scroll-responsive labels.
  *
- * @param hazeState Optional [HazeState] whose source is placed on the content behind this bar.
- *                  When provided, the pill gets a blur-through effect.
+ * @param backdrop Optional [Backdrop] whose source is placed on the content behind this bar.
+ *                 When provided, the pill gets a liquid glass effect.
  */
 @Composable
 fun NuvioNavigationBar(
     modifier: Modifier = Modifier,
     scrollState: NuvioNavBarScrollState? = null,
-    hazeState: HazeState? = null,
+    backdrop: Backdrop? = null,
     contentPadding: PaddingValues = floatingNavigationBarPadding(),
     compactSize: Boolean = false,
     content: @Composable NuvioNavigationBarScope.() -> Unit,
@@ -142,18 +145,19 @@ fun NuvioNavigationBar(
         // The floating pill
         val pillModifier = Modifier
             .padding(horizontal = horizontalPadding)
+            // On a phone the horizontal padding alone shapes the pill, but on a tablet or in
+            // landscape it would stretch to nearly the full width and stop reading as a pill.
+            .widthIn(max = NuvioNavigationBarMaxWidth)
             .fillMaxWidth()
             .clip(RoundedCornerShape(NuvioTokens.Radius.full))
-            .then(
-                if (hazeState != null) {
-                    Modifier.hazeEffect(state = hazeState) {
-                        blurRadius = 24.dp
-                    }
-                } else {
-                    Modifier
-                },
+            .liquidGlassSurface(
+                backdrop = backdrop,
+                shape = RoundedCornerShape(NuvioTokens.Radius.full),
+                tint = Color(0xFF1C1C1E).copy(alpha = 0.55f),
+                fallback = Color(0xFF1C1C1E).copy(alpha = 0.82f),
+                blurRadius = 24.dp,
+                refractionHeight = 24.dp,
             )
-            .background(Color(0xFF1C1C1E).copy(alpha = if (hazeState != null) 0.55f else 0.82f))
 
         Box(modifier = pillModifier) {
             Row(

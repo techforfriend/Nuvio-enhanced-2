@@ -27,7 +27,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import com.nuvio.app.features.settings.ThemeSettingsRepository
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -92,9 +95,9 @@ fun <T> NuvioShelfSection(
             )
         }
         LazyRow(
-            modifier = rowModifier,
+            modifier = rowModifier.nuvioHorizontalScrollBleed(LocalVerticalBarPadding.current),
             state = state,
-            contentPadding = rowContentPadding,
+            contentPadding = rowContentPadding.withVerticalBar(),
             horizontalArrangement = Arrangement.spacedBy(itemSpacing),
         ) {
             if (key != null) {
@@ -280,6 +283,7 @@ private fun NuvioShelfSectionHeader(
     viewAllPillSize: NuvioViewAllPillSize = NuvioViewAllPillSize.Default,
 ) {
     val tokens = MaterialTheme.nuvio
+    val showAccent by ThemeSettingsRepository.showCatalogAccentEnabled.collectAsState()
     Column(
         modifier = modifier.fillMaxWidth(),
     ) {
@@ -310,14 +314,15 @@ private fun NuvioShelfSectionHeader(
                 modifier = viewAllPlaceholderModifier,
             )
         }
-        Spacer(modifier = Modifier.height(5.dp))
-        Box(
-            modifier = Modifier
-                .width(36.dp)
-                .height(3.5.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(tokens.colors.accent),
-        )
+        if (showAccent) {
+            Box(
+                modifier = Modifier
+                    .padding(top = NuvioTokens.Space.s6)
+                    .width(NuvioTokens.Space.s64 - NuvioTokens.Space.s4)
+                    .height(NuvioTokens.Space.s4)
+                    .background(brush = MaterialTheme.themePalette.accentBrush(), shape = tokens.shapes.chip),
+            )
+        }
     }
 }
 

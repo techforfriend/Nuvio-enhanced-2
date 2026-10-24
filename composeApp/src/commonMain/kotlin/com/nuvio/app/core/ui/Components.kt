@@ -79,21 +79,28 @@ fun NuvioScreen(
     horizontalPadding: Dp = MaterialTheme.nuvio.spacing.screenHorizontal,
     topPadding: Dp? = null,
     listState: LazyListState = rememberLazyListState(),
+    autoHidesNativeTabBar: Boolean = false,
     content: LazyListScope.() -> Unit,
 ) {
+    NativeTabBarScrollEffect(listState = listState, enabled = autoHidesNativeTabBar)
     val tokens = MaterialTheme.nuvio
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val screenBackground = if (LocalDynamicArtworkBackgroundActive.current) {
+        Color.Transparent
+    } else {
+        tokens.colors.background
+    }
     LazyColumn(
         state = listState,
         modifier = modifier
             .fillMaxSize()
-            .background(tokens.colors.background),
+            .background(screenBackground),
         contentPadding = PaddingValues(
             start = horizontalPadding,
             top = topPadding ?: tokens.spacing.screenTop + statusBarTop + nuvioPlatformExtraTopPadding,
             end = horizontalPadding,
             bottom = nuvioSafeBottomPadding(tokens.spacing.screenBottom),
-        ),
+        ).withVerticalBar(),
         verticalArrangement = Arrangement.spacedBy(tokens.spacing.listGap),
         content = content,
     )
@@ -305,7 +312,12 @@ fun NuvioPrimaryButton(
 ) {
     val tokens = MaterialTheme.nuvio
     val shape = tokens.shapes.button
-    val animatedBrush = rememberAnimatedAccentBrush().takeIf { enabled }
+    val palette = MaterialTheme.themePalette
+    val containerBrush = if (enabled) {
+        palette.accentBrush()
+    } else {
+        palette.accentBrush(alpha = tokens.opacity.disabled)
+    }
     Button(
         onClick = onClick,
         modifier = modifier
@@ -313,13 +325,13 @@ fun NuvioPrimaryButton(
             .height(NuvioTokens.Space.s48 + NuvioTokens.Space.s4)
             .clip(shape)
             .nuvioKeyboardFocusIndicator(shape, enabled)
-            .then(if (animatedBrush != null) Modifier.background(animatedBrush, shape) else Modifier),
+            .background(containerBrush),
         enabled = enabled,
         shape = shape,
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (animatedBrush != null) Color.Transparent else tokens.colors.accent,
+            containerColor = Color.Transparent,
             contentColor = tokens.colors.onAccent,
-            disabledContainerColor = tokens.colors.accent.copy(alpha = tokens.opacity.disabled),
+            disabledContainerColor = Color.Transparent,
             disabledContentColor = tokens.colors.onAccent.copy(alpha = tokens.opacity.disabled),
         ),
     ) {
@@ -344,6 +356,7 @@ fun NuvioInputField(
     placeholder: String,
     modifier: Modifier = Modifier,
     trailingContent: (@Composable (() -> Unit))? = null,
+    containerColor: Color = MaterialTheme.nuvio.colors.surfaceCard,
 ) {
     val tokens = MaterialTheme.nuvio
     OutlinedTextField(
@@ -364,8 +377,8 @@ fun NuvioInputField(
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = tokens.colors.borderFocus,
             unfocusedBorderColor = tokens.colors.borderDefault,
-            focusedContainerColor = tokens.colors.surfaceCard,
-            unfocusedContainerColor = tokens.colors.surfaceCard,
+            focusedContainerColor = containerColor,
+            unfocusedContainerColor = containerColor,
             cursorColor = tokens.colors.accent,
         ),
     )

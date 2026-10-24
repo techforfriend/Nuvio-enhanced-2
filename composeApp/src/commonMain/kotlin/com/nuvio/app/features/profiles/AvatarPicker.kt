@@ -20,7 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
+import com.nuvio.app.core.ui.NuvioAsyncImage
 
 @Composable
 internal fun AvatarPicker(
@@ -79,11 +79,15 @@ private fun AvatarChoiceItem(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        AsyncImage(
-            model = avatarImageUrl(avatar),
-            contentDescription = avatar.displayName,
-            modifier = Modifier.fillMaxSize().clip(CircleShape),
-            contentScale = ContentScale.Crop,
-        )
+        val imageUrl = avatarImageUrl(avatar)
+        if (imageUrl != null) {
+            NuvioAsyncImage(
+                imageUrl = imageUrl,
+                contentDescription = avatar.displayName,
+                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                contentScale = ContentScale.Crop,
+                animateIfPossible = true,
+            )
+        }
     }
 }

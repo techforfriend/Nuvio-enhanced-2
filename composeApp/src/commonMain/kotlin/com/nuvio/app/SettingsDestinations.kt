@@ -17,6 +17,7 @@ import com.nuvio.app.navigation.AppRoute
 import com.nuvio.app.navigation.CollectionEditorPageRoute
 import com.nuvio.app.navigation.CollectionEditorRoute
 import com.nuvio.app.navigation.CollectionsRoute
+import com.nuvio.app.navigation.DetailRoute
 import com.nuvio.app.navigation.FolderDetailRoute
 import com.nuvio.app.navigation.NuvioNavigator
 import com.nuvio.app.navigation.PartyRoute
@@ -43,6 +44,8 @@ internal fun SettingsRootDestination(
     collectionsTitle: String,
     onCheckForUpdates: (() -> Unit)?,
     onTestUpdateBanner: (() -> Unit)?,
+    onSwitchProfile: (() -> Unit)? = null,
+    onEditProfile: (() -> Unit)? = null,
 ) {
     val onBack = rememberGuardedPopBackStack(navController, route)
     val watchPartyTitle = stringResource(Res.string.party_title)
@@ -55,6 +58,11 @@ internal fun SettingsRootDestination(
         },
         onExternalBack = onBack,
         showInternalHeader = !useNativeNavigation,
+        onSwitchProfile = onSwitchProfile,
+        onEditProfile = onEditProfile,
+        onPosterClick = { meta ->
+            navController.navigate(DetailRoute(type = meta.type, id = meta.id, title = meta.name))
+        },
         onCollectionsClick = {
             navController.navigate(CollectionsRoute(collectionsTitle))
         },

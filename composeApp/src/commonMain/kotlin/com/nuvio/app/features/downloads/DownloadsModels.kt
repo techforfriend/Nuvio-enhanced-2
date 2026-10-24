@@ -9,6 +9,7 @@ import nuvio.composeapp.generated.resources.downloads_enqueue_missing_url
 import nuvio.composeapp.generated.resources.downloads_enqueue_replaced
 import nuvio.composeapp.generated.resources.downloads_enqueue_started
 import nuvio.composeapp.generated.resources.downloads_enqueue_unsupported_format
+import nuvio.composeapp.generated.resources.downloads_enqueue_requires_wifi
 import org.jetbrains.compose.resources.getString
 
 @Serializable
@@ -91,7 +92,8 @@ enum class DownloadEnqueueResult {
     Started,
     Replaced,
     MissingUrl,
-    UnsupportedFormat;
+    UnsupportedFormat,
+    RequiresWifi;
 
     fun toastMessage(): String = runBlocking {
         when (this@DownloadEnqueueResult) {
@@ -99,6 +101,7 @@ enum class DownloadEnqueueResult {
             Replaced -> getString(Res.string.downloads_enqueue_replaced)
             MissingUrl -> getString(Res.string.downloads_enqueue_missing_url)
             UnsupportedFormat -> getString(Res.string.downloads_enqueue_unsupported_format)
+            RequiresWifi -> getString(Res.string.downloads_enqueue_requires_wifi)
         }
     }
 }

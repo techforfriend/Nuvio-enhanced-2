@@ -13,7 +13,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,6 +38,8 @@ import com.nuvio.app.core.ui.nuvio
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_close
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.glass.ambientLiquidGlass
+import androidx.compose.ui.unit.dp
 
 @Composable
 internal fun PlayerQualityPanel(
@@ -79,9 +80,16 @@ internal fun PlayerQualityPanel(
                     modifier = Modifier
                         .widthIn(max = tokens.components.playerPanelMaxWidth)
                         .fillMaxWidth(0.92f)
-                        .heightIn(max = tokens.components.dialogMaxWidth + NuvioTokens.Space.s40)
+                        .heightIn(max = tokens.components.dialogMaxWidth)
                         .clip(tokens.shapes.playerPanel)
-                        .background(tokens.colors.surfaceSheet)
+                        .ambientLiquidGlass(
+                            shape = tokens.shapes.playerPanel,
+                            tint = tokens.colors.surfaceSheet.copy(alpha = tokens.colors.surfaceSheet.alpha * 0.72f),
+                            fallback = tokens.colors.surfaceSheet,
+                            blurRadius = 28.dp,
+                            refractionHeight = 10.dp,
+                            refractionAmount = 18.dp,
+                        )
                         .border(tokens.borders.thin, tokens.colors.borderDefault, tokens.shapes.playerPanel)
                         .clickable(
                             indication = null,
@@ -157,9 +165,11 @@ internal fun PlayerQualityPanel(
                                 LazyColumn(
                                     modifier = Modifier.padding(horizontal = tokens.spacing.cardPadding),
                                     verticalArrangement = Arrangement.spacedBy(NuvioTokens.Space.s6),
-                                    contentPadding = PaddingValues(bottom = tokens.spacing.cardPadding),
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                        bottom = tokens.spacing.cardPadding,
+                                    ),
                                 ) {
-                                    item(key = PlayerQualityAutoId) {
+                                    item(key = "auto") {
                                         QualityOptionRow(
                                             title = state.labelFor(null)?.let { "Auto ($it)" } ?: "Auto",
                                             subtitle = "Recommended compatible quality",

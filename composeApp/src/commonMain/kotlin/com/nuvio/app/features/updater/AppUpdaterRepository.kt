@@ -18,6 +18,7 @@ internal data class GitHubReleaseDto(
     val draft: Boolean = false,
     val prerelease: Boolean = false,
     @SerialName("html_url") val htmlUrl: String? = null,
+    @SerialName("published_at") val publishedAt: String? = null,
     val assets: List<GitHubAssetDto> = emptyList(),
 )
 
@@ -31,6 +32,10 @@ internal data class GitHubAssetDto(
 
 internal class NoChannelReleaseException : IllegalStateException()
 
+internal const val GITHUB_API_BASE = "https://api.github.com"
+internal const val GITHUB_OWNER = "luqmanfadlli"
+internal const val GITHUB_REPO = "NuvioMobile-Enhanced"
+
 internal object AppUpdaterRepository {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -40,7 +45,7 @@ internal object AppUpdaterRepository {
     suspend fun getLatestChannelUpdate(channel: UpdateChannel): Result<AppUpdate> = runCatching {
         val response = httpRequestRaw(
             method = "GET",
-            url = "https://api.github.com/repos/NuvioMedia/NuvioMobile/${releasePath(channel)}",
+            url = "$GITHUB_API_BASE/repos/$GITHUB_OWNER/$GITHUB_REPO/${releasePath(channel)}",
             headers = mapOf(
                 "Accept" to "application/vnd.github+json",
                 "User-Agent" to "NuvioMobile",

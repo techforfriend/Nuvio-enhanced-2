@@ -1135,11 +1135,6 @@
     <string name="settings_playback_regex_preset_quality_720p_smaller">720p / چھوٹا سائز</string>
     <string name="settings_playback_regex_preset_web_sources">WEB ذرائع</string>
     <string name="settings_playback_render_type">Libass Render Mode</string>
-    <string name="settings_playback_render_type_cues">Standard Cues</string>
-    <string name="settings_playback_render_type_effects_canvas">Effects Canvas</string>
-    <string name="settings_playback_render_type_effects_opengl">Effects OpenGL</string>
-    <string name="settings_playback_render_type_overlay_canvas">Overlay Canvas</string>
-    <string name="settings_playback_render_type_overlay_opengl">Overlay OpenGL (تجویز کردہ)</string>
     <string name="settings_playback_reuse_last_link">آخری Link دوبارہ استعمال کریں</string>
     <string name="settings_playback_reuse_last_link_description">اگر cache اب بھی valid ہو تو اسی movie یا episode کے لیے آخری کامیاب stream خودکار طور پر چلائیں۔</string>
     <string name="settings_playback_secondary_audio_language">ثانوی Audio زبان</string>
@@ -2298,7 +2293,7 @@
     <string name="player_torrent_peer_info">%1$d seeds · %2$d peers</string>
     <string name="player_torrent_buffered_status">%1$s buffered · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%</string>
     <string name="player_torrent_connecting_peers">Peers سے کنکشن ہو رہا ہے…</string>
     <string name="player_torrent_starting_engine">P2P engine شروع کیا جا رہا ہے…</string>
     <string name="player_torrent_fetching_metadata">Torrent metadata حاصل کیا جا رہا ہے…</string>
@@ -2344,7 +2339,6 @@
     <string name="layout_ratings_hide_unwatched">نہ دیکھی گئی اقساط کی ریٹنگز چھپائیں</string>
     <string name="settings_playback_legacy_layout">پرانا Layout</string>
     <string name="settings_playback_legacy_layout_description">اصل Player controls استعمال کریں۔</string>
-    <string name="compose_player_via">%1$s کے ذریعے</string>
     <string name="compose_player_episode_code">S%1$d E%2$d</string>
     <string name="compose_player_more_actions">مزید کنٹرولز</string>
     <string name="compose_player_fewer_actions">کم کنٹرولز</string>

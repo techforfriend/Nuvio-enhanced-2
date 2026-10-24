@@ -54,6 +54,8 @@ enum class LibrarySourceMode {
     TRAKT,
     SIMKL,
     MDBLIST,
+    ANILIST,
+    WETRAKR,
 }
 
 data class LibraryUiState(

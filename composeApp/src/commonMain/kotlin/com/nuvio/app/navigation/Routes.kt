@@ -38,6 +38,8 @@ data class DetailRoute(
     val type: String,
     val id: String,
     override val title: String? = null,
+    val initialSeasonNumber: Int? = null,
+    val initialEpisodeNumber: Int? = null,
 ) : AppRoute
 
 @Serializable
@@ -111,6 +113,12 @@ data class SupportersContributorsSettingsRoute(override val title: String = "") 
 
 @Serializable
 data class LicensesAttributionsSettingsRoute(override val title: String = "") : SettingsDestinationRoute
+
+@Serializable
+data class WhatsNewSettingsRoute(override val title: String = "") : SettingsDestinationRoute
+
+@Serializable
+data class ProfileEditRoute(override val title: String = "") : SettingsDestinationRoute
 
 @Serializable
 data class CollectionsRoute(override val title: String = "") : SettingsDestinationRoute

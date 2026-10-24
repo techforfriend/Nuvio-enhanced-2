@@ -12,6 +12,7 @@ import android.view.WindowManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,15 +34,30 @@ import kotlin.math.roundToInt
 actual fun LockPlayerToLandscape() {
     val activity = LocalContext.current.findActivity() ?: return
     if (!activity.shouldForceLandscapePlayer()) return
+    val portrait = PlayerOrientationPreference.portrait.collectAsState().value
+    val target = if (portrait) {
+        ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+    } else {
+        ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+    }
 
     DisposableEffect(activity) {
         val previousOrientation = activity.requestedOrientation
-        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
 
         onDispose {
             activity.requestedOrientation = previousOrientation
+            PlayerOrientationPreference.reset()
         }
     }
+    SideEffect {
+        if (activity.requestedOrientation != target) activity.requestedOrientation = target
+    }
+}
+
+@Composable
+actual fun rememberPlayerOrientationToggleSupported(): Boolean {
+    val activity = LocalContext.current.findActivity() ?: return false
+    return activity.shouldForceLandscapePlayer()
 }
 
 @Composable

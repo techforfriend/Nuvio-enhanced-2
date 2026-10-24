@@ -2,6 +2,9 @@ package com.nuvio.app.features.player
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.IntSize
@@ -11,11 +14,15 @@ import platform.Foundation.NSNotificationCenter
 import platform.MediaPlayer.MPVolumeView
 import platform.UIKit.UIApplication
 import platform.UIKit.UIControlEventValueChanged
+import platform.UIKit.UIDevice
+import platform.UIKit.UIUserInterfaceIdiomPhone
 import platform.UIKit.UIScreen
 import platform.UIKit.UISlider
 
 private const val lockPlayerToLandscapeNotification = "NuvioPlayerLockLandscape"
 private const val unlockPlayerOrientationNotification = "NuvioPlayerUnlockOrientation"
+private const val preferPlayerPortraitNotification = "NuvioPlayerPreferPortrait"
+private const val preferPlayerLandscapeNotification = "NuvioPlayerPreferLandscape"
 private var playerLandscapeLockCount = 0
 
 @Composable
@@ -32,6 +39,7 @@ actual fun LockPlayerToLandscape() {
         onDispose {
             playerLandscapeLockCount -= 1
             if (playerLandscapeLockCount == 0) {
+                PlayerOrientationPreference.reset()
                 NSNotificationCenter.defaultCenter.postNotificationName(
                     unlockPlayerOrientationNotification,
                     null,
@@ -39,7 +47,18 @@ actual fun LockPlayerToLandscape() {
             }
         }
     }
+    val portrait by PlayerOrientationPreference.portrait.collectAsState()
+    LaunchedEffect(portrait) {
+        NSNotificationCenter.defaultCenter.postNotificationName(
+            if (portrait) preferPlayerPortraitNotification else preferPlayerLandscapeNotification,
+            null,
+        )
+    }
 }
+
+@Composable
+actual fun rememberPlayerOrientationToggleSupported(): Boolean =
+    remember { UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPhone }
 
 @Composable
 actual fun FullscreenPlayerDialog(onDismiss: () -> Unit, content: @Composable () -> Unit) {

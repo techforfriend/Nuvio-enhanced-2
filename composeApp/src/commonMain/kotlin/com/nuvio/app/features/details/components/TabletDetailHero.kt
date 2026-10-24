@@ -1,7 +1,12 @@
 package com.nuvio.app.features.details.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -56,6 +62,7 @@ import com.nuvio.app.core.format.extractReleaseYearForDisplay
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.details.formatRuntimeForDisplay
+import com.nuvio.app.features.player.MiniPlayerController
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.detail_logo_content_description
 import nuvio.composeapp.generated.resources.details_season_count
@@ -63,6 +70,7 @@ import nuvio.composeapp.generated.resources.details_director
 import nuvio.composeapp.generated.resources.details_writer
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
 
 @Composable
 fun TabletDetailBackdrop(
@@ -188,7 +196,7 @@ private fun BackdropArtwork(
             HeroTrailerPlayerSurface(
                 sourceUrl = heroTrailerSourceUrl,
                 sourceAudioUrl = heroTrailerSourceAudioUrl,
-                playWhenReady = heroTrailerPlayWhenReady(),
+                playWhenReady = heroTrailerPlayWhenReady() && !MiniPlayerController.isActive,
                 muted = heroTrailerMuted,
                 modifier = artworkModifier.graphicsLayer {
                     alpha = trailerAlpha
@@ -240,6 +248,7 @@ fun TabletDetailHero(
     showOverallRatings: Boolean,
     isMdbListActive: Boolean,
     horizontalPadding: Dp,
+    viewportHeight: Dp,
     heroTrailerSourceUrl: String?,
     heroTrailerReady: Boolean,
     heroTrailerMuted: Boolean,
@@ -256,22 +265,25 @@ fun TabletDetailHero(
     )
     var logoLoadError by remember(meta.id, meta.logo) { mutableStateOf(false) }
     val logoUrl = meta.logo?.takeIf { it.isNotBlank() }
+    val heroMinHeight = if (viewportHeight > 0.dp) viewportHeight else TabletHeroHeight
+    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = TabletHeroHeight)
+            .heightIn(min = heroMinHeight)
             .onSizeChanged { onHeightChanged(it.height) },
     ) {
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .widthIn(max = 760.dp)
+                .padding(LocalVerticalBarPadding.current)
+                .fillMaxWidth()
                 .padding(
                     start = horizontalPadding,
-                    end = space.s32,
+                    end = horizontalPadding,
                     top = TabletHeroTopInset,
-                    bottom = space.s40,
+                    bottom = bottomInset + space.s24,
                 ),
         ) {
             if (logoUrl != null && !logoLoadError) {
@@ -302,12 +314,18 @@ fun TabletDetailHero(
             if (showOverview) {
                 Spacer(modifier = Modifier.height(space.s20))
                 TabletHeroMetaRow(meta = meta, showImdbRating = showOverallRatings && !isMdbListActive)
-                if (isMdbListActive && meta.externalRatings.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(space.s12))
-                    DetailRatingsRow(
-                        ratings = meta.externalRatings,
-                        modifier = Modifier.widthIn(max = 520.dp),
-                    )
+                AnimatedVisibility(
+                    visible = isMdbListActive && meta.externalRatings.isNotEmpty(),
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically(),
+                ) {
+                    Column {
+                        Spacer(modifier = Modifier.height(space.s12))
+                        DetailRatingsRow(
+                            ratings = meta.externalRatings,
+                            modifier = Modifier.widthIn(max = 520.dp),
+                        )
+                    }
                 }
             }
             if (meta.genres.isNotEmpty()) {
@@ -348,7 +366,7 @@ fun TabletDetailHero(
                 )
             }
             if (actions != null) {
-                Spacer(modifier = Modifier.height(space.s28))
+                Spacer(modifier = Modifier.height(space.s24))
                 actions()
             }
         }
@@ -359,6 +377,7 @@ fun TabletDetailHero(
                 enabled = heroTrailerReady,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
+                    .padding(LocalVerticalBarPadding.current)
                     .padding(
                         top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + space.s8,
                         end = horizontalPadding,
@@ -418,10 +437,7 @@ private fun TabletHeroMetaRow(meta: MetaDetails, showImdbRating: Boolean) {
         }
         if (validImdbRating != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ImdbRatingSourceLabel(
-                    storeTextStyle = itemStyle,
-                    storeTextColor = ImdbYellow,
-                )
+                ImdbRatingSourceLabel(storeTextStyle = itemStyle)
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = validImdbRating,

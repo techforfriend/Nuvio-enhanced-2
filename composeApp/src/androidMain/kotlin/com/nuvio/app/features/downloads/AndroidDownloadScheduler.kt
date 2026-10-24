@@ -8,6 +8,7 @@ import android.net.Network
 import android.os.Build
 import android.os.PersistableBundle
 import android.os.SystemClock
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.work.BackoffPolicy
@@ -40,9 +41,20 @@ internal class AndroidDownloadScheduler(val context: Context) {
     private val locks = ConcurrentHashMap<String, Mutex>()
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    init {
+        AndroidDownloadExport.initialize(context)
+    }
+
     fun enqueue(item: DownloadItem): AndroidDownloadTransfer {
         val previous = store.get(item.fileName)
-        val transfer = store.begin(item)
+        val exportTreeUri = DownloadsSettingsRepository.run {
+            ensureLoaded()
+            downloadLocationUri.value
+        }?.takeIf { it.isNotBlank() }
+        val transfer = store.begin(item, exportTreeUri)
+        previous?.takeIf { it.item.id == item.id }?.partialDocumentUri
+            ?.takeIf { it != transfer.partialDocumentUri }
+            ?.let { stale -> cleanupScope.launch { AndroidDownloadExport.delete(stale) } }
         val existing = previous?.generation == transfer.generation
         if (existing && Build.VERSION.SDK_INT >= 34) return transfer
         try {
@@ -99,10 +111,24 @@ internal class AndroidDownloadScheduler(val context: Context) {
             } else item
         if (transfer.item.status == DownloadStatus.Downloading && Build.VERSION.SDK_INT >= 34 &&
             jobScheduler().getPendingJob(transfer.jobId) == null) {
-            pause(item.fileName)
+            reschedule(item.fileName)
             transfer = store.get(item.fileName) ?: transfer
         }
         return transfer.item
+    }
+
+    fun reschedule(fileName: String) {
+        val transfer = store.get(fileName) ?: return
+        if (transfer.item.status != DownloadStatus.Downloading) return
+        val scheduled = if (Build.VERSION.SDK_INT >= 34) {
+            try {
+                jobScheduler().schedule(buildJob(transfer)) == JobScheduler.RESULT_SUCCESS
+            } catch (error: Exception) {
+                Log.w(TAG, "Could not reschedule download $fileName", error)
+                false
+            }
+        } else false
+        if (!scheduled) pause(fileName)
     }
 
     fun pause(fileName: String) {
@@ -124,6 +150,7 @@ internal class AndroidDownloadScheduler(val context: Context) {
             lock(fileName).withLock {
                 if (store.get(fileName) == null) {
                     File(directory, "$fileName.part").delete()
+                    transfer?.partialDocumentUri?.let(AndroidDownloadExport::delete)
                     DownloadSubtitleStorage(File(directory, fileName).toURI().toString()).remove()
                 }
             }
@@ -150,42 +177,107 @@ internal class AndroidDownloadScheduler(val context: Context) {
                 .connectionPool(ConnectionPool())
                 .build()
         } else downloadHttpClient
+        val subtitles = CoroutineScope(currentCoroutineContext()).launch {
+            try {
+                DownloadSubtitles.prepare(transfer.item, destination.toURI().toString())
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Log.w(TAG, "Subtitle preparation failed for $fileName", error)
+            }
+        }
         try {
-            DownloadSubtitles.prepare(transfer.item, destination.toURI().toString())
+            var lastProgressAt = 0L
+            val onHeaders: (Long?, String?) -> Unit = { total, validator ->
+                updateActive(transfer) { it.copy(validator = validator, item = it.item.copy(totalBytes = total)) }
+            }
+            val reportProgress: (Long, Long?) -> Unit = { bytes, total ->
+                val now = SystemClock.elapsedRealtime()
+                if (now - lastProgressAt >= 1_000L || bytes == total) {
+                    lastProgressAt = now
+                    updateActive(transfer) {
+                        it.copy(
+                            retryCount = if (bytes > it.item.downloadedBytes) 0 else it.retryCount,
+                            item = it.item.copy(downloadedBytes = bytes, totalBytes = total),
+                        )
+                    }?.let(onProgress)
+                }
+            }
+
+            val exportFolder = transfer.exportTreeUri?.let { treeUri ->
+                AndroidDownloadExport.writableFolder(treeUri).also {
+                    if (it == null) Log.w(TAG, "Download location unavailable, keeping $fileName in app storage")
+                }
+            }
+            val partialDocument = if (exportFolder != null && !destination.isFile) {
+                directPartial(transfer, exportFolder)
+            } else null
+            if (!isActive(transfer)) return@withLock false
+
+            if (partialDocument != null) {
+                transferAndroidDownload(
+                    item = transfer.item,
+                    sink = AndroidDownloadExport.sink(partialDocument),
+                    validator = transfer.validator,
+                    client = client,
+                    onHeaders = onHeaders,
+                    onProgress = reportProgress,
+                )
+                currentCoroutineContext().ensureActive()
+                subtitles.join()
+                updateActive(transfer) { current ->
+                    val finalUri = AndroidDownloadExport.finalizePartial(partialDocument, fileName).toString()
+                    runCatching { AndroidDownloadExport.moveSubtitles(destination, finalUri) }
+                    val bytes = runCatching { AndroidDownloadExport.sink(finalUri).length() }
+                        .getOrDefault(current.item.downloadedBytes)
+                    current.copy(
+                        partialDocumentUri = null,
+                        item = current.item.copy(
+                            status = DownloadStatus.Completed,
+                            localFileUri = finalUri,
+                            downloadedBytes = bytes,
+                            totalBytes = bytes,
+                            errorMessage = null,
+                        ),
+                    )
+                }
+                return@withLock false
+            }
+
+            val partialFile = File(directory, "$fileName.part")
+            if (!destination.isFile) {
+                transferAndroidDownload(
+                    item = transfer.item,
+                    sink = FileDownloadSink(partialFile),
+                    validator = transfer.validator,
+                    client = client,
+                    onHeaders = onHeaders,
+                    onProgress = reportProgress,
+                )
+            }
             currentCoroutineContext().ensureActive()
             if (!isActive(transfer)) return@withLock false
-            var lastProgressAt = 0L
-            val partial = if (destination.isFile) destination else transferAndroidDownload(
-                item = transfer.item,
-                directory = directory,
-                validator = transfer.validator,
-                client = client,
-                onHeaders = { total, validator ->
-                    updateActive(transfer) { it.copy(validator = validator, item = it.item.copy(totalBytes = total)) }
-                },
-                onProgress = { bytes, total ->
-                    val now = SystemClock.elapsedRealtime()
-                    if (now - lastProgressAt >= 1_000L || bytes == total) {
-                        lastProgressAt = now
-                        updateActive(transfer) {
-                            it.copy(item = it.item.copy(downloadedBytes = bytes, totalBytes = total))
-                        }?.let(onProgress)
-                    }
-                },
-            )
-            currentCoroutineContext().ensureActive()
-            updateActive(transfer) { current ->
-                if (partial != destination && !partial.renameTo(destination)) {
-                    throw IOException("Could not finalize the downloaded file")
+            subtitles.join()
+            if (!destination.isFile && !partialFile.renameTo(destination)) {
+                throw IOException("Could not finalize the downloaded file")
+            }
+            val bytes = destination.length()
+            val exportedUri = exportFolder?.let { AndroidDownloadExport.copyInto(it, destination).toString() }
+            val completed = updateActive(transfer) { current ->
+                if (exportedUri != null) {
+                    AndroidDownloadExport.moveSubtitles(destination, exportedUri)
+                    destination.delete()
                 }
-                val bytes = destination.length()
                 current.copy(item = current.item.copy(
                     status = DownloadStatus.Completed,
-                    localFileUri = destination.toURI().toString(),
+                    localFileUri = exportedUri ?: destination.toURI().toString(),
                     downloadedBytes = bytes,
                     totalBytes = bytes,
                     errorMessage = null,
                 ))
+            }
+            if (exportedUri != null && completed?.item?.localFileUri != exportedUri) {
+                AndroidDownloadExport.delete(exportedUri)
             }
             false
         } catch (cancelled: CancellationException) {
@@ -198,8 +290,32 @@ internal class AndroidDownloadScheduler(val context: Context) {
             else fail(transfer, error)
             retry
         } finally {
+            subtitles.cancel()
             if (network != null) withContext(NonCancellable + Dispatchers.IO) { client.connectionPool.evictAll() }
         }
+    }
+
+    private fun directPartial(
+        transfer: AndroidDownloadTransfer,
+        folder: androidx.documentfile.provider.DocumentFile,
+    ): String? {
+        val current = store.get(transfer.item.fileName)?.takeIf { it.generation == transfer.generation }
+            ?: return null
+        if (!current.directWrite) return null
+        current.partialDocumentUri?.takeIf(AndroidDownloadExport::exists)?.let { return it }
+        if (File(directory, "${transfer.item.fileName}.part").isFile) return null
+        val created = AndroidDownloadExport.createPartial(folder, transfer.item.fileName)
+        val usable = created?.takeIf(AndroidDownloadExport::probeDirectWrite)
+        if (created != null && usable == null) AndroidDownloadExport.delete(created.toString())
+        val updated = updateActive(transfer) {
+            it.copy(partialDocumentUri = usable?.toString(), directWrite = usable != null)
+        }
+        if (updated?.partialDocumentUri != usable?.toString()) {
+            usable?.let { AndroidDownloadExport.delete(it.toString()) }
+            return null
+        }
+        if (usable == null) Log.i(TAG, "Download location can't be written in place, staging ${transfer.item.fileName}")
+        return usable?.toString()
     }
 
     fun isActive(transfer: AndroidDownloadTransfer): Boolean = store.get(transfer.item.fileName)?.let {
@@ -232,6 +348,7 @@ internal class AndroidDownloadScheduler(val context: Context) {
         const val FILE_NAME = "download_file_name"
         const val GENERATION = "download_generation"
         const val JOB_NAMESPACE = "nuvio-downloads"
+        private const val TAG = "NuvioDownloads"
     }
 }
 

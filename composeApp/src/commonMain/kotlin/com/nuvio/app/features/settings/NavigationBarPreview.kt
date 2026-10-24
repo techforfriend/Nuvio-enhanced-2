@@ -26,25 +26,46 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.FloatingNavigationBar
+import com.nuvio.app.core.ui.glass.LiquidGlassEffectDefaults
+import com.nuvio.app.core.ui.glass.LiquidGlassEffectSettings
+import com.nuvio.app.core.ui.glass.LiquidGlassStyle
+import com.nuvio.app.core.ui.glass.rememberNuvioBackdrop
+import com.nuvio.app.core.ui.glass.nuvioBackdropSource
 import com.nuvio.app.core.ui.FloatingNavigationItem
+import com.nuvio.app.AppScreenTab
+import com.nuvio.app.TabletFloatingTopBar
 import com.nuvio.app.core.ui.NuvioClassicNavigationBar
 import com.nuvio.app.core.ui.NuvioNavBarScrollState
 import com.nuvio.app.core.ui.nuvio
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun NavigationBarPreview(style: NavBarStyle, isTablet: Boolean, glowEnabled: Boolean) {
+internal fun NavigationBarPreview(
+    style: NavBarStyle,
+    isTablet: Boolean,
+    glowEnabled: Boolean,
+    position: NavBarPosition = NavBarPosition.BOTTOM,
+    tabletLayout: Boolean = false,
+    floatingBarEffects: LiquidGlassEffectSettings = LiquidGlassEffectDefaults.floatingBar,
+    selectionLensEffects: LiquidGlassEffectSettings = LiquidGlassEffectDefaults.selectionLens,
+    scrollBounceTrigger: Int = 0,
+    scrollBounceDirection: Float = 0f,
+    defaultIconColorOverride: Color? = null,
+    glassStyle: LiquidGlassStyle = LiquidGlassStyle.Default,
+) {
     val tokens = MaterialTheme.nuvio
-    val hazeState = rememberHazeState()
-    val barScrollState = remember(style, isTablet) {
+    val previewBackdrop = rememberNuvioBackdrop()
+    val tabletClassic = style == NavBarStyle.CLASSIC && (isTablet || tabletLayout)
+    val topPill = isTablet
+    val pillOnTop = topPill || (style != NavBarStyle.CLASSIC && position == NavBarPosition.TOP)
+    val barScrollState = remember(style, topPill) {
         NuvioNavBarScrollState().apply {
-            if (isTablet || style == NavBarStyle.COMPACT) collapse()
+            if (topPill || style == NavBarStyle.COMPACT) collapse()
         }
     }
     var selectedIndex by remember { mutableIntStateOf(0) }
@@ -55,11 +76,15 @@ internal fun NavigationBarPreview(style: NavBarStyle, isTablet: Boolean, glowEna
         FloatingNavigationItem(stringResource(Res.string.compose_nav_profile), selectedIndex == 3, { selectedIndex = 3 }, icon = Icons.Default.Person),
     )
     Column(Modifier.padding(horizontal = 16.dp)) {
-        Box(Modifier.fillMaxWidth().height(156.dp).clip(tokens.shapes.card)) {
+        Box(
+            Modifier.fillMaxWidth()
+                .height(156.dp)
+                .clip(tokens.shapes.card),
+        ) {
             Column(
                 Modifier.matchParentSize()
-                    .hazeSource(hazeState)
-                    .then(if (!isTablet && style == NavBarStyle.ADAPTIVE) Modifier.nestedScroll(barScrollState.nestedScrollConnection) else Modifier)
+                    .nuvioBackdropSource(previewBackdrop)
+                    .then(if (!topPill && style == NavBarStyle.ADAPTIVE) Modifier.nestedScroll(barScrollState.nestedScrollConnection) else Modifier)
                     .verticalScroll(rememberScrollState())
                     .background(tokens.colors.surfaceCard)
                     .padding(12.dp),
@@ -83,7 +108,18 @@ internal fun NavigationBarPreview(style: NavBarStyle, isTablet: Boolean, glowEna
                     }
                 }
             }
-            if (style == NavBarStyle.CLASSIC && !isTablet) {
+            if (tabletClassic) {
+                val previewTabs = listOf(AppScreenTab.Home, AppScreenTab.Search, AppScreenTab.Library, AppScreenTab.Settings)
+                TabletFloatingTopBar(
+                    selectedTab = previewTabs[selectedIndex],
+                    showLiveTv = false,
+                    onTabSelected = { tab -> previewTabs.indexOf(tab).takeIf { it >= 0 }?.let { selectedIndex = it } },
+                    onProfileSelected = {},
+                    onAddProfileRequested = {},
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    topInset = 12.dp,
+                )
+            } else if (style == NavBarStyle.CLASSIC && !topPill) {
                 NuvioClassicNavigationBar(
                     Modifier.align(Alignment.BottomCenter).background(tokens.colors.background),
                 ) {
@@ -98,24 +134,41 @@ internal fun NavigationBarPreview(style: NavBarStyle, isTablet: Boolean, glowEna
             } else {
                 FloatingNavigationBar(
                     items = items,
-                    modifier = Modifier.align(if (isTablet) Alignment.TopCenter else Alignment.BottomCenter)
-                        .then(if (isTablet) Modifier.widthIn(max = 416.dp) else Modifier),
+                    modifier = Modifier.align(if (pillOnTop) Alignment.TopCenter else Alignment.BottomCenter)
+                        .then(if (topPill) Modifier.widthIn(max = 416.dp) else Modifier),
                     scrollState = barScrollState,
-                    hazeState = hazeState,
+                    backdrop = previewBackdrop,
                     contentPadding = PaddingValues(vertical = 16.dp),
-                    compactSize = isTablet,
+                    compactSize = topPill,
                     glowEnabled = glowEnabled,
+                    liquidGlassBarEffects = floatingBarEffects,
+                    liquidGlassSelectionEffects = selectionLensEffects,
+                    inlineLabels = tabletLayout,
+                    defaultIconColorOverride = defaultIconColorOverride,
+                    glassStyle = glassStyle,
+                    scrollBounceTrigger = scrollBounceTrigger,
+                    scrollBounceDirection = scrollBounceDirection,
                 )
             }
         }
         Text(
             text = stringResource(
-                if (!isTablet && style == NavBarStyle.ADAPTIVE) Res.string.settings_nav_bar_preview_hint
+                if (!topPill && style == NavBarStyle.ADAPTIVE) Res.string.settings_nav_bar_preview_hint
                 else Res.string.settings_nav_bar_preview_tap_hint,
             ),
             style = MaterialTheme.typography.bodySmall,
             color = tokens.colors.textMuted,
             modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
         )
+    }
+}
+
+internal class NavigationPreviewScrollBounceGate {
+    private var wasAwayFromTop = false
+
+    fun onScrollabilityChanged(canScrollBackward: Boolean): Float? {
+        if (canScrollBackward == wasAwayFromTop) return null
+        wasAwayFromTop = canScrollBackward
+        return if (canScrollBackward) 1f else -1f
     }
 }

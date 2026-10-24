@@ -1,5 +1,6 @@
 package com.nuvio.app.features.mdblist
 
+import com.nuvio.app.features.tracking.TrackingAnimeIdMapper
 import com.nuvio.app.features.tracking.TrackingHistoryItem
 import com.nuvio.app.features.tracking.TrackingHistoryWriter
 import com.nuvio.app.features.tracking.TrackingMediaReference
@@ -19,13 +20,13 @@ class MdbListTrackingWrites(
     override val seekScrobblePolicy = TrackingSeekScrobblePolicy.STOP_AND_RESTART
 
     override suspend fun addToHistory(profileId: Int, items: Collection<TrackingHistoryItem>) =
-        history.add(scope(profileId), items)
+        history.add(scope(profileId), TrackingAnimeIdMapper.toImdbHistoryItems(items))
 
     override suspend fun removeFromHistory(profileId: Int, items: Collection<TrackingMediaReference>) =
-        history.remove(scope(profileId), items)
+        history.remove(scope(profileId), TrackingAnimeIdMapper.toImdbReferences(items))
 
     override suspend fun scrobble(profileId: Int, action: TrackingScrobbleAction, event: TrackingScrobbleEvent) =
-        scrobble.scrobble(scope(profileId), action, event)
+        scrobble.scrobble(scope(profileId), action, event.copy(media = TrackingAnimeIdMapper.toImdbReference(event.media)))
 
     private fun scope(profileId: Int): MdbListAuthScope = sync.currentScope().also {
         if (it.profileId != profileId) throw CancellationException("MDBList profile changed")

@@ -22,8 +22,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.features.ratings.UserRatingsRepository
+import com.nuvio.app.features.tracking.TrackingProviderRegistry
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.features.anilist.AniListTracker
 import com.nuvio.app.features.library.LibrarySourceMode
 import com.nuvio.app.features.mdblist.MdbListTracker
 import com.nuvio.app.features.profiles.ProfileRepository
@@ -43,9 +46,21 @@ import com.nuvio.app.features.trakt.TraktConnectionMode
 import com.nuvio.app.features.trakt.TraktContinueWatchingDaysOptions
 import com.nuvio.app.features.trakt.normalizeTraktContinueWatchingDaysCap
 import com.nuvio.app.features.watchprogress.WatchProgressSourceCoordinator
+import com.nuvio.app.features.wetrakr.WeTrakrTracker
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.settings_tracking_in_app_rating
+import nuvio.composeapp.generated.resources.settings_tracking_in_app_rating_description
+import nuvio.composeapp.generated.resources.settings_tracking_in_app_rating_requires_tracker
+import nuvio.composeapp.generated.resources.settings_tracking_ratings_section
 import nuvio.composeapp.generated.resources.tracking_source_mdblist
+import nuvio.composeapp.generated.resources.tracking_source_anilist
+import nuvio.composeapp.generated.resources.tracking_source_wetrakr
+import nuvio.composeapp.generated.resources.settings_wetrakr_library_description
+import nuvio.composeapp.generated.resources.settings_wetrakr_progress_description
+import nuvio.composeapp.generated.resources.settings_anilist_library_description
+import nuvio.composeapp.generated.resources.settings_anilist_progress_description
+import nuvio.composeapp.generated.resources.settings_anilist_anime_section
 import nuvio.composeapp.generated.resources.settings_mdblist_library_description
 import nuvio.composeapp.generated.resources.settings_mdblist_progress_description
 import nuvio.composeapp.generated.resources.action_retry
@@ -148,6 +163,15 @@ internal fun LazyListScope.trackingSettingsContent(
         }
     }
 
+    item {
+        SettingsSection(
+            title = stringResource(Res.string.settings_tracking_ratings_section),
+            isTablet = isTablet,
+        ) {
+            TrackingInAppRatingSection(isTablet = isTablet)
+        }
+    }
+
     if (traktUiState.mode == TraktConnectionMode.CONNECTED) {
         item {
             SettingsSection(
@@ -165,10 +189,15 @@ internal fun LazyListScope.trackingSettingsContent(
         }
     }
 
-    if (simklUiState.mode == SimklConnectionMode.CONNECTED) {
-        item {
+    item {
+        val aniListConnected by remember { AniListTracker.ensureLoaded(); AniListTracker.isAuthenticated }
+            .collectAsStateWithLifecycle()
+        val simklConnected = simklUiState.mode == SimklConnectionMode.CONNECTED
+        if (simklConnected || aniListConnected) {
             SettingsSection(
-                title = stringResource(Res.string.settings_tracking_anime_section),
+                title = stringResource(
+                    if (simklConnected) Res.string.settings_tracking_anime_section else Res.string.settings_anilist_anime_section,
+                ),
                 isTablet = isTablet,
             ) {
                 AnimeIdPreferenceSection(
@@ -188,6 +217,29 @@ internal fun LazyListScope.trackingSettingsContent(
                 MdbListLibraryListsSection(isTablet = isTablet)
             }
         }
+    }
+}
+
+@Composable
+private fun TrackingInAppRatingSection(isTablet: Boolean) {
+    val connected by TrackingProviderRegistry.connectedProviderIds.collectAsStateWithLifecycle()
+    val ratingsState by UserRatingsRepository.uiState.collectAsStateWithLifecycle()
+    val hasRatingProvider = remember(connected) { UserRatingsRepository.hasRatingProvider() }
+    val enabled = remember(ratingsState.profileId, ratingsState.inAppRatingEnabled) {
+        UserRatingsRepository.isInAppRatingEnabled()
+    }
+    SettingsGroup(isTablet = isTablet) {
+        SettingsSwitchRow(
+            title = stringResource(Res.string.settings_tracking_in_app_rating),
+            description = listOfNotNull(
+                stringResource(Res.string.settings_tracking_in_app_rating_description),
+                stringResource(Res.string.settings_tracking_in_app_rating_requires_tracker).takeUnless { hasRatingProvider },
+            ).joinToString("\n"),
+            checked = hasRatingProvider && enabled,
+            enabled = hasRatingProvider,
+            isTablet = isTablet,
+            onCheckedChange = UserRatingsRepository::setInAppRatingEnabled,
+        )
     }
 }
 
@@ -212,10 +264,14 @@ private fun TrackingDataSources(
         WatchProgressSourceCoordinator.uiState
     }.collectAsStateWithLifecycle()
     val mdblistConnected by remember { MdbListTracker.ensureLoaded(); MdbListTracker.isAuthenticated }.collectAsStateWithLifecycle()
+    val anilistConnected by remember { AniListTracker.ensureLoaded(); AniListTracker.isAuthenticated }.collectAsStateWithLifecycle()
+    val wetrakrConnected by remember { WeTrakrTracker.ensureLoaded(); WeTrakrTracker.isAuthenticated }.collectAsStateWithLifecycle()
     val connectedProviders = buildSet {
         if (traktConnected) add(TrackingProviderId.TRAKT)
         if (simklConnected) add(TrackingProviderId.SIMKL)
         if (mdblistConnected) add(TrackingProviderId.MDBLIST)
+        if (anilistConnected) add(TrackingProviderId.ANILIST)
+        if (wetrakrConnected) add(TrackingProviderId.WETRAKR)
     }
     val effectiveLibrarySource = effectiveLibrarySourceMode(settingsUiState.librarySourceMode) { provider ->
         provider in connectedProviders
@@ -305,7 +361,7 @@ private fun TrackingDataSources(
             title = stringResource(Res.string.trakt_library_source_dialog_title),
             subtitle = stringResource(Res.string.trakt_library_source_dialog_subtitle),
             selectedValue = effectiveLibrarySource,
-            options = librarySourceOptions(traktConnected, simklConnected, mdblistConnected),
+            options = librarySourceOptions(traktConnected, simklConnected, mdblistConnected, anilistConnected, wetrakrConnected),
             onSelected = TrackingSettingsRepository::setLibrarySourceMode,
             onDismiss = { activePickerName = null },
         )
@@ -314,7 +370,7 @@ private fun TrackingDataSources(
             title = stringResource(Res.string.trakt_watch_progress_dialog_title),
             subtitle = stringResource(Res.string.tracking_watch_progress_dialog_subtitle),
             selectedValue = effectiveProgressSource,
-            options = watchProgressSourceOptions(traktConnected, simklConnected, mdblistConnected),
+            options = watchProgressSourceOptions(traktConnected, simklConnected, mdblistConnected, anilistConnected, wetrakrConnected),
             onSelected = { source ->
                 scope.launch {
                     WatchProgressSourceCoordinator.selectSource(
@@ -479,6 +535,8 @@ private fun librarySourceOptions(
     traktConnected: Boolean,
     simklConnected: Boolean,
     mdblistConnected: Boolean,
+    anilistConnected: Boolean,
+    wetrakrConnected: Boolean,
 ): List<TrackingPickerOption<LibrarySourceMode>> {
     val traktAvailable = isTrackingBrandAvailable(TrackingBrand.TRAKT, traktConnected, simklConnected)
     val simklAvailable = isTrackingBrandAvailable(TrackingBrand.SIMKL, traktConnected, simklConnected)
@@ -509,6 +567,20 @@ private fun librarySourceOptions(
             enabled = mdblistConnected,
             unavailableReason = trackingUnavailableReason(TrackingBrand.MDBLIST, mdblistConnected),
         ),
+        TrackingPickerOption(
+            value = LibrarySourceMode.ANILIST,
+            title = stringResource(Res.string.tracking_source_anilist),
+            description = stringResource(Res.string.settings_anilist_library_description),
+            enabled = anilistConnected,
+            unavailableReason = trackingUnavailableReason(TrackingBrand.ANILIST, anilistConnected),
+        ),
+        TrackingPickerOption(
+            value = LibrarySourceMode.WETRAKR,
+            title = stringResource(Res.string.tracking_source_wetrakr),
+            description = stringResource(Res.string.settings_wetrakr_library_description),
+            enabled = wetrakrConnected,
+            unavailableReason = trackingUnavailableReason(TrackingBrand.WETRAKR, wetrakrConnected),
+        ),
     )
 }
 
@@ -517,6 +589,8 @@ private fun watchProgressSourceOptions(
     traktConnected: Boolean,
     simklConnected: Boolean,
     mdblistConnected: Boolean,
+    anilistConnected: Boolean,
+    wetrakrConnected: Boolean,
 ): List<TrackingPickerOption<WatchProgressSource>> {
     val traktAvailable = isTrackingBrandAvailable(TrackingBrand.TRAKT, traktConnected, simklConnected)
     val simklAvailable = isTrackingBrandAvailable(TrackingBrand.SIMKL, traktConnected, simklConnected)
@@ -546,6 +620,20 @@ private fun watchProgressSourceOptions(
             description = stringResource(Res.string.settings_mdblist_progress_description),
             enabled = mdblistConnected,
             unavailableReason = trackingUnavailableReason(TrackingBrand.MDBLIST, mdblistConnected),
+        ),
+        TrackingPickerOption(
+            value = WatchProgressSource.ANILIST,
+            title = stringResource(Res.string.tracking_source_anilist),
+            description = stringResource(Res.string.settings_anilist_progress_description),
+            enabled = anilistConnected,
+            unavailableReason = trackingUnavailableReason(TrackingBrand.ANILIST, anilistConnected),
+        ),
+        TrackingPickerOption(
+            value = WatchProgressSource.WETRAKR,
+            title = stringResource(Res.string.tracking_source_wetrakr),
+            description = stringResource(Res.string.settings_wetrakr_progress_description),
+            enabled = wetrakrConnected,
+            unavailableReason = trackingUnavailableReason(TrackingBrand.WETRAKR, wetrakrConnected),
         ),
     )
 }
@@ -608,6 +696,8 @@ private fun librarySourceModeLabel(source: LibrarySourceMode): String = when (so
     LibrarySourceMode.LOCAL -> stringResource(Res.string.trakt_library_source_nuvio)
     LibrarySourceMode.SIMKL -> stringResource(Res.string.tracking_source_simkl)
     LibrarySourceMode.MDBLIST -> stringResource(Res.string.tracking_source_mdblist)
+    LibrarySourceMode.ANILIST -> stringResource(Res.string.tracking_source_anilist)
+    LibrarySourceMode.WETRAKR -> stringResource(Res.string.tracking_source_wetrakr)
 }
 
 @Composable
@@ -616,6 +706,8 @@ private fun watchProgressSourceLabel(source: WatchProgressSource): String = when
     WatchProgressSource.NUVIO_SYNC -> stringResource(Res.string.trakt_watch_progress_source_nuvio)
     WatchProgressSource.SIMKL -> stringResource(Res.string.tracking_source_simkl)
     WatchProgressSource.MDBLIST -> stringResource(Res.string.tracking_source_mdblist)
+    WatchProgressSource.ANILIST -> stringResource(Res.string.tracking_source_anilist)
+    WatchProgressSource.WETRAKR -> stringResource(Res.string.tracking_source_wetrakr)
 }
 
 @Composable

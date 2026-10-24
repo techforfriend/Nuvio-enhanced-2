@@ -39,6 +39,10 @@ const val SUBTITLE_DELAY_MAX_MS = 60_000
 const val SUBTITLE_DELAY_STEP_MS = 100
 const val SUBTITLE_AUTO_SYNC_REACTION_COMPENSATION_MS = 300L
 
+const val SUBTITLE_SHADOW_STRENGTH_MIN = 1
+const val SUBTITLE_SHADOW_STRENGTH_MAX = 5
+const val SUBTITLE_SHADOW_STRENGTH_DEFAULT = 2
+
 internal val subtitleFontSizeRangeSp: IntRange
     get() = if (isIos) 6..40 else 12..40
 
@@ -48,7 +52,10 @@ data class SubtitleStyleState(
     val outlineColor: Color = Color.Black,
     val outlineEnabled: Boolean = true,
     val outlineWidth: Int = 2,
+    val shadowEnabled: Boolean = false,
+    val shadowStrength: Int = SUBTITLE_SHADOW_STRENGTH_DEFAULT,
     val bold: Boolean = false,
+    val customFontFile: String? = null,
     val fontSizeSp: Int = 18,
     val bottomOffset: Int = 20,
     val stripSdh: Boolean = false,

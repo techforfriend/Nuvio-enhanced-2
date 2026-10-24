@@ -60,6 +60,7 @@ object SimklSyncRepository : TrackingProfileStore {
                     .onFailure { error -> log.w { "Failed to parse Simkl sync snapshot: ${error.message}" } }
                     .getOrNull()
             }
+            ?.withoutLocalPlaceholders()
             ?: SimklSyncSnapshot()
         _state.value = SimklSyncUiState(snapshot = snapshot, hasLoaded = true)
         SimklWatchDiagnostics.logSnapshot(stage = "cache-load", snapshot = snapshot)
@@ -211,6 +212,7 @@ object SimklSyncRepository : TrackingProfileStore {
             if (generation == profileGeneration && profileId == ProfileRepository.activeProfileId) {
                 _state.value = current.copy(snapshot = snapshot)
                 SimklWatchDiagnostics.logSnapshot(stage = "scrobble-commit", snapshot = snapshot)
+                refreshIfHoldingLocalEntries(snapshot)
             }
         }
     }
@@ -233,8 +235,17 @@ object SimklSyncRepository : TrackingProfileStore {
             if (generation == profileGeneration && profileId == ProfileRepository.activeProfileId) {
                 _state.value = current.copy(snapshot = snapshot)
                 SimklWatchDiagnostics.logSnapshot(stage = "mutation-commit", snapshot = snapshot)
+                refreshIfHoldingLocalEntries(snapshot)
             }
         }
+    }
+
+    private fun refreshIfHoldingLocalEntries(snapshot: SimklSyncSnapshot) {
+        if (snapshot.entries.none(SimklLibraryEntry::isLocalPlaceholder)) return
+        refreshAsync(
+            intent = TrackingRefreshIntent.INVALIDATED,
+            origin = SimklRefreshOrigin.MUTATION,
+        )
     }
 
     override fun onProfileChanged() {

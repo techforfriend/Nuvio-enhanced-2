@@ -157,8 +157,9 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 |package com.nuvio.app.features.details
                 |
                 |object ImdbEpisodeRatingsConfig {
-                |    const val IMDB_RATINGS_API_BASE_URL = "${props.getProperty("IMDB_RATINGS_API_BASE_URL", "")}" 
-                |    const val IMDB_TAPFRAME_API_BASE_URL = "${props.getProperty("IMDB_TAPFRAME_API_BASE_URL", "")}" 
+                |    const val IMDB_RATINGS_API_BASE_URL = "${props.getProperty("IMDB_RATINGS_API_BASE_URL", "")}"
+                |    const val IMDB_TAPFRAME_API_BASE_URL = "${props.getProperty("IMDB_TAPFRAME_API_BASE_URL", "")}"
+                |    const val OMDB_API_KEY = "${props.getProperty("OMDB_API_KEY", "")}"
                 |}
                 """.trimMargin()
             )
@@ -416,12 +417,18 @@ kotlin {
             baseName = "ComposeApp"
             isStatic = true
             freeCompilerArgs += listOf("-Xbinary=bundleId=$iosFrameworkBundleId")
+
+            // Biometric authentication and the profile PIN cache use Apple Security,
+            // LocalAuthentication, and CoreFoundation APIs on every iOS distribution.
+            linkerOpts(
+                "-framework", "Security",
+                "-framework", "LocalAuthentication",
+                "-framework", "CoreFoundation",
+            )
             if (iosDistribution == "full") {
                 linkerOpts(
                     "-lc++",
-                    "-framework", "Security",
                     "-framework", "SystemConfiguration",
-                    "-framework", "CoreFoundation",
                 )
             }
         }
@@ -448,32 +455,36 @@ kotlin {
             dependencies {
                 implementation(libs.compose.uiToolingPreview)
                 implementation(libs.androidx.appcompat)
+                implementation(libs.androidx.documentfile)
                 implementation(libs.androidx.activity.compose)
                 implementation(libs.androidx.core.splashscreen)
                 implementation(libs.androidx.work.runtime)
+                implementation(libs.androidx.biometric)
                 implementation(libs.coil.gif)
                 implementation("androidx.recyclerview:recyclerview:1.4.0")
                 implementation("com.squareup.okhttp3:okhttp:4.12.0")
                 implementation("com.squareup.okhttp3:okhttp-dnsoverhttps:4.12.0")
                 implementation("com.google.code.gson:gson:2.11.0")
                 implementation("org.tukaani:xz:1.10")
-                implementation("io.github.peerless2012:ass-media:0.5.1")
+                // libass - atlas-based subtitle rendering (from NuvioMedia/nuvio-libass)
+                implementation(files("libs/nuvio-libass-release.aar"))
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.sentry.android)
+                implementation(libs.play.services.cast.framework)
+                implementation(libs.androidx.mediarouter)
                 implementation(libs.androidx.media3.exoplayer.hls)
                 implementation(libs.androidx.media3.exoplayer.dash)
                 implementation(libs.androidx.media3.exoplayer.smoothstreaming)
                 implementation(libs.androidx.media3.exoplayer.rtsp)
                 implementation(libs.androidx.media3.datasource)
+                implementation(libs.androidx.media3.database)
                 implementation(libs.androidx.media3.datasource.okhttp)
                 implementation(libs.androidx.media3.decoder)
+                implementation(libs.androidx.media3.effect)
                 implementation(libs.androidx.media3.session)
                 implementation(libs.androidx.media3.common)
                 implementation(libs.androidx.media3.container)
                 implementation(libs.androidx.media3.extractor)
-                implementation("com.google.guava:guava:33.3.1-android")
-                implementation("androidx.media3:media3-database:1.8.0")
-                implementation("androidx.annotation:annotation-experimental:1.3.1")
                 implementation(libs.mpv.android.lib)
                 implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("lib-*.aar"))))
                 if (androidDistribution == "full") {
@@ -523,7 +534,7 @@ kotlin {
             implementation("io.coil-kt.coil3:coil-svg:${libs.versions.coil.get()}") {
                 exclude(group = "org.jetbrains.skiko", module = "skiko")
             }
-            implementation("dev.chrisbanes.haze:haze:1.7.2")
+            implementation(libs.kyant.backdrop)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
@@ -538,6 +549,7 @@ kotlin {
             implementation(libs.androidx.savedstate.compose)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.atomicfu)
             implementation(libs.kmpalette.core)
             implementation(libs.androidx.navigation3.ui)
@@ -575,10 +587,5 @@ configurations.matching { it.name == "iosMainImplementation" }.configureEach {
 
 configurations.all {
     exclude(group = "androidx.media3", module = "media3-exoplayer")
-    exclude(group = "androidx.media3", module = "media3-exoplayer-hls")
     exclude(group = "androidx.media3", module = "media3-ui")
-    exclude(group = "androidx.media3", module = "media3-common")
-    exclude(group = "androidx.media3", module = "media3-datasource")
-    exclude(group = "androidx.media3", module = "media3-datasource-okhttp")
-    exclude(group = "androidx.media3", module = "media3-extractor")
 }

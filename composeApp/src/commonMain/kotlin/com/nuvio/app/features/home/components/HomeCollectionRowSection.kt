@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.LocalScreenActive
 import com.nuvio.app.core.ui.NuvioShelfSection
@@ -146,7 +147,7 @@ private fun CollectionFolderCard(
             ) {
                 when {
                     !imageUrl.isNullOrBlank() -> {
-                        CollectionCardRemoteImage(
+                        NuvioAsyncImage(
                             imageUrl = imageUrl,
                             contentDescription = folder.title,
                             modifier = Modifier.fillMaxSize(),

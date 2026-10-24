@@ -11,6 +11,11 @@ private let nuvioBackgroundColor = UIColor(
     alpha: 1.0
 )
 
+let nuvioPlayerImmersiveSystemUIVisibilityDidChange = Notification.Name(
+    "NuvioPlayerImmersiveSystemUIVisibilityDidChange"
+)
+let nuvioPlayerImmersiveSystemUIVisibleKey = "isVisible"
+
 private enum NuvioComposeHost {
     static let registerPlayerBridge: Void = {
         NuvioPlayerRegistration.register()
@@ -18,34 +23,54 @@ private enum NuvioComposeHost {
 
     static func wrap(
         _ contentController: UIViewController,
+        backgroundColor: UIColor = nuvioBackgroundColor,
         disablesInteractiveContentPopGesture: Bool = false,
+        passesThroughEmptyNavigationBarAreas: Bool = false,
+        hidesContainingTabBar: Bool = false,
+        verticalBar: VerticalBar? = nil,
         onTabBarControllerAvailable: ((UITabBarController) -> Void)? = nil
     ) -> RootComposeViewController {
         _ = registerPlayerBridge
-        contentController.view.backgroundColor = nuvioBackgroundColor
+        contentController.view.backgroundColor = backgroundColor
         return RootComposeViewController(
             contentController: contentController,
+            backgroundColor: backgroundColor,
             disablesInteractiveContentPopGesture: disablesInteractiveContentPopGesture,
+            passesThroughEmptyNavigationBarAreas: passesThroughEmptyNavigationBarAreas,
+            hidesContainingTabBar: hidesContainingTabBar,
+            verticalBar: verticalBar,
             onTabBarControllerAvailable: onTabBarControllerAvailable
         )
     }
 }
 
-/// A navigation-neutral container for Compose. The MPV player is nested below the
-/// Compose controller, so UIKit's immersive-system-UI queries need to be forwarded
-/// to the deepest child that requests them.
 final class RootComposeViewController: UIViewController {
     private let contentController: UIViewController
+    private let backgroundColor: UIColor
     private let disablesInteractiveContentPopGesture: Bool
+    private let passesThroughEmptyNavigationBarAreas: Bool
+    private let hidesContainingTabBar: Bool
     private let onTabBarControllerAvailable: ((UITabBarController) -> Void)?
+    private var immersiveSystemUIObserver: NSObjectProtocol?
+    private let verticalBar: VerticalBar?
+    private var leadingConstraint: NSLayoutConstraint?
+    private var trailingConstraint: NSLayoutConstraint?
 
     init(
         contentController: UIViewController,
+        backgroundColor: UIColor,
         disablesInteractiveContentPopGesture: Bool,
+        passesThroughEmptyNavigationBarAreas: Bool = false,
+        hidesContainingTabBar: Bool,
+        verticalBar: VerticalBar?,
         onTabBarControllerAvailable: ((UITabBarController) -> Void)?
     ) {
         self.contentController = contentController
+        self.backgroundColor = backgroundColor
         self.disablesInteractiveContentPopGesture = disablesInteractiveContentPopGesture
+        self.passesThroughEmptyNavigationBarAreas = passesThroughEmptyNavigationBarAreas
+        self.hidesContainingTabBar = hidesContainingTabBar
+        self.verticalBar = verticalBar
         self.onTabBarControllerAvailable = onTabBarControllerAvailable
         super.init(nibName: nil, bundle: nil)
     }
@@ -58,19 +83,73 @@ final class RootComposeViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        view.backgroundColor = nuvioBackgroundColor
-        contentController.view.backgroundColor = nuvioBackgroundColor
+        view.backgroundColor = backgroundColor
+        view.isOpaque = backgroundColor != .clear
+        contentController.view.backgroundColor = backgroundColor
 
         addChild(contentController)
         view.addSubview(contentController.view)
         contentController.view.translatesAutoresizingMaskIntoConstraints = false
+        let leadingConstraint = contentController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor)
+        let trailingConstraint = contentController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         NSLayoutConstraint.activate([
-            contentController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            contentController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             contentController.view.topAnchor.constraint(equalTo: view.topAnchor),
             contentController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            leadingConstraint,
+            trailingConstraint,
         ])
+        self.leadingConstraint = leadingConstraint
+        self.trailingConstraint = trailingConstraint
+        if #available(iOS 27.1, *) {
+            registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) {
+                (controller: RootComposeViewController, _: UITraitCollection) in
+                controller.updateVerticalBar()
+            }
+        }
         contentController.didMove(toParent: self)
+
+        immersiveSystemUIObserver = NotificationCenter.default.addObserver(
+            forName: nuvioPlayerImmersiveSystemUIVisibilityDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.refreshImmersiveSystemUI()
+        }
+    }
+
+    deinit {
+        if let immersiveSystemUIObserver {
+            NotificationCenter.default.removeObserver(immersiveSystemUIObserver)
+        }
+    }
+
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        updateVerticalBar()
+    }
+
+    private func updateVerticalBar() {
+        let insets = verticalBarInsets
+        if let verticalBar {
+            verticalBar.update(start: Double(insets.leading), end: Double(insets.trailing))
+        } else {
+            leadingConstraint?.constant = insets.leading
+            trailingConstraint?.constant = -insets.trailing
+        }
+    }
+
+    private var verticalBarInsets: NSDirectionalEdgeInsets {
+        guard #available(iOS 27.1, *) else { return .zero }
+        let insets = view.safeAreaInsets
+        let isRightToLeft = view.effectiveUserInterfaceLayoutDirection == .rightToLeft
+        switch traitCollection.verticalBarEdge {
+        case .leading:
+            return NSDirectionalEdgeInsets(top: 0, leading: isRightToLeft ? insets.right : insets.left, bottom: 0, trailing: 0)
+        case .trailing:
+            return NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 0, trailing: isRightToLeft ? insets.left : insets.right)
+        default:
+            return .zero
+        }
     }
 
     override var childForHomeIndicatorAutoHidden: UIViewController? {
@@ -103,40 +182,90 @@ final class RootComposeViewController: UIViewController {
             ?? false
     }
 
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        .lightContent
+    }
+
     override var preferredStatusBarUpdateAnimation: UIStatusBarAnimation {
         .fade
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        configureBackGestures(isVisible: true)
+        refreshContainingTabBarVisibility()
+        refreshImmersiveSystemUI()
+        setInteractiveContentPopGestureEnabled(false)
+        setNavigationBarPassthroughEnabled(true)
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        configureBackGestures(isVisible: true)
+        refreshContainingTabBarVisibility()
+        refreshImmersiveSystemUI()
+        setInteractiveContentPopGestureEnabled(false)
         if let tabBarController {
             onTabBarControllerAvailable?(tabBarController)
         }
     }
 
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        enforceContainingTabBarVisibility()
+    }
+
     override func viewWillDisappear(_ animated: Bool) {
-        configureBackGestures(isVisible: false)
+        setNavigationBarPassthroughEnabled(false)
+        setInteractiveContentPopGestureEnabled(true)
         super.viewWillDisappear(animated)
     }
 
-    func refreshImmersiveSystemUI() {
-        setNeedsUpdateOfHomeIndicatorAutoHidden()
-        setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
-        setNeedsStatusBarAppearanceUpdate()
+    func prepareForPictureInPictureParking() {
+        setNavigationBarPassthroughEnabled(false)
+        setInteractiveContentPopGestureEnabled(true)
     }
 
-    private func configureBackGestures(isVisible: Bool) {
-        if #available(iOS 26.0, *) {
-            navigationController?.interactiveContentPopGestureRecognizer?.isEnabled = false
+    func restoreAfterPictureInPictureParking() {
+        refreshContainingTabBarVisibility()
+        refreshImmersiveSystemUI()
+        setInteractiveContentPopGestureEnabled(false)
+        setNavigationBarPassthroughEnabled(true)
+    }
+
+    func refreshContainingTabBarVisibility() {
+        enforceContainingTabBarVisibility()
+        DispatchQueue.main.async { [weak self] in
+            self?.enforceContainingTabBarVisibility()
         }
-        navigationController?.interactivePopGestureRecognizer?.isEnabled =
-            isVisible ? !disablesInteractiveContentPopGesture : true
+    }
+
+    private func enforceContainingTabBarVisibility() {
+        guard hidesContainingTabBar, let tabBar = tabBarController?.tabBar else { return }
+        tabBar.isHidden = true
+        tabBar.alpha = 0
+        tabBar.isUserInteractionEnabled = false
+    }
+
+    func refreshImmersiveSystemUI() {
+        var controller: UIViewController? = self
+        while let current = controller {
+            current.setNeedsUpdateOfHomeIndicatorAutoHidden()
+            current.setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
+            current.setNeedsStatusBarAppearanceUpdate()
+            controller = current.parent
+        }
+        SystemUI.shared.refresh()
+    }
+
+    private func setInteractiveContentPopGestureEnabled(_ enabled: Bool) {
+        guard disablesInteractiveContentPopGesture else { return }
+        if #available(iOS 26.0, *) {
+            navigationController?.interactiveContentPopGestureRecognizer?.isEnabled = enabled
+        }
+    }
+
+    private func setNavigationBarPassthroughEnabled(_ enabled: Bool) {
+        guard passesThroughEmptyNavigationBarAreas else { return }
+        NuvioNavigationBarPassthrough.setEnabled(enabled, on: navigationController)
     }
 
     private func immersiveController(in controller: UIViewController?) -> UIViewController? {
@@ -175,6 +304,14 @@ struct ComposeView: UIViewControllerRepresentable {
 // MARK: - Native iOS navigation
 
 @available(iOS 16.0, *)
+extension AppRoute {
+    var keepsTabBar: Bool { self is SettingsDestinationRoute }
+}
+
+extension Array where Element == RouteWrapper {
+    var keepsTabBar: Bool { allSatisfy { $0.route.keepsTabBar } }
+}
+
 struct RouteWrapper: Hashable, Identifiable {
     let id = UUID()
     let route: AppRoute
@@ -191,7 +328,11 @@ struct RouteWrapper: Hashable, Identifiable {
 @available(iOS 16.0, *)
 @MainActor
 final class TabNavigationCoordinator: ObservableObject {
-    @Published var path: [RouteWrapper] = []
+    @Published var path: [RouteWrapper] = [] {
+        didSet { onPathChanged?(path.isEmpty) }
+    }
+    var onReturnedToRoot: (() -> Void)?
+    var onPathChanged: ((Bool) -> Void)?
 
     func push(_ route: AppRoute, launchSingleTop: Bool) {
         if launchSingleTop,
@@ -223,16 +364,20 @@ final class TabNavigationCoordinator: ObservableObject {
         setPath([])
     }
 
-    /// Used by NavigationStack's path binding so interactive swipe-back and
-    /// programmatic mutations share the same Kotlin route-disposal behavior.
     func setPath(_ newPath: [RouteWrapper]) {
         let retainedIDs = Set(newPath.map(\.id))
         let removedRoutes = path
             .filter { !retainedIDs.contains($0.id) }
             .map(\.route)
 
+        let returnedToRoot = !path.isEmpty && newPath.isEmpty
         path = newPath
-        removedRoutes.forEach { AppKt.disposeRoute(route: $0) }
+        removedRoutes
+            .filter { !PlayerPictureInPictureParking.shared.isParked($0) }
+            .forEach { AppKt.disposeRoute(route: $0) }
+        if returnedToRoot {
+            onReturnedToRoot?()
+        }
     }
 }
 
@@ -241,10 +386,16 @@ enum NuvioAppTab: String, CaseIterable, Hashable {
     case home = "Home"
     case search = "Search"
     case library = "Library"
+    case liveTv = "LiveTv"
     case settings = "Settings"
 
     var fallbackTitle: String {
-        String(localized: String.LocalizationValue(rawValue))
+        switch self {
+        case .liveTv:
+            return "Live TV"
+        default:
+            return String(localized: String.LocalizationValue(rawValue))
+        }
     }
 
     static func from(kotlinName: String?) -> NuvioAppTab? {
@@ -252,6 +403,7 @@ enum NuvioAppTab: String, CaseIterable, Hashable {
         case "home": return .home
         case "search": return .search
         case "library": return .library
+        case "livetv", "live_tv", "live tv": return .liveTv
         case "settings", "profile": return .settings
         default: return nil
         }
@@ -262,6 +414,7 @@ enum NuvioAppTab: String, CaseIterable, Hashable {
         case .home: return "NuvioTabHome"
         case .search: return "NuvioTabSearch"
         case .library: return "NuvioTabLibrary"
+        case .liveTv: return "NuvioTabLiveTv"
         case .settings: return "NuvioTabProfile"
         }
     }
@@ -271,6 +424,7 @@ enum NuvioAppTab: String, CaseIterable, Hashable {
         case .home: return "house.fill"
         case .search: return "magnifyingglass"
         case .library: return "rectangle.stack.fill"
+        case .liveTv: return "tv.fill"
         case .settings: return "person.crop.circle.fill"
         }
     }
@@ -290,6 +444,34 @@ private enum NuvioNativeTabIcon {
 
         return (UIImage(systemName: tab.fallbackSystemImage) ?? UIImage())
             .withRenderingMode(.alwaysTemplate)
+    }
+
+    static func gradientTinted(_ image: UIImage, colors: [UIColor]) -> UIImage {
+        guard colors.count > 1, let mask = image.cgImage else { return image }
+        let size = image.size
+        guard size.width > 0, size.height > 0 else { return image }
+        let cgColors = colors.map { $0.cgColor } as CFArray
+        guard let gradient = CGGradient(
+            colorsSpace: CGColorSpaceCreateDeviceRGB(),
+            colors: cgColors,
+            locations: nil
+        ) else {
+            return image
+        }
+
+        return UIGraphicsImageRenderer(size: size).image { context in
+            let cgContext = context.cgContext
+            let rect = CGRect(origin: .zero, size: size)
+            cgContext.translateBy(x: 0, y: size.height)
+            cgContext.scaleBy(x: 1, y: -1)
+            cgContext.clip(to: rect, mask: mask)
+            cgContext.drawLinearGradient(
+                gradient,
+                start: .zero,
+                end: CGPoint(x: size.width, y: size.height),
+                options: [.drawsBeforeStartLocation, .drawsAfterEndLocation]
+            )
+        }.withRenderingMode(.alwaysOriginal)
     }
 
     static func profileAvatar(
@@ -368,6 +550,7 @@ private enum NuvioNativeTabIcon {
 final class NativeTabIconStore: ObservableObject {
     private static let chromeDidChange = Notification.Name("NuvioNativeTabChromeDidChange")
     private static let accentKey = "NuvioNativeTabAccentColor"
+    private static let accentGradientKey = "NuvioNativeTabAccentGradient"
     private static let profileNameKey = "NuvioNativeProfileName"
     private static let profileColorKey = "NuvioNativeProfileAvatarColor"
     private static let profileURLKey = "NuvioNativeProfileAvatarURL"
@@ -380,6 +563,19 @@ final class NativeTabIconStore: ObservableObject {
         blue: 0.96,
         alpha: 1
     )
+
+    @Published private(set) var accentColors: [UIColor] = []
+
+    func accentStyle(opacity: CGFloat = 1) -> AnyShapeStyle {
+        let colors = accentColors.isEmpty ? [accentColor] : accentColors
+        let faded = colors.map { Color(uiColor: $0).opacity(opacity) }
+        guard faded.count > 1 else {
+            return AnyShapeStyle(faded[0])
+        }
+        return AnyShapeStyle(
+            LinearGradient(colors: faded, startPoint: .topLeading, endPoint: .bottomTrailing)
+        )
+    }
 
     private var observer: NSObjectProtocol?
     private var profileAvatarURL: String?
@@ -412,7 +608,9 @@ final class NativeTabIconStore: ObservableObject {
 
     func image(for tab: NuvioAppTab, selected: Bool) -> UIImage {
         guard tab == .settings else {
-            return NuvioNativeTabIcon.image(for: tab)
+            let icon = NuvioNativeTabIcon.image(for: tab)
+            guard selected, accentColors.count > 1 else { return icon }
+            return NuvioNativeTabIcon.gradientTinted(icon, colors: accentColors)
         }
 
         let defaults = UserDefaults.standard
@@ -430,6 +628,9 @@ final class NativeTabIconStore: ObservableObject {
         let defaults = UserDefaults.standard
         accentColor = UIColor(hexString: defaults.string(forKey: Self.accentKey))
             ?? UIColor(red: 0.96, green: 0.96, blue: 0.96, alpha: 1)
+        accentColors = (defaults.string(forKey: Self.accentGradientKey) ?? "")
+            .split(separator: ",")
+            .compactMap { UIColor(hexString: String($0).trimmingCharacters(in: .whitespaces)) }
 
         let nextURL = defaults.string(forKey: Self.profileURLKey)
         guard nextURL != profileAvatarURL else {
@@ -462,6 +663,10 @@ final class NativeProfileTabInteractionCoordinator: NSObject, UIGestureRecognize
     var onLongPress: (() -> Void)?
     private(set) var isHandlingLongPress = false
     private(set) var suppressesProfileSelection = false
+    func setSuppressesProfileSelection(_ enabled: Bool) {
+        suppressesProfileSelection = enabled
+    }
+
     private weak var tabBarController: UITabBarController?
     private var selectedIndexBeforeLongPress: Int?
     private let competingRecognizers = NSHashTable<UIGestureRecognizer>.weakObjects()
@@ -481,6 +686,140 @@ final class NativeProfileTabInteractionCoordinator: NSObject, UIGestureRecognize
         self.tabBarController?.tabBar.removeGestureRecognizer(recognizer)
         tabBarController.tabBar.addGestureRecognizer(recognizer)
         self.tabBarController = tabBarController
+        publishIconFrame()
+        onAttached?()
+    }
+
+    var onAttached: (() -> Void)?
+
+    func measureNativeTabBarMetrics() -> NuvioTabBarMetrics? {
+        guard let tabBar = tabBarController?.tabBar,
+              let window = tabBar.window,
+              !tabBar.isHidden,
+              tabBar.bounds.width > 0 else { return nil }
+        let platterFrame: CGRect
+        if let platter = Self.findPlatter(in: tabBar) {
+            platterFrame = platter.convert(platter.bounds, to: window)
+        } else if #available(iOS 17.0, *),
+                  let items = tabBar.items, !items.isEmpty {
+            let union = items
+                .compactMap { $0.frame(in: tabBar) }
+                .reduce(CGRect.null) { $0.union($1) }
+            guard !union.isNull else { return nil }
+            platterFrame = tabBar.convert(union.insetBy(dx: -4, dy: -4), to: window)
+        } else {
+            return nil
+        }
+        guard platterFrame.width > 0, platterFrame.height > 0 else { return nil }
+        let (items, selectionFrame, selectionIndex) = Self.measureItems(
+            in: tabBar,
+            window: window,
+            platterFrame: platterFrame
+        )
+        return NuvioTabBarMetrics(
+            windowSize: window.bounds.size,
+            leadingInset: platterFrame.minX,
+            trailingInset: window.bounds.width - platterFrame.maxX,
+            bottomInset: window.bounds.height - platterFrame.maxY,
+            height: platterFrame.height,
+            items: items,
+            selectionFrame: selectionFrame,
+            selectionItemIndex: selectionFrame == nil ? nil : selectionIndex
+        )
+    }
+
+    private static func measureItems(
+        in tabBar: UITabBar,
+        window: UIWindow,
+        platterFrame: CGRect
+    ) -> ([NuvioTabBarItemMetrics], CGRect?, Int?) {
+        func local(_ view: UIView) -> CGRect {
+            view.convert(view.bounds, to: window).offsetBy(dx: -platterFrame.minX, dy: -platterFrame.minY)
+        }
+        func descendants(of view: UIView) -> [UIView] {
+            view.subviews.flatMap { [$0] + descendants(of: $0) }
+        }
+
+        let buttons = descendants(of: tabBar)
+            .filter { view in
+                String(describing: type(of: view)).localizedCaseInsensitiveContains("TabBarButton") &&
+                    !view.isHidden && view.alpha > 0.01 && view.bounds.width > 0
+            }
+            .sorted { local($0).minX < local($1).minX }
+        guard !buttons.isEmpty else { return ([], nil, nil) }
+
+        var items: [NuvioTabBarItemMetrics] = []
+        for button in buttons {
+            let inner = descendants(of: button).filter { !$0.isHidden && $0.alpha > 0.01 }
+            guard let imageView = inner
+                .compactMap({ $0 as? UIImageView })
+                .filter({ $0.image != nil })
+                .max(by: { $0.bounds.width * $0.bounds.height < $1.bounds.width * $1.bounds.height })
+            else { return ([], nil, nil) }
+            let label = inner.compactMap { $0 as? UILabel }.first { !($0.text ?? "").isEmpty }
+            items.append(
+                NuvioTabBarItemMetrics(
+                    buttonFrame: local(button),
+                    iconFrame: local(imageView),
+                    labelFrame: label.map(local),
+                    labelFont: label?.font
+                )
+            )
+        }
+
+        var selectionFrame: CGRect?
+        var selectionIndex: Int?
+        if let selectedItem = tabBar.selectedItem,
+           let selectedIndex = tabBar.items?.firstIndex(of: selectedItem),
+           selectedIndex < buttons.count {
+            selectionIndex = selectedIndex
+            let buttonFrame = local(buttons[selectedIndex])
+            let center = CGPoint(x: buttonFrame.midX, y: buttonFrame.midY)
+            let buttonSet = Set(buttons.flatMap { [ObjectIdentifier($0)] + descendants(of: $0).map(ObjectIdentifier.init) })
+            selectionFrame = descendants(of: tabBar)
+                .filter { view in
+                    guard !buttonSet.contains(ObjectIdentifier(view)),
+                          !view.isHidden, view.alpha > 0.01 else { return false }
+                    let frame = local(view)
+                    return frame.contains(center) &&
+                        frame.width >= buttonFrame.width * 0.8 &&
+                        frame.width <= buttonFrame.width * 1.8 &&
+                        frame.height >= platterFrame.height * 0.6 &&
+                        frame.height < platterFrame.height + 1
+                }
+                .map(local)
+                .min { $0.width * $0.height < $1.width * $1.height }
+        }
+        return (items, selectionFrame, selectionIndex)
+    }
+
+    private static func findPlatter(in view: UIView) -> UIView? {
+        var best: UIView?
+        var stack = view.subviews
+        while let current = stack.popLast() {
+            let name = String(describing: type(of: current))
+            if name.localizedCaseInsensitiveContains("Platter"),
+               !current.isHidden,
+               current.bounds.width > (best?.bounds.width ?? 0) {
+                best = current
+            }
+            stack.append(contentsOf: current.subviews)
+        }
+        return best
+    }
+
+    func publishIconFrame() {
+        guard #available(iOS 17.0, *),
+              let tabBar = tabBarController?.tabBar,
+              let profileItem = tabBar.items?.last,
+              let itemFrame = profileItem.frame(in: tabBar) else { return }
+        let windowFrame = tabBar.convert(itemFrame, to: nil)
+        NativeTabBridgeKt.publishProfileTabIconFrame(
+            xDp: Float(windowFrame.origin.x),
+            yDp: Float(windowFrame.origin.y),
+            widthDp: Float(windowFrame.width),
+            heightDp: Float(windowFrame.height)
+        )
     }
 
     func gestureRecognizer(
@@ -546,24 +885,81 @@ final class NativeProfileTabInteractionCoordinator: NSObject, UIGestureRecognize
 @available(iOS 16.0, *)
 @MainActor
 final class AppNavigationCoordinator: ObservableObject {
-    @Published var selectedTab: NuvioAppTab = .home
+    private static let nativeTabBarVisibleKey = "NuvioNativeTabBarVisible"
+    private static let liveTvTabVisibleKey = "NuvioLiveTvNavigationVisible"
+
+    @Published var selectedTab: NuvioAppTab = .home {
+        didSet {
+            if selectedTab != oldValue {
+                setTabBarVisible(true)
+                refreshSelectedTabDepth()
+                NativeTabBridgeKt.nativeTabVisibilityChanged(tabName: selectedTab.rawValue)
+            }
+        }
+    }
     @Published private(set) var isMainContentMounted = false
     @Published private(set) var isMainContentVisible = false
     @Published private(set) var isAppReady = false
+    @Published private(set) var isTabBarVisible = true
+    @Published private(set) var isNativeTabBarVisible = true
+    @Published private(set) var isCompactPillHidden = true
+    @Published private(set) var nativeTabBarMetricsBySize: [String: NuvioTabBarMetrics] = [:]
+
+    func nativeTabBarMetrics(for size: CGSize) -> NuvioTabBarMetrics? {
+        nativeTabBarMetricsBySize[NuvioTabBarMetrics.key(for: size)]
+    }
+
+    func refreshNativeTabBarMetrics() {
+        guard isNativeTabBarVisible,
+              let metrics = profileTabInteraction.measureNativeTabBarMetrics() else { return }
+        let key = NuvioTabBarMetrics.key(for: metrics.windowSize)
+        guard nativeTabBarMetricsBySize[key] != metrics else { return }
+        nativeTabBarMetricsBySize[key] = metrics
+    }
+    @Published private(set) var tabBarBehavior: NuvioTabBarBehavior = NuvioTabBarBehavior.current()
+    @Published private(set) var isSelectedTabAtRoot = true
+    @Published private(set) var isLiveTvTabVisible = false
     @Published private var localizedTabTitles: [NuvioAppTab: String] = [:]
     @Published private(set) var localizedSwitchProfileTitle = ""
     @Published private(set) var localizedAddProfileTitle = ""
     @Published var isProfileSwitcherPresented = false
 
+    private var tabBarTransitionTask: Task<Void, Never>?
+
     let homeCoordinator = TabNavigationCoordinator()
     let searchCoordinator = TabNavigationCoordinator()
     let libraryCoordinator = TabNavigationCoordinator()
+    let liveTvCoordinator = TabNavigationCoordinator()
     let settingsCoordinator = TabNavigationCoordinator()
     let appGateController = AppGateController()
     let profileSwitcherController = NativeProfileSwitcherController()
     let profileTabInteraction = NativeProfileTabInteractionCoordinator()
 
     init() {
+        PlayerPictureInPictureParking.shared.appCoordinator = self
+        setTabBarVisible(true)
+        reloadTabBarBehavior()
+        reloadLiveTvTabVisibility()
+        NativeTabBridgeKt.observeNativePopToRoot { [weak self] tabName in
+            guard let self, let tab = NuvioAppTab.from(kotlinName: tabName) else { return }
+            self.coordinator(for: tab).popToRoot()
+            self.selectedTab = tab
+        }
+        NativeTabBridgeKt.observeNativeTabBarVisible { [weak self] visible in
+            guard let self else { return }
+            self.setTabBarVisible(visible.boolValue, animated: self.tabBarBehavior == .morphed)
+        }
+        allCoordinators.forEach { coordinator in
+            coordinator.onReturnedToRoot = { [weak self] in
+                self?.setTabBarVisible(true)
+            }
+            coordinator.onPathChanged = { [weak self] _ in
+                self?.refreshSelectedTabDepth()
+            }
+        }
+        profileTabInteraction.onAttached = { [weak self] in
+            DispatchQueue.main.async { self?.refreshNativeTabBarMetrics() }
+        }
         profileTabInteraction.onLongPress = { [weak self] in
             guard let self, self.isAppReady else { return }
             self.isProfileSwitcherPresented = true
@@ -571,7 +967,80 @@ final class AppNavigationCoordinator: ObservableObject {
     }
 
     private var allCoordinators: [TabNavigationCoordinator] {
-        [homeCoordinator, searchCoordinator, libraryCoordinator, settingsCoordinator]
+        [homeCoordinator, searchCoordinator, libraryCoordinator, liveTvCoordinator, settingsCoordinator]
+    }
+
+    var availableTabs: [NuvioAppTab] {
+        NuvioAppTab.allCases.filter { $0 != .liveTv || isLiveTvTabVisible }
+    }
+
+    var usesGlassTabBarOverlay: Bool {
+        tabBarBehavior.usesCompactPill ||
+            (tabBarBehavior.isEnabled && UIDevice.current.userInterfaceIdiom == .pad)
+    }
+
+    func reloadTabBarBehavior() {
+        let behavior = NuvioTabBarBehavior.current()
+        guard tabBarBehavior != behavior else { return }
+        tabBarBehavior = behavior
+        if !behavior.respondsToScroll {
+            setTabBarVisible(true)
+        }
+    }
+
+    private func refreshSelectedTabDepth() {
+        let atRoot = coordinator(for: selectedTab).path.keepsTabBar
+        if isSelectedTabAtRoot != atRoot {
+            isSelectedTabAtRoot = atRoot
+        }
+    }
+
+    func requestTabBarVisible(_ visible: Bool) {
+        setTabBarVisible(visible, animated: tabBarBehavior == .morphed)
+    }
+
+    func reloadTabBarVisibility() {
+        guard tabBarBehavior.respondsToScroll else {
+            setTabBarVisible(true)
+            return
+        }
+        guard let visible = UserDefaults.standard.object(
+            forKey: Self.nativeTabBarVisibleKey
+        ) as? Bool else {
+            return
+        }
+        setTabBarVisible(visible, animated: tabBarBehavior == .morphed)
+    }
+
+    private func setTabBarVisible(_ visible: Bool, animated: Bool = false) {
+        UserDefaults.standard.set(visible, forKey: Self.nativeTabBarVisibleKey)
+        if visible {
+            profileTabInteraction.publishIconFrame()
+        }
+
+        tabBarTransitionTask?.cancel()
+        tabBarTransitionTask = nil
+
+        guard animated else {
+            isTabBarVisible = visible
+            isNativeTabBarVisible = visible
+            isCompactPillHidden = visible
+            return
+        }
+
+        isNativeTabBarVisible = false
+        isCompactPillHidden = false
+        guard isTabBarVisible != visible else { return }
+        isTabBarVisible = visible
+    }
+
+    func reloadLiveTvTabVisibility() {
+        let visible = UserDefaults.standard.bool(forKey: Self.liveTvTabVisibleKey)
+        guard isLiveTvTabVisible != visible else { return }
+        if !visible && selectedTab == .liveTv {
+            selectedTab = .home
+        }
+        isLiveTvTabVisible = visible
     }
 
     func coordinator(for tab: NuvioAppTab) -> TabNavigationCoordinator {
@@ -579,12 +1048,17 @@ final class AppNavigationCoordinator: ObservableObject {
         case .home: return homeCoordinator
         case .search: return searchCoordinator
         case .library: return libraryCoordinator
+        case .liveTv: return liveTvCoordinator
         case .settings: return settingsCoordinator
         }
     }
 
     func activateTab(named tabName: String) {
         guard let tab = NuvioAppTab.from(kotlinName: tabName) else { return }
+        guard tab != .liveTv || isLiveTvTabVisible else {
+            selectedTab = .home
+            return
+        }
         if tab == .home || isAppReady {
             selectedTab = tab
         }
@@ -606,6 +1080,7 @@ final class AppNavigationCoordinator: ObservableObject {
             .home: home,
             .search: search,
             .library: library,
+            .liveTv: NuvioAppTab.liveTv.fallbackTitle,
             .settings: profile,
         ]
         localizedSwitchProfileTitle = switchProfile
@@ -616,6 +1091,8 @@ final class AppNavigationCoordinator: ObservableObject {
         isAppReady = ready
         if !ready {
             isProfileSwitcherPresented = false
+            setTabBarVisible(true)
+            selectedTab = .home
             allCoordinators.forEach { $0.popToRoot() }
         }
     }
@@ -650,12 +1127,23 @@ final class AppNavigationCoordinator: ObservableObject {
             AppKt.disposeRoute(route: route)
             return
         }
-        let targetTab = NuvioAppTab.from(kotlinName: route.preferredTabName)
+        if route is PlayerRoute, !PlayerPictureInPictureParking.shared.isParked(route) {
+            PlayerPictureInPictureParking.shared.closeParked()
+        }
+        let requestedTab = NuvioAppTab.from(kotlinName: route.preferredTabName)
             ?? tab(for: origin)
             ?? selectedTab
+        let targetTab = requestedTab == .liveTv && !isLiveTvTabVisible ? .home : requestedTab
         let target = coordinator(for: targetTab)
         selectedTab = targetTab
         target.push(route, launchSingleTop: launchSingleTop)
+    }
+
+    func showParkedPlayerRoute(_ route: AppRoute, in target: TabNavigationCoordinator) {
+        if let targetTab = tab(for: target) {
+            selectedTab = targetTab
+        }
+        target.path.append(RouteWrapper(route: route))
     }
 
     func replace(_ route: AppRoute, in target: TabNavigationCoordinator) {
@@ -679,6 +1167,7 @@ struct NativeNavComposeView: UIViewControllerRepresentable {
     let appCoordinator: AppNavigationCoordinator
 
     func makeUIViewController(context: Context) -> UIViewController {
+        let verticalBar = VerticalBar()
         let controller = MainViewControllerKt.MainViewController(
             initialTabName: tab.rawValue,
             useNativeTabBar: usesNativeTabBar,
@@ -709,17 +1198,24 @@ struct NativeNavComposeView: UIViewControllerRepresentable {
                     addProfile: addProfile
                 )
             },
-            appGateController: appCoordinator.appGateController
+            appGateController: appCoordinator.appGateController,
+            verticalBar: verticalBar
         )
         return NuvioComposeHost.wrap(
             controller,
+            hidesContainingTabBar: !usesNativeTabBar,
+            verticalBar: verticalBar,
             onTabBarControllerAvailable: { tabBarController in
-                appCoordinator.profileTabInteraction.attach(to: tabBarController)
+                if usesNativeTabBar {
+                    appCoordinator.profileTabInteraction.attach(to: tabBarController)
+                }
             }
         )
     }
 
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        (uiViewController as? RootComposeViewController)?.refreshContainingTabBarVisibility()
+    }
 }
 
 @available(iOS 16.0, *)
@@ -727,6 +1223,7 @@ struct AppGateComposeView: UIViewControllerRepresentable {
     let appCoordinator: AppNavigationCoordinator
 
     func makeUIViewController(context: Context) -> UIViewController {
+        let verticalBar = VerticalBar()
         let controller = MainViewControllerKt.AppGateViewController(
             appGateController: appCoordinator.appGateController,
             nativeProfileSwitcherController: appCoordinator.profileSwitcherController,
@@ -741,11 +1238,11 @@ struct AppGateComposeView: UIViewControllerRepresentable {
             },
             onMainContentVisibleChanged: { visible in
                 appCoordinator.setMainContentVisible(visible.boolValue)
-            }
+            },
+            verticalBar: verticalBar
         )
-        controller.view.backgroundColor = .clear
         controller.view.isOpaque = false
-        return controller
+        return NuvioComposeHost.wrap(controller, backgroundColor: .clear, verticalBar: verticalBar)
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
@@ -754,10 +1251,28 @@ struct AppGateComposeView: UIViewControllerRepresentable {
 @available(iOS 16.0, *)
 struct DetailComposeView: UIViewControllerRepresentable {
     let route: AppRoute
+    let usesNativeTabBar: Bool
+    let usesTabletFloatingTabBar: Bool
     let coordinator: TabNavigationCoordinator
     let appCoordinator: AppNavigationCoordinator
 
     func makeUIViewController(context: Context) -> UIViewController {
+        if route is PlayerRoute {
+            return PlayerRouteContainerViewController(
+                route: route,
+                coordinator: coordinator,
+                makeContent: { makeScreenController() }
+            )
+        }
+        return makeScreenController()
+    }
+
+    private func makeScreenController() -> UIViewController {
+        let route = route
+        let coordinator = coordinator
+        let appCoordinator = appCoordinator
+        let parking = PlayerPictureInPictureParking.shared
+        let verticalBar = VerticalBar()
         let controller = MainViewControllerKt.ScreenViewController(
             route: route,
             onNavigate: { newRoute, launchSingleTop in
@@ -768,19 +1283,32 @@ struct DetailComposeView: UIViewControllerRepresentable {
                 )
             },
             onGoBack: {
-                coordinator.pop()
+                if parking.isParked(route) {
+                    parking.closeParked()
+                } else {
+                    coordinator.pop()
+                }
             },
             onReplace: { newRoute in
+                if parking.isParked(route) {
+                    AppKt.disposeRoute(route: newRoute)
+                    return
+                }
                 appCoordinator.replace(newRoute, in: coordinator)
             },
             onActivate: { tabName in
                 appCoordinator.activateTab(named: tabName)
             },
-            appGateController: appCoordinator.appGateController
+            appGateController: appCoordinator.appGateController,
+            useNativeTabBar: usesNativeTabBar,
+            useTabletFloatingTabBar: usesTabletFloatingTabBar,
+            verticalBar: verticalBar
         )
         return NuvioComposeHost.wrap(
             controller,
-            disablesInteractiveContentPopGesture: route is PlayerRoute
+            disablesInteractiveContentPopGesture: true,
+            passesThroughEmptyNavigationBarAreas: true,
+            verticalBar: verticalBar
         )
     }
 
@@ -816,27 +1344,32 @@ struct TabContentView: View {
                 if appCoordinator.selectedTab == tab {
                     DetailDestinationView(
                         wrapper: wrapper,
+                        usesNativeTabBar: usesNativeTabBar,
+                        usesTabletFloatingTabBar: usesTabletFloatingTabBar,
                         coordinator: coordinator,
                         appCoordinator: appCoordinator
                     )
-                    // A native replace keeps the same NavigationStack depth.
-                    // Keying by the wrapper forces SwiftUI to replace the
-                    // embedded Compose controller instead of reusing the old
-                    // screen with the new route's toolbar preferences.
                     .id(wrapper.id)
                 } else {
                     Color.clear
                 }
             }
         }
-        // Tab-bar visibility is a preference emitted by the active navigation
-        // stack. Applying it here keeps the authentication/profile gate truly
-        // full-screen on iOS 26, where a modifier on TabView itself is ignored.
         .toolbar(
-            usesNativeTabBar && appCoordinator.isMainContentVisible && coordinator.path.isEmpty
+            usesNativeTabBar &&
+                appCoordinator.isMainContentVisible &&
+                coordinator.path.keepsTabBar &&
+                !appCoordinator.usesGlassTabBarOverlay &&
+                appCoordinator.isNativeTabBarVisible
                 ? Visibility.visible
                 : Visibility.hidden,
             for: .tabBar
+        )
+        .animation(
+            appCoordinator.tabBarBehavior == .autoHide
+                ? .easeInOut(duration: 0.18)
+                : nil,
+            value: appCoordinator.isNativeTabBarVisible
         )
     }
 }
@@ -866,6 +1399,8 @@ private struct NativeToolbarReadabilityFade: View {
 @available(iOS 16.0, *)
 private struct DetailDestinationView: View {
     let wrapper: RouteWrapper
+    let usesNativeTabBar: Bool
+    let usesTabletFloatingTabBar: Bool
     @ObservedObject var coordinator: TabNavigationCoordinator
     @ObservedObject var appCoordinator: AppNavigationCoordinator
 
@@ -877,31 +1412,23 @@ private struct DetailDestinationView: View {
         wrapper.route is FolderDetailRoute
     }
 
-    private var hidesNativeNavigationBar: Bool {
-        wrapper.route.hidesNavigationBar
-    }
-
     private var showsReadabilityFade: Bool {
-        !hidesNativeNavigationBar && !usesComposeNavigationHeader
+        !wrapper.route.hidesNavigationBar && !usesComposeNavigationHeader
     }
 
     private var content: some View {
         ZStack(alignment: .top) {
-            if respectsNativeNavigationSafeArea {
-                DetailComposeView(
-                    route: wrapper.route,
-                    coordinator: coordinator,
-                    appCoordinator: appCoordinator
-                )
-                .ignoresSafeArea(.all, edges: [.horizontal, .bottom])
-            } else {
-                DetailComposeView(
-                    route: wrapper.route,
-                    coordinator: coordinator,
-                    appCoordinator: appCoordinator
-                )
-                .ignoresSafeArea(.all)
-            }
+            DetailComposeView(
+                route: wrapper.route,
+                usesNativeTabBar: usesNativeTabBar,
+                usesTabletFloatingTabBar: usesTabletFloatingTabBar,
+                coordinator: coordinator,
+                appCoordinator: appCoordinator
+            )
+            .ignoresSafeArea(
+                .all,
+                edges: respectsNativeNavigationSafeArea ? [.horizontal, .bottom] : .all
+            )
 
             if showsReadabilityFade {
                 NativeToolbarReadabilityFade()
@@ -917,11 +1444,20 @@ private struct DetailDestinationView: View {
                 }
             }
         }
-        .toolbar(.hidden, for: .tabBar)
         .toolbar(
-            hidesNativeNavigationBar ? Visibility.hidden : Visibility.visible,
+            usesNativeTabBar &&
+                wrapper.route.keepsTabBar &&
+                !appCoordinator.usesGlassTabBarOverlay &&
+                appCoordinator.isNativeTabBarVisible
+                ? Visibility.visible
+                : Visibility.hidden,
+            for: .tabBar
+        )
+        .toolbar(
+            wrapper.route.hidesNavigationBar ? Visibility.hidden : Visibility.visible,
             for: .navigationBar
         )
+        .verticalBarDisabled(wrapper.route is PlayerRoute)
     }
 
     @ViewBuilder
@@ -930,6 +1466,17 @@ private struct DetailDestinationView: View {
             content.navigationSubtitle(wrapper.route.subtitle ?? "")
         } else {
             content
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func verticalBarDisabled(_ disabled: Bool) -> some View {
+        if #available(iOS 27.1, *), disabled {
+            toolbarVerticalBehavior(.disabled)
+        } else {
+            self
         }
     }
 }
@@ -1210,11 +1757,12 @@ struct NativeNavContentView: View {
     @StateObject private var iconStore = NativeTabIconStore()
 
     private var usesNativeTabBar: Bool {
-        guard UIDevice.current.userInterfaceIdiom == .phone else {
+        let idiom = UIDevice.current.userInterfaceIdiom
+        guard idiom == .phone || idiom == .pad else {
             return false
         }
         if #available(iOS 26.0, *) {
-            return true
+            return appCoordinator.tabBarBehavior.isEnabled
         }
         return false
     }
@@ -1242,42 +1790,38 @@ struct NativeNavContentView: View {
         )
     }
 
+    @State private var mountedLegacyTabs: Set<NuvioAppTab> = []
+
     private var legacyTabs: some View {
-        TabView(selection: tabSelection) {
-            ForEach(NuvioAppTab.allCases, id: \.self) { tab in
-                TabContentView(
-                    tab: tab,
-                    usesNativeTabBar: usesNativeTabBar,
-                    usesTabletFloatingTabBar: usesTabletFloatingTabBar,
-                    coordinator: appCoordinator.coordinator(for: tab),
-                    appCoordinator: appCoordinator
-                )
-                .tabItem {
-                    Label {
-                        Text(appCoordinator.title(for: tab))
-                    } icon: {
-                        Image(
-                            uiImage: iconStore.image(
-                                for: tab,
-                                selected: appCoordinator.selectedTab == tab
-                            )
-                        )
-                        .id(
-                            "\(tab.rawValue)-\(iconStore.revision)-" +
-                                "\(appCoordinator.selectedTab == tab)"
-                        )
-                    }
+        ZStack {
+            ForEach(appCoordinator.availableTabs, id: \.self) { tab in
+                if mountedLegacyTabs.contains(tab) {
+                    TabContentView(
+                        tab: tab,
+                        usesNativeTabBar: usesNativeTabBar,
+                        usesTabletFloatingTabBar: usesTabletFloatingTabBar,
+                        coordinator: appCoordinator.coordinator(for: tab),
+                        appCoordinator: appCoordinator
+                    )
+                    .opacity(appCoordinator.selectedTab == tab ? 1 : 0)
+                    .allowsHitTesting(appCoordinator.selectedTab == tab)
+                    .accessibilityHidden(appCoordinator.selectedTab != tab)
+                    .zIndex(appCoordinator.selectedTab == tab ? 1 : 0)
                 }
-                .tag(tab)
             }
         }
-        .tint(Color(uiColor: iconStore.accentColor))
+        .onAppear {
+            mountedLegacyTabs.insert(appCoordinator.selectedTab)
+        }
+        .onChange(of: appCoordinator.selectedTab) { newTab in
+            mountedLegacyTabs.insert(newTab)
+        }
     }
 
     @available(iOS 26.0, *)
     private var nativeTabs: some View {
         TabView(selection: tabSelection) {
-            ForEach(NuvioAppTab.allCases, id: \.self) { tab in
+            ForEach(appCoordinator.availableTabs, id: \.self) { tab in
                 if tab == .settings {
                     Tab(value: tab) {
                         TabContentView(
@@ -1343,8 +1887,27 @@ struct NativeNavContentView: View {
                 }
             }
         }
+        .id(appCoordinator.isLiveTvTabVisible)
         .tint(Color(uiColor: iconStore.accentColor))
-        .tabBarMinimizeBehavior(.automatic)
+        .tabBarMinimizeBehavior(
+            appCoordinator.tabBarBehavior == .autoHide ? .onScrollDown : .never
+        )
+        .overlay(alignment: .bottom) {
+            if appCoordinator.usesGlassTabBarOverlay &&
+                appCoordinator.isAppReady &&
+                appCoordinator.isSelectedTabAtRoot {
+                GeometryReader { proxy in
+                    NuvioGlassTabBar(
+                        appCoordinator: appCoordinator,
+                        iconStore: iconStore
+                    )
+                    .frame(width: proxy.size.width)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                }
+                .ignoresSafeArea(.all)
+            }
+        }
+        .ignoresSafeArea(.container, edges: .bottom)
     }
 
     @ViewBuilder
@@ -1369,6 +1932,21 @@ struct NativeNavContentView: View {
                 .allowsHitTesting(!appCoordinator.isAppReady)
                 .accessibilityHidden(appCoordinator.isAppReady)
                 .zIndex(1)
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: Notification.Name("NuvioNativeTabChromeDidChange")
+            )
+        ) { _ in
+            appCoordinator.reloadTabBarBehavior()
+            appCoordinator.reloadTabBarVisibility()
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: Notification.Name("NuvioLiveTvNavigationVisibilityDidChange")
+            )
+        ) { _ in
+            appCoordinator.reloadLiveTvTabVisibility()
         }
     }
 }

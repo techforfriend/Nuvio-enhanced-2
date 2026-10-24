@@ -8,12 +8,12 @@ data class MetaDetails(
     val type: String,
     val name: String,
     val imdbId: String? = null,
+    val tvdbId: String? = null,
     val poster: String? = null,
     val background: String? = null,
     val logo: String? = null,
     val description: String? = null,
     val releaseInfo: String? = null,
-    /** TV: ISO last air date from TMDB (or addon) for year-range display. */
     val lastAirDate: String? = null,
     val status: String? = null,
     val imdbRating: String? = null,
@@ -29,11 +29,14 @@ data class MetaDetails(
     val country: String? = null,
     val awards: String? = null,
     val language: String? = null,
+    val budget: Long? = null,
+    val revenue: Long? = null,
     val website: String? = null,
     val hasScheduledVideos: Boolean = false,
     val defaultVideoId: String? = null,
     val moreLikeThis: List<MetaPreview> = emptyList(),
     val moreLikeThisSource: MoreLikeThisSource? = null,
+    val moreLikeThisHasMore: Boolean = false,
     val collectionName: String? = null,
     val collectionItems: List<MetaPreview> = emptyList(),
     val trailers: List<MetaTrailer> = emptyList(),
@@ -47,6 +50,11 @@ enum class MoreLikeThisSource {
     TRAKT,
     SIMKL,
 }
+
+data class MoreLikeThisPage(
+    val items: List<MetaPreview> = emptyList(),
+    val hasMore: Boolean = false,
+)
 
 data class MetaExternalRating(
     val source: String,
@@ -98,8 +106,13 @@ data class MetaVideo(
     val episode: Int? = null,
     val overview: String? = null,
     val runtime: Int? = null,
+    val tmdbRating: Double? = null,
+    val imdbRating: Double? = null,
     val rating: Double? = null,
     val streams: List<StreamItem> = emptyList(),
+    val imdbId: String? = null,
+    val imdbSeason: Int? = null,
+    val imdbEpisode: Int? = null,
 )
 
 data class MetaDetailsUiState(

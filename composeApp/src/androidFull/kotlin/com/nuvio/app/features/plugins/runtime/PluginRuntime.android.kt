@@ -16,6 +16,8 @@ internal val pluginDispatcher: CoroutineDispatcher =
         }
     }.asCoroutineDispatcher()
 
+internal suspend fun <T> withPluginThread(block: suspend () -> T): T = block()
+
 internal fun QuickJs.configurePluginRuntime() {
     evaluationTimeoutMillis = PLUGIN_TIMEOUT_MS
 }

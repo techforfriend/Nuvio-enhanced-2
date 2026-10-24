@@ -39,12 +39,16 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.NuvioAnimatedWatchedBadge
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.details.MetaVideo
+import com.nuvio.app.features.party.PartyRepository
+import com.nuvio.app.features.party.partyMediaKey
+import com.nuvio.app.features.streams.SharedStream
 import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.features.streams.StreamsUiState
 import com.nuvio.app.features.watchprogress.WatchProgressEntry
@@ -61,6 +65,7 @@ import nuvio.composeapp.generated.resources.compose_player_panel_streams
 import nuvio.composeapp.generated.resources.compose_player_playing
 import nuvio.composeapp.generated.resources.episodes_season
 import nuvio.composeapp.generated.resources.episodes_specials
+import nuvio.composeapp.generated.resources.party_shared_by
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -112,6 +117,8 @@ fun PlayerEpisodesPanel(
             if (episodeStreamsState.showStreams) {
                 EpisodeStreamsPanelContent(
                     state = episodeStreamsState,
+                    parentMetaType = parentMetaType,
+                    parentMetaId = parentMetaId,
                     onFilterSelected = onEpisodeStreamFilterSelected,
                     onStreamSelected = onEpisodeStreamSelected,
                     onBack = onBackToEpisodes,
@@ -432,6 +439,8 @@ private fun EpisodeRow(
 @Composable
 private fun EpisodeStreamsPanelContent(
     state: EpisodeStreamsPanelState,
+    parentMetaType: String,
+    parentMetaId: String,
     onFilterSelected: (String?) -> Unit,
     onStreamSelected: (StreamItem, MetaVideo) -> Unit,
     onBack: () -> Unit,
@@ -441,6 +450,16 @@ private fun EpisodeStreamsPanelContent(
     val tokens = MaterialTheme.nuvio
     val episode = state.selectedEpisode ?: return
     val streamsUiState = state.streamsUiState
+    val partyState by PartyRepository.state.collectAsStateWithLifecycle()
+    val partyStream by PartyRepository.sharedStream.collectAsStateWithLifecycle()
+    val party = partyState.party
+    val sharedLabel = stringResource(Res.string.party_shared_by, party?.member(party.hostMemberId)?.displayName.orEmpty())
+    val episodeKey = partyMediaKey(parentMetaType, parentMetaId, episode.season, episode.episode)
+    val sharedStream = remember(partyStream, sharedLabel, party?.isHost, episodeKey) {
+        partyStream
+            ?.takeIf { party != null && !party.isHost && it.mediaKey == episodeKey }
+            ?.let { SharedStream(label = sharedLabel, stream = it.toStreamItem()) }
+    }
 
     Column(modifier = modifier) {
         Row(
@@ -491,6 +510,7 @@ private fun EpisodeStreamsPanelContent(
             onStreamSelected = { stream -> onStreamSelected(stream, episode) },
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(top = 4.dp, bottom = 8.dp),
+            sharedStream = sharedStream,
         )
     }
 }

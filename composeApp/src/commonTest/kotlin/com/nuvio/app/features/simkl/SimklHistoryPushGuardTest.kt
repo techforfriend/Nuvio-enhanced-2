@@ -5,10 +5,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * A show-level mark makes Simkl mark every episode of a series watched, so nothing but a film may
- * leave the app without episode coordinates.
- */
 class SimklHistoryPushGuardTest {
     private fun mark(
         type: String,
@@ -29,8 +25,6 @@ class SimklHistoryPushGuardTest {
         assertTrue(simklHistoryPushItems(listOf(mark("show"))).isEmpty())
         assertTrue(simklHistoryPushItems(listOf(mark("tv"))).isEmpty())
         assertTrue(simklHistoryPushItems(listOf(mark("anime"))).isEmpty())
-        // An unexpected type must fail safe as well: dropping a suspicious mark costs nothing,
-        // pushing it can wipe a whole series.
         assertTrue(simklHistoryPushItems(listOf(mark("documentary-series"))).isEmpty())
     }
 
@@ -75,5 +69,28 @@ class SimklHistoryPushGuardTest {
         assertEquals(2, pushed.size)
         assertTrue(pushed.any { it.type == "movie" })
         assertTrue(pushed.any { it.season == 2 && it.episode == 6 })
+    }
+
+    @Test
+    fun `a series marked together with its episodes is an explicit completion`() {
+        val series = simklExplicitlyCompletedSeries(
+            listOf(
+                mark("series"),
+                mark("series", season = 1, episode = 1),
+                mark("series", season = 1, episode = 2),
+            ),
+        )
+
+        assertEquals(1, series.size)
+        assertEquals(null, series.single().episode)
+    }
+
+    @Test
+    fun `an automatic series mark on its own never moves Simkl to Completed`() {
+        assertTrue(simklExplicitlyCompletedSeries(listOf(mark("series"))).isEmpty())
+        assertTrue(
+            simklExplicitlyCompletedSeries(listOf(mark("series", season = 3, episode = 4))).isEmpty(),
+        )
+        assertTrue(simklExplicitlyCompletedSeries(listOf(mark("movie"))).isEmpty())
     }
 }

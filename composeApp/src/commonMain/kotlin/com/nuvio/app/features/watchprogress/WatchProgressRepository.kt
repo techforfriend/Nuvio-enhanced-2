@@ -247,6 +247,10 @@ object WatchProgressRepository {
     private val _activeSourceState = MutableStateFlow(activeSource)
     internal val activeSourceState: StateFlow<WatchProgressSource> = _activeSourceState.asStateFlow()
     private val entriesLock = SynchronizedObject()
+    private val persistLock = SynchronizedObject()
+    private val persistWriteLock = SynchronizedObject()
+    private val persistScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var pendingPersist: PendingWatchProgressPersist? = null
     private var entriesByProgressKey: MutableMap<String, WatchProgressEntry> = mutableMapOf()
     private var dirtyProgressKeys: MutableSet<String> = mutableSetOf()
     private var metadataResolutionJob: Job? = null
@@ -311,6 +315,9 @@ object WatchProgressRepository {
     }
 
     fun clearLocalState() {
+        synchronized(persistWriteLock) {
+            synchronized(persistLock) { pendingPersist = null }
+        }
         val previousAccountJob = synchronized(accountScopeLock) {
             accountScopeJob.also {
                 accountScopeJob = SupervisorJob()
@@ -343,14 +350,20 @@ object WatchProgressRepository {
         providerMetadataOverlay.clear()
         clearLocalEntries()
 
+        flushPendingPersist()
         val payload = WatchProgressStorage.loadPayload(profileId).orEmpty().trim()
         if (payload.isNotEmpty()) {
             val storedPayload = WatchProgressCodec.decodePayload(payload)
             lastSuccessfulPushEpochMs = storedPayload.lastSuccessfulPushEpochMs
             deltaCursorEventId = storedPayload.deltaCursorEventId
             deltaInitialized = storedPayload.deltaInitialized
-            replaceLocalEntries(storedPayload.entries)
+            val liveTvEntries = storedPayload.entries.filter { it.isLiveTvEntry() }
+            replaceLocalEntries(storedPayload.entries.filterNot { it.isLiveTvEntry() })
             replaceDirtyProgressKeys(storedPayload.dirtyProgressKeys)
+            if (liveTvEntries.isNotEmpty()) {
+                persist()
+                pushDeleteToServer(liveTvEntries)
+            }
         } else {
             lastSuccessfulPushEpochMs = 0L
             deltaCursorEventId = 0L
@@ -720,7 +733,7 @@ object WatchProgressRepository {
     ) {
         val serverEntries = syncAdapter.pull(profileId = profileId)
         if (!isActiveOperation(profileId, operationGeneration)) return
-        log.d {
+        log.i {
             "Watch progress snapshot fetched ${serverEntries.size} entries for profile $profileId " +
                 "resetDeltaState=$resetDeltaState preserveLocalEntries=$preserveLocalEntries"
         }
@@ -1266,6 +1279,8 @@ object WatchProgressRepository {
         persist: Boolean,
         syncRemote: Boolean,
     ) {
+        if (session.isLiveTvSession()) return
+
         val targetProfileId = session.profileId
         val positionMs = snapshot.positionMs.coerceAtLeast(0L)
         val durationMs = snapshot.durationMs.coerceAtLeast(0L)
@@ -1376,6 +1391,7 @@ object WatchProgressRepository {
         profileId: Int,
         entry: WatchProgressEntry,
     ): WatchProgressEntry {
+        flushPendingPersist()
         val payload = WatchProgressStorage.loadPayload(profileId).orEmpty().trim()
         val storedPayload = if (payload.isNotEmpty()) {
             WatchProgressCodec.decodePayload(payload)
@@ -1403,6 +1419,7 @@ object WatchProgressRepository {
         profileId: Int,
         entry: WatchProgressEntry,
     ): WatchProgressEntry {
+        flushPendingPersist()
         val payload = WatchProgressStorage.loadPayload(profileId).orEmpty().trim()
         val storedEntries = if (payload.isEmpty()) {
             emptyList()
@@ -1456,16 +1473,44 @@ object WatchProgressRepository {
     }
 
     private fun persist() {
-        WatchProgressStorage.savePayload(
-            currentProfileId,
-            WatchProgressCodec.encodePayload(
-                entries = localEntriesSnapshot(),
-                lastSuccessfulPushEpochMs = lastSuccessfulPushEpochMs,
-                deltaCursorEventId = deltaCursorEventId,
-                deltaInitialized = deltaInitialized,
-                dirtyProgressKeys = dirtyProgressKeysSnapshot(),
-            ),
+        val pending = PendingWatchProgressPersist(
+            profileId = currentProfileId,
+            entries = localEntriesSnapshot(),
+            lastSuccessfulPushEpochMs = lastSuccessfulPushEpochMs,
+            deltaCursorEventId = deltaCursorEventId,
+            deltaInitialized = deltaInitialized,
+            dirtyProgressKeys = dirtyProgressKeysSnapshot(),
         )
+        val shouldSchedule = synchronized(persistLock) {
+            val idle = pendingPersist == null
+            pendingPersist = pending
+            idle
+        }
+        if (shouldSchedule) {
+            persistScope.launch { flushPendingPersist() }
+        }
+    }
+
+    fun flushPendingWrites() = flushPendingPersist()
+
+    private fun flushPendingPersist() {
+        synchronized(persistWriteLock) {
+            val pending = synchronized(persistLock) {
+                pendingPersist.also { pendingPersist = null }
+            }
+            if (pending != null) {
+                WatchProgressStorage.savePayload(
+                    pending.profileId,
+                    WatchProgressCodec.encodePayload(
+                        entries = pending.entries,
+                        lastSuccessfulPushEpochMs = pending.lastSuccessfulPushEpochMs,
+                        deltaCursorEventId = pending.deltaCursorEventId,
+                        deltaInitialized = pending.deltaInitialized,
+                        dirtyProgressKeys = pending.dirtyProgressKeys,
+                    ),
+                )
+            }
+        }
     }
 
     private fun recordSuccessfulPush(
@@ -1511,6 +1556,7 @@ object WatchProgressRepository {
         profileId: Int,
         pushedEntries: Collection<WatchProgressEntry>,
     ) {
+        flushPendingPersist()
         val payload = WatchProgressStorage.loadPayload(profileId).orEmpty().trim()
         if (payload.isEmpty()) return
         val storedPayload = WatchProgressCodec.decodePayload(payload)
@@ -1576,11 +1622,13 @@ object WatchProgressRepository {
             nuvioEntries = localEntriesSnapshot(),
             providerEntries = providerEntries,
         )
-        return if (activeSource.providerId == null) {
+        val entries = if (activeSource.providerId == null) {
             projectedEntries
         } else {
             providerMetadataOverlay.project(source = activeSource, entries = projectedEntries)
         }
+
+        return entries.filterNot { it.isLiveTvEntry() }
     }
 
     private fun localEntriesSnapshot(): List<WatchProgressEntry> =
@@ -1726,6 +1774,9 @@ object WatchProgressRepository {
         activeProgressProvider()?.shouldUseAsNextUpSeed(entry, nowEpochMs)
             ?: entry.shouldUseAsCompletedSeedForContinueWatching()
 
+    fun nextUpSeedContentId(contentId: String): String =
+        activeProgressProvider()?.nextUpSeedContentId(contentId) ?: contentId
+
     suspend fun prepareNextUpProgressEntries(
         entries: List<WatchProgressEntry>,
         contentId: String,
@@ -1759,4 +1810,25 @@ internal fun projectWatchProgressUiState(
     hiddenContentIds = providerSnapshot?.hiddenContentIds.orEmpty(),
     hasLoadedRemoteProgress =
         providerSnapshot?.hasLoadedRemoteProgress ?: hasLoadedNuvioRemoteProgress,
+)
+
+private fun WatchProgressPlaybackSession.isLiveTvSession(): Boolean =
+    contentType.equals("live", ignoreCase = true) ||
+        parentMetaType.equals("live", ignoreCase = true) ||
+        providerName.equals("Live TV", ignoreCase = true) ||
+        providerAddonId?.equals("live-tv", ignoreCase = true) == true
+
+private fun WatchProgressEntry.isLiveTvEntry(): Boolean =
+    contentType.equals("live", ignoreCase = true) ||
+        parentMetaType.equals("live", ignoreCase = true) ||
+        providerName?.equals("Live TV", ignoreCase = true) == true ||
+        providerAddonId?.equals("live-tv", ignoreCase = true) == true
+
+private class PendingWatchProgressPersist(
+    val profileId: Int,
+    val entries: List<WatchProgressEntry>,
+    val lastSuccessfulPushEpochMs: Long,
+    val deltaCursorEventId: Long,
+    val deltaInitialized: Boolean,
+    val dirtyProgressKeys: Set<String>,
 )

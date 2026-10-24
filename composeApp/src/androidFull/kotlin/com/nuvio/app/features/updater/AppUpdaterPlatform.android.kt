@@ -19,6 +19,12 @@ actual object AppUpdaterPlatform {
         AndroidAppUpdaterPlatform.setUpdateChannel(channel)
     }
 
+    actual fun getWhatsNewCache(): String? = AndroidAppUpdaterPlatform.getWhatsNewCache()
+
+    actual fun setWhatsNewCache(payload: String?) {
+        AndroidAppUpdaterPlatform.setWhatsNewCache(payload)
+    }
+
     actual fun deleteDownloadedApk(path: String) {
         AndroidAppUpdaterPlatform.deleteDownloadedApk(path)
     }

@@ -36,6 +36,7 @@ object AuthRepository {
     private var initialized = false
     private var sessionStatusJob: Job? = null
     private var validatedRemoteUserId: String? = null
+    private var trustNextSessionWithoutValidation = false
 
     fun initialize() {
         if (initialized) return
@@ -82,6 +83,11 @@ object AuthRepository {
 
     private suspend fun validateRemoteSession(userId: String): Boolean {
         if (userId.isBlank() || validatedRemoteUserId == userId) return true
+        if (trustNextSessionWithoutValidation) {
+            trustNextSessionWithoutValidation = false
+            validatedRemoteUserId = userId
+            return true
+        }
 
         return runCatching {
             SupabaseProvider.client.auth.retrieveUserForCurrentSession(false)
@@ -117,6 +123,7 @@ object AuthRepository {
             this.email = email
             this.password = password
         }
+        trustNextSessionWithoutValidation = true
         Unit
     }.onFailure { e ->
         log.e(e) { "Email sign-up failed" }
@@ -130,6 +137,7 @@ object AuthRepository {
             this.email = email
             this.password = password
         }
+        trustNextSessionWithoutValidation = true
     }.onFailure { e ->
         log.e(e) { "Email sign-in failed" }
         _error.value = e.safeAuthErrorDescription()
@@ -138,6 +146,7 @@ object AuthRepository {
 
     suspend fun signOut(): Result<Unit> {
         _error.value = null
+        val accountUserId = (state.value as? AuthState.Authenticated)?.userId
         val anonymousRead = runCatching { AuthStorage.loadAnonymousUserId() }
         val wasAnonymous = anonymousRead.getOrNull() != null
         val anonymousClear = runCatching { AuthStorage.clearAnonymousUserId() }
@@ -154,7 +163,7 @@ object AuthRepository {
         } else {
             Result.success(Unit)
         }
-        val localCleanup = runCatching { LocalAccountDataCleaner.wipe() }
+        val localCleanup = runCatching { LocalAccountDataCleaner.wipe(accountUserId) }
         _state.value = AuthState.Unauthenticated
 
         val failure = anonymousRead.exceptionOrNull()
@@ -207,6 +216,7 @@ object AuthRepository {
 
     private suspend fun clearLocalSessionAfterRemoteInvalidation() {
         _error.value = null
+        val accountUserId = (state.value as? AuthState.Authenticated)?.userId
         AuthStorage.clearAnonymousUserId()
         validatedRemoteUserId = null
         runCatching {
@@ -214,7 +224,7 @@ object AuthRepository {
         }.onFailure { e ->
             log.w(e) { "Failed to clear Supabase session after remote invalidation; continuing local reset" }
         }
-        val localCleanup = runCatching { LocalAccountDataCleaner.wipe() }
+        val localCleanup = runCatching { LocalAccountDataCleaner.wipe(accountUserId) }
         _state.value = AuthState.Unauthenticated
         localCleanup.onFailure { error ->
             log.e(error) { "Local account cleanup failed after remote session invalidation" }
@@ -223,11 +233,12 @@ object AuthRepository {
 
     suspend fun deleteAccount(): Result<Unit> = runCatching {
         _error.value = null
+        val accountUserId = (state.value as? AuthState.Authenticated)?.userId
         SupabaseProvider.client.functions.invoke("delete-account")
         SupabaseProvider.client.auth.signOut()
         validatedRemoteUserId = null
         try {
-            LocalAccountDataCleaner.wipe()
+            LocalAccountDataCleaner.wipe(accountUserId)
         } finally {
             _state.value = AuthState.Unauthenticated
         }

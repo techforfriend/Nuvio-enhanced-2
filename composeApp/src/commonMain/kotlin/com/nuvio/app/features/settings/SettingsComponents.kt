@@ -61,7 +61,10 @@ import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.NuvioActionLabel
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.NuvioSectionLabel
+import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.nuvioConsumePointerEvents
 import com.nuvio.app.features.home.HomeCatalogSettingsItem
 import nuvio.composeapp.generated.resources.Res
@@ -198,6 +201,11 @@ internal fun SettingsSidebarItem(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
+                    modifier = if (selected) {
+                        Modifier.gradientMask(MaterialTheme.themePalette.accentBrush())
+                    } else {
+                        Modifier
+                    },
                     tint = if (selected) primary else contentColor,
                 )
             }
@@ -235,6 +243,35 @@ internal fun SettingsSection(
         }
         Spacer(modifier = Modifier.height(if (isTablet) tokens.spacing.listGap else NuvioTokens.Space.s10))
         content()
+    }
+}
+
+@Composable
+internal fun SettingsClickableRow(
+    title: String,
+    enabled: Boolean = true,
+    isTablet: Boolean,
+    onClick: () -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    val verticalPadding = if (isTablet) 16.dp else 14.dp
+    val horizontalPadding = if (isTablet) 20.dp else 16.dp
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = horizontalPadding, vertical = verticalPadding)
+            .alpha(if (enabled) NuvioTokens.Opacity.visible else tokens.opacity.medium),
+        horizontalArrangement = Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            color = tokens.colors.accent,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }
 
@@ -293,6 +330,7 @@ internal fun SettingsNavigationRow(
                             Icon(
                                 imageVector = icon,
                                 contentDescription = null,
+                                modifier = Modifier.gradientMask(MaterialTheme.themePalette.accentBrush()),
                                 tint = tokens.colors.accent,
                             )
                         }

@@ -1,6 +1,7 @@
 package com.nuvio.app.features.streams
 
 import co.touchlab.kermit.Logger
+import com.nuvio.app.core.logging.InAppLogger
 import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.addons.buildAddonResourceUrl
@@ -161,6 +162,11 @@ object StreamsRepository {
         val playerSettings = PlayerSettingsRepository.uiState.value
         val debridSettings = DebridSettingsRepository.snapshot()
         val streamBadgeRules = StreamBadgeSettingsRepository.snapshot()
+        InAppLogger.info(
+            "Streams/StreamsRepository",
+            "Loading streams type=$type id=$videoId season=${season ?: -1} episode=${episode ?: -1} " +
+                "manual=$manualSelection force=$forceRefresh",
+        )
         val autoPlayMode = playerSettings.streamAutoPlayMode
         val isAutoPlayEnabled = !manualSelection && autoPlayMode != StreamAutoPlayMode.MANUAL &&
             !(autoPlayMode == StreamAutoPlayMode.REGEX_MATCH &&
@@ -199,6 +205,7 @@ object StreamsRepository {
         val embeddedStreams = MetaDetailsRepository.findEmbeddedStreams(videoId)
         if (embeddedStreams.isNotEmpty()) {
             log.d { "Using ${embeddedStreams.size} embedded streams for type=$type id=$videoId" }
+            InAppLogger.info("Streams/StreamsRepository", "Using embedded streams count=${embeddedStreams.size} type=$type id=$videoId")
             val group = AddonStreamGroup(
                 addonName = embeddedStreams.first().addonName,
                 addonId = "embedded",
@@ -326,6 +333,7 @@ object StreamsRepository {
         )
 
         if (installedAddons.isEmpty() && pluginProviderGroups.isEmpty() && serverSources.isEmpty() && cloudStreamProviderGroups.isEmpty()) {
+            InAppLogger.warn("Streams/StreamsRepository", "No stream addons, plugin scrapers, or CloudStream providers installed for type=$type id=$videoId")
             _uiState.value = StreamsUiState(
                 requestToken = requestToken,
                 isAnyLoading = false,
@@ -348,8 +356,14 @@ object StreamsRepository {
             }
 
         log.d { "Found ${streamAddons.size} addons for stream type=$type id=$videoId" }
+        InAppLogger.info(
+            "Streams/StreamsRepository",
+            "Found addons=${streamAddons.size} pluginGroups=${pluginProviderGroups.size} pluginScrapers=${pluginScrapers.size} " +
+                "for type=$type id=$videoId",
+        )
 
         if (streamAddons.isEmpty() && pluginProviderGroups.isEmpty() && serverSources.isEmpty() && cloudStreamProviderGroups.isEmpty()) {
+            InAppLogger.warn("Streams/StreamsRepository", "No compatible stream addon, plugin, or CloudStream provider for type=$type id=$videoId")
             _uiState.value = StreamsUiState(
                 requestToken = requestToken,
                 isAnyLoading = false,
@@ -626,6 +640,10 @@ object StreamsRepository {
                     log.d { "Fetching streams from: $url" }
 
                     val displayName = addon.addonName
+                    InAppLogger.info(
+                        "Streams/AddonFetch",
+                        "Fetching streams addon=$displayName addonId=${addon.addonId} url=${InAppLogger.redactUrl(url)}",
+                    )
                     val group = runCatchingUnlessCancelled {
                         val payload = fetchAddonResponseText(
                             url = url,
@@ -640,6 +658,7 @@ object StreamsRepository {
                     }.fold(
                         onSuccess = { streams ->
                             log.d { "Got ${streams.size} streams from ${displayName}" }
+                            InAppLogger.info("Streams/AddonFetch", "Loaded streams addon=$displayName count=${streams.size}")
                             AddonStreamGroup(
                                 addonName = displayName,
                                 addonId = addon.addonId,
@@ -649,6 +668,7 @@ object StreamsRepository {
                         },
                         onFailure = { err ->
                             log.w(err) { "Failed to fetch streams from ${displayName}" }
+                            InAppLogger.warn("Streams/AddonFetch", "Failed addon=$displayName error=${InAppLogger.throwableSummary(err)}")
                             AddonStreamGroup(
                                 addonName = displayName,
                                 addonId = addon.addonId,
@@ -670,6 +690,10 @@ object StreamsRepository {
                 val includeScraperNameInSubtitle = false
                 providerGroup.scrapers.forEach { scraper ->
                     launch {
+                        InAppLogger.info(
+                            "Streams/PluginFetch",
+                            "Executing scraper=${scraper.name} provider=${providerGroup.addonName} type=$type id=$videoId season=${season ?: -1} episode=${episode ?: -1}",
+                        )
                         val completion = PluginRepository.executeScraper(
                             scraper = scraper,
                             tmdbId = pluginContentId(
@@ -682,6 +706,7 @@ object StreamsRepository {
                             episode = episode,
                         ).fold(
                             onSuccess = { results ->
+                                InAppLogger.info("Streams/PluginFetch", "Scraper loaded scraper=${scraper.name} provider=${providerGroup.addonName} count=${results.size}")
                                 StreamLoadCompletion.PluginScraper(
                                     addonId = providerGroup.addonId,
                                     streams = results.map { result ->
@@ -696,6 +721,7 @@ object StreamsRepository {
                                 )
                             },
                             onFailure = { error ->
+                                InAppLogger.warn("Streams/PluginFetch", "Scraper failed scraper=${scraper.name} provider=${providerGroup.addonName} error=${InAppLogger.throwableSummary(error)}")
                                 StreamLoadCompletion.PluginScraper(
                                     addonId = providerGroup.addonId,
                                     streams = emptyList(),
@@ -812,6 +838,10 @@ object StreamsRepository {
             if (isDirectAutoPlayFlow && !autoSelectTriggered) {
                 settleAutoPlay(evaluateAutoPlay())
             }
+            InAppLogger.info(
+                "Streams/StreamsRepository",
+                "Finished loading streams type=$type id=$videoId groups=${_uiState.value.groups.size} streams=${_uiState.value.groups.sumOf { it.streams.size }}",
+            )
             timeoutJob?.cancel()
         }
     }

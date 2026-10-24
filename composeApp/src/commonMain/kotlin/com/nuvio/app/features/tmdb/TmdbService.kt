@@ -1,6 +1,7 @@
 package com.nuvio.app.features.tmdb
 
 import co.touchlab.kermit.Logger
+import com.nuvio.app.core.logging.InAppLogger
 import com.nuvio.app.features.addons.httpGetText
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -27,8 +28,12 @@ object TmdbService {
             .trim()
 
         if (normalized.isBlank()) return null
-        if (normalized.all(Char::isDigit)) return normalized
+        if (normalized.all(Char::isDigit)) {
+            InAppLogger.debug("Metadata/TMDB", "ensureTmdbId alreadyTmdb id=$normalized type=$mediaType")
+            return normalized
+        }
         if (normalized.startsWith("tt", ignoreCase = true)) {
+            InAppLogger.debug("Metadata/TMDB", "ensureTmdbId imdb=$normalized type=$mediaType")
             return imdbToTmdb(imdbId = normalized, mediaType = mediaType, apiKey = apiKey)
         }
 
@@ -38,6 +43,7 @@ object TmdbService {
             ?.substringBefore(':')
             ?.takeIf { it.startsWith("tt", ignoreCase = true) }
         if (normalizedFallback != null) {
+            InAppLogger.debug("Metadata/TMDB", "ensureTmdbId fallbackImdb=$normalizedFallback type=$mediaType")
             return imdbToTmdb(imdbId = normalizedFallback, mediaType = mediaType, apiKey = apiKey)
         }
 
@@ -49,7 +55,10 @@ object TmdbService {
 
         val cacheKey = "$tmdbId:${normalizeMediaType(mediaType)}"
         cacheMutex.withLock {
-            tmdbToImdbCache[cacheKey]?.let { return it }
+            tmdbToImdbCache[cacheKey]?.let {
+                InAppLogger.debug("Metadata/TMDB", "cache hit tmdbToImdb key=$cacheKey")
+                return it
+            }
         }
 
         val endpoint = when (normalizeMediaType(mediaType)) {
@@ -63,6 +72,7 @@ object TmdbService {
             tmdbToImdbCache[cacheKey] = imdbId
             imdbToTmdbCache["$imdbId:${normalizeMediaType(mediaType)}"] = tmdbId.toString()
         }
+        InAppLogger.info("Metadata/TMDB", "tmdbToImdb tmdbId=$tmdbId type=${normalizeMediaType(mediaType)} imdb=$imdbId")
         return imdbId
     }
 
@@ -70,7 +80,10 @@ object TmdbService {
         val normalizedType = normalizeMediaType(mediaType)
         val cacheKey = "$imdbId:$normalizedType"
         cacheMutex.withLock {
-            imdbToTmdbCache[cacheKey]?.let { return it }
+            imdbToTmdbCache[cacheKey]?.let {
+                InAppLogger.debug("Metadata/TMDB", "cache hit imdbToTmdb key=$cacheKey")
+                return it
+            }
         }
 
         val body = fetch<TmdbFindResponse>(
@@ -90,8 +103,10 @@ object TmdbService {
                 imdbToTmdbCache[cacheKey] = resultId
                 tmdbToImdbCache["$resultId:$normalizedType"] = imdbId
             }
+            InAppLogger.info("Metadata/TMDB", "imdbToTmdb imdb=$imdbId type=$normalizedType tmdb=$resultId")
         } else {
             log.d { "No TMDB ID found for $imdbId ($normalizedType)" }
+            InAppLogger.debug("Metadata/TMDB", "no mapping imdb=$imdbId type=$normalizedType")
         }
 
         return resultId
@@ -103,10 +118,14 @@ object TmdbService {
         query: Map<String, String> = emptyMap(),
     ): T? {
         val url = buildTmdbUrl(endpoint = endpoint, apiKey = apiKey, query = query)
+        InAppLogger.info("Metadata/TMDB", "GET endpoint=$endpoint url=${InAppLogger.redactUrl(url)}")
         return runCatching {
-            json.decodeFromString<T>(httpGetText(url))
+            val payload = httpGetText(url)
+            InAppLogger.info("Metadata/TMDB", "GET endpoint=$endpoint ok chars=${payload.length}")
+            json.decodeFromString<T>(payload)
         }.onFailure { error ->
             log.w { "TMDB request failed for $endpoint: ${error.message}" }
+            InAppLogger.warn("Metadata/TMDB", "GET endpoint=$endpoint failed: ${InAppLogger.throwableSummary(error)}")
         }.getOrNull()
     }
 
