@@ -933,9 +933,9 @@ fun MetaDetailsScreen(
                 val showDownloadButton by remember {
                     DownloadsSettingsRepository.ensureLoaded()
                     DownloadsSettingsRepository.showDownloadButton
-                }.collectAsStateWithLifecycle()
                 val downloadHandler = onDownload
-                val onDownloadClick: (() -> Unit)? = if (showDownloadButton && downloadHandler != null) {
+                val isDownloadActionEnabled = showDownloadButton || metaScreenSettingsUiState.showDownloadAction
+                val onDownloadClick: (() -> Unit)? = if (isDownloadActionEnabled && downloadHandler != null) {
                     {
                         stopHeroTrailerForNavigation()
                         if ((meta.type == "series" || hasEpisodes) && seriesAction != null) {
@@ -2503,21 +2503,6 @@ private fun ConfiguredMetaSections(
     fun RenderSection(key: MetaScreenSectionKey, showHeader: Boolean = true) {
         when (key) {
             MetaScreenSectionKey.ACTIONS -> {
-                val downloadAction = if (settings.showDownloadAction) {
-                    DetailSecondaryAction(
-                        label = stringResource(Res.string.streams_download_file),
-                        icon = Icons.Rounded.Download,
-                        onClick = {
-                            if (showManualPlayOption) {
-                                onPrimaryPlayLongClick?.invoke() ?: onPrimaryPlayClick()
-                            } else {
-                                onPrimaryPlayClick()
-                            }
-                        },
-                    )
-                } else {
-                    null
-                }
                 DetailActions(
                     playLabel = playButtonLabel,
                     playEnabled = isPrimaryPlayEnabled,

@@ -56,6 +56,20 @@ internal data class NuvioEnhancedSettingsUiState(
     val releaseRadarLibraryOnly: Boolean = true,
     val releaseRadarWindowDays: Int = 30,
     val releaseRadarContentFilter: NuvioReleaseRadarContentFilter = NuvioReleaseRadarContentFilter.All,
+    val hidePlayerSubmitIntro: Boolean = false,
+    val hidePlayerExternalPlayer: Boolean = false,
+    val hidePlayerShuffle: Boolean = false,
+    val hidePlayerEngineSwitch: Boolean = false,
+    val hidePlayerWatchParty: Boolean = false,
+    val hidePlayerCast: Boolean = false,
+    val hidePlayerPip: Boolean = false,
+    val hidePlayerOrientation: Boolean = false,
+    val hidePlayerRating: Boolean = false,
+    val hidePlayerInfo: Boolean = false,
+    val hidePlayerVideoSettings: Boolean = false,
+    val hidePlayerLock: Boolean = false,
+    val hidePlayerResizeMode: Boolean = false,
+    val hidePlayerSpeed: Boolean = false,
     val featureHighlightsEnabled: Boolean = true,
     val discordWelcomeSeen: Boolean = false,
     val seenFeatureIds: Set<String> = emptySet(),
@@ -203,6 +217,20 @@ private data class StoredNuvioEnhancedSettings(
     val releaseRadarLibraryOnly: Boolean = true,
     val releaseRadarWindowDays: Int = 30,
     val releaseRadarContentFilter: NuvioReleaseRadarContentFilter = NuvioReleaseRadarContentFilter.All,
+    val hidePlayerSubmitIntro: Boolean = false,
+    val hidePlayerExternalPlayer: Boolean = false,
+    val hidePlayerShuffle: Boolean = false,
+    val hidePlayerEngineSwitch: Boolean = false,
+    val hidePlayerWatchParty: Boolean = false,
+    val hidePlayerCast: Boolean = false,
+    val hidePlayerPip: Boolean = false,
+    val hidePlayerOrientation: Boolean = false,
+    val hidePlayerRating: Boolean = false,
+    val hidePlayerInfo: Boolean = false,
+    val hidePlayerVideoSettings: Boolean = false,
+    val hidePlayerLock: Boolean = false,
+    val hidePlayerResizeMode: Boolean = false,
+    val hidePlayerSpeed: Boolean = false,
     val featureHighlightsEnabled: Boolean = true,
     val discordWelcomeSeen: Boolean = false,
     val seenFeatureIds: Set<String> = previouslyReleasedFeatureIds,
@@ -475,6 +503,21 @@ internal object NuvioEnhancedSettingsRepository {
         copy(releaseRadarContentFilter = filter)
     }
 
+    fun setHidePlayerSubmitIntro(hidden: Boolean) = update { copy(hidePlayerSubmitIntro = hidden) }
+    fun setHidePlayerExternalPlayer(hidden: Boolean) = update { copy(hidePlayerExternalPlayer = hidden) }
+    fun setHidePlayerShuffle(hidden: Boolean) = update { copy(hidePlayerShuffle = hidden) }
+    fun setHidePlayerEngineSwitch(hidden: Boolean) = update { copy(hidePlayerEngineSwitch = hidden) }
+    fun setHidePlayerWatchParty(hidden: Boolean) = update { copy(hidePlayerWatchParty = hidden) }
+    fun setHidePlayerCast(hidden: Boolean) = update { copy(hidePlayerCast = hidden) }
+    fun setHidePlayerPip(hidden: Boolean) = update { copy(hidePlayerPip = hidden) }
+    fun setHidePlayerOrientation(hidden: Boolean) = update { copy(hidePlayerOrientation = hidden) }
+    fun setHidePlayerRating(hidden: Boolean) = update { copy(hidePlayerRating = hidden) }
+    fun setHidePlayerInfo(hidden: Boolean) = update { copy(hidePlayerInfo = hidden) }
+    fun setHidePlayerVideoSettings(hidden: Boolean) = update { copy(hidePlayerVideoSettings = hidden) }
+    fun setHidePlayerLock(hidden: Boolean) = update { copy(hidePlayerLock = hidden) }
+    fun setHidePlayerResizeMode(hidden: Boolean) = update { copy(hidePlayerResizeMode = hidden) }
+    fun setHidePlayerSpeed(hidden: Boolean) = update { copy(hidePlayerSpeed = hidden) }
+
     fun setFeatureHighlightsEnabled(enabled: Boolean) = update {
         copy(featureHighlightsEnabled = enabled)
     }
@@ -553,6 +596,20 @@ internal object NuvioEnhancedSettingsRepository {
             releaseRadarLibraryOnly = stored.releaseRadarLibraryOnly,
             releaseRadarWindowDays = stored.releaseRadarWindowDays.coerceIn(7, 45),
             releaseRadarContentFilter = stored.releaseRadarContentFilter,
+            hidePlayerSubmitIntro = stored.hidePlayerSubmitIntro,
+            hidePlayerExternalPlayer = stored.hidePlayerExternalPlayer,
+            hidePlayerShuffle = stored.hidePlayerShuffle,
+            hidePlayerEngineSwitch = stored.hidePlayerEngineSwitch,
+            hidePlayerWatchParty = stored.hidePlayerWatchParty,
+            hidePlayerCast = stored.hidePlayerCast,
+            hidePlayerPip = stored.hidePlayerPip,
+            hidePlayerOrientation = stored.hidePlayerOrientation,
+            hidePlayerRating = stored.hidePlayerRating,
+            hidePlayerInfo = stored.hidePlayerInfo,
+            hidePlayerVideoSettings = stored.hidePlayerVideoSettings,
+            hidePlayerLock = stored.hidePlayerLock,
+            hidePlayerResizeMode = stored.hidePlayerResizeMode,
+            hidePlayerSpeed = stored.hidePlayerSpeed,
             featureHighlightsEnabled = stored.featureHighlightsEnabled,
             discordWelcomeSeen = stored.discordWelcomeSeen,
             seenFeatureIds = stored.seenFeatureIds,

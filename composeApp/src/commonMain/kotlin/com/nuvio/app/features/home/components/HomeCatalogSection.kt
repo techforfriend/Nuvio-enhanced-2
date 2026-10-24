@@ -19,6 +19,7 @@ fun HomeCatalogRowSection(
     section: HomeCatalogSection,
     modifier: Modifier = Modifier,
     entries: List<MetaPreview> = section.items,
+    posterCardStyle: com.nuvio.app.core.ui.PosterCardStyleUiState = rememberPosterCardStyleUiState(),
     watchedKeys: Set<String> = emptySet(),
     fullyWatchedSeriesKeys: Set<String> = emptySet(),
     sectionPadding: Dp? = null,
@@ -30,6 +31,7 @@ fun HomeCatalogRowSection(
         HomeCatalogRowSectionContent(
             section = section,
             entries = entries,
+            posterCardStyle = posterCardStyle,
             watchedKeys = watchedKeys,
             fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
             modifier = modifier.fillMaxWidth(),
@@ -43,6 +45,7 @@ fun HomeCatalogRowSection(
             HomeCatalogRowSectionContent(
                 section = section,
                 entries = entries,
+                posterCardStyle = posterCardStyle,
                 watchedKeys = watchedKeys,
                 fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                 modifier = Modifier.fillMaxWidth(),
@@ -59,6 +62,7 @@ fun HomeCatalogRowSection(
 private fun HomeCatalogRowSectionContent(
     section: HomeCatalogSection,
     entries: List<MetaPreview>,
+    posterCardStyle: com.nuvio.app.core.ui.PosterCardStyleUiState,
     watchedKeys: Set<String>,
     fullyWatchedSeriesKeys: Set<String>,
     modifier: Modifier,
@@ -67,8 +71,6 @@ private fun HomeCatalogRowSectionContent(
     onPosterClick: ((MetaPreview) -> Unit)?,
     onPosterLongClick: ((MetaPreview) -> Unit)?,
 ) {
-    val posterCardStyle = rememberPosterCardStyleUiState()
-
     NuvioShelfSection(
         title = section.title,
         entries = entries,
@@ -81,6 +83,7 @@ private fun HomeCatalogRowSectionContent(
     ) { item ->
         HomePosterCard(
             item = item,
+            posterCardStyle = posterCardStyle,
             useLandscapeBackdropMode = posterCardStyle.catalogLandscapeModeEnabled,
             isWatched = WatchingState.isPosterWatched(
                 watchedKeys = watchedKeys,

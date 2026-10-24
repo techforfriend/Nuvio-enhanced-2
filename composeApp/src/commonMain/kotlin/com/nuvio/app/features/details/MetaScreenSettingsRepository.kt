@@ -304,9 +304,11 @@ object MetaScreenSettingsRepository {
 
     fun setShowDownloadAction(enabled: Boolean) {
         ensureLoaded()
+        if (showDownloadAction == enabled) return
         showDownloadAction = enabled
         publish()
         persist()
+        com.nuvio.app.features.downloads.DownloadsSettingsRepository.setShowDownloadButton(enabled)
     }
 
     fun setCinematicBackground(enabled: Boolean) {

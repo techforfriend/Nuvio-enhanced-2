@@ -138,8 +138,8 @@ fun NuvioPosterCard(
     isWatched: Boolean = false,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
+    posterCardStyle: PosterCardStyleUiState = rememberPosterCardStyleUiState(),
 ) {
-    val posterCardStyle = rememberPosterCardStyleUiState()
     val tokens = MaterialTheme.nuvio
     val cardWidth = shape.cardWidth(basePosterWidthDp = posterCardStyle.widthDp)
     val cardShape = RoundedCornerShape(posterCardStyle.cornerRadiusDp.dp)

@@ -328,7 +328,6 @@ object HomeRepository {
         isLoading: Boolean,
         requestKey: String?,
     ) {
-        if (currentDefinitions.isEmpty() && cachedSections.isNotEmpty()) return
         val snapshot = HomeCatalogSettingsRepository.snapshot()
         val preferences = snapshot.preferences
         val todayIsoDate = if (snapshot.hideUnreleasedContent) CurrentDateProvider.todayIsoDate() else null
@@ -339,22 +338,28 @@ object HomeRepository {
         fun HomeCatalogSection.withPosterOverlay(): HomeCatalogSection =
             copy(items = items.reapplyCustomPosterUrls(posterPattern))
 
-        val entries = currentDefinitions
-            .sortedBy { definition -> preferences[definition.key]?.order ?: Int.MAX_VALUE }
-            .mapNotNull { definition ->
-                val preference = preferences[definition.key]
-                if (preference?.enabled == false) return@mapNotNull null
+        val entries = if (currentDefinitions.isNotEmpty()) {
+            currentDefinitions
+                .sortedBy { definition -> preferences[definition.key]?.order ?: Int.MAX_VALUE }
+                .mapNotNull { definition ->
+                    val preference = preferences[definition.key]
+                    if (preference?.enabled == false) return@mapNotNull null
 
-                val section = cachedSections[definition.cacheKey]
-                    ?.withPosterOverlay()
-                    ?.withReleaseFilter()
-                    ?: return@mapNotNull null
-                if (section.items.isEmpty()) return@mapNotNull null
-                val customTitle = preference?.customTitle.orEmpty()
-                definition.cacheKey to section.copy(
-                    title = customTitle.ifBlank { definition.titleFor(snapshot.showCatalogType) },
-                )
+                    val section = cachedSections[definition.cacheKey]
+                        ?.withPosterOverlay()
+                        ?.withReleaseFilter()
+                        ?: return@mapNotNull null
+                    if (section.items.isEmpty()) return@mapNotNull null
+                    val customTitle = preference?.customTitle.orEmpty()
+                    definition.cacheKey to section.copy(
+                        title = customTitle.ifBlank { definition.titleFor(snapshot.showCatalogType) },
+                    )
+                }
+        } else {
+            cachedSections.map { (key, section) ->
+                key to section.withPosterOverlay().withReleaseFilter()
             }
+        }
         if (entries.isNotEmpty() || currentDefinitions.isNotEmpty()) {
             lastPublishedEntries = entries
         }

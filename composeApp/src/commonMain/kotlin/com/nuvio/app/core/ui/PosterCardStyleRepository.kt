@@ -66,6 +66,7 @@ object PosterCardStyleRepository {
             heightDp = nextHeight,
         )
         persist()
+        com.nuvio.app.features.home.HomeRepository.applyCurrentSettings()
     }
 
     fun setCornerRadiusDp(cornerRadiusDp: Int) {
@@ -73,6 +74,7 @@ object PosterCardStyleRepository {
         if (_uiState.value.cornerRadiusDp == cornerRadiusDp) return
         _uiState.value = _uiState.value.copy(cornerRadiusDp = cornerRadiusDp)
         persist()
+        com.nuvio.app.features.home.HomeRepository.applyCurrentSettings()
     }
 
     fun setCatalogLandscapeModeEnabled(enabled: Boolean) {
@@ -80,6 +82,7 @@ object PosterCardStyleRepository {
         if (_uiState.value.catalogLandscapeModeEnabled == enabled) return
         _uiState.value = _uiState.value.copy(catalogLandscapeModeEnabled = enabled)
         persist()
+        com.nuvio.app.features.home.HomeRepository.applyCurrentSettings()
     }
 
     fun setHideLabelsEnabled(enabled: Boolean) {
@@ -87,6 +90,7 @@ object PosterCardStyleRepository {
         if (_uiState.value.hideLabelsEnabled == enabled) return
         _uiState.value = _uiState.value.copy(hideLabelsEnabled = enabled)
         persist()
+        com.nuvio.app.features.home.HomeRepository.applyCurrentSettings()
     }
 
     fun setAlwaysShowLandscapeClearlogo(enabled: Boolean) {
@@ -94,6 +98,7 @@ object PosterCardStyleRepository {
         if (_uiState.value.alwaysShowLandscapeClearlogo == enabled) return
         _uiState.value = _uiState.value.copy(alwaysShowLandscapeClearlogo = enabled)
         persist()
+        com.nuvio.app.features.home.HomeRepository.applyCurrentSettings()
     }
 
     fun resetToDefaults() {
@@ -101,6 +106,7 @@ object PosterCardStyleRepository {
         if (_uiState.value == PosterCardStyleUiState()) return
         _uiState.value = PosterCardStyleUiState()
         persist()
+        com.nuvio.app.features.home.HomeRepository.applyCurrentSettings()
     }
 
     private fun loadFromDisk() {

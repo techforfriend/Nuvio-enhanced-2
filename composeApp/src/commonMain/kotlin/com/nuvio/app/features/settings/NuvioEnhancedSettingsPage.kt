@@ -965,6 +965,126 @@ private fun NuvioEnhancedSettingsPageContent(
                     }
                 }
             }
+
+            SettingsSection(
+                title = stringResource(Res.string.nuvio_enhanced_hide_player_buttons_title),
+                description = stringResource(Res.string.nuvio_enhanced_hide_player_buttons_desc),
+                isTablet = isTablet,
+            ) {
+                SettingsGroup(isTablet = isTablet) {
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_hide_player_cast),
+                        description = stringResource(Res.string.nuvio_enhanced_hide_player_cast_desc),
+                        checked = settings.hidePlayerCast,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerCast,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_hide_player_pip),
+                        description = stringResource(Res.string.nuvio_enhanced_hide_player_pip_desc),
+                        checked = settings.hidePlayerPip,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerPip,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_hide_player_external_player),
+                        description = stringResource(Res.string.nuvio_enhanced_hide_player_external_player_desc),
+                        checked = settings.hidePlayerExternalPlayer,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerExternalPlayer,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_hide_player_watch_party),
+                        description = stringResource(Res.string.nuvio_enhanced_hide_player_watch_party_desc),
+                        checked = settings.hidePlayerWatchParty,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerWatchParty,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_hide_player_engine_switch),
+                        description = stringResource(Res.string.nuvio_enhanced_hide_player_engine_switch_desc),
+                        checked = settings.hidePlayerEngineSwitch,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerEngineSwitch,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_hide_player_submit_intro),
+                        description = stringResource(Res.string.nuvio_enhanced_hide_player_submit_intro_desc),
+                        checked = settings.hidePlayerSubmitIntro,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerSubmitIntro,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_hide_player_shuffle),
+                        description = stringResource(Res.string.nuvio_enhanced_hide_player_shuffle_desc),
+                        checked = settings.hidePlayerShuffle,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerShuffle,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_hide_player_rating),
+                        description = stringResource(Res.string.nuvio_enhanced_hide_player_rating_desc),
+                        checked = settings.hidePlayerRating,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerRating,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_hide_player_orientation),
+                        description = stringResource(Res.string.nuvio_enhanced_hide_player_orientation_desc),
+                        checked = settings.hidePlayerOrientation,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerOrientation,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_hide_player_info),
+                        description = stringResource(Res.string.nuvio_enhanced_hide_player_info_desc),
+                        checked = settings.hidePlayerInfo,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerInfo,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_hide_player_video_settings),
+                        description = stringResource(Res.string.nuvio_enhanced_hide_player_video_settings_desc),
+                        checked = settings.hidePlayerVideoSettings,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerVideoSettings,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_hide_player_lock),
+                        description = stringResource(Res.string.nuvio_enhanced_hide_player_lock_desc),
+                        checked = settings.hidePlayerLock,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerLock,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_hide_player_resize),
+                        description = stringResource(Res.string.nuvio_enhanced_hide_player_resize_desc),
+                        checked = settings.hidePlayerResizeMode,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerResizeMode,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_hide_player_speed),
+                        description = stringResource(Res.string.nuvio_enhanced_hide_player_speed_desc),
+                        checked = settings.hidePlayerSpeed,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerSpeed,
+                    )
+                }
+            }
         }
 
         if (selectedCategory == EnhancedSettingsCategory.All ||
