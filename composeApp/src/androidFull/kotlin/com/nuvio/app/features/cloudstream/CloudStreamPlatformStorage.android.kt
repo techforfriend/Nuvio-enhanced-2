@@ -63,16 +63,29 @@ internal actual object CloudStreamPlatformStorage {
                 output.write(bytes)
                 output.fd.sync()
             }
-            if (backup.exists()) backup.delete()
-            if (destination.exists() && !destination.renameTo(backup)) {
-                error("Could not prepare existing CloudStream package for update")
+            if (backup.exists()) {
+                backup.setWritable(true)
+                backup.delete()
+            }
+            if (destination.exists()) {
+                destination.setWritable(true)
+                if (!destination.renameTo(backup)) {
+                    error("Could not prepare existing CloudStream package for update")
+                }
             }
             if (!temporary.renameTo(destination)) {
-                if (backup.exists()) backup.renameTo(destination)
+                if (backup.exists()) {
+                    backup.setWritable(true)
+                    backup.renameTo(destination)
+                }
                 error("Could not commit CloudStream package")
             }
-            backup.delete()
+            if (backup.exists()) {
+                backup.setWritable(true)
+                backup.delete()
+            }
         } finally {
+            temporary.setWritable(true)
             temporary.delete()
         }
     }
@@ -89,6 +102,7 @@ internal actual object CloudStreamPlatformStorage {
         val source = File(directory, "$oldStorageKey.cs3")
         val destination = File(directory, "$newStorageKey.cs3")
         if (destination.isFile) return true
+        source.setWritable(true)
         if (source.isFile && source.renameTo(destination)) return true
         val legacy = legacyPackage(oldStorageKey)
         return legacy.isFile && legacy.copyTo(destination, overwrite = false).isFile
@@ -100,8 +114,16 @@ internal actual object CloudStreamPlatformStorage {
     }
 
     actual fun deletePackage(storageKey: String) {
-        File(packagesDirectory(), "$storageKey.cs3").delete()
-        File(packagesDirectory(), "$storageKey.backup").delete()
+        val packageFile = File(packagesDirectory(), "$storageKey.cs3")
+        val backupFile = File(packagesDirectory(), "$storageKey.backup")
+        if (packageFile.exists()) {
+            packageFile.setWritable(true)
+            packageFile.delete()
+        }
+        if (backupFile.exists()) {
+            backupFile.setWritable(true)
+            backupFile.delete()
+        }
     }
 
     actual fun clearPackages() {

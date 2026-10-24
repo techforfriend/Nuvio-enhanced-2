@@ -51,7 +51,7 @@ fun CloudStreamLoadItem.toMetaDetails(): MetaDetails {
         listOf(
             MetaVideo(
                 id = routeId,
-                title = if (type == CloudStreamTvType.Live) "Canlı yayın" else name,
+                title = if (type == CloudStreamTvType.Live) name.ifBlank { "Live Stream" } else name,
                 available = true,
                 thumbnail = backgroundUrl ?: posterUrl,
             ),
@@ -127,9 +127,9 @@ fun CloudStreamPlaybackSource.toStreamItem(
 }
 
 private fun Int.cloudStreamQualityLabel(): String? =
-    takeIf { it in knownCloudStreamQualities }?.let { "${it}p" }
+    takeIf { it in knownCloudStreamQualities || (it in 144..4320 && it % 10 == 0) }?.let { "${it}p" }
 
-private val knownCloudStreamQualities = setOf(144, 240, 360, 480, 720, 1080, 1440, 2160)
+private val knownCloudStreamQualities = setOf(144, 240, 360, 480, 540, 576, 720, 1080, 1440, 2160, 4320)
 
 private data class ParsedCloudStreamPlaybackUrl(
     val url: String,

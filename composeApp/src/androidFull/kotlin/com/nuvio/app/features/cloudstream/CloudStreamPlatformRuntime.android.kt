@@ -253,7 +253,8 @@ internal actual object CloudStreamPlatformRuntime {
         }
         val pluginClassName = manifest.pluginClassName?.takeIf(String::isNotBlank)
             ?: error("CloudStream manifest has no pluginClassName")
-        val loader = PathClassLoader(file.absolutePath, context.classLoader)
+        val nativeLibDir = context.applicationInfo.nativeLibraryDir
+        val loader = PathClassLoader(file.absolutePath, nativeLibDir, context.classLoader)
         val pluginClass = loader.loadClass(pluginClassName)
         require(BasePlugin::class.java.isAssignableFrom(pluginClass)) {
             "CloudStream entry point does not extend BasePlugin"
@@ -321,8 +322,8 @@ internal actual object CloudStreamPlatformRuntime {
                 "CloudStream plugin-load-failure id=" + item.metadata.id.value + " error=" + error.message,
             )
             log.e(error) { "Failed to load ${item.metadata.internalName}" }
-            APIHolder.allProviders.removeAll { it !in providersBefore && it.sourcePlugin == file.absolutePath }
-            extractorApis.removeAll { it !in extractorsBefore && it.sourcePlugin == file.absolutePath }
+            APIHolder.allProviders.removeAll { it !in providersBefore }
+            extractorApis.removeAll { it !in extractorsBefore }
             PluginManager.unregister(file.absolutePath)
             throw error
         } finally {
@@ -733,8 +734,13 @@ private class AndroidDexCloudStreamProvider(
         val episodes = when (this) {
             is TvSeriesLoadResponse -> episodes.map { episode -> episode.toNuvioEpisode(api) }
             is AnimeLoadResponse -> episodes.flatMap { (dubStatus, values) ->
+                val variant = when {
+                    episodes.size > 1 -> dubStatus.name
+                    dubStatus.name.equals("Dubbed", ignoreCase = true) -> "Dubbed"
+                    else -> null
+                }
                 values.map { episode ->
-                    episode.toNuvioEpisode(api, dubStatus.name.takeUnless { episodes.size == 1 })
+                    episode.toNuvioEpisode(api, variant)
                 }
             }
             else -> emptyList()
@@ -757,15 +763,19 @@ private class AndroidDexCloudStreamProvider(
     private fun com.lagradost.cloudstream3.Episode.toNuvioEpisode(
         api: MainAPI,
         variant: String? = null,
-    ): CloudStreamEpisode = CloudStreamEpisode(
-        data = encodeAndroidDexRoute(api.javaClass.name, data),
-        name = listOfNotNull(name?.takeIf(String::isNotBlank), variant).joinToString(" · ")
-            .ifBlank { "Episode ${episode ?: ""}".trim() },
-        season = season,
-        episode = episode,
-        posterUrl = posterUrl,
-        description = description,
-    )
+    ): CloudStreamEpisode {
+        val baseName = name?.takeIf(String::isNotBlank) ?: "Episode ${episode ?: ""}".trim()
+        val displayName = listOfNotNull(baseName.takeIf(String::isNotBlank), variant).joinToString(" · ")
+            .ifBlank { "Episode ${episode ?: ""}".trim() }
+        return CloudStreamEpisode(
+            data = encodeAndroidDexRoute(api.javaClass.name, data),
+            name = displayName,
+            season = season,
+            episode = episode,
+            posterUrl = posterUrl,
+            description = description,
+        )
+    }
 
     private companion object {
         private val IMDB_ID_REGEX = Regex("^tt\\d{5,12}$", RegexOption.IGNORE_CASE)
