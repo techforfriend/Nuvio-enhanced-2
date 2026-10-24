@@ -2,7 +2,7 @@
 
   <img src="https://nuvio.tv/assets/nuvio-app-logo-wordmark.webp" alt="Nuvio" width="320" />
 
-  <h1>Nuvio Enhanced</h1>
+  <h1>Nuvio Enhanced 2</h1> 
 
   <p>
     An unofficial fork of <a href="https://github.com/NuvioMedia/NuvioMobile">Nuvio Mobile</a> that keeps pace with
