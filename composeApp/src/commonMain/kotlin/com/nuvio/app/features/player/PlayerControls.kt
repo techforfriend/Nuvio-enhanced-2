@@ -128,6 +128,7 @@ internal fun PlayerControlsShell(
     modifier: Modifier = Modifier,
     foldLayout: Boolean = false,
     gestureController: PlayerGestureController? = null,
+    onWake: () -> Unit = {},
 ) {
     if (foldLayout) {
         FoldControls(
@@ -164,6 +165,8 @@ internal fun PlayerControlsShell(
             onSubmitIntroClick = onSubmitIntroClick,
             onSwitchEngineClick = onSwitchEngineClick,
             gestureController = gestureController,
+            dimmed = !showPlaybackControls,
+            onWake = onWake,
             horizontalSafePadding = horizontalSafePadding,
             modifier = modifier,
         )

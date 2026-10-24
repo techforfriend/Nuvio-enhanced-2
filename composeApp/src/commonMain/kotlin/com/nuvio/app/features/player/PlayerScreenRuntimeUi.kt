@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -299,6 +300,12 @@ private fun PlayerScreenRuntime.RenderPlayerControls(
     val partyState by PartyRepository.state.collectAsStateWithLifecycle()
     val partyActive = partyState.party != null
     val playerBadges = rememberPlayerBadges()
+    LaunchedEffect(folded) {
+        if (folded) {
+            controlsVisible = true
+            showParentalGuide = false
+        }
+    }
     AnimatedVisibility(
         visible = (controlsVisible || folded || showParentalGuide) && !playerControlsLocked && !isInPip &&
             !(folded && isPanelOpen),
@@ -329,7 +336,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(
                 }
             } else null,
             onInteraction = { controlsActivityTick += 1 },
-            showPlaybackControls = controlsVisible || folded,
+            showPlaybackControls = controlsVisible,
             onLockToggle = {
                 if (playerControlsLocked) unlockPlayerControls() else lockPlayerControls()
             },
@@ -438,6 +445,10 @@ private fun PlayerScreenRuntime.RenderPlayerControls(
             modifier = modifier,
             foldLayout = folded,
             gestureController = gestureController,
+            onWake = {
+                controlsVisible = true
+                controlsActivityTick += 1
+            },
         )
     }
     AnimatedVisibility(

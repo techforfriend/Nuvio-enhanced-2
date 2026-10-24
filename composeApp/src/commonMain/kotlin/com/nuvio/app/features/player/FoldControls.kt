@@ -74,14 +74,20 @@ import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.graphicsLayer
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 
 private val TileShape = RoundedCornerShape(NuvioTokens.Radius.xl)
 private val TileColor = Color.White.copy(alpha = 0.08f)
@@ -89,6 +95,7 @@ private val TileBorder = Color.White.copy(alpha = 0.06f)
 private val TileGap = 10.dp
 private val RowHeight = 60.dp
 private val SideTileWidth = 56.dp
+private const val DimmedAlpha = 0.05f
 
 @Composable
 internal fun FoldControls(
@@ -125,9 +132,17 @@ internal fun FoldControls(
     onSubmitIntroClick: (() -> Unit)?,
     onSwitchEngineClick: (() -> Unit)?,
     gestureController: PlayerGestureController?,
+    dimmed: Boolean,
+    onWake: () -> Unit,
     horizontalSafePadding: Dp,
     modifier: Modifier = Modifier,
 ) {
+    val currentOnWake by rememberUpdatedState(onWake)
+    val contentAlpha by animateFloatAsState(
+        targetValue = if (dimmed) DimmedAlpha else 1f,
+        animationSpec = tween(durationMillis = if (dimmed) 700 else 150),
+        label = "foldControlsAlpha",
+    )
     val actions = playerControlActions(
         playbackSnapshot = playbackSnapshot,
         resizeMode = resizeMode,
@@ -161,6 +176,20 @@ internal fun FoldControls(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
+            .pointerInput(dimmed) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    currentOnWake()
+                    if (dimmed) {
+                        down.consume()
+                        do {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            event.changes.forEach { it.consume() }
+                        } while (event.changes.any { it.pressed })
+                    }
+                }
+            }
+            .graphicsLayer { alpha = contentAlpha }
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
             .padding(horizontal = 16.dp + horizontalSafePadding, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(TileGap, Alignment.CenterVertically),
