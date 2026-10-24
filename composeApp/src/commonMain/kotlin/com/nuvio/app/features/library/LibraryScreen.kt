@@ -114,6 +114,8 @@ import com.nuvio.app.core.ui.NuvioShelfSection
 import com.nuvio.app.core.ui.NuvioViewAllPillSize
 import com.nuvio.app.core.ui.ScopedDisintegrationTracker
 import com.nuvio.app.core.ui.nuvioConsumePointerEvents
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
+import com.nuvio.app.core.ui.nuvioHorizontalScrollBleed
 import com.nuvio.app.features.cloud.CloudLibraryFile
 import com.nuvio.app.features.cloud.CloudLibraryItem
 import com.nuvio.app.features.cloud.CloudLibraryItemType
@@ -444,7 +446,9 @@ fun LibraryScreen(
     Column(modifier = modifier.fillMaxSize()) {
         Box(modifier = Modifier.fillMaxWidth()) {
             androidx.compose.foundation.layout.Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(LocalVerticalBarPadding.current),
             ) {
                 NuvioScreenHeader(
                     title = if (sourceMode != LibraryViewMode.Saved) {

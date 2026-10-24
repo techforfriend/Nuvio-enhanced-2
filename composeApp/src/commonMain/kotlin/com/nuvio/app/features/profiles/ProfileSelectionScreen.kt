@@ -64,6 +64,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.NuvioToastHost
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
 import com.nuvio.app.features.membership.CosmeticEntitlement
 import com.nuvio.app.features.settings.AppBrandWordmark
 import com.nuvio.app.features.settings.SupporterBadgeIfPresent
@@ -394,6 +395,7 @@ fun ProfileSelectionScreen(
                 onClick = onBack,
                 modifier = Modifier
                     .align(Alignment.TopStart)
+                    .padding(LocalVerticalBarPadding.current)
                     .padding(start = 16.dp, top = statusBarTop + 8.dp),
             )
         }

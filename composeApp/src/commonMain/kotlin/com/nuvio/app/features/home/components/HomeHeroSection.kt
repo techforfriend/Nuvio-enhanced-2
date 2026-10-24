@@ -2,6 +2,7 @@ package com.nuvio.app.features.home.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.MutatePriority
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -79,6 +81,7 @@ import com.nuvio.app.core.ui.LocalDynamicArtworkBackgroundColor
 import com.nuvio.app.core.ui.rememberDynamicArtworkBackgroundEnabled
 import com.nuvio.app.core.ui.PrefetchArtworkDominantColors
 import com.nuvio.app.core.ui.heroStretchHeight
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
 import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.heroStretchZoom
 import com.nuvio.app.features.details.HeroTrailerAudioState
@@ -94,6 +97,9 @@ import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.player.MiniPlayerController
 import com.nuvio.app.features.trailer.TrailerPlaybackResolver
 import com.nuvio.app.features.trailer.TrailerPlaybackSource
+import com.nuvio.app.core.ui.centeredVerticalBarPadding
+import com.nuvio.app.core.ui.withVerticalBar
+import com.nuvio.app.features.home.stableKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -201,6 +207,8 @@ internal fun HomeHeroSection(
     trailerPlaybackEnabled: Boolean = false,
     trailerStartDelaySeconds: Int = 0,
     trailerStartUnmuted: Boolean = false,
+    showImdbRating: Boolean = true,
+    showMdbListRatings: Boolean = false,
     onItemClick: ((MetaPreview) -> Unit)? = null,
     onActiveArtworkChange: ((String?) -> Unit)? = null,
 ) {
@@ -572,9 +580,13 @@ internal fun HomeHeroSection(
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
                                 .padding(
-                                    horizontal = layout.contentHorizontalPadding,
-                                    vertical = layout.contentVerticalPadding,
-                                ),
+                                    if (layout.isTablet) {
+                                        PaddingValues(horizontal = layout.contentHorizontalPadding).withVerticalBar()
+                                    } else {
+                                        centeredVerticalBarPadding(layout.contentHorizontalPadding)
+                                    },
+                                )
+                                .padding(vertical = layout.contentVerticalPadding),
                             horizontalAlignment = if (layout.isTablet) Alignment.Start else Alignment.CenterHorizontally,
                         ) {
                             Box(
@@ -585,7 +597,7 @@ internal fun HomeHeroSection(
                             ) {
                                 visiblePages.forEach { layer ->
                                     val layerItem = items[layer.itemIndex]
-                                    key(layerItem.type, layerItem.id) {
+                                    key(layerItem.stableKey()) {
                                     Box(
                                         modifier = Modifier.graphicsLayer {
                                             val offset = heroPageOffset(pagerState, layer.page)
@@ -597,6 +609,8 @@ internal fun HomeHeroSection(
                                         HeroContentBlock(
                                             item = layerItem,
                                             layout = layout,
+                                            showImdbRating = showImdbRating,
+                                            showMdbListRatings = showMdbListRatings,
                                             onItemClick = onItemClick,
                                         )
                                     }
@@ -777,6 +791,8 @@ internal fun HomeHeroReservedSpace(
 private fun HeroContentBlock(
     item: MetaPreview,
     layout: HomeHeroLayout,
+    showImdbRating: Boolean,
+    showMdbListRatings: Boolean,
     onItemClick: ((MetaPreview) -> Unit)?,
 ) {
     var logoLoadError by remember(item.type, item.id, item.logo) {
@@ -785,7 +801,9 @@ private fun HeroContentBlock(
     val logoUrl = item.logo?.takeIf { it.isNotBlank() }
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
         horizontalAlignment = if (layout.isTablet) Alignment.Start else Alignment.CenterHorizontally,
     ) {
         if (logoUrl != null && !logoLoadError) {
@@ -834,60 +852,29 @@ private fun HeroContentBlock(
             }
         }
         val details = detailsState.value
-        val rating = (item.imdbRating ?: details?.imdbRating)
-            ?.takeIf { raw -> raw.toDoubleOrNull()?.let { it > 0.0 } == true }
-        val year = (item.releaseInfo ?: details?.releaseInfo)
-            ?.takeIf { it.isNotBlank() }
-            ?.let(::formatReleaseDateForDisplay)
-        val genre = (item.genres.firstOrNull() ?: details?.genres?.firstOrNull())?.takeIf { it.isNotBlank() }
-        val ageRating = details?.ageRating?.trim()?.takeIf { it.isNotBlank() }
-        val synopsis = (item.description ?: details?.description)?.trim()?.takeIf { it.isNotBlank() }
-        val typeLabel = when (item.type.lowercase()) {
-            "movie" -> stringResource(Res.string.media_movie)
-            "series", "tv", "show" -> stringResource(Res.string.media_series)
-            else -> item.type.replaceFirstChar(Char::uppercase)
-        }
-        val textAlign = if (layout.isTablet) TextAlign.Start else TextAlign.Center
-
-        Spacer(modifier = Modifier.height(14.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = if (layout.isTablet) {
-                Arrangement.spacedBy(8.dp, Alignment.Start)
+        // Fill the gaps a catalog preview leaves (rating, age rating, genre) from
+        // the cached details so the upstream meta rows stay populated on Enhanced.
+        val metaItem = remember(item, details) {
+            if (details == null) {
+                item
             } else {
-                Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
-            },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            var needsDot = false
-            if (rating != null) {
-                Icon(
-                    imageVector = Icons.Rounded.Star,
-                    contentDescription = null,
-                    tint = HeroRatingStar,
-                    modifier = Modifier.size(18.dp),
+                item.copy(
+                    imdbRating = item.imdbRating ?: details.imdbRating,
+                    releaseInfo = item.releaseInfo ?: details.releaseInfo,
+                    genres = item.genres.ifEmpty { details.genres },
+                    ageRating = item.ageRating ?: details.ageRating,
                 )
-                HeroMetaText(text = rating)
-                needsDot = true
             }
-            year?.let {
-                if (needsDot) HeroMetaDot()
-                HeroMetaText(text = it)
-                needsDot = true
-            }
-            genre?.let {
-                if (needsDot) HeroMetaDot()
-                HeroMetaText(text = it, modifier = Modifier.weight(1f, fill = false))
-                needsDot = true
-            }
-            ageRating?.let {
-                if (needsDot) HeroMetaDot()
-                DetailHeroMetaBadge(text = it, contentColor = MaterialTheme.colorScheme.onBackground)
-                needsDot = true
-            }
-            if (needsDot) HeroMetaDot()
-            HeroTypePill(text = typeLabel)
         }
+        val synopsis = (item.description ?: details?.description)?.trim()?.takeIf { it.isNotBlank() }
+
+        Spacer(modifier = Modifier.height(12.dp))
+        HomeHeroMetaRows(
+            item = metaItem,
+            isTablet = layout.isTablet,
+            showImdbRating = showImdbRating,
+            showMdbListRatings = showMdbListRatings,
+        )
 
         if (synopsis != null) {
             Spacer(modifier = Modifier.height(10.dp))
@@ -896,45 +883,12 @@ private fun HeroContentBlock(
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
-                textAlign = textAlign,
+                textAlign = if (layout.isTablet) TextAlign.Start else TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
     }
-}
-
-@Composable
-private fun HeroTypePill(text: String) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.16f))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            maxLines = 1,
-        )
-    }
-}
-
-private val HeroRatingStar = Color(0xFFF5C518)
-
-@Composable
-private fun HeroMetaText(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text = text,
-        modifier = modifier,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onBackground,
-        fontWeight = FontWeight.SemiBold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
 }
 
 internal fun homeHeroLayout(
@@ -1045,16 +999,6 @@ private fun mobileHeroHeight(
     }
 
     return cappedHeight.coerceIn(minHeight, MOBILE_HERO_MAX_HEIGHT_DP.dp)
-}
-
-@Composable
-private fun HeroMetaDot() {
-    Box(
-        modifier = Modifier
-            .size(4.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)),
-    )
 }
 
 private fun heroBackgroundScrollScale(scrollOffsetPx: Float): Float {

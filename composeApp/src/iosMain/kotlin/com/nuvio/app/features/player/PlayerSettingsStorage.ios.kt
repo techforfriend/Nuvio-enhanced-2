@@ -1071,6 +1071,10 @@ actual object PlayerSettingsStorage {
 
     actual fun saveVodDiskCacheSizeMb(value: Int) {}
 
+    actual fun loadLibassRenderScale(): String? = null
+
+    actual fun saveLibassRenderScale(scale: String) {}
+
     actual fun loadIosVideoOutputPreset(): String? =
         NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(iosVideoOutputPresetKey))
 

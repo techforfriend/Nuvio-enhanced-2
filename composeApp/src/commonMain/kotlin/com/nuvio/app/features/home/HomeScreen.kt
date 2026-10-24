@@ -28,6 +28,8 @@ import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.ui.LocalNuvioBottomNavigationOverlayPadding
 import com.nuvio.app.core.ui.DynamicArtworkBackground
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
+import com.nuvio.app.core.ui.nuvioHorizontalScrollBleed
 import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
@@ -141,6 +143,7 @@ fun HomeScreen(
 
     val addonsUiState by AddonRepository.uiState.collectAsStateWithLifecycle()
     val homeUiState by HomeRepository.uiState.collectAsStateWithLifecycle()
+    val homeHeroState = rememberHomeHeroState(homeUiState.heroItems)
     val homeSettingsUiState by remember {
         HomeCatalogSettingsRepository.snapshot()
         HomeCatalogSettingsRepository.uiState
@@ -1015,40 +1018,49 @@ fun HomeScreen(
                 autoHidesNativeTabBar = true,
             ) {
                 if (showHeroSlot) {
-                    item {
-                        when {
-                            showHeroSkeleton -> HomeSkeletonHero(
-                                modifier = Modifier,
-                                viewportHeight = maxHeight,
-                                mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
-                                heroStyle = homeSettingsUiState.heroStyle,
-                            )
+                    item(key = "home_hero", contentType = "hero") {
+                        Crossfade(
+                            targetState = showHeroSkeleton,
+                            modifier = Modifier.nuvioHorizontalScrollBleed(LocalVerticalBarPadding.current),
+                            animationSpec = tween(320),
+                            label = "HomeHeroLoading",
+                        ) { isLoading ->
+                            when {
+                                isLoading -> HomeSkeletonHero(
+                                    modifier = Modifier,
+                                    viewportHeight = maxHeight,
+                                    mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
+                                    heroStyle = homeSettingsUiState.heroStyle,
+                                )
 
-                            homeUiState.heroItems.isNotEmpty() -> HomeHeroSection(
-                                items = homeUiState.heroItems,
-                                modifier = Modifier,
-                                viewportHeight = maxHeight,
-                                mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
-                                heroStyle = homeSettingsUiState.heroStyle,
-                                listState = homeListState,
-                                stretchPx = { heroStretchState.stretchPx },
-                                // animateCollectionGifs doubles as "Home is the visible route" — it already
-                                // turns false whenever a screen (like Details) is pushed on top of it, which
-                                // is also exactly when hero trailer playback must stop, not just pause.
-                                trailerPlaybackEnabled = homeSettingsUiState.heroTrailerPlaybackEnabled &&
-                                    animateCollectionGifs,
-                                trailerStartDelaySeconds = homeSettingsUiState.heroTrailerStartDelaySeconds,
-                                trailerStartUnmuted = homeSettingsUiState.heroTrailerStartUnmuted,
-                                onItemClick = onPosterClick,
-                                onActiveArtworkChange = onActiveHeroArtworkChange,
-                            )
+                                homeUiState.heroItems.isNotEmpty() -> HomeHeroSection(
+                                    items = homeHeroState.items,
+                                    modifier = Modifier,
+                                    viewportHeight = maxHeight,
+                                    mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
+                                    heroStyle = homeSettingsUiState.heroStyle,
+                                    listState = homeListState,
+                                    stretchPx = { heroStretchState.stretchPx },
+                                    // animateCollectionGifs doubles as "Home is the visible route" — it already
+                                    // turns false whenever a screen (like Details) is pushed on top of it, which
+                                    // is also exactly when hero trailer playback must stop, not just pause.
+                                    trailerPlaybackEnabled = homeSettingsUiState.heroTrailerPlaybackEnabled &&
+                                        animateCollectionGifs,
+                                    trailerStartDelaySeconds = homeSettingsUiState.heroTrailerStartDelaySeconds,
+                                    trailerStartUnmuted = homeSettingsUiState.heroTrailerStartUnmuted,
+                                    showImdbRating = homeHeroState.showImdbRating,
+                                    showMdbListRatings = homeHeroState.showMdbListRatings,
+                                    onItemClick = onPosterClick,
+                                    onActiveArtworkChange = onActiveHeroArtworkChange,
+                                )
 
-                            else -> HomeHeroReservedSpace(
-                                modifier = Modifier,
-                                viewportHeight = maxHeight,
-                                mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
-                                heroStyle = homeSettingsUiState.heroStyle,
-                            )
+                                else -> HomeHeroReservedSpace(
+                                    modifier = Modifier,
+                                    viewportHeight = maxHeight,
+                                    mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
+                                    heroStyle = homeSettingsUiState.heroStyle,
+                                )
+                            }
                         }
                     }
                 }

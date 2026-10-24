@@ -10,6 +10,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,6 +32,7 @@ import com.nuvio.app.core.logging.InAppLogger
 import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.sync.SyncManager
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
 import com.nuvio.app.core.ui.NativeProfileSwitcherController
 import com.nuvio.app.core.ui.NativeTabBridge
 import com.nuvio.app.core.ui.NuvioTokens
@@ -568,7 +570,12 @@ internal fun AppGate(
                     AppIntroContent(modifier = Modifier.fillMaxSize())
                 }
                 AppGateScreen.Auth.name -> {
-                    AuthScreen(modifier = Modifier.fillMaxSize())
+                    AuthScreen(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.nuvio.colors.background)
+                            .padding(LocalVerticalBarPadding.current),
+                    )
                 }
                 AppGateScreen.ProfileSelection.name -> {
                     Box(

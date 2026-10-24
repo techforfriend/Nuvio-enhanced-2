@@ -177,12 +177,11 @@ internal fun PlayerControlsShell(
     val density = LocalDensity.current
     var timelineHeight by remember { mutableStateOf(0.dp) }
     val glassActive = isAmbientLiquidGlassActive()
-    var sourceLineHeight by remember { mutableStateOf(0.dp) }
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val centerControlHeight = metrics.playIconSize + maxOf(metrics.playButtonPadding, metrics.sideButtonPadding) * 2
         val centerBottomPadding = if (useLegacyLayout) metrics.centerLift else maxOf(
             metrics.centerLift,
-            (timelineHeight - sourceLineHeight) * 2 + centerControlHeight + 16.dp - maxHeight,
+            timelineHeight * 2 + centerControlHeight + 16.dp - maxHeight,
         )
         Box(
             modifier = Modifier
@@ -364,14 +363,8 @@ internal fun PlayerControlsShell(
                             episodeNumber = episodeNumber,
                             episodeTitle = episodeTitle,
                             releaseInfo = releaseInfo,
-                            streamTitle = streamTitle,
-                            providerName = providerName,
-                            isPlaying = playbackSnapshot.isPlaying,
                             metrics = metrics,
                             badges = badges,
-                            onSourceLineHeightChanged = { height ->
-                                sourceLineHeight = with(density) { height.toDp() }
-                            },
                         )
                     }
                     Row(
@@ -1100,6 +1093,8 @@ internal fun PlayerSeekBar(
     val bufferedFraction = playerBufferedFraction(bufferedPositionMs, durationMs)
     val chapterMarks = remember(chapters, durationMs) { chapters.chapterMarkFractions(durationMs) }
     val seekDescription = stringResource(Res.string.player_seek_position)
+    val seekState = remember(seekDurationMs) { SliderState(trackRange = 0f..seekDurationMs.toFloat()) }
+    seekState.value = displayedPositionMs.coerceIn(0L, seekDurationMs).toFloat()
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val isDragged by interactionSource.collectIsDraggedAsState()
@@ -1125,11 +1120,10 @@ internal fun PlayerSeekBar(
                     modifier = Modifier
                         .fillMaxSize()
                         .semantics { contentDescription = seekDescription },
-                    value = displayedPositionMs.coerceIn(0L, seekDurationMs).toFloat(),
+                    state = seekState,
                     onValueChange = { value -> onScrubChange(value.toLong()) },
                     onValueChangeFinished = { onScrubFinished(displayedPositionMs.coerceIn(0L, seekDurationMs)) },
                     enabled = durationMs > 0L,
-                    valueRange = 0f..seekDurationMs.toFloat(),
                     interactionSource = interactionSource,
                     track = { sliderState -> PlayerProgressTrack(sliderState, bufferedFraction, chapterMarks) },
                 )
@@ -1172,7 +1166,7 @@ internal val PlayerBufferedTrackColor = Color.White.copy(alpha = 0.40f)
 @Composable
 private fun PlayerBufferedTrack(bufferedFraction: Float, enabled: Boolean = true) {
     if (bufferedFraction <= 0f) return
-    val bufferedState = remember { SliderState(value = 0f, valueRange = 0f..1f) }
+    val bufferedState = remember { SliderState(trackRange = 0f..1f) }
     bufferedState.value = bufferedFraction
     SliderDefaults.Track(
         sliderState = bufferedState,

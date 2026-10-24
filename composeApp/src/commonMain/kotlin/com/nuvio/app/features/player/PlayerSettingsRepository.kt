@@ -101,9 +101,10 @@ data class PlayerSettingsUiState(
     val preloadNextEpisodeSources: Boolean = false,
     val miniPlayerEnabled: Boolean = true,
     val privateViewingEnabled: Boolean = false,
-    val useLibass: Boolean = false,
-    val libassRenderType: String = "CUES",
     val useLibmpvAss: Boolean = false,
+    val useLibass: Boolean = true,
+    val libassRenderType: String = "CUES",
+    val libassRenderScale: String = "FULL",
     val iosVideoOutputPreset: IosVideoOutputPreset = IosVideoOutputPreset.NativeEdr,
     val iosToneMappingMode: IosToneMappingMode = IosToneMappingMode.Auto,
     val iosTargetPrimaries: IosTargetPrimaries = IosTargetPrimaries.Auto,
@@ -194,9 +195,10 @@ object PlayerSettingsRepository {
     private var preloadNextEpisodeSources = false
     private var miniPlayerEnabled = true
     private var privateViewingEnabled = false
-    private var useLibass = false
-    private var libassRenderType = "CUES"
     private var useLibmpvAss = false
+    private var useLibass = true
+    private var libassRenderType = "OVERLAY_OPEN_GL"
+    private var libassRenderScale = "FULL"
     private var iosVideoOutputPreset = IosVideoOutputPreset.NativeEdr
     private var iosToneMappingMode = IosToneMappingMode.Auto
     private var iosTargetPrimaries = IosTargetPrimaries.Auto
@@ -292,9 +294,10 @@ object PlayerSettingsRepository {
         preloadNextEpisodeSources = false
         miniPlayerEnabled = true
         privateViewingEnabled = false
-        useLibass = false
-        libassRenderType = "CUES"
         useLibmpvAss = false
+        useLibass = true
+        libassRenderType = "OVERLAY_OPEN_GL"
+        libassRenderScale = "FULL"
         iosVideoOutputPreset = IosVideoOutputPreset.NativeEdr
         iosToneMappingMode = IosToneMappingMode.Auto
         iosTargetPrimaries = IosTargetPrimaries.Auto
@@ -453,9 +456,10 @@ object PlayerSettingsRepository {
         preloadNextEpisodeSources = PlayerSettingsStorage.loadPreloadNextEpisodeSources() ?: false
         miniPlayerEnabled = PlayerSettingsStorage.loadMiniPlayerEnabled() ?: true
         privateViewingEnabled = PlayerSettingsStorage.loadPrivateViewingEnabled() ?: false
-        useLibass = PlayerSettingsStorage.loadUseLibass() ?: false
-        libassRenderType = PlayerSettingsStorage.loadLibassRenderType() ?: "CUES"
         useLibmpvAss = PlayerSettingsStorage.loadUseLibmpvAss() ?: false
+        useLibass = PlayerSettingsStorage.loadUseLibass() ?: true
+        libassRenderType = PlayerSettingsStorage.loadLibassRenderType() ?: "CUES"
+        libassRenderScale = PlayerSettingsStorage.loadLibassRenderScale() ?: "FULL"
         iosVideoOutputPreset = PlayerSettingsStorage.loadIosVideoOutputPreset()
             ?.let { runCatching { IosVideoOutputPreset.valueOf(it) }.getOrNull() }
             ?: IosVideoOutputPreset.NativeEdr
@@ -1088,6 +1092,14 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveUseLibmpvAss(enabled)
     }
 
+    fun setLibassRenderScale(scale: String) {
+        ensureLoaded()
+        if (libassRenderScale == scale) return
+        libassRenderScale = scale
+        publish()
+        PlayerSettingsStorage.saveLibassRenderScale(scale)
+    }
+
     fun setIosVideoOutputPreset(preset: IosVideoOutputPreset) {
         ensureLoaded()
         iosVideoOutputPreset = preset
@@ -1326,6 +1338,7 @@ object PlayerSettingsRepository {
             useLibass = useLibass,
             libassRenderType = libassRenderType,
             useLibmpvAss = useLibmpvAss,
+            libassRenderScale = libassRenderScale,
             iosVideoOutputPreset = iosVideoOutputPreset,
             iosToneMappingMode = iosToneMappingMode,
             iosTargetPrimaries = iosTargetPrimaries,

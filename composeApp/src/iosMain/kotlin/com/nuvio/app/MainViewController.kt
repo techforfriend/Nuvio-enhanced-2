@@ -1,8 +1,10 @@
 package com.nuvio.app
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.uikit.OnFocusBehavior
 import androidx.compose.ui.window.ComposeUIViewController
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
 import com.nuvio.app.core.ui.NativeProfileSwitcherController
 import com.nuvio.app.features.profiles.ProfileBiometricAuth
 import com.nuvio.app.navigation.AppRoute
@@ -27,9 +29,10 @@ fun MainViewController(
     onActivate: (String) -> Unit,
     onTabTitles: (String, String, String, String, String, String) -> Unit,
     appGateController: AppGateController,
+    verticalBar: VerticalBar,
 ): UIViewController {
     val initialTab = AppScreenTab.fromName(initialTabName)
-    return nuvioComposeViewController {
+    return nuvioComposeViewController(verticalBar) {
         App(
             initialTab = initialTab,
             useNativeNavigation = true,
@@ -57,7 +60,8 @@ fun ScreenViewController(
     appGateController: AppGateController,
     useNativeTabBar: Boolean = false,
     useTabletFloatingTabBar: Boolean = false,
-): UIViewController = nuvioComposeViewController {
+    verticalBar: VerticalBar,
+): UIViewController = nuvioComposeViewController(verticalBar) {
     App(
         initialRoute = route,
         useNativeNavigation = true,
@@ -82,20 +86,23 @@ fun AppGateViewController(
     onAppReady: (Boolean) -> Unit,
     onMainContentMountChanged: (Boolean) -> Unit,
     onMainContentVisibleChanged: (Boolean) -> Unit,
+    verticalBar: VerticalBar,
 ): UIViewController = ComposeUIViewController(
     configure = {
         onFocusBehavior = OnFocusBehavior.DoNothing
         opaque = false
     },
     content = {
-        AppGateOverlay(
-            onActivate = { tab -> onActivate(tab.name) },
-            onAppReady = onAppReady,
-            onMainContentMountChanged = onMainContentMountChanged,
-            onMainContentVisibleChanged = onMainContentVisibleChanged,
-            nativeProfileSwitcherController = nativeProfileSwitcherController,
-            appGateController = appGateController,
-        )
+        CompositionLocalProvider(LocalVerticalBarPadding provides verticalBar.padding) {
+            AppGateOverlay(
+                onActivate = { tab -> onActivate(tab.name) },
+                onAppReady = onAppReady,
+                onMainContentMountChanged = onMainContentMountChanged,
+                onMainContentVisibleChanged = onMainContentVisibleChanged,
+                nativeProfileSwitcherController = nativeProfileSwitcherController,
+                appGateController = appGateController,
+            )
+        }
     },
 ).apply {
     ProfileBiometricAuth.initialize(this)
@@ -103,11 +110,14 @@ fun AppGateViewController(
 }
 
 private fun nuvioComposeViewController(
+    verticalBar: VerticalBar = VerticalBar(),
     content: @androidx.compose.runtime.Composable () -> Unit,
 ): UIViewController = ComposeUIViewController(
     configure = { onFocusBehavior = OnFocusBehavior.DoNothing },
-    content = content,
- ).apply {
+    content = {
+        CompositionLocalProvider(LocalVerticalBarPadding provides verticalBar.padding, content)
+    },
+).apply {
     ProfileBiometricAuth.initialize(this)
     view.backgroundColor = nuvioBackgroundColor
 }
