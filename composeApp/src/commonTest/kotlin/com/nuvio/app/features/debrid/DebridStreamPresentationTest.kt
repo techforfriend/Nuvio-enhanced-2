@@ -399,6 +399,75 @@ class DebridStreamPresentationTest {
         assertEquals(listOf("First"), result.map { it.name })
     }
 
+    @Test
+    fun `does not read title words as the stream language`() {
+        fun languages(filename: String, title: String) = DebridStreamMetadata.facts(
+            stream = premiumizeDirectStream(name = "PM Instant", filename = filename, size = 1_000_000_000, title = title),
+            preferences = DebridStreamPreferences(),
+        ).languages
+
+        assertEquals(emptyList(), languages("The.French.Dispatch.2021.1080p.BluRay.x264-GRP.mkv", "The French Dispatch"))
+        assertEquals(
+            listOf(DebridStreamLanguage.EN),
+            languages("The.Italian.Job.2003.1080p.BluRay.ENG.x264-GRP.mkv", "The Italian Job"),
+        )
+        assertEquals(
+            listOf(DebridStreamLanguage.IT),
+            languages("The Italian Job (2003) 1080p BluRay ITA AC3.mkv", "The Italian Job"),
+        )
+        assertEquals(listOf(DebridStreamLanguage.FR), languages("French.2020.FRENCH.1080p.WEB-DL.x264-GRP.mkv", "French"))
+    }
+
+    @Test
+    fun `does not read the parsed title as the stream language`() {
+        val stream = premiumizeDirectStream(
+            name = "PM Instant",
+            filename = "The.French.Dispatch.2021.1080p.BluRay.ITA.x264-GRP.mkv",
+            size = 1_000_000_000,
+        ).let { stream ->
+            val resolve = stream.clientResolve!!
+            val raw = resolve.stream!!.raw!!
+            stream.copy(
+                clientResolve = resolve.copy(
+                    stream = StreamClientResolveStream(
+                        raw = raw.copy(parsed = raw.parsed!!.copy(parsedTitle = "The French Dispatch")),
+                    ),
+                ),
+            )
+        }
+
+        val languages = DebridStreamMetadata.facts(stream, DebridStreamPreferences()).languages
+
+        assertEquals(listOf(DebridStreamLanguage.IT), languages)
+    }
+
+    @Test
+    fun `required language hides streams whose title only has the language word`() {
+        val italianTitle = premiumizeDirectStream(
+            name = "First",
+            filename = "The.Italian.Job.2003.1080p.BluRay.ENG.x264-GRP.mkv",
+            size = 1_000_000_000,
+            title = "The Italian Job",
+        )
+        val italianAudio = premiumizeDirectStream(
+            name = "Second",
+            filename = "The.Italian.Job.2003.1080p.BluRay.ITA.x264-GRP.mkv",
+            size = 2_000_000_000,
+            title = "The Italian Job",
+        )
+
+        val result = DebridStreamPresentation.applyPreferences(
+            streams = listOf(italianTitle, italianAudio),
+            settings = DebridSettings(
+                enabled = true,
+                providerApiKeys = mapOf(DebridProviders.PREMIUMIZE_ID to "key"),
+                streamPreferences = DebridStreamPreferences(requiredLanguages = listOf(DebridStreamLanguage.IT)),
+            ),
+        )
+
+        assertEquals(listOf("Second"), result.map { it.name })
+    }
+
     private fun localTorboxStream(
         name: String = "Torrent",
         filename: String,
@@ -427,6 +496,7 @@ class DebridStreamPresentationTest {
         name: String,
         filename: String,
         size: Long,
+        title: String? = null,
     ): StreamItem =
         StreamItem(
             name = name,
@@ -436,6 +506,7 @@ class DebridStreamPresentationTest {
                 type = "debrid",
                 service = DebridProviders.PREMIUMIZE_ID,
                 filename = filename,
+                title = title,
                 isCached = true,
                 stream = StreamClientResolveStream(
                     raw = StreamClientResolveRaw(
