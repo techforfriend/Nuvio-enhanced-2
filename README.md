@@ -11,15 +11,6 @@
     Bring your own sources. Nuvio turns them into a library with artwork, ratings, subtitles, and your place saved on every screen.
   </p>
 
-  <p>
-    <a href="https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/latest">Releases</a> ·
-    <a href="https://github.com/NuvioMedia/NuvioMobile">Upstream project</a> ·
-    <a href="https://nuvio.tv">nuvio.tv</a> ·
-    <a href="https://nuvio.tv/support">Support Nuvio</a>
-  </p>
-
-</div>
-
 > **Unofficial.** This fork is not affiliated with or supported by the Nuvio team. Please report bugs you find here to
 > **this** repository, not upstream — unless you can reproduce them on an official build too.
 
@@ -29,16 +20,12 @@
 
 ### iOS — AltStore / SideStore
 
-Add this source, then install **Nuvio Enhanced** from it:
-
-```
-https://github.com/luqmanfadlli/NuvioMobile-Enhanced/raw/refs/heads/enhanced/store.json
-```
-or grab the IPA from [the latest release](https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/latest).
+Add this source, then install **Nuvio Enhanced** 
+or grab the IPA from [the latest release]
 
 ### Android
 
-Grab the APK from [the latest release](https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/latest).
+Grab the APK from [the latest release]
 
 ---
 
@@ -179,12 +166,6 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 ---
 
 ## Build from source
-
-```bash
-git clone https://github.com/luqmanfadlli/NuvioMobile-Enhanced.git
-cd NuvioMobile-Enhanced
-git checkout enhanced
-```
 
 ### Android
 
