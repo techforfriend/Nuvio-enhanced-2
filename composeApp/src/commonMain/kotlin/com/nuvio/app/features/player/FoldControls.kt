@@ -27,6 +27,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Forward10
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Lock
@@ -34,13 +36,21 @@ import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Replay10
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -62,12 +72,23 @@ import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.features.streams.StreamBadge
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.drawscope.clipRect
+import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 
 private val TileShape = RoundedCornerShape(NuvioTokens.Radius.xl)
 private val TileColor = Color.White.copy(alpha = 0.08f)
 private val TileBorder = Color.White.copy(alpha = 0.06f)
 private val TileGap = 10.dp
 private val RowHeight = 60.dp
+private val SideTileWidth = 56.dp
 
 @Composable
 internal fun FoldControls(
@@ -103,6 +124,7 @@ internal fun FoldControls(
     onStreamInfoClick: () -> Unit,
     onSubmitIntroClick: (() -> Unit)?,
     onSwitchEngineClick: (() -> Unit)?,
+    gestureController: PlayerGestureController?,
     horizontalSafePadding: Dp,
     modifier: Modifier = Modifier,
 ) {
@@ -176,9 +198,18 @@ internal fun FoldControls(
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth().weight(1f, fill = false).heightIn(min = 72.dp, max = 112.dp),
+            modifier = Modifier.fillMaxWidth().weight(1f, fill = false).heightIn(min = 72.dp, max = 132.dp),
             horizontalArrangement = Arrangement.spacedBy(TileGap),
         ) {
+            if (gestureController != null) {
+                LevelTile(
+                    icon = { Icons.Rounded.LightMode },
+                    description = stringResource(Res.string.compose_player_brightness),
+                    read = gestureController::currentBrightness,
+                    write = gestureController::setBrightness,
+                    modifier = Modifier.width(SideTileWidth),
+                )
+            }
             Tile(onClick = interact(onSeekBack), modifier = Modifier.weight(1f).fillMaxHeight()) {
                 Icon(
                     imageVector = Icons.Rounded.Replay10,
@@ -213,6 +244,15 @@ internal fun FoldControls(
                     contentDescription = stringResource(Res.string.compose_player_seek_forward_10),
                     tint = Color.White,
                     modifier = Modifier.size(NuvioTokens.Icon.xl),
+                )
+            }
+            if (gestureController != null) {
+                LevelTile(
+                    icon = { level -> if (level <= 0.001f) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp },
+                    description = stringResource(Res.string.compose_player_volume),
+                    read = { gestureController.currentVolume()?.fraction },
+                    write = { gestureController.setVolume(it)?.fraction },
+                    modifier = Modifier.width(SideTileWidth),
                 )
             }
         }
@@ -419,5 +459,65 @@ private fun TimelineRow(
             },
             modifier = Modifier.clickable(onClick = onRuntimeClick),
         )
+    }
+}
+
+@Composable
+private fun LevelTile(
+    icon: (Float) -> ImageVector,
+    description: String,
+    read: () -> Float?,
+    write: (Float) -> Float?,
+    modifier: Modifier = Modifier,
+) {
+    var level by remember { mutableStateOf(read()) }
+    var adjusting by remember { mutableStateOf(false) }
+    LaunchedEffect(adjusting) {
+        while (!adjusting) {
+            delay(1000)
+            level = read()
+        }
+    }
+    val fraction = level?.coerceIn(0f, 1f) ?: 0f
+    val update: (Float) -> Unit = { level = write(it.coerceIn(0f, 1f)) ?: level }
+    val currentUpdate by rememberUpdatedState(update)
+    val accent = MaterialTheme.themePalette.accentBrush()
+    Box(
+        modifier = modifier
+            .fillMaxHeight()
+            .clip(TileShape)
+            .background(TileColor)
+            .border(NuvioTokens.Border.thin, TileBorder, TileShape)
+            .drawBehind {
+                clipRect(top = size.height * (1f - fraction)) {
+                    drawRect(brush = accent, alpha = 0.5f)
+                }
+            }
+            .pointerInput(Unit) {
+                detectTapGestures { offset -> currentUpdate(1f - offset.y / size.height) }
+            }
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = { adjusting = true },
+                    onDragEnd = { adjusting = false },
+                    onDragCancel = { adjusting = false },
+                ) { change, _ ->
+                    change.consume()
+                    currentUpdate(1f - change.position.y / size.height)
+                }
+            }
+            .semantics {
+                contentDescription = description
+                progressBarRangeInfo = ProgressBarRangeInfo(fraction, 0f..1f)
+            },
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            TimeLabel("${(fraction * 100).roundToInt()}")
+            Spacer(Modifier.weight(1f))
+            Icon(icon(fraction), null, tint = Color.White, modifier = Modifier.size(NuvioTokens.Icon.md))
+        }
     }
 }

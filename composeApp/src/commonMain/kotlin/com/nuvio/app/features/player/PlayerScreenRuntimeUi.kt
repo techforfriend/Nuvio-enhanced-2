@@ -437,6 +437,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(
             horizontalSafePadding = horizontalSafePadding,
             modifier = modifier,
             foldLayout = folded,
+            gestureController = gestureController,
         )
     }
     AnimatedVisibility(

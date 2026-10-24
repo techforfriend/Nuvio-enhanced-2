@@ -127,6 +127,7 @@ internal fun PlayerControlsShell(
     horizontalSafePadding: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
     foldLayout: Boolean = false,
+    gestureController: PlayerGestureController? = null,
 ) {
     if (foldLayout) {
         FoldControls(
@@ -162,6 +163,7 @@ internal fun PlayerControlsShell(
             onStreamInfoClick = onStreamInfoClick,
             onSubmitIntroClick = onSubmitIntroClick,
             onSwitchEngineClick = onSwitchEngineClick,
+            gestureController = gestureController,
             horizontalSafePadding = horizontalSafePadding,
             modifier = modifier,
         )
