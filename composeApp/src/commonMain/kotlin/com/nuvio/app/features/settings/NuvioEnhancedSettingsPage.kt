@@ -950,6 +950,20 @@ private fun NuvioEnhancedSettingsPageContent(
                             onCheckedChange = NuvioEnhancedSettingsRepository::setAndroidMemorySafeBufferEnabled,
                         )
                     }
+                    if ((selectedCategory != EnhancedSettingsCategory.New || isNew(NuvioEnhancedFeature.VolumeBoost)) && !isIos) {
+                        SettingsGroupDivider(isTablet = isTablet)
+                        SettingsSwitchRow(
+                            title = stringResource(Res.string.nuvio_enhanced_volume_boost_title),
+                            description = stringResource(Res.string.nuvio_enhanced_volume_boost_desc),
+                            checked = settings.volumeBoostEnabled,
+                            isTablet = isTablet,
+                            highlighted = isNew(NuvioEnhancedFeature.VolumeBoost),
+                            onCheckedChange = {
+                                markSeen(NuvioEnhancedFeature.VolumeBoost)
+                                NuvioEnhancedSettingsRepository.setVolumeBoostEnabled(it)
+                            },
+                        )
+                    }
                 }
             }
         }

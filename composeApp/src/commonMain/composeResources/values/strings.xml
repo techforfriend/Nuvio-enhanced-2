@@ -3217,4 +3217,6 @@
     <string name="settings_content_discovery_metadata_description">Optional TMDB enrichment. CloudStream providers work independently when this is off.</string>
     <string name="settings_content_discovery_providers_title">CloudStream providers</string>
     <string name="settings_content_discovery_providers_description">Add external CloudStream repositories and enable providers that can work independently of TMDB.</string>
+    <string name="nuvio_enhanced_volume_boost_title">Volume Boost (Up to 200%)</string>
+    <string name="nuvio_enhanced_volume_boost_desc">Boost audio loudness up to 200% via swipe gestures and hardware loudness enhancer for quiet dialogues.</string>
 </resources>

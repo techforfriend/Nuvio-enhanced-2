@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -105,10 +106,15 @@ private fun PlayerGestureFeedback(
                     val description = stringResource(
                         if (isBrightness) Res.string.compose_player_brightness else Res.string.compose_player_volume,
                     )
-                    val level = feedback.level?.coerceIn(0f, 1f) ?: 0f
+                    val maxLevel = if (isBrightness) 1f else 2f
+                    val rawLevel = feedback.level?.coerceIn(0f, maxLevel) ?: 0f
+                    val isBoosted = !isBrightness && rawLevel > 1.001f
+                    val percent = (rawLevel * 100f).roundToInt()
                     val trackHeight = minOf(maxHeight / 4, 104.dp)
-                    val animatedLevel by animateFloatAsState(level, tween(80), label = "playerGestureLevel")
-                    val percent = (level * 100f).roundToInt()
+                    val baseLevel = rawLevel.coerceIn(0f, 1f)
+                    val boostLevel = (rawLevel - 1f).coerceIn(0f, 1f)
+                    val animatedBaseLevel by animateFloatAsState(baseLevel, tween(80), label = "playerGestureBaseLevel")
+                    val animatedBoostLevel by animateFloatAsState(boostLevel, tween(80), label = "playerGestureBoostLevel")
                     Column(
                         modifier = Modifier
                             .align(if (isBrightness) Alignment.CenterStart else Alignment.CenterEnd)
@@ -120,9 +126,9 @@ private fun PlayerGestureFeedback(
                         // column evenly on both sides so the bar itself never moves.
                         Text(
                             text = percent.toString(),
-                            color = Color.White,
+                            color = if (isBoosted) Color(0xFFFFB74D) else Color.White,
                             style = MaterialTheme.nuvioTypeScale.bodySm.copy(
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = if (isBoosted) FontWeight.Bold else FontWeight.SemiBold,
                                 shadow = Shadow(Color.Black.copy(alpha = 0.8f), blurRadius = 8f),
                             ),
                             maxLines = 1,
@@ -134,7 +140,7 @@ private fun PlayerGestureFeedback(
                             modifier = Modifier
                                 .semantics {
                                     contentDescription = description
-                                    progressBarRangeInfo = ProgressBarRangeInfo(level, 0f..1f)
+                                    progressBarRangeInfo = ProgressBarRangeInfo(rawLevel, 0f..maxLevel)
                                 }
                                 .width(6.dp)
                                 .height(trackHeight)
@@ -145,9 +151,22 @@ private fun PlayerGestureFeedback(
                                 Modifier
                                     .align(Alignment.BottomCenter)
                                     .fillMaxWidth()
-                                    .fillMaxHeight(animatedLevel)
+                                    .fillMaxHeight(animatedBaseLevel)
                                     .background(MaterialTheme.themePalette.accentBrush()),
                             )
+                            if (boostLevel > 0f) {
+                                Box(
+                                    Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(animatedBoostLevel)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                colors = listOf(Color(0xFFFFB74D), Color(0xFFFF9800))
+                                            )
+                                        ),
+                                )
+                            }
                         }
                     }
                 }
