@@ -93,7 +93,7 @@ object HomeRepository {
         val runnableCloudPlugins = cloudState.plugins.filter(CloudStreamPluginItem::isRunnable)
         val effectiveSelectedProviderId = selectedProviderId?.takeIf { id ->
             runnableCloudPlugins.any { it.metadata.id.value == id }
-        } ?: runnableCloudPlugins.firstOrNull()?.metadata.id.value
+        } ?: runnableCloudPlugins.firstOrNull()?.metadata?.id?.value
         val cloudPlugins = if (effectiveSelectedProviderId != null) {
             runnableCloudPlugins.filter { it.metadata.id.value == effectiveSelectedProviderId }
         } else {
