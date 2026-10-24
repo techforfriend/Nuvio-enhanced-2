@@ -59,6 +59,7 @@ import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.appIconPainter
 import com.nuvio.app.core.ui.nuvioTypeScale
 import com.nuvio.app.core.ui.themePalette
+import com.nuvio.app.features.streams.StreamBadge
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -76,6 +77,7 @@ internal fun FoldControls(
     episodeTitle: String?,
     playbackSnapshot: PlayerPlaybackSnapshot,
     displayedPositionMs: Long,
+    badges: List<StreamBadge>,
     resizeMode: PlayerResizeMode,
     showRemainingTime: Boolean,
     onRuntimeClick: () -> Unit,
@@ -215,29 +217,21 @@ internal fun FoldControls(
             }
         }
 
-        Tile(onClick = null, modifier = Modifier.fillMaxWidth().height(RowHeight)) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TimeLabel(formatPlaybackTime(displayedPositionMs))
-                PlayerTimeline(
-                    snapshot = playbackSnapshot,
+        Tile(onClick = null, modifier = Modifier.fillMaxWidth().heightIn(min = RowHeight)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                if (badges.isNotEmpty()) {
+                    PlayerBadges(badges = badges, modifier = Modifier.padding(bottom = 10.dp))
+                }
+                TimelineRow(
+                    playbackSnapshot = playbackSnapshot,
                     displayedPositionMs = displayedPositionMs,
+                    showRemainingTime = showRemainingTime,
                     onScrubChange = onScrubChange,
                     onScrubFinished = {
                         onInteraction()
                         onScrubFinished(it)
                     },
-                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-                )
-                TimeLabel(
-                    text = if (showRemainingTime) {
-                        formatPlaybackRuntime(displayedPositionMs, playbackSnapshot.durationMs, true)
-                    } else {
-                        formatPlaybackTime(playbackSnapshot.durationMs)
-                    },
-                    modifier = Modifier.clickable(onClick = interact(onRuntimeClick)),
+                    onRuntimeClick = interact(onRuntimeClick),
                 )
             }
         }
@@ -393,5 +387,37 @@ internal fun FoldLockedControls(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun TimelineRow(
+    playbackSnapshot: PlayerPlaybackSnapshot,
+    displayedPositionMs: Long,
+    showRemainingTime: Boolean,
+    onScrubChange: (Long) -> Unit,
+    onScrubFinished: (Long) -> Unit,
+    onRuntimeClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TimeLabel(formatPlaybackTime(displayedPositionMs))
+        PlayerTimeline(
+            snapshot = playbackSnapshot,
+            displayedPositionMs = displayedPositionMs,
+            onScrubChange = onScrubChange,
+            onScrubFinished = onScrubFinished,
+            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+        )
+        TimeLabel(
+            text = if (showRemainingTime) {
+                formatPlaybackRuntime(displayedPositionMs, playbackSnapshot.durationMs, true)
+            } else {
+                formatPlaybackTime(playbackSnapshot.durationMs)
+            },
+            modifier = Modifier.clickable(onClick = onRuntimeClick),
+        )
     }
 }

@@ -136,6 +136,7 @@ internal fun PlayerControlsShell(
             episodeTitle = episodeTitle,
             playbackSnapshot = playbackSnapshot,
             displayedPositionMs = displayedPositionMs,
+            badges = badges,
             resizeMode = resizeMode,
             showRemainingTime = showRemainingTime,
             onRuntimeClick = onRuntimeClick,
