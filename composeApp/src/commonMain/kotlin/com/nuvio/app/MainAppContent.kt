@@ -1576,7 +1576,7 @@ internal fun MainAppContent(
                     backStack = navBackStack,
                     modifier = Modifier
                         .fillMaxSize()
-                        .then(if (settingsRouteBarVisible) Modifier.nuvioBackdropSource(settingsRouteBarBackdrop) else Modifier),
+                        .then(if (settingsRouteBarVisible) Modifier.nuvioBackdropSource(settingsRouteBarBackdrop) else Modifier)
                         .padding(if (drawsUnderVerticalBar) PaddingValues() else verticalBarPadding),
                     onBack = { navController.popBackStack() },
                     entryDecorators = listOf(

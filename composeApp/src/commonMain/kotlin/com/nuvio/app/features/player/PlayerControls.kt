@@ -1309,15 +1309,19 @@ internal fun LockedPlayerOverlay(
                 .padding(bottom = metrics.sliderBottomOffset),
         ) {
             if (useLegacyLayout) {
+                val lockedSeekDurationMs = durationMs.coerceAtLeast(1L)
+                val lockedSliderState = remember(lockedSeekDurationMs) {
+                    SliderState(trackRange = 0f..lockedSeekDurationMs.toFloat())
+                }
+                lockedSliderState.value = displayedPositionMs.coerceIn(0L, lockedSeekDurationMs).toFloat()
                 Slider(
+                    state = lockedSliderState,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(metrics.sliderTouchHeight)
                         .graphicsLayer(scaleY = metrics.sliderScaleY),
-                    value = displayedPositionMs.coerceIn(0L, durationMs).toFloat(),
                     onValueChange = {},
                     onValueChangeFinished = {},
-                    valueRange = 0f..durationMs.toFloat(),
                     enabled = false,
                     colors = sliderColors,
                     track = { sliderState ->
