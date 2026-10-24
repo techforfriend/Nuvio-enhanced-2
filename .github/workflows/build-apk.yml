@@ -36,25 +36,12 @@ jobs:
         with:
           gradle-version: wrapper
 
-      - name: Enable extra swap space
-        run: |
-          sudo fallocate -l 6G /swapfile2 || sudo dd if=/dev/zero of=/swapfile2 bs=1M count=6144
-          sudo chmod 600 /swapfile2
-          sudo mkswap /swapfile2
-          sudo swapon /swapfile2
-          free -h
-
       - name: Prepare build environment
         run: |
           touch local.properties
           mkdir -p ~/.gradle
-          cat << 'EOF' > ~/.gradle/gradle.properties
-          org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=1024m -XX:+UseG1GC
-          kotlin.daemon.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -XX:+UseG1GC
-          org.gradle.parallel=false
-          org.gradle.workers.max=2
-          org.gradle.configuration-cache=false
-          EOF
+          echo "org.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=1536m" >> ~/.gradle/gradle.properties
+          echo "org.gradle.configuration-cache=false" >> ~/.gradle/gradle.properties
 
       - name: Build Android Release APK
         run: ./gradlew :androidApp:assembleFullRelease --stacktrace
@@ -66,6 +53,13 @@ jobs:
           find androidApp/build/outputs/apk/ -name "*.apk" -exec cp {} build-apks/ \;
           ls -la build-apks/
 
+      - name: Upload APKs Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NuvioEnhanced-APKs
+          path: build-apks/*.apk
+          retention-days: 14
+
       - name: Publish GitHub Testing Release
         uses: softprops/action-gh-release@v2
         if: success()
@@ -76,13 +70,11 @@ jobs:
             ## What's New in v0.6.4-beta.3
             **by RAJA JI**
 
-            ### 🚀 Upstream 0.6.4-beta Full Merge & Fixes:
+            ### 🚀 Upstream 0.6.4-beta Full Merge:
             - **DNS-over-HTTPS (DoH):** Cloudflare, Google, AdGuard, Quad9, and custom DoH resolver support.
             - **Player Enhancements:** nuvio-libass atlas rendering, time-left toggle, stream end-time display, custom skip durations.
             - **Ratings & Visuals:** Ratings on hero banners, poster zoom previews, liquid glass navigation & styling.
             - **Optimizations:** Debrid regex caching, stream badge caching, tablet UI refinements, WeTrakr integration, WhatsNew screen.
-            - **Fast Catalog Caching:** Prevents repetitive reload loops when switching between tabs or updating revisions.
-            - **UI Cleanups:** Removed obsolete Supporters/Contributors, diagnostics, and stable release filters.
 
             ### 🌟 Preserved Custom Enhancements:
             - **CloudStream 3 (CS3) Repository Toggle:** Master ON/OFF toggle switch for every repository in Settings.
