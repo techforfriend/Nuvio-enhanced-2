@@ -664,20 +664,8 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
             onScrubChange = { positionMs ->
                 isScrubbingTimeline = true
                 scrubbingPositionMs = positionMs
-                if (enhancedSettings.seekPreviewEnabled) {
-                    val displayedPreview = seekPreview
-                    if (displayedPreview == null || kotlin.math.abs(displayedPreview.positionMs - positionMs) > 1_500L) {
-                        seekPreview = null
-                    }
-                    playerController?.requestSeekPreviewFrame(positionMs) { preview ->
-                        if (isScrubbingTimeline && scrubbingPositionMs == positionMs) {
-                            seekPreview = preview
-                        }
-                    }
-                }
             },
             onScrubFinished = { positionMs ->
-                seekPreview = null
                 val targetMs = if (isPartyControlLocked) ownSeekTarget(positionMs) else positionMs
                 if (targetMs == null) {
                     isScrubbingTimeline = false

@@ -21,13 +21,10 @@ actual object ThemeSettingsStorage {
     private const val customThemeSecondColorKey = "custom_theme_second_color"
     private const val amoledEnabledKey = "amoled_enabled"
     private const val liquidGlassNativeTabBarEnabledKey = "liquid_glass_native_tab_bar_enabled"
-<<<<<<< HEAD
     private const val liquidGlassAutoHideOnScrollEnabledKey = "liquid_glass_auto_hide_on_scroll_enabled"
-=======
     private const val dynamicArtworkBackgroundEnabledKey = "dynamic_artwork_background_enabled"
     private const val showCatalogAccentEnabledKey = "show_catalog_accent_enabled"
     private const val tabBarBehaviorKey = "tab_bar_behavior"
->>>>>>> luqman/enhanced
     private const val selectedAppLanguageKey = "selected_app_language"
     private const val NAV_BAR_STYLE_KEY = "nav_bar_style"
     private const val NAV_BAR_POSITION_KEY = "nav_bar_position"
@@ -164,6 +161,19 @@ actual object ThemeSettingsStorage {
         preferences
             ?.edit()
             ?.putBoolean(ProfileScopedKey.of(liquidGlassNativeTabBarEnabledKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadLiquidGlassAutoHideOnScrollEnabled(): Boolean? =
+        preferences?.let { prefs ->
+            val key = ProfileScopedKey.of(liquidGlassAutoHideOnScrollEnabledKey)
+            if (prefs.contains(key)) prefs.getBoolean(key, false) else null
+        }
+
+    actual fun saveLiquidGlassAutoHideOnScrollEnabled(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(liquidGlassAutoHideOnScrollEnabledKey), enabled)
             ?.apply()
     }
 

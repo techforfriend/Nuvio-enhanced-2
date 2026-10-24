@@ -2525,7 +2525,6 @@ private fun ConfiguredMetaSections(
                     isWatched = isWatched,
                     isTablet = isTablet,
                     shuffleEnabled = shuffleEnabled,
-                    downloadAction = downloadAction,
                     onPlayClick = onPrimaryPlayClick,
                     onDownloadClick = onDownloadClick,
                     onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,

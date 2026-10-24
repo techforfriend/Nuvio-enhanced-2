@@ -95,6 +95,8 @@ import nuvio.composeapp.generated.resources.party_title
 import nuvio.composeapp.generated.resources.about_supporters_contributors_subtitle
 import nuvio.composeapp.generated.resources.about_licenses_attributions_subtitle
 import nuvio.composeapp.generated.resources.whats_new_root_description
+import nuvio.composeapp.generated.resources.updates_debug_test_title
+import nuvio.composeapp.generated.resources.updates_debug_test_description
 import org.jetbrains.compose.resources.stringResource
 
 private const val PRIVACY_POLICY_URL = "https://nuvio.tv/privacy-policy"

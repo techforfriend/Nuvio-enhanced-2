@@ -1003,10 +1003,6 @@ private fun ExoPlayerSurface(
             playerViewRef?.releaseLibassOverlay()
             seekPreviewJob?.cancel()
             exoPlayer.releaseWithAssSupportCompat()
-            if (VodCache.playheadBytesProvider != null) {
-                VodCache.playheadBytesProvider = null
-            }
-            VodCache.evictCachedSession()
         }
     }
 
@@ -1715,6 +1711,7 @@ private fun LibmpvPlayerSurface(
     }
 
     LaunchedEffect(playerViewRef, sourceUrl, sourceAudioUrl, sanitizedSourceHeaders, externalSubtitles) {
+        val view = playerViewRef ?: return@LaunchedEffect
         val wrappedController = autoSyncCoordinator.wrap( // AutoSync hook
             view.controller(context, nowPlayingController),
             view::replaceExternalSubtitle,

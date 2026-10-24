@@ -45,7 +45,6 @@ import com.nuvio.app.features.membership.MemberAssetStorage
 import com.nuvio.app.features.library.LibraryStorage
 import com.nuvio.app.core.storage.AppFileCache
 import com.nuvio.app.features.details.FavoritePeopleStorage
-import com.nuvio.app.features.livetv.LiveTvStorage
 import com.nuvio.app.features.details.MetaScreenSettingsStorage
 import com.nuvio.app.features.details.OmdbEpisodeRatingsStorage
 import com.nuvio.app.features.details.OmdbSettingsStorage
@@ -257,11 +256,6 @@ open class MainActivity : AppCompatActivity() {
         EpisodeReleaseNotificationPlatform.unbindActivity(this)
         DownloadsExternalFolderPlatform.unbindActivity(this)
         NuvioEnhancedBackupFileBridge.unbindActivity(this)
-        val receiver = pipRemoteActionReceiver
-        if (receiver != null) {
-            runCatching { unregisterReceiver(receiver) }
-            pipRemoteActionReceiver = null
-        }
         super.onDestroy()
     }
 
