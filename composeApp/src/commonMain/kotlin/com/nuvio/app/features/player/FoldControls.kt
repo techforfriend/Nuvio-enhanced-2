@@ -95,7 +95,7 @@ private val TileBorder = Color.White.copy(alpha = 0.06f)
 private val TileGap = 10.dp
 private val RowHeight = 60.dp
 private val SideTileWidth = 56.dp
-private const val DimmedAlpha = 0.05f
+private const val DimmedAlpha = 0.02f
 
 @Composable
 internal fun FoldControls(
