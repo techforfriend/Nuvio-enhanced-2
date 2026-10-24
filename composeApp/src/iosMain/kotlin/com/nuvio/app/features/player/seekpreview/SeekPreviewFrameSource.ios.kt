@@ -64,3 +64,9 @@ private fun NSData.toByteArray(): ByteArray {
     result.usePinned { pinned -> memcpy(pinned.addressOf(0), bytes, length) }
     return result
 }
+
+internal actual fun openSeekPreviewFeed(
+    url: String,
+    headers: Map<String, String>,
+    onThumbnail: (positionMs: Long, bitmap: ImageBitmap?, error: String?) -> Unit,
+): SeekPreviewFeed? = null

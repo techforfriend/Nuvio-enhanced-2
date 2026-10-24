@@ -25,6 +25,7 @@ import kotlin.concurrent.Volatile
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.abs
 import kotlin.time.TimeSource
+import kotlin.time.TimeSource.Monotonic.ValueTimeMark
 
 private const val FrameMaxWidthPx = 320
 
@@ -38,6 +39,10 @@ private const val MaxInitialFailures = 3
 
 private const val WarmUpDelayMs = 1_200L
 private const val IdleReleaseMs = 30_000L
+
+private const val ThumbnailAskMs = 80L
+private const val ThumbnailIndexMs = 5_000L
+private const val ThumbnailFallbackMs = 15_000L
 
 private const val LogTag = "Player/SeekPreview"
 
@@ -67,6 +72,16 @@ internal class SeekPreviewController(
 
     private var connectionGeneration = 0
 
+    private var feed: SeekPreviewFeed? = null
+    private var feedOpened = false
+    private var feedFailed = false
+    private var feedWanted: Long? = null
+    private var feedAskedAt: ValueTimeMark? = null
+    private var feedAskJob: Job? = null
+    private var feedDurationMs = 0L
+    private var feedFallbackJob: Job? = null
+    private var disposed = false
+
     var frame by mutableStateOf<SeekPreviewFrame?>(null)
         private set
 
@@ -75,6 +90,13 @@ internal class SeekPreviewController(
 
     fun request(positionMs: Long, durationMs: Long) {
         if (isUnavailable || durationMs <= 0L) return
+        if (openFeed() != null) {
+            scrubbing = true
+            warmJob?.cancel()
+            feedDurationMs = durationMs
+            wantFeed(positionMs.coerceIn(0L, durationMs))
+            return
+        }
         scrubbing = true
         warmJob?.cancel()
         releaseJob?.cancel()
@@ -91,6 +113,14 @@ internal class SeekPreviewController(
 
     fun warmUp(positionMs: Long, durationMs: Long) {
         if (isUnavailable || durationMs <= 0L || scrubbing) return
+        if (openFeed() != null) {
+            if (warmJob?.isActive == true) return
+            warmJob = scope.launch {
+                delay(ThumbnailIndexMs)
+                feed?.prepare()
+            }
+            return
+        }
         releaseJob?.cancel()
         warmJob?.cancel()
         warmJob = scope.launch {
@@ -106,8 +136,78 @@ internal class SeekPreviewController(
 
     fun endScrub() {
         scrubbing = false
+        if (feed != null) {
+            feedWanted = null
+            feedAskJob?.cancel()
+            feedAskJob = null
+            return
+        }
         requests.value = null
         scheduleRelease()
+    }
+
+    private fun openFeed(): SeekPreviewFeed? {
+        if (feedFailed) return null
+        if (!feedOpened) {
+            feedOpened = true
+            feed = openSeekPreviewFeed(url, headers, ::onFeedThumbnail)
+            if (feed == null) feedFailed = true
+            InAppLogger.info(
+                LogTag,
+                "native thumbnails=${feed != null} headers=${headers.size} url=${InAppLogger.redactUrl(url)}",
+            )
+        }
+        return feed
+    }
+
+    private fun wantFeed(positionMs: Long) {
+        feedWanted = positionMs
+        if (feedAskJob?.isActive == true) return
+        val waitMs = feedAskedAt?.let { ThumbnailAskMs - it.elapsedNow().inWholeMilliseconds } ?: 0L
+        if (waitMs <= 0L) {
+            askFeed()
+        } else {
+            feedAskJob = scope.launch {
+                delay(waitMs)
+                askFeed()
+            }
+        }
+    }
+
+    private fun askFeed() {
+        feedAskJob = null
+        feedAskedAt = TimeSource.Monotonic.markNow()
+        val wanted = feedWanted ?: return
+        feed?.want(wanted, frame?.positionMs)
+        if (!hasSucceeded && feedFallbackJob == null) {
+            feedFallbackJob = scope.launch {
+                delay(ThumbnailFallbackMs)
+                if (!hasSucceeded) onFeedThumbnail(-1L, null, "no thumbnail after ${ThumbnailFallbackMs}ms")
+            }
+        }
+    }
+
+    private fun onFeedThumbnail(positionMs: Long, bitmap: ImageBitmap?, error: String?) {
+        if (disposed || feed == null) return
+        if (bitmap == null) {
+            InAppLogger.info(LogTag, "no native thumbnails: $error")
+            feedFailed = true
+            feed?.close()
+            feed = null
+            feedAskJob?.cancel()
+            feedAskJob = null
+            feedFallbackJob?.cancel()
+            warmJob?.cancel()
+            val wanted = feedWanted
+            feedWanted = null
+            frame = null
+            if (scrubbing && wanted != null) request(wanted, feedDurationMs)
+            return
+        }
+        hasSucceeded = true
+        feedFallbackJob?.cancel()
+        if (feedWanted == null) return
+        frame = SeekPreviewFrame(positionMs, bitmap)
     }
 
     private fun scheduleRelease() {
@@ -133,6 +233,9 @@ internal class SeekPreviewController(
     }
 
     fun dispose() {
+        disposed = true
+        feed?.close()
+        feed = null
         scope.cancel()
         source?.cancel()
         CoroutineScope(decodeDispatcher).launch {
