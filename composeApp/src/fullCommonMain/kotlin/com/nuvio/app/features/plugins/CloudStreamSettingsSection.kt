@@ -234,7 +234,23 @@ internal fun CloudStreamSettingsSection() {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(repository.manifest.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                repository.manifest.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                            if (!repository.enabled) {
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = copy.disabled,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontWeight = FontWeight.Medium,
+                                )
+                            }
+                        }
                         Text(
                             repository.manifest.sourceUrl,
                             style = MaterialTheme.typography.bodySmall,
@@ -246,6 +262,13 @@ internal fun CloudStreamSettingsSection() {
                             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                         }
                     }
+                    Switch(
+                        checked = repository.enabled,
+                        onCheckedChange = { isChecked ->
+                            CloudStreamRepository.setRepositoryEnabled(repository.manifest.sourceUrl, isChecked)
+                        },
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
                     IconButton(
                         onClick = {
                             repositoryUrl = repository.manifest.sourceUrl
@@ -608,6 +631,10 @@ private class CloudStreamSettingsCopy private constructor(
         if (turkish) "Repository yenile" else "Refresh repository"
     val removeRepositoryContentDescription: String =
         if (turkish) "Repository kaldır" else "Remove repository"
+    val toggleRepositoryContentDescription: String =
+        if (turkish) "Repository aç/kapat" else "Toggle repository"
+    val disabled: String =
+        if (turkish) "Devre dışı" else "Disabled"
     val searchAndFilterTitle: String =
         if (turkish) "Eklenti ara ve filtrele" else "Search and filter plugins"
     val searchPlaceholder: String =

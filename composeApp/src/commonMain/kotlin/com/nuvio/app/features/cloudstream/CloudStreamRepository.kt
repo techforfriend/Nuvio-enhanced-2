@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 data class CloudStreamRepositoryItem(
     val manifest: CloudStreamRepositoryManifest,
+    val enabled: Boolean = true,
     val isRefreshing: Boolean = false,
     val errorMessage: String? = null,
 )
@@ -72,6 +73,7 @@ expect object CloudStreamRepository {
     fun refreshRepository(manifestUrl: String)
     fun refreshAll()
     fun removeRepository(manifestUrl: String)
+    fun setRepositoryEnabled(manifestUrl: String, enabled: Boolean)
 
     suspend fun installPlugin(pluginId: String): CloudStreamInstallResult
     suspend fun updatePlugin(pluginId: String): CloudStreamInstallResult

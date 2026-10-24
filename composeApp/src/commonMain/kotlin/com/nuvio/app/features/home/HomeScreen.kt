@@ -234,9 +234,13 @@ fun HomeScreen(
     val selectedCloudStreamProviderId by HomeRepository.selectedCloudStreamProviderId.collectAsStateWithLifecycle()
 
     LaunchedEffect(runnableCloudStreamProviders, selectedCloudStreamProviderId) {
-        if (selectedCloudStreamProviderId != null &&
-            runnableCloudStreamProviders.none { it.metadata.id.value == selectedCloudStreamProviderId }
-        ) {
+        if (runnableCloudStreamProviders.isNotEmpty()) {
+            if (selectedCloudStreamProviderId == null ||
+                runnableCloudStreamProviders.none { it.metadata.id.value == selectedCloudStreamProviderId }
+            ) {
+                HomeRepository.setSelectedCloudStreamProvider(runnableCloudStreamProviders.first().metadata.id.value)
+            }
+        } else if (selectedCloudStreamProviderId != null) {
             HomeRepository.setSelectedCloudStreamProvider(null)
         }
     }
@@ -1445,60 +1449,6 @@ fun HomeScreen(
                                     .verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
-                                val allSelected = selectedCloudStreamProviderId == null
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .then(
-                                            if (allSelected) {
-                                                Modifier.background(themeAccent.copy(alpha = 0.16f))
-                                            } else {
-                                                Modifier
-                                            }
-                                        )
-                                        .clickable {
-                                            HomeRepository.setSelectedCloudStreamProvider(null)
-                                            cloudStreamProviderMenuExpanded = false
-                                        }
-                                        .padding(horizontal = 7.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Layers,
-                                        contentDescription = null,
-                                        tint = themeAccent,
-                                        modifier = Modifier.size(16.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "All extensions",
-                                        color = themeOnSurface,
-                                        fontWeight = if (allSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                        fontSize = 12.sp,
-                                        modifier = Modifier.weight(1f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    if (allSelected) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Check,
-                                            contentDescription = null,
-                                            tint = themeAccent,
-                                            modifier = Modifier.size(15.dp),
-                                        )
-                                    } else {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(14.dp)
-                                                .border(1.2.dp, themeOnSurface.copy(alpha = 0.35f), CircleShape),
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(1.dp))
-
                                 runnableCloudStreamProviders.forEach { provider ->
                                     val isSelected = provider.metadata.id.value == selectedCloudStreamProviderId
                                     Row(
@@ -1580,7 +1530,9 @@ fun HomeScreen(
                     val selectedCloudStreamProvider = runnableCloudStreamProviders.firstOrNull {
                         it.metadata.id.value == selectedCloudStreamProviderId
                     }
-                    val pillLabel = selectedCloudStreamProvider?.metadata?.name ?: "All extensions"
+                    val pillLabel = selectedCloudStreamProvider?.metadata?.name
+                        ?: runnableCloudStreamProviders.firstOrNull()?.metadata?.name
+                        ?: "Extensions"
 
                     Row(
                         modifier = Modifier

@@ -514,7 +514,9 @@ private class AndroidDexCloudStreamProvider(
         var lastError: Throwable? = null
 
         coroutineScope {
-            providers.filter(MainAPI::hasMainPage).map { api ->
+            val eligibleProviders = providers.filter { it.hasMainPage || it.mainPage.isNotEmpty() }
+                .ifEmpty { providers }
+            eligibleProviders.map { api ->
                 async {
                     apiGate.withPermit {
                         val requests = api.mainPage.ifEmpty {
@@ -798,7 +800,7 @@ private class AndroidDexCloudStreamProvider(
         }
 
         private const val CLOUDSTREAM_API_CONCURRENCY = 4
-        private const val DEFAULT_DISCOVERY_TIMEOUT_MS = 15_000L
+        private const val DEFAULT_DISCOVERY_TIMEOUT_MS = 30_000L
         private const val DEFAULT_LOAD_TIMEOUT_MS = 120_000L
         private const val DEFAULT_LINK_TIMEOUT_MS = 120_000L
         private const val LEGACY_RUNTIME_DEFAULT_LOAD_TIMEOUT_MS = 5_000L

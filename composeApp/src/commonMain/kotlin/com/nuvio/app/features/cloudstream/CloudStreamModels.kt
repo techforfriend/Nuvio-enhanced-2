@@ -222,6 +222,7 @@ internal data class StoredCloudStreamRepository(
     val iconUrl: String? = null,
     val manifestVersion: Int = 1,
     val pluginListUrls: List<String> = emptyList(),
+    val enabled: Boolean = true,
 )
 
 @Serializable
