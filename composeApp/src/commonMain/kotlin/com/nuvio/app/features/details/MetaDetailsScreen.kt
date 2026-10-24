@@ -933,6 +933,7 @@ fun MetaDetailsScreen(
                 val showDownloadButton by remember {
                     DownloadsSettingsRepository.ensureLoaded()
                     DownloadsSettingsRepository.showDownloadButton
+                }.collectAsStateWithLifecycle()
                 val downloadHandler = onDownload
                 val isDownloadActionEnabled = showDownloadButton || metaScreenSettingsUiState.showDownloadAction
                 val onDownloadClick: (() -> Unit)? = if (isDownloadActionEnabled && downloadHandler != null) {
