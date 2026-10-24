@@ -36,12 +36,12 @@ jobs:
         with:
           gradle-version: wrapper
 
-      - name: Enable swap space
+      - name: Enable extra swap space
         run: |
-          sudo fallocate -l 8G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=8192
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          sudo fallocate -l 6G /swapfile2 || sudo dd if=/dev/zero of=/swapfile2 bs=1M count=6144
+          sudo chmod 600 /swapfile2
+          sudo mkswap /swapfile2
+          sudo swapon /swapfile2
           free -h
 
       - name: Prepare build environment
