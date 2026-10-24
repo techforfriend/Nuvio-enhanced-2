@@ -968,7 +968,6 @@ private fun NuvioEnhancedSettingsPageContent(
 
             SettingsSection(
                 title = stringResource(Res.string.nuvio_enhanced_hide_player_buttons_title),
-                description = stringResource(Res.string.nuvio_enhanced_hide_player_buttons_desc),
                 isTablet = isTablet,
             ) {
                 SettingsGroup(isTablet = isTablet) {
