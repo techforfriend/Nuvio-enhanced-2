@@ -532,6 +532,10 @@ private fun PlayerHeader(
     modifier: Modifier = Modifier,
 ) {
     val typeScale = MaterialTheme.nuvioTypeScale
+    val enhancedSettings by remember {
+        NuvioEnhancedSettingsRepository.ensureLoaded()
+        NuvioEnhancedSettingsRepository.uiState
+    }.collectAsStateWithLifecycle()
     val metadataAlpha by animateFloatAsState(
         targetValue = if (!showParentalGuide && showActions) 1f else 0f,
         animationSpec = tween(durationMillis = if (!showParentalGuide && showActions) 260 else 160),
@@ -619,7 +623,7 @@ private fun PlayerHeader(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (onSubmitIntroClick != null) {
+                    if (onSubmitIntroClick != null && !enhancedSettings.hidePlayerSubmitIntro) {
                         PlayerHeaderIconButton(
                             icon = Icons.Rounded.Flag,
                             contentDescription = stringResource(Res.string.submit_intro_action),
@@ -628,7 +632,7 @@ private fun PlayerHeader(
                             onClick = onSubmitIntroClick,
                         )
                     }
-                    if (onOpenInExternalPlayer != null) {
+                    if (onOpenInExternalPlayer != null && !enhancedSettings.hidePlayerExternalPlayer) {
                         PlayerHeaderIconButton(
                             icon = Icons.AutoMirrored.Rounded.OpenInNew,
                             contentDescription = stringResource(Res.string.streams_open_external_player),
@@ -637,7 +641,7 @@ private fun PlayerHeader(
                             onClick = onOpenInExternalPlayer,
                         )
                     }
-                    if (onRandomNextEpisodeModeToggle != null) {
+                    if (onRandomNextEpisodeModeToggle != null && !enhancedSettings.hidePlayerShuffle) {
                         PlayerHeaderIconButton(
                             icon = Icons.Rounded.Shuffle,
                             contentDescription = if (randomNextEpisodeMode) {
@@ -652,7 +656,7 @@ private fun PlayerHeader(
                             onClick = onRandomNextEpisodeModeToggle,
                         )
                     }
-                    if (onSwitchEngineClick != null) {
+                    if (onSwitchEngineClick != null && !enhancedSettings.hidePlayerEngineSwitch) {
                         PlayerHeaderIconButton(
                             icon = Icons.Rounded.SwapHoriz,
                             contentDescription = stringResource(Res.string.cd_switch_player_engine),
@@ -661,7 +665,7 @@ private fun PlayerHeader(
                             onClick = onSwitchEngineClick,
                         )
                     }
-                    if (onPartyClick != null) {
+                    if (onPartyClick != null && !enhancedSettings.hidePlayerWatchParty) {
                         PlayerHeaderIconButton(
                             icon = Icons.Rounded.Groups,
                             contentDescription = stringResource(Res.string.party_title),
@@ -671,7 +675,7 @@ private fun PlayerHeader(
                             tint = if (partyActive) MaterialTheme.colorScheme.primary else Color.White,
                         )
                     }
-                    if (onCastClick != null) {
+                    if (onCastClick != null && !enhancedSettings.hidePlayerCast) {
                         PlayerHeaderIconButton(
                             icon = if (isCasting) Icons.Rounded.CastConnected else Icons.Rounded.Cast,
                             contentDescription = stringResource(Res.string.player_cast),
@@ -680,7 +684,7 @@ private fun PlayerHeader(
                             onClick = onCastClick,
                         )
                     }
-                    if (onPictureInPictureClick != null) {
+                    if (onPictureInPictureClick != null && !enhancedSettings.hidePlayerPip) {
                         PlayerHeaderIconButton(
                             icon = Icons.Rounded.PictureInPictureAlt,
                             contentDescription = stringResource(Res.string.compose_player_picture_in_picture),
@@ -689,7 +693,7 @@ private fun PlayerHeader(
                             onClick = onPictureInPictureClick,
                         )
                     }
-                    if (onOrientationToggleClick != null) {
+                    if (onOrientationToggleClick != null && !enhancedSettings.hidePlayerOrientation) {
                         PlayerHeaderIconButton(
                             icon = playerOrientationToggleIcon(isPortraitPlayback),
                             contentDescription = stringResource(playerOrientationToggleLabel(isPortraitPlayback)),
@@ -698,7 +702,7 @@ private fun PlayerHeader(
                             onClick = onOrientationToggleClick,
                         )
                     }
-                    if (onRateClick != null) {
+                    if (onRateClick != null && !enhancedSettings.hidePlayerRating) {
                         PlayerHeaderIconButton(
                             icon = if (userRating != null) Icons.Rounded.Star else Icons.Rounded.StarBorder,
                             contentDescription = userRating?.let {
@@ -709,7 +713,7 @@ private fun PlayerHeader(
                             onClick = onRateClick,
                         )
                     }
-                    if (onInfoClick != null) {
+                    if (onInfoClick != null && !enhancedSettings.hidePlayerInfo) {
                         PlayerHeaderIconButton(
                             icon = Icons.Rounded.Info,
                             contentDescription = stringResource(Res.string.compose_player_playback_info),
@@ -718,7 +722,7 @@ private fun PlayerHeader(
                             onClick = onInfoClick,
                         )
                     }
-                    if (onVideoSettingsClick != null) {
+                    if (onVideoSettingsClick != null && !enhancedSettings.hidePlayerVideoSettings) {
                         PlayerHeaderIconButton(
                             icon = Icons.Rounded.Build,
                             contentDescription = stringResource(Res.string.player_action_video_settings),
@@ -727,17 +731,19 @@ private fun PlayerHeader(
                             onClick = onVideoSettingsClick,
                         )
                     }
-                    PlayerHeaderIconButton(
-                        icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
-                        contentDescription = if (isLocked) {
-                            stringResource(Res.string.compose_player_unlock_controls)
-                        } else {
-                            stringResource(Res.string.compose_player_lock_controls)
-                        },
-                        buttonSize = metrics.headerIconSize + 16.dp,
-                        iconSize = metrics.headerIconSize,
-                        onClick = onLockToggle,
-                    )
+                    if (!enhancedSettings.hidePlayerLock) {
+                        PlayerHeaderIconButton(
+                            icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
+                            contentDescription = if (isLocked) {
+                                stringResource(Res.string.compose_player_unlock_controls)
+                            } else {
+                                stringResource(Res.string.compose_player_lock_controls)
+                            },
+                            buttonSize = metrics.headerIconSize + 16.dp,
+                            iconSize = metrics.headerIconSize,
+                            onClick = onLockToggle,
+                        )
+                    }
                     NuvioBackButton(
                         onClick = onBack,
                         modifier = Modifier.playerLiquidGlass(CircleShape, refractionHeight = 6.dp, refractionAmount = 8.dp),
@@ -951,6 +957,10 @@ private fun ProgressControls(
     val subtitlesPainter = appIconPainter(AppIconResource.PlayerSubtitles)
     val audioPainter = appIconPainter(AppIconResource.PlayerAudioFilled)
     val sourcesPainter = appIconPainter(AppIconResource.PlayerSource)
+    val enhancedSettings by remember {
+        NuvioEnhancedSettingsRepository.ensureLoaded()
+        NuvioEnhancedSettingsRepository.uiState
+    }.collectAsStateWithLifecycle()
 
     Column(modifier = modifier) {
         Row(
@@ -1032,12 +1042,14 @@ private fun ProgressControls(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    PlayerActionPillButton(
-                        label = stringResource(resizeMode.labelRes),
-                        painter = aspectRatioPainter,
-                        onClick = onResizeModeClick,
-                    )
-                    if (onSpeedClick != null) {
+                    if (!enhancedSettings.hidePlayerResizeMode) {
+                        PlayerActionPillButton(
+                            label = stringResource(resizeMode.labelRes),
+                            painter = aspectRatioPainter,
+                            onClick = onResizeModeClick,
+                        )
+                    }
+                    if (onSpeedClick != null && !enhancedSettings.hidePlayerSpeed) {
                         Box {
                             PlayerActionPillButton(
                                 label = formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed),

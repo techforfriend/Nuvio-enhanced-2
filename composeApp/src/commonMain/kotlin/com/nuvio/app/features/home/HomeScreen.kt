@@ -1381,6 +1381,7 @@ fun HomeScreen(
                                 HomeCatalogRowSection(
                                     section = section,
                                     entries = section.items.take(HOME_CATALOG_PREVIEW_LIMIT),
+                                    posterCardStyle = posterCardStyle,
                                     modifier = Modifier.padding(bottom = 12.dp),
                                     sectionPadding = homeSectionPadding,
                                     onViewAllClick = if (section.canOpenCatalog(HOME_CATALOG_PREVIEW_LIMIT)) {
@@ -1418,6 +1419,7 @@ fun HomeScreen(
                                         HomeCatalogRowSection(
                                             section = section,
                                             entries = section.items.take(HOME_CATALOG_PREVIEW_LIMIT),
+                                            posterCardStyle = posterCardStyle,
                                             modifier = Modifier.padding(bottom = 12.dp),
                                             sectionPadding = homeSectionPadding,
                                             onViewAllClick = if (section.canOpenCatalog(HOME_CATALOG_PREVIEW_LIMIT)) {

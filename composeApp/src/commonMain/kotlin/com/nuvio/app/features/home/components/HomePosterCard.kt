@@ -18,8 +18,8 @@ fun HomePosterCard(
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
     showLandscapeOverlay: Boolean = true,
+    posterCardStyle: com.nuvio.app.core.ui.PosterCardStyleUiState = rememberPosterCardStyleUiState(),
 ) {
-    val posterCardStyle = rememberPosterCardStyleUiState()
     val isLandscapeMode = useLandscapeBackdropMode || posterCardStyle.catalogLandscapeModeEnabled
     val effectiveLandscapePoster = if (posterCardStyle.alwaysShowLandscapeClearlogo) null else item.landscapePoster
     val imageUrl = if (isLandscapeMode) {
@@ -37,6 +37,7 @@ fun HomePosterCard(
         imageUrl = imageUrl,
         modifier = modifier,
         fallbackImageUrl = fallbackImageUrl,
+        posterCardStyle = posterCardStyle,
         shape = if (isLandscapeMode) NuvioPosterShape.Landscape else item.posterShape.toNuvioPosterShape(),
         detailLine = if (isLandscapeMode || posterCardStyle.hideLabelsEnabled) null else item.releaseInfo?.let { formatReleaseDateForDisplay(it) },
         showTitleBelow = !posterCardStyle.hideLabelsEnabled,

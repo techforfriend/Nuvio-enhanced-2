@@ -41,6 +41,7 @@ object DownloadsSettingsRepository {
         if (_showDownloadButton.value == enabled) return
         _showDownloadButton.value = enabled
         DownloadsSettingsStorage.saveShowDownloadButton(enabled)
+        com.nuvio.app.features.details.MetaScreenSettingsRepository.setShowDownloadAction(enabled)
     }
 
     fun setDownloadLocationUri(uri: String?) {
