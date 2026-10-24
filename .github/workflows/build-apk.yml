@@ -53,13 +53,6 @@ jobs:
           find androidApp/build/outputs/apk/ -name "*.apk" -exec cp {} build-apks/ \;
           ls -la build-apks/
 
-      - name: Upload APKs Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: NuvioEnhanced-APKs
-          path: build-apks/*.apk
-          retention-days: 14
-
       - name: Publish GitHub Testing Release
         uses: softprops/action-gh-release@v2
         if: success()
@@ -70,11 +63,13 @@ jobs:
             ## What's New in v0.6.4-beta.3
             **by RAJA JI**
 
-            ### 🚀 Upstream 0.6.4-beta Full Merge:
+            ### 🚀 Upstream 0.6.4-beta Full Merge & Fixes:
             - **DNS-over-HTTPS (DoH):** Cloudflare, Google, AdGuard, Quad9, and custom DoH resolver support.
             - **Player Enhancements:** nuvio-libass atlas rendering, time-left toggle, stream end-time display, custom skip durations.
             - **Ratings & Visuals:** Ratings on hero banners, poster zoom previews, liquid glass navigation & styling.
             - **Optimizations:** Debrid regex caching, stream badge caching, tablet UI refinements, WeTrakr integration, WhatsNew screen.
+            - **Fast Catalog Caching:** Prevents repetitive reload loops when switching between tabs or updating revisions.
+            - **UI Cleanups:** Removed obsolete Supporters/Contributors, diagnostics, and stable release filters.
 
             ### 🌟 Preserved Custom Enhancements:
             - **CloudStream 3 (CS3) Repository Toggle:** Master ON/OFF toggle switch for every repository in Settings.
