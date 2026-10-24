@@ -64,17 +64,25 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.4-beta.1-testing
-          name: "Nuvio Enhanced v0.6.4 Testing Release (Volume Boost)"
+          tag_name: v0.6.4-beta.2-testing
+          name: "Nuvio Enhanced v0.6.4-beta.2 Testing Release (CS3 Overhaul & Volume Boost)"
           body: |
-            ## What's New in v0.6.4 (Testing Release)
+            ## What's New in v0.6.4-beta.2 (Testing Release)
             **by RAJA JI**
 
             ### 🌟 What's New:
-            - **Digital Volume Boost (Up to 200%):** Integrated Android hardware-accelerated Loudness Enhancer for ExoPlayer and digital audio amplification for libmpv. Dialogue in movies and shows with 5.1/7.1 surround sound is now significantly clearer and louder on phone speakers.
-            - **Smart Swipe Volume Boost Indicator:** Swiping up on the right side of the screen now smoothly continues beyond 100% up to 200% with a dedicated golden amber boost indicator and real-time percentage feedback.
-            - **Enhanced Settings Toggle:** Added Volume Boost switch in Enhanced Settings (`Player` category) to easily enable or disable audio boost.
-            - **Player & System Stability Fixes:** Fixed Live TV LazyColumn duplicate key playlist crash, Continue Watching progress sync, custom layout constraints, and extension popup scroll.
+            - **CloudStream 3 (CS3) Repository Toggle:** Master ON/OFF toggle switch for every repository in Settings. Instantly enable or disable entire plugin repos with persistent state across app restarts.
+            - **Home Screen Single Extension Selection:** Removed redundant "All extensions" multi-fetch. Individual extensions are now selectable with instant catalog loading.
+            - **CS3 Extension Catalog Loading Fix:** Resolved catalog failures for community extensions lacking explicit `hasMainPage` flags and extended discovery/preview timeouts (30s) to guarantee smooth loading.
+            - **11 CS3 Core Subsystem Bug Fixes:**
+              - Thread-safe Cloudflare & DDoS-Guard bypass cookies with `ConcurrentHashMap`.
+              - Safe platform storage file locking on Android sandbox.
+              - 1-hour TTL cache expiration to prevent stale media metadata.
+              - Anime Sub/Dub episode ID and title collisions resolved.
+              - Native library path loader and provider leak prevention.
+            - **Digital Volume Boost (Up to 200%):** Hardware-accelerated Loudness Enhancer for ExoPlayer and digital amplification for libmpv with golden amber gesture boost indicator.
+            - **Enhanced Settings Toggle:** Volume Boost switch in Enhanced Settings (`Player` category).
+            - **Player & System Stability:** Fixed Live TV duplicate key crash and Continue Watching progress sync.
           draft: false
           prerelease: true
           files: build-apks/*.apk
