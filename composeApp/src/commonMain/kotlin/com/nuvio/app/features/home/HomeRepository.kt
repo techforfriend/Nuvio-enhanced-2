@@ -90,9 +90,15 @@ object HomeRepository {
         CloudStreamRepository.initialize()
         val cloudState = CloudStreamRepository.uiState.value
         val selectedProviderId = _selectedCloudStreamProviderId.value
-        val cloudPlugins = cloudState.plugins
-            .filter(CloudStreamPluginItem::isRunnable)
-            .filter { selectedProviderId == null || it.metadata.id.value == selectedProviderId }
+        val runnableCloudPlugins = cloudState.plugins.filter(CloudStreamPluginItem::isRunnable)
+        val effectiveSelectedProviderId = selectedProviderId?.takeIf { id ->
+            runnableCloudPlugins.any { it.metadata.id.value == id }
+        } ?: runnableCloudPlugins.firstOrNull()?.metadata.id.value
+        val cloudPlugins = if (effectiveSelectedProviderId != null) {
+            runnableCloudPlugins.filter { it.metadata.id.value == effectiveSelectedProviderId }
+        } else {
+            emptyList()
+        }
         val activeAddons = addons.enabledAddons()
         val requests = buildHomeCatalogDefinitions(activeAddons)
         currentDefinitions = requests
@@ -622,9 +628,9 @@ private const val HOME_CATALOG_PREVIEW_FETCH_LIMIT = 18
 private const val HOME_CATALOG_PUBLISH_INTERVAL = 2
 private const val HOME_CLOUDSTREAM_PROVIDER_SCAN_LIMIT = 6
 private const val HOME_CLOUDSTREAM_SECTION_PREVIEW_LIMIT = 6
-private const val HOME_CLOUDSTREAM_PROVIDER_TIMEOUT_MS = 10_000L
+private const val HOME_CLOUDSTREAM_PROVIDER_TIMEOUT_MS = 30_000L
 private const val HOME_CLOUDSTREAM_PROVIDER_CONCURRENCY = 2
-private const val HOME_CLOUDSTREAM_TOTAL_PREVIEW_TIMEOUT_MS = 15_000L
+private const val HOME_CLOUDSTREAM_TOTAL_PREVIEW_TIMEOUT_MS = 35_000L
 private const val HOME_CATALOG_REQUEST_TIMEOUT_MS = 12_000L
 
 private fun prioritizeDefinitions(

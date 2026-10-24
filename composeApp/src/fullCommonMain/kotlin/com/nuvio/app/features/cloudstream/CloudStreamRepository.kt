@@ -271,6 +271,47 @@ actual object CloudStreamRepository {
         persist()
     }
 
+    actual fun setRepositoryEnabled(manifestUrl: String, enabled: Boolean) {
+        initialize()
+        val normalizedUrl = runCatching { normalizeCloudStreamRepositoryUrl(manifestUrl) }.getOrNull() ?: manifestUrl
+        RuntimeDiagnostics.recordLog("cs-repo-enabled url=$normalizedUrl enabled=$enabled")
+        val affectedUnloadPluginIds = mutableListOf<String>()
+        _uiState.update { current ->
+            var changed = false
+            val repositories = current.repositories.map { repo ->
+                if (repo.manifest.sourceUrl == normalizedUrl && repo.enabled != enabled) {
+                    changed = true
+                    repo.copy(enabled = enabled)
+                } else repo
+            }
+            val plugins = current.plugins.map { plugin ->
+                if (plugin.metadata.repositoryManifestUrl != normalizedUrl) return@map plugin
+                if (!enabled) {
+                    if (plugin.enabled) {
+                        changed = true
+                        affectedUnloadPluginIds += plugin.metadata.id.value
+                    }
+                    plugin.copy(enabled = false)
+                } else {
+                    val canEnable = plugin.isInstalled && plugin.verified && plugin.compatibility.isRunnable && plugin.metadata.status.canInstall
+                    if (plugin.enabled != canEnable) changed = true
+                    plugin.copy(enabled = canEnable)
+                }
+            }
+            current.copy(
+                repositories = repositories,
+                plugins = plugins,
+                registryRevision = current.registryRevision + if (changed) 1 else 0,
+            )
+        }
+        if (!enabled) {
+            affectedUnloadPluginIds.forEach { pluginId ->
+                CloudStreamPlatformRuntime.unload(pluginId)
+            }
+        }
+        persist()
+    }
+
     actual suspend fun installPlugin(pluginId: String): CloudStreamInstallResult = installOrUpdate(pluginId)
 
     actual suspend fun updatePlugin(pluginId: String): CloudStreamInstallResult = installOrUpdate(pluginId)
@@ -758,7 +799,7 @@ actual object CloudStreamRepository {
             val manifestUrl = runCatching { normalizeCloudStreamRepositoryUrl(repository.manifestUrl) }
                 .getOrDefault(repository.manifestUrl)
             CloudStreamRepositoryItem(
-                CloudStreamRepositoryManifest(
+                manifest = CloudStreamRepositoryManifest(
                     sourceUrl = manifestUrl,
                     name = repository.name,
                     description = repository.description,
@@ -766,8 +807,10 @@ actual object CloudStreamRepository {
                     manifestVersion = repository.manifestVersion,
                     pluginListUrls = repository.pluginListUrls,
                 ),
+                enabled = repository.enabled,
             )
         }
+        val disabledRepoUrls = stored.repositories.filterNot { it.enabled }.map { it.manifestUrl }.toSet()
         val plugins = stored.plugins.map { plugin ->
             val metadata = plugin.toMetadata()
             val legacyStorageKey = CloudStreamPluginId(plugin.repositoryManifestUrl, plugin.internalName).storageKey
@@ -778,12 +821,13 @@ actual object CloudStreamRepository {
                         CloudStreamPlatformStorage.migratePackage(legacyStorageKey, storageKey))
                 )
             val compatibility = resolveCompatibility(metadata)
+            val isRepoEnabled = plugin.repositoryManifestUrl !in disabledRepoUrls
             CloudStreamPluginItem(
                 metadata = metadata,
                 compatibility = compatibility,
                 installedVersion = plugin.installedVersion.takeIf { packageExists },
                 installedAtEpochMs = plugin.installedAtEpochMs.takeIf { packageExists } ?: 0L,
-                enabled = plugin.enabled && packageExists && plugin.verified && compatibility.isRunnable && metadata.status.canInstall,
+                enabled = plugin.enabled && isRepoEnabled && packageExists && plugin.verified && compatibility.isRunnable && metadata.status.canInstall,
                 verified = plugin.verified && packageExists,
             )
         }
@@ -806,6 +850,7 @@ actual object CloudStreamRepository {
                     iconUrl = item.manifest.iconUrl,
                     manifestVersion = item.manifest.manifestVersion,
                     pluginListUrls = item.manifest.pluginListUrls,
+                    enabled = item.enabled,
                 )
             },
             plugins = current.plugins.map { item -> item.toStored() },
@@ -861,8 +906,12 @@ actual object CloudStreamRepository {
         )
     }
 
-    private fun runnableProviderIds(): List<String> =
-        _uiState.value.plugins.filter(CloudStreamPluginItem::isRunnable).map { it.metadata.id.value }
+    private fun runnableProviderIds(): List<String> {
+        val disabledRepoUrls = _uiState.value.repositories.filterNot { it.enabled }.map { it.manifest.sourceUrl }.toSet()
+        return _uiState.value.plugins
+            .filter { it.isRunnable && it.metadata.repositoryManifestUrl !in disabledRepoUrls }
+            .map { it.metadata.id.value }
+    }
 
     private fun resolveCompatibility(metadata: CloudStreamPluginMetadata): CloudStreamCompatibility =
         CloudStreamCompatibilityResolver.resolve(

@@ -169,11 +169,12 @@ object CatalogRepository {
                                 .orEmpty()
                                 .map { it.toMetaPreview() }
                         } else {
-                            CloudStreamRepository.getMainPage(target.providerId, pageNumber).getOrThrow()
-                                .firstOrNull { it.first == target.categoryName }
-                                ?.second
-                                .orEmpty()
-                                .map { it.toMetaPreview() }
+                            val sections = CloudStreamRepository.getMainPage(target.providerId, pageNumber).getOrThrow()
+                            val matchingSection = sections.firstOrNull { it.first == target.categoryName }
+                                ?: sections.firstOrNull { it.first.equals(target.categoryName, ignoreCase = true) }
+                                ?: sections.firstOrNull { it.first.contains(target.categoryName, ignoreCase = true) || target.categoryName.contains(it.first, ignoreCase = true) }
+                                ?: sections.firstOrNull()
+                            matchingSection?.second.orEmpty().map { it.toMetaPreview() }
                         }
                         CatalogPage(
                             items = items,
