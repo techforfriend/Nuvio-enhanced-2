@@ -112,6 +112,16 @@ internal class DomBridge : HostModule {
             elementCache[prevId] = prev
             prevId
         }
+
+        runtime.function("__cheerio_parent") { args ->
+            val docId = args.getOrNull(0)?.toString() ?: ""
+            val elementId = args.getOrNull(1)?.toString() ?: ""
+            val element = elementCache[elementId] ?: return@function "__NONE__"
+            val parent = element.parent() ?: return@function "__NONE__"
+            val parentId = "$docId:parent:${parent.hashCode()}"
+            elementCache[parentId] = parent
+            parentId
+        }
     }
 
     fun clear() {

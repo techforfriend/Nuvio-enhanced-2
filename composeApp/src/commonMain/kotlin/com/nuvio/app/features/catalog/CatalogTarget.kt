@@ -57,6 +57,15 @@ sealed interface CatalogTarget {
         override val contentType: String,
         override val supportsPagination: Boolean = false,
     ) : CatalogTarget
+
+    data class Vega(
+        val providerId: String,
+        val categoryName: String,
+        val filter: String = "",
+        val searchQuery: String? = null,
+        override val contentType: String = "movie",
+        override val supportsPagination: Boolean = true,
+    ) : CatalogTarget
 }
 
 @Serializable
@@ -66,4 +75,5 @@ enum class CatalogTargetKind {
     COLLECTION_SOURCE,
     SERVER,
     CLOUDSTREAM,
+    VEGA,
 }

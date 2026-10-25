@@ -19,6 +19,7 @@ import com.nuvio.app.features.servers.ServerRepository
 import com.nuvio.app.features.servers.ServerStreams
 
 import com.nuvio.app.features.vega.VegaRepository
+import com.nuvio.app.features.vega.parseVegaRouteId
 
 internal fun AddonManifest.supportsStream(type: String, videoId: String): Boolean =
     supportsResource("stream", type, videoId)
@@ -33,6 +34,7 @@ internal fun hasCompatiblePlaybackSource(
 ): Boolean = addons.any { it.enabled && it.manifest?.supportsStream(type, videoId) == true } ||
     (plugins.pluginsEnabled && plugins.scrapers.any { it.enabled && it.supportsType(type) }) ||
     parseCloudStreamRouteId(videoId) != null ||
+    parseVegaRouteId(videoId) != null ||
     hasCloudStreamProviders ||
     hasVegaProviders
 
@@ -47,7 +49,8 @@ internal class PlaybackAvailability(
             MetaDetailsRepository.findEmbeddedStreams(videoId).isNotEmpty() ||
             ServerStreams.canServe(type, videoId) ||
             parseCloudStreamRouteId(videoId) != null ||
-            (parentMetaId != null && parseCloudStreamRouteId(parentMetaId) != null)
+            parseVegaRouteId(videoId) != null ||
+            (parentMetaId != null && (parseCloudStreamRouteId(parentMetaId) != null || parseVegaRouteId(parentMetaId) != null))
 
     fun canPlay(
         type: String,
@@ -57,6 +60,7 @@ internal class PlaybackAvailability(
         episodeNumber: Int? = null,
     ): Boolean = canStream(type, videoId, parentMetaId) ||
         parseCloudStreamRouteId(parentMetaId) != null ||
+        parseVegaRouteId(parentMetaId) != null ||
         DownloadsRepository.findPlayableDownload(
             parentMetaId = parentMetaId,
             seasonNumber = seasonNumber,

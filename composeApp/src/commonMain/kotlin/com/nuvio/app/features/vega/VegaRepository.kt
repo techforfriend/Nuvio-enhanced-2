@@ -223,8 +223,17 @@ internal object VegaRepository {
         persistState()
     }
 
-    suspend fun getOrFetchProviderScript(provider: VegaProviderItem): String? = withContext(Dispatchers.Default) {
-        val cacheKey = "${provider.repositoryUrl}_${provider.value}_${provider.version ?: "1.0"}"
+    fun getProviderByValue(value: String): VegaProviderItem? {
+        val state = _uiState.value
+        return state.repositories
+            .filter { it.enabled }
+            .flatMap { it.providers }
+            .firstOrNull { it.value == value }
+    }
+
+    suspend fun getOrFetchScript(provider: VegaProviderItem, scriptName: String): String? = withContext(Dispatchers.Default) {
+        val sanitizedScriptName = scriptName.replace(".js", "").replace("[^a-zA-Z0-9_]".toRegex(), "_")
+        val cacheKey = "${provider.repositoryUrl}_${provider.value}_${provider.version ?: "1.0"}_$sanitizedScriptName"
             .replace("[^a-zA-Z0-9_]".toRegex(), "_")
 
         val cached = VegaStorage.loadScript(cacheKey)
@@ -233,20 +242,23 @@ internal object VegaRepository {
         }
 
         val baseUrl = provider.repositoryUrl.substringBeforeLast("/") + "/"
-        val scriptUrl = "${baseUrl}dist/${provider.value}/stream.js"
+        val scriptUrl = "${baseUrl}dist/${provider.value}/$scriptName"
 
         try {
-            log.d { "Fetching Vega provider script for ${provider.displayName} from $scriptUrl" }
+            log.d { "Fetching Vega $scriptName for ${provider.displayName} from $scriptUrl" }
             val script = httpClient.get(scriptUrl).bodyAsText()
             if (script.isNotBlank()) {
                 VegaStorage.saveScript(cacheKey, script)
                 return@withContext script
             }
         } catch (e: Exception) {
-            log.w(e) { "Failed to fetch Vega provider script url=$scriptUrl" }
+            log.w(e) { "Failed to fetch Vega script $scriptName url=$scriptUrl" }
         }
         null
     }
+
+    suspend fun getOrFetchProviderScript(provider: VegaProviderItem): String? =
+        getOrFetchScript(provider, "stream.js")
 
     fun getEnabledProviders(): List<VegaProviderItem> {
         val state = _uiState.value
