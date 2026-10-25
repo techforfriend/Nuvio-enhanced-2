@@ -13,10 +13,10 @@ internal actual suspend fun resolveVegaProviderStreams(
     searchTitle: String?,
 ): AddonStreamGroup {
     val vegaRoute = parseVegaRouteId(videoId) ?: parentMetaId?.let { parseVegaRouteId(it) }
-    if (vegaRoute != null && vegaRoute.providerValue == provider.value) {
+    if (vegaRoute != null && vegaRoute.providerId == provider.value) {
         val streams = VegaBridge.getStreams(
             provider = provider,
-            link = vegaRoute.contentLink,
+            link = vegaRoute.link,
             type = type,
         )
         return AddonStreamGroup(
