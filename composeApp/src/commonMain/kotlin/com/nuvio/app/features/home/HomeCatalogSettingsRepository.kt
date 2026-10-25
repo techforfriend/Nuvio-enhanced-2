@@ -223,7 +223,6 @@ object HomeCatalogSettingsRepository {
             return
         }
         normalizePreferences()
-        enforcePinnedCollectionsAtTop()
         publish()
         persist()
     }
@@ -238,7 +237,6 @@ object HomeCatalogSettingsRepository {
         }
         lastCollectionSync = syncInput
         normalizePreferences()
-        enforcePinnedCollectionsAtTop()
         publish()
         persist()
         HomeRepository.applyCurrentSettings()
@@ -395,6 +393,7 @@ object HomeCatalogSettingsRepository {
             updatedPreferences[itemKey] = current.copy(order = index)
         }
         preferences = updatedPreferences
+        enforcePinnedCollectionsAtTop()
         publish()
         persist()
         HomeRepository.applyCurrentSettings()
@@ -482,6 +481,7 @@ object HomeCatalogSettingsRepository {
             )
         }
         preferences = normalized.toMap()
+        enforcePinnedCollectionsAtTop()
     }
 
     private fun publish() {
@@ -596,6 +596,7 @@ object HomeCatalogSettingsRepository {
             updatedPreferences[itemKey] = current.copy(order = index)
         }
         preferences = updatedPreferences
+        enforcePinnedCollectionsAtTop()
 
         publish()
         persist()
