@@ -37,8 +37,22 @@ internal object VegaRuntime {
                     config = urlOrConfig;
                     url = config.url;
                 }
+                if (!url) throw new Error("Missing URL for axios request");
                 var method = (config.method || 'GET').toUpperCase();
                 var headers = Object.assign({}, config.headers || {});
+                
+                if (config.params && typeof config.params === 'object') {
+                    var queryParts = [];
+                    for (var p in config.params) {
+                        if (config.params[p] !== undefined && config.params[p] !== null) {
+                            queryParts.push(encodeURIComponent(p) + '=' + encodeURIComponent(config.params[p]));
+                        }
+                    }
+                    if (queryParts.length > 0) {
+                        url += (url.indexOf('?') === -1 ? '?' : '&') + queryParts.join('&');
+                    }
+                }
+
                 var body = config.data;
                 if (body && typeof body === 'object' && !(body instanceof FormData) && !(body instanceof URLSearchParams)) {
                     if (!headers['Content-Type'] && !headers['content-type']) {
@@ -85,8 +99,21 @@ internal object VegaRuntime {
             ax.post = function(url, data, cfg) { return ax(url, Object.assign({}, cfg, { method: 'POST', data: data })); };
             ax.put = function(url, data, cfg) { return ax(url, Object.assign({}, cfg, { method: 'PUT', data: data })); };
             ax.delete = function(url, cfg) { return ax(url, Object.assign({}, cfg, { method: 'DELETE' })); };
+            ax.create = function(defaultCfg) {
+                var instance = function(urlOrConfig, maybeConfig) {
+                    var merged = Object.assign({}, defaultCfg, typeof urlOrConfig === 'object' ? urlOrConfig : Object.assign({ url: urlOrConfig }, maybeConfig));
+                    return ax(merged);
+                };
+                instance.get = function(url, cfg) { return instance(url, Object.assign({}, cfg, { method: 'GET' })); };
+                instance.post = function(url, data, cfg) { return instance(url, Object.assign({}, cfg, { method: 'POST', data: data })); };
+                instance.put = function(url, data, cfg) { return instance(url, Object.assign({}, cfg, { method: 'PUT', data: data })); };
+                instance.delete = function(url, cfg) { return instance(url, Object.assign({}, cfg, { method: 'DELETE' })); };
+                return instance;
+            };
             return ax;
         })();
+
+        globalThis.axios = axios;
 
         var providerContext = {
             axios: axios,
@@ -100,6 +127,8 @@ internal object VegaRuntime {
                 set: async function(key, val) { return true; }
             }
         };
+
+        globalThis.providerContext = providerContext;
     """.trimIndent()
 
     private suspend fun executeJs(
@@ -137,9 +166,10 @@ internal object VegaRuntime {
                     val wrappedCode = """
                         var module = { exports: {} };
                         var exports = module.exports;
-                        (function() {
-                            $code
-                        })();
+                        var window = globalThis;
+                        var self = globalThis;
+                        var global = globalThis;
+                        $code
                     """.trimIndent()
                     evaluate<Any?>(wrappedCode)
                     evaluate<Any?>(invocationJs)
@@ -156,8 +186,8 @@ internal object VegaRuntime {
         val invocation = """
             (async function() {
                 try {
-                    var cat = module.exports.catalog || exports.catalog || globalThis.catalog;
-                    if (typeof cat === 'function') cat = cat();
+                    var fn = module.exports.catalog || exports.catalog || globalThis.catalog || (module.exports.default && module.exports.default.catalog);
+                    var cat = typeof fn === 'function' ? await fn() : fn;
                     if (!cat || !Array.isArray(cat)) cat = [];
                     __capture_result(JSON.stringify(cat));
                 } catch(e) {
@@ -182,17 +212,29 @@ internal object VegaRuntime {
         val invocation = """
             (async function() {
                 try {
-                    var fn = module.exports.getPosts || exports.getPosts || globalThis.getPosts;
+                    var fn = module.exports.getPosts || exports.getPosts || globalThis.getPosts || (module.exports.default && module.exports.default.getPosts);
                     if (!fn) {
                         __capture_result(JSON.stringify([]));
                         return;
                     }
-                    var posts = await fn({
-                        filter: $filterArg,
-                        page: $pageArg,
-                        providerContext: providerContext,
-                        signal: undefined
-                    });
+                    var posts = null;
+                    try {
+                        posts = await fn({
+                            filter: $filterArg,
+                            page: $pageArg,
+                            providerContext: providerContext,
+                            signal: undefined
+                        });
+                    } catch (err1) {
+                        try {
+                            posts = await fn($filterArg, $pageArg, providerContext);
+                        } catch (err2) {
+                            throw err1;
+                        }
+                    }
+                    if (posts && !Array.isArray(posts) && Array.isArray(posts.posts)) {
+                        posts = posts.posts;
+                    }
                     __capture_result(JSON.stringify(posts || []));
                 } catch(e) {
                     console.error("Vega getPosts error in ${provider.displayName}:", e && e.message ? e.message : e);
@@ -212,17 +254,29 @@ internal object VegaRuntime {
         val invocation = """
             (async function() {
                 try {
-                    var fn = module.exports.getSearchPosts || exports.getSearchPosts || globalThis.getSearchPosts;
+                    var fn = module.exports.getSearchPosts || exports.getSearchPosts || globalThis.getSearchPosts || (module.exports.default && module.exports.default.getSearchPosts);
                     if (!fn) {
                         __capture_result(JSON.stringify([]));
                         return;
                     }
-                    var posts = await fn({
-                        searchQuery: $queryArg,
-                        page: $pageArg,
-                        providerContext: providerContext,
-                        signal: undefined
-                    });
+                    var posts = null;
+                    try {
+                        posts = await fn({
+                            searchQuery: $queryArg,
+                            page: $pageArg,
+                            providerContext: providerContext,
+                            signal: undefined
+                        });
+                    } catch (err1) {
+                        try {
+                            posts = await fn($queryArg, $pageArg, providerContext);
+                        } catch (err2) {
+                            throw err1;
+                        }
+                    }
+                    if (posts && !Array.isArray(posts) && Array.isArray(posts.posts)) {
+                        posts = posts.posts;
+                    }
                     __capture_result(JSON.stringify(posts || []));
                 } catch(e) {
                     console.error("Vega getSearchPosts error in ${provider.displayName}:", e && e.message ? e.message : e);
@@ -241,16 +295,28 @@ internal object VegaRuntime {
         val invocation = """
             (async function() {
                 try {
-                    var fn = module.exports.getEpisodes || exports.getEpisodes || globalThis.getEpisodes;
+                    var fn = module.exports.getEpisodes || exports.getEpisodes || globalThis.getEpisodes || (module.exports.default && module.exports.default.getEpisodes);
                     if (!fn) {
                         __capture_result(JSON.stringify([]));
                         return;
                     }
-                    var eps = await fn({
-                        url: $urlArg,
-                        providerContext: providerContext,
-                        signal: undefined
-                    });
+                    var eps = null;
+                    try {
+                        eps = await fn({
+                            url: $urlArg,
+                            providerContext: providerContext,
+                            signal: undefined
+                        });
+                    } catch (err1) {
+                        try {
+                            eps = await fn($urlArg, providerContext);
+                        } catch (err2) {
+                            throw err1;
+                        }
+                    }
+                    if (eps && !Array.isArray(eps) && Array.isArray(eps.episodes)) {
+                        eps = eps.episodes;
+                    }
                     __capture_result(JSON.stringify(eps || []));
                 } catch(e) {
                     console.error("Vega getEpisodes error in ${provider.displayName}:", e && e.message ? e.message : e);
@@ -269,16 +335,25 @@ internal object VegaRuntime {
         val invocation = """
             (async function() {
                 try {
-                    var fn = module.exports.getMeta || exports.getMeta || globalThis.getMeta;
+                    var fn = module.exports.getMeta || exports.getMeta || globalThis.getMeta || (module.exports.default && module.exports.default.getMeta);
                     if (!fn) {
                         __capture_result(JSON.stringify(null));
                         return;
                     }
-                    var meta = await fn({
-                        link: $linkArg,
-                        providerContext: providerContext,
-                        signal: undefined
-                    });
+                    var meta = null;
+                    try {
+                        meta = await fn({
+                            link: $linkArg,
+                            providerContext: providerContext,
+                            signal: undefined
+                        });
+                    } catch (err1) {
+                        try {
+                            meta = await fn($linkArg, providerContext);
+                        } catch (err2) {
+                            throw err1;
+                        }
+                    }
                     __capture_result(JSON.stringify(meta || null));
                 } catch(e) {
                     console.error("Vega getMeta error in ${provider.displayName}:", e && e.message ? e.message : e);
@@ -317,7 +392,7 @@ internal object VegaRuntime {
         val invocation = """
             (async function() {
                 try {
-                    var getStream = module.exports.getStream || globalThis.getStream;
+                    var getStream = module.exports.getStream || exports.getStream || globalThis.getStream || (module.exports.default && module.exports.default.getStream);
                     if (!getStream && typeof module.exports === 'function') {
                         getStream = module.exports;
                     }
@@ -326,14 +401,27 @@ internal object VegaRuntime {
                         __capture_result(JSON.stringify([]));
                         return;
                     }
-                    var result = await getStream({
-                        link: $linkArg,
-                        type: $typeArg,
-                        providerContext: providerContext,
-                        signal: undefined,
-                        isDownload: false
-                    });
-                    __capture_result(JSON.stringify(result || []));
+                    var result = null;
+                    try {
+                        result = await getStream({
+                            link: $linkArg,
+                            type: $typeArg,
+                            providerContext: providerContext,
+                            signal: undefined,
+                            isDownload: false
+                        });
+                    } catch (err1) {
+                        try {
+                            result = await getStream($linkArg, $typeArg, providerContext);
+                        } catch (err2) {
+                            throw err1;
+                        }
+                    }
+                    if (result && !Array.isArray(result)) {
+                        result = result.streams || result.data || [result];
+                    }
+                    if (!Array.isArray(result)) result = [];
+                    __capture_result(JSON.stringify(result));
                 } catch (e) {
                     console.error("Vega direct getStream error in ${provider.displayName}:", e && e.message ? e.message : e);
                     __capture_result(JSON.stringify([]));

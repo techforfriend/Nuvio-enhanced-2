@@ -242,17 +242,23 @@ internal object VegaRepository {
         }
 
         val baseUrl = provider.repositoryUrl.substringBeforeLast("/") + "/"
-        val scriptUrl = "${baseUrl}dist/${provider.value}/$scriptName"
+        val primaryUrl = "${baseUrl}dist/${provider.value}/$scriptName"
+        val fallbackUrl = "${baseUrl}${provider.value}/$scriptName"
 
-        try {
-            log.d { "Fetching Vega $scriptName for ${provider.displayName} from $scriptUrl" }
-            val script = httpClient.get(scriptUrl).bodyAsText()
-            if (script.isNotBlank()) {
-                VegaStorage.saveScript(cacheKey, script)
-                return@withContext script
+        for (candidateUrl in listOf(primaryUrl, fallbackUrl)) {
+            try {
+                log.d { "Fetching Vega $scriptName for ${provider.displayName} from $candidateUrl" }
+                val response = httpClient.get(candidateUrl)
+                if (response.status.value in 200..299) {
+                    val script = response.bodyAsText()
+                    if (script.isNotBlank()) {
+                        VegaStorage.saveScript(cacheKey, script)
+                        return@withContext script
+                    }
+                }
+            } catch (e: Exception) {
+                log.w(e) { "Failed to fetch Vega script $scriptName from $candidateUrl" }
             }
-        } catch (e: Exception) {
-            log.w(e) { "Failed to fetch Vega script $scriptName url=$scriptUrl" }
         }
         null
     }

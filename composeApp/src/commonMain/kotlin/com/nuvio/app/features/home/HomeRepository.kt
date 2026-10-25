@@ -135,11 +135,11 @@ object HomeRepository {
         val runnableCloudPlugins = cloudState.plugins.filter(CloudStreamPluginItem::isRunnable)
         val enabledVegaProviders = VegaRepository.getEnabledProviders()
         val effectiveSelectedProviderId = selectedProviderId?.takeIf { id ->
-            runnableCloudPlugins.any { it.metadata.id.value == id }
-        } ?: runnableCloudPlugins.firstOrNull()?.metadata?.id?.value
+            id != "off" && runnableCloudPlugins.any { it.metadata.id.value == id }
+        } ?: if (selectedProviderId == "off") null else runnableCloudPlugins.firstOrNull()?.metadata?.id?.value
         val effectiveSelectedVegaId = selectedVegaId?.takeIf { id ->
-            enabledVegaProviders.any { it.value == id }
-        } ?: enabledVegaProviders.firstOrNull()?.value
+            id != "off" && enabledVegaProviders.any { it.value == id }
+        } ?: if (selectedVegaId == "off") null else enabledVegaProviders.firstOrNull()?.value
         val cloudPlugins = if (effectiveSelectedProviderId != null) {
             runnableCloudPlugins.filter { it.metadata.id.value == effectiveSelectedProviderId }
         } else {
@@ -201,13 +201,27 @@ object HomeRepository {
         activeJob?.cancel()
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         activeJob = scope.launch {
-            val cloudResult = loadCloudSections(cloudPlugins, requestKey)
+            var cloudErrorMessage: String? = null
+            var vegaErrorMessage: String? = null
+            coroutineScope {
+                launch {
+                    val cloudResult = loadCloudSections(cloudPlugins, requestKey)
+                    if (activeRequestKey == requestKey) {
+                        cachedCloudSections = cloudResult.sections
+                        cloudErrorMessage = cloudResult.errorMessage
+                        publishCurrentState(isLoading = true, requestKey = requestKey)
+                    }
+                }
+                launch {
+                    val vegaResult = loadVegaSections(vegaProviders, requestKey)
+                    if (activeRequestKey == requestKey) {
+                        cachedVegaSections = vegaResult.sections
+                        vegaErrorMessage = vegaResult.errorMessage
+                        publishCurrentState(isLoading = true, requestKey = requestKey)
+                    }
+                }
+            }
             if (activeRequestKey != requestKey) return@launch
-            cachedCloudSections = cloudResult.sections
-
-            val vegaResult = loadVegaSections(vegaProviders, requestKey)
-            if (activeRequestKey != requestKey) return@launch
-            cachedVegaSections = vegaResult.sections
 
             val prioritizedRequests = prioritizeDefinitions(
                 definitions = requests,
@@ -217,7 +231,7 @@ object HomeRepository {
                 force || cachedSections[definition.cacheKey] == null
             }
             if (pendingRequests.isEmpty()) {
-                lastErrorMessage = cloudResult.errorMessage
+                lastErrorMessage = cloudErrorMessage ?: vegaErrorMessage
                 lastCompletedRequestKey = requestKey
                 activeRequestKey = null
                 publishCurrentState(
@@ -410,7 +424,7 @@ object HomeRepository {
         if (entries.isNotEmpty() || currentDefinitions.isNotEmpty()) {
             lastPublishedEntries = entries
         }
-        val sections = entries.map { (_, section) -> section } + cachedCloudSections + cachedVegaSections
+        val sections = entries.map { (_, section) -> section } + cachedVegaSections + cachedCloudSections
 
         val catalogHeroItems = if (snapshot.heroEnabled) {
             val heroRandom = Random((requestKey?.hashCode() ?: 0).absoluteValue + 1)
@@ -735,7 +749,7 @@ object HomeRepository {
                                             val previews = items.take(HOME_CATALOG_PREVIEW_FETCH_LIMIT).map { it.toMetaPreview() }
                                             HomeCatalogSection(
                                                 key = "cloudstream:${plugin.metadata.id.storageKey}:${categoryName.hashCode()}",
-                                                title = categoryName,
+                                                title = "CS3 • ${plugin.metadata.name} - $categoryName",
                                                 subtitle = "${plugin.metadata.name} · CloudStream",
                                                 addonName = plugin.metadata.name,
                                                 target = CatalogTarget.CloudStream(
@@ -800,7 +814,7 @@ object HomeRepository {
                                         val previews = posts.take(HOME_CATALOG_PREVIEW_FETCH_LIMIT).map { it.toMetaPreview(provider.value) }
                                         HomeCatalogSection(
                                             key = "vega:${provider.value}:${category.title.hashCode()}",
-                                            title = category.title,
+                                            title = "Vega • ${provider.displayName} - ${category.title}",
                                             subtitle = "${provider.displayName} · Vega",
                                             addonName = provider.displayName,
                                             target = CatalogTarget.Vega(
