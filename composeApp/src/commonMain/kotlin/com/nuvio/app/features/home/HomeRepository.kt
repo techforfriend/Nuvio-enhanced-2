@@ -166,10 +166,11 @@ object HomeRepository {
         }
     }
 
-    fun applyCurrentSettings() {
+    fun applyCurrentSettings(heroSourcesChanged: Boolean = false) {
         publishCurrentState(
             isLoading = _uiState.value.isLoading,
             requestKey = currentRequestKey,
+            keepVisibleHeroWhilePending = !heroSourcesChanged,
         )
         ensureCollectionHeroFallback(
             addons = AddonRepository.uiState.value.addons.enabledAddons(),
@@ -247,6 +248,7 @@ object HomeRepository {
     private fun publishCurrentState(
         isLoading: Boolean,
         requestKey: String?,
+        keepVisibleHeroWhilePending: Boolean = true,
     ) {
         if (currentDefinitions.isEmpty() && cachedSections.isNotEmpty()) return
         val snapshot = HomeCatalogSettingsRepository.snapshot()
@@ -296,7 +298,11 @@ object HomeRepository {
         lastPublishedCatalogHeroEmpty = snapshot.heroEnabled && catalogHeroItems.isEmpty()
         val visibleHeroItems = _uiState.value.heroItems
         val heroItems = if (snapshot.heroEnabled) {
-            if (visibleHeroItems.isNotEmpty() && isHeroResolutionPending(isLoading)) {
+            if (
+                keepVisibleHeroWhilePending &&
+                visibleHeroItems.isNotEmpty() &&
+                isHeroResolutionPending(isLoading)
+            ) {
                 visibleHeroItems
             } else {
                 catalogHeroItems.ifEmpty { cachedCollectionHeroItems }
