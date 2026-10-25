@@ -2,7 +2,7 @@
 set -e
 
 git remote add luqman https://github.com/luqmanfadlli/NuvioMobile-Enhanced.git 2>/dev/null || true
-git fetch luqman enhanced
+git fetch -q luqman enhanced 2>&1 | grep -v 'submodule.MPVKit' || true
 
 LATEST_LUQMAN_SHA="$(git rev-parse luqman/enhanced)"
 LAST_SYNC_FILE=".github/luqman_last_sync.sha"
