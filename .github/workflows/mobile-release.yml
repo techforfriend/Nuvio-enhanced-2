@@ -245,6 +245,11 @@ jobs:
             fi
           done
 
+      - name: Set up Rust
+        run: |
+          rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+          cargo install cargo-ndk --locked
+
       - name: Build full release APKs
         run: ./gradlew :androidApp:assembleFullRelease -Pnuvio.app.versionName="${RELEASE_VERSION}" --stacktrace
 
@@ -259,10 +264,10 @@ jobs:
     name: Build iOS IPA
     if: inputs.mode != 'dry-run' && (inputs.target == 'all' || inputs.target == 'ios-only')
     needs: prepare
-    runs-on: xcode-27
+    runs-on: macos-26
     timeout-minutes: 180
     env:
-      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       GRADLE_OPTS: -Dfile.encoding=UTF-8
       KOTLIN_DAEMON_JVMARGS: -Xmx1024M
       NUVIO_GRADLE_JVMARGS: -Xmx2048M -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=768M -XX:+UseG1GC
@@ -343,13 +348,13 @@ jobs:
           path: build/ios-ipa/*.ipa
           if-no-files-found: error
 
+  # Creates the release with the APKs as soon as Android succeeds — does not wait for iOS.
   release:
     name: Create ${{ inputs.mode }} release
-    if: inputs.mode == 'draft' || inputs.mode == 'publish'
+    if: (inputs.mode == 'draft' || inputs.mode == 'publish') && (inputs.target == 'all' || inputs.target == 'android-only')
     needs:
       - prepare
       - android
-      - ios
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -361,17 +366,24 @@ jobs:
       RELEASE_BRANCH: ${{ github.ref_name }}
 
     steps:
-      - name: Download release artifacts
+      - name: Download release notes
         uses: actions/download-artifact@v8
         with:
+          name: release-notes
+          path: release-assets
+
+      - name: Download Android artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: nuvio-*-android-full-release
           path: release-assets
           merge-multiple: true
 
       - name: Create GitHub release
         run: |
-          mapfile -t release_files < <(find release-assets -maxdepth 1 -type f \( -name '*.apk' -o -name '*.ipa' \) -print | sort)
+          mapfile -t release_files < <(find release-assets -maxdepth 1 -type f -name '*.apk' -print | sort)
           if (( ${#release_files[@]} == 0 )); then
-            echo "No release packages were produced." >&2
+            echo "No Android packages were produced." >&2
             exit 1
           fi
 
@@ -387,12 +399,75 @@ jobs:
           fi
           gh release create "${release_args[@]}" "${release_files[@]}"
 
-  store:
-    name: Update sideload source
-    if: inputs.mode == 'publish' && (inputs.target == 'all' || inputs.target == 'ios-only')
+  # Attaches the IPA to the release created above once iOS finishes.
+  # For ios-only runs there is no Android release, so this job creates the release itself.
+  release-ios:
+    name: Attach iOS IPA to ${{ inputs.mode }} release
+    if: >-
+      always()
+      && (inputs.mode == 'draft' || inputs.mode == 'publish')
+      && needs.prepare.result == 'success'
+      && needs.ios.result == 'success'
+      && (needs.release.result == 'success' || inputs.target == 'ios-only')
     needs:
       - prepare
+      - ios
       - release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_MODE: ${{ inputs.mode }}
+      RELEASE_TARGET: ${{ inputs.target }}
+      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+      RELEASE_VERSION: ${{ needs.prepare.outputs.tag }}
+      RELEASE_BRANCH: ${{ github.ref_name }}
+
+    steps:
+      - name: Download release notes
+        uses: actions/download-artifact@v8
+        with:
+          name: release-notes
+          path: release-assets
+
+      - name: Download iOS artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: nuvio-*-ios-full-release
+          path: release-assets
+          merge-multiple: true
+
+      - name: Attach IPA to GitHub release
+        run: |
+          mapfile -t ipa_files < <(find release-assets -maxdepth 1 -type f -name '*.ipa' -print | sort)
+          if (( ${#ipa_files[@]} == 0 )); then
+            echo "No iOS packages were produced." >&2
+            exit 1
+          fi
+
+          if [[ "${RELEASE_TARGET}" == "ios-only" ]]; then
+            release_args=(
+              "${RELEASE_TAG}"
+              --repo "${GITHUB_REPOSITORY}"
+              --target "${RELEASE_BRANCH}"
+              --title "${RELEASE_VERSION}"
+              --notes-file release-assets/release-notes.md
+            )
+            if [[ "${RELEASE_MODE}" == "draft" ]]; then
+              release_args+=(--draft)
+            fi
+            gh release create "${release_args[@]}" "${ipa_files[@]}"
+          else
+            gh release upload "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --clobber "${ipa_files[@]}"
+          fi
+
+  store:
+    name: Update sideload source
+    if: always() && inputs.mode == 'publish' && needs.prepare.result == 'success' && needs.release-ios.result == 'success'
+    needs:
+      - prepare
+      - release-ios
     permissions:
       contents: write
     uses: ./.github/workflows/update-store-source.yml

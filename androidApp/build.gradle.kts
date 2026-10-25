@@ -1,4 +1,5 @@
 import java.util.Properties
+import javax.inject.Inject
 
 fun readXcconfigValue(file: File, key: String): String? {
     if (!file.exists()) return null
@@ -163,9 +164,75 @@ android {
     }
 }
 
+@CacheableTask
+abstract class CargoNdkBuild @Inject constructor(private val exec: ExecOperations) : DefaultTask() {
+    @get:Internal
+    abstract val workspace: DirectoryProperty
+
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val sources: ConfigurableFileCollection
+
+    @get:Input
+    abstract val crate: Property<String>
+
+    @get:Input
+    abstract val abis: ListProperty<String>
+
+    @get:Input
+    abstract val minSdk: Property<Int>
+
+    @get:Internal
+    abstract val ndk: DirectoryProperty
+
+    @get:Input
+    abstract val ndkVersion: Property<String>
+
+    @get:OutputDirectory
+    abstract val jniLibs: DirectoryProperty
+
+    @TaskAction
+    fun build() {
+        val out = jniLibs.get().asFile.apply {
+            deleteRecursively()
+            mkdirs()
+        }
+        exec.exec {
+            workingDir = workspace.get().asFile
+            environment("ANDROID_NDK_HOME", ndk.get().asFile.path)
+            commandLine(
+                listOf(cargo(), "ndk", "--platform", minSdk.get().toString()) +
+                    abis.get().flatMap { listOf("-t", it) } +
+                    listOf("-o", out.path, "build", "--release", "-p", crate.get()),
+            )
+        }
+    }
+
+    private fun cargo(): String {
+        val home = System.getenv("CARGO_HOME")?.let(::File) ?: File(System.getProperty("user.home"), ".cargo")
+        val name = if (System.getProperty("os.name").startsWith("Windows")) "cargo.exe" else "cargo"
+        return File(home, "bin/$name").takeIf { it.exists() }?.path ?: "cargo"
+    }
+}
+
+val native = rootProject.layout.projectDirectory.dir("native")
+val rust = tasks.register<CargoNdkBuild>("buildRust") {
+    workspace = native
+    sources.from(fileTree(native) { exclude("target/**", "**/*.md") })
+    crate = "aiostreams-native-android"
+    abis = listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+    minSdk = libs.versions.android.minSdk.get().toInt()
+    ndkVersion = androidComponents.sdkComponents.ndkDirectory.map { it.asFile.name }
+    ndk = androidComponents.sdkComponents.ndkDirectory
+    jniLibs = layout.buildDirectory.dir("cargo/jniLibs")
+}
+
 androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->
         variant.applicationId.set("com.nuviodebug.com")
+    }
+    onVariants { variant ->
+        variant.sources.jniLibs?.addGeneratedSourceDirectory(rust, CargoNdkBuild::jniLibs)
     }
 }
 
