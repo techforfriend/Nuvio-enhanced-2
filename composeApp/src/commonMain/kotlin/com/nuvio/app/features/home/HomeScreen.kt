@@ -1188,16 +1188,21 @@ fun HomeScreen(
                                     modifier = Modifier,
                                     viewportHeight = maxHeight,
                                     mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
-                                    heroStyle = if (enhancedSettings.originalNuvioHeroBannerEnabled) HomeHeroStyle.FULL_BLEED else homeSettingsUiState.heroStyle,
+                                    heroStyle = when {
+                                        enhancedSettings.originalNuvioHeroBannerEnabled -> HomeHeroStyle.FULL_BLEED
+                                        enhancedSettings.streamingShowcaseHeroEnabled -> HomeHeroStyle.FULL_BLEED
+                                        else -> homeSettingsUiState.heroStyle
+                                    },
                                     listState = homeListState,
                                     stretchPx = { heroStretchState.stretchPx },
                                     // animateCollectionGifs doubles as "Home is the visible route" — it already
                                     // turns false whenever a screen (like Details) is pushed on top of it, which
                                     // is also exactly when hero trailer playback must stop, not just pause.
-                                    trailerPlaybackEnabled = homeSettingsUiState.heroTrailerPlaybackEnabled &&
+                                    trailerPlaybackEnabled = (homeSettingsUiState.heroTrailerPlaybackEnabled ||
+                                        (enhancedSettings.streamingShowcaseHeroEnabled && enhancedSettings.streamingShowcaseVideoPreviewEnabled)) &&
                                         animateCollectionGifs,
                                     trailerStartDelaySeconds = homeSettingsUiState.heroTrailerStartDelaySeconds,
-                                    trailerStartUnmuted = homeSettingsUiState.heroTrailerStartUnmuted,
+                                    trailerStartUnmuted = enhancedSettings.streamingShowcaseVideoPreviewSoundEnabled || homeSettingsUiState.heroTrailerStartUnmuted,
                                     showImdbRating = homeHeroState.showImdbRating && enhancedSettings.showHeroRatings,
                                     showMdbListRatings = homeHeroState.showMdbListRatings && enhancedSettings.showHeroRatings,
                                     preferredArtworkSource = if (enhancedSettings.posterArtHeroEnabled && !enhancedSettings.originalNuvioHeroBannerEnabled) {
@@ -1208,6 +1213,9 @@ fun HomeScreen(
                                     showHeroOverview = enhancedSettings.showHeroOverview,
                                     showHeroDetailsButton = enhancedSettings.showHeroDetailsButton,
                                     heroRefreshHapticsEnabled = enhancedSettings.heroRefreshHapticsEnabled,
+                                    heroDisplayMode = enhancedSettings.heroDisplayMode,
+                                    compactHeroMetadata = enhancedSettings.compactHeroMetadata,
+                                    ratingsAboveMetadata = enhancedSettings.ratingsAboveMetadata,
                                     onItemClick = onPosterClick,
                                     onActiveArtworkChange = onActiveHeroArtworkChange,
                                 )

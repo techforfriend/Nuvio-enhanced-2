@@ -40,6 +40,8 @@ internal fun HomeHeroMetaRows(
     isTablet: Boolean,
     showImdbRating: Boolean,
     showMdbListRatings: Boolean,
+    compactMetadata: Boolean = false,
+    ratingsAboveMetadata: Boolean = false,
 ) {
     val type = item.type.trim().lowercase()
     val isSeries = type == "series" || type == "tv"
@@ -59,33 +61,45 @@ internal fun HomeHeroMetaRows(
     val imdbRating = item.imdbRating?.trim()
         ?.takeIf { showImdbRating && ratings.isEmpty() }
         ?.takeIf { raw -> raw.toDoubleOrNull()?.let { it > 0.0 } == true }
-    val primaryImdbRating = imdbRating?.takeIf { !isSeries && badges.isEmpty() }
-    val secondaryImdbRating = imdbRating?.takeIf { primaryImdbRating == null }
+    val primaryImdbRating = if (ratingsAboveMetadata) null else imdbRating?.takeIf { !isSeries && badges.isEmpty() }
+    val secondaryImdbRating = if (ratingsAboveMetadata) null else imdbRating?.takeIf { primaryImdbRating == null }
     val horizontalAlignment = if (isTablet) Alignment.Start else Alignment.CenterHorizontally
-    val rowArrangement = Arrangement.spacedBy(8.dp, horizontalAlignment)
+    val itemSpacing = if (compactMetadata) 4.dp else 8.dp
+    val rowArrangement = Arrangement.spacedBy(itemSpacing, horizontalAlignment)
 
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = horizontalAlignment,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(if (compactMetadata) 4.dp else 8.dp),
     ) {
+        if (ratingsAboveMetadata && (ratings.isNotEmpty() || imdbRating != null)) {
+            if (ratings.isNotEmpty()) {
+                RatingsRow(
+                    ratings = ratings,
+                    maxItems = HERO_RATINGS_LIMIT,
+                )
+            } else if (imdbRating != null) {
+                HeroImdbRating(rating = imdbRating)
+            }
+        }
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = rowArrangement,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeroMetaText(text = typeLabel)
+            HeroMetaText(text = typeLabel, isCompact = compactMetadata)
             genre?.let {
                 HeroMetaDot()
-                HeroMetaText(text = it, modifier = Modifier.weight(1f, fill = false))
+                HeroMetaText(text = it, isCompact = compactMetadata, modifier = Modifier.weight(1f, fill = false))
             }
             runtime?.let {
                 HeroMetaDot()
-                HeroMetaText(text = it)
+                HeroMetaText(text = it, isCompact = compactMetadata)
             }
             release?.let {
                 HeroMetaDot()
-                HeroMetaText(text = it)
+                HeroMetaText(text = it, isCompact = compactMetadata)
             }
             primaryImdbRating?.let {
                 HeroMetaDot()
@@ -112,12 +126,12 @@ internal fun HomeHeroMetaRows(
                 }
                 language?.let {
                     if (badges.isNotEmpty() || secondaryImdbRating != null) HeroMetaDot()
-                    HeroMetaText(text = it)
+                    HeroMetaText(text = it, isCompact = compactMetadata)
                 }
             }
         }
 
-        if (ratings.isNotEmpty()) {
+        if (!ratingsAboveMetadata && ratings.isNotEmpty()) {
             RatingsRow(
                 ratings = ratings,
                 maxItems = HERO_RATINGS_LIMIT,
@@ -145,11 +159,12 @@ private fun HeroImdbRating(rating: String) {
 private fun HeroMetaText(
     text: String,
     modifier: Modifier = Modifier,
+    isCompact: Boolean = false,
 ) {
     Text(
         text = text,
         modifier = modifier,
-        style = MaterialTheme.typography.labelLarge,
+        style = if (isCompact) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onBackground,
         fontWeight = FontWeight.SemiBold,
         maxLines = 1,

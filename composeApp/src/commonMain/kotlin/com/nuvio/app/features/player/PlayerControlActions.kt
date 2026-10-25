@@ -67,6 +67,8 @@ import com.nuvio.app.core.ui.nuvioTypeScale
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.features.settings.NuvioEnhancedSettingsRepository
 
 internal fun playerOrientationToggleIcon(isPortraitPlayback: Boolean): ImageVector =
     if (isPortraitPlayback) Icons.Rounded.StayCurrentLandscape else Icons.Rounded.StayCurrentPortrait
@@ -91,6 +93,11 @@ internal fun PlayerToolbar(
     isPortraitPlayback: Boolean = false,
     onPictureInPictureClick: (() -> Unit)? = null,
 ) {
+    val enhancedSettings by remember {
+        NuvioEnhancedSettingsRepository.ensureLoaded()
+        NuvioEnhancedSettingsRepository.uiState
+    }.collectAsStateWithLifecycle()
+
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
         // Toolbar actions share one liquid-glass capsule; close sits in its own glass circle.
@@ -102,14 +109,14 @@ internal fun PlayerToolbar(
             ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            onSwitchEngineClick?.let {
+            if (onSwitchEngineClick != null && !enhancedSettings.hidePlayerEngineSwitch) {
                 PlayerAction(
                     description = stringResource(Res.string.cd_switch_player_engine),
                     icon = Icons.Rounded.SwapHoriz,
-                    onClick = it,
+                    onClick = onSwitchEngineClick,
                 )
             }
-            onRandomNextEpisodeModeToggle?.let {
+            if (onRandomNextEpisodeModeToggle != null && !enhancedSettings.hidePlayerShuffle) {
                 PlayerAction(
                     description = if (randomNextEpisodeMode) {
                         stringResource(Res.string.player_random_next_enabled)
@@ -117,25 +124,25 @@ internal fun PlayerToolbar(
                         stringResource(Res.string.player_random_next_disabled)
                     },
                     icon = Icons.Rounded.Shuffle,
-                    onClick = it,
+                    onClick = onRandomNextEpisodeModeToggle,
                     tint = if (randomNextEpisodeMode) MaterialTheme.colorScheme.primary else Color.White,
                 )
             }
-            onPictureInPictureClick?.let {
+            if (onPictureInPictureClick != null && !enhancedSettings.hidePlayerPip) {
                 PlayerAction(
                     description = stringResource(Res.string.compose_player_picture_in_picture),
                     icon = Icons.Rounded.PictureInPictureAlt,
-                    onClick = it,
+                    onClick = onPictureInPictureClick,
                 )
             }
-            onOrientationToggleClick?.let {
+            if (onOrientationToggleClick != null && !enhancedSettings.hidePlayerOrientation) {
                 PlayerAction(
                     description = stringResource(playerOrientationToggleLabel(isPortraitPlayback)),
                     icon = playerOrientationToggleIcon(isPortraitPlayback),
-                    onClick = it,
+                    onClick = onOrientationToggleClick,
                 )
             }
-            if (onPartyClick != null) {
+            if (onPartyClick != null && !enhancedSettings.hidePlayerWatchParty) {
                 PlayerAction(
                     description = stringResource(Res.string.party_title),
                     icon = Icons.Rounded.Groups,
@@ -143,20 +150,22 @@ internal fun PlayerToolbar(
                     tint = if (partyActive) MaterialTheme.colorScheme.primary else Color.White,
                 )
             }
-            onCastClick?.let {
+            if (onCastClick != null && !enhancedSettings.hidePlayerCast) {
                 PlayerAction(
                     description = stringResource(Res.string.player_cast),
                     icon = if (isCasting) Icons.Rounded.CastConnected else Icons.Rounded.Cast,
-                    onClick = it,
+                    onClick = onCastClick,
                 )
             }
-            PlayerAction(
-                description = stringResource(
-                    if (isLocked) Res.string.compose_player_unlock_controls else Res.string.compose_player_lock_controls,
-                ),
-                icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
-                onClick = onLockToggle,
-            )
+            if (!enhancedSettings.hidePlayerLock) {
+                PlayerAction(
+                    description = stringResource(
+                        if (isLocked) Res.string.compose_player_unlock_controls else Res.string.compose_player_lock_controls,
+                    ),
+                    icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
+                    onClick = onLockToggle,
+                )
+            }
         }
         Spacer(Modifier.width(8.dp))
         NuvioBackButton(
@@ -205,6 +214,11 @@ internal fun PlayerControlActions(
     userRating: Int? = null,
     onInteraction: () -> Unit,
 ) {
+    val enhancedSettings by remember {
+        NuvioEnhancedSettingsRepository.ensureLoaded()
+        NuvioEnhancedSettingsRepository.uiState
+    }.collectAsStateWithLifecycle()
+
     val primaryActions = listOfNotNull(
         onNextEpisodeClick?.let {
             PlayerControlAction(
@@ -212,22 +226,26 @@ internal fun PlayerControlActions(
                 icon = Icons.Rounded.SkipNext, iconSize = 40.dp,
             )
         },
-        PlayerControlAction(
-            "${stringResource(Res.string.compose_player_speed)} ${formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed)}",
-            onSpeedClick, icon = Icons.Rounded.Speed,
-            popup = {
-                PlayerSpeedPopup(
-                    visible = speedPickerVisible,
-                    currentSpeed = playbackSnapshot.playbackSpeed,
-                    onSpeedSelected = onSpeedSelected,
-                    onDismiss = onSpeedPickerDismiss,
-                )
-            },
-        ),
-        PlayerControlAction(
-            stringResource(resizeMode.labelRes), onResizeModeClick,
-            painter = appIconPainter(AppIconResource.PlayerAspectRatio),
-        ),
+        if (!enhancedSettings.hidePlayerSpeed) {
+            PlayerControlAction(
+                "${stringResource(Res.string.compose_player_speed)} ${formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed)}",
+                onSpeedClick, icon = Icons.Rounded.Speed,
+                popup = {
+                    PlayerSpeedPopup(
+                        visible = speedPickerVisible,
+                        currentSpeed = playbackSnapshot.playbackSpeed,
+                        onSpeedSelected = onSpeedSelected,
+                        onDismiss = onSpeedPickerDismiss,
+                    )
+                },
+            )
+        } else null,
+        if (!enhancedSettings.hidePlayerResizeMode) {
+            PlayerControlAction(
+                stringResource(resizeMode.labelRes), onResizeModeClick,
+                painter = appIconPainter(AppIconResource.PlayerAspectRatio),
+            )
+        } else null,
         PlayerControlAction(
             stringResource(Res.string.compose_player_subtitles), onSubtitleClick,
             painter = appIconPainter(AppIconResource.PlayerSubtitles),
@@ -262,7 +280,7 @@ internal fun PlayerControlActions(
                 painter = appIconPainter(AppIconResource.PlayerEpisodes),
             )
         },
-        onRateClick?.let {
+        onRateClick?.takeIf { !enhancedSettings.hidePlayerRating }?.let {
             PlayerControlAction(
                 userRating?.let { rating -> stringResource(Res.string.user_rating_action_rated, rating) }
                     ?: stringResource(Res.string.user_rating_action_rate),
@@ -270,13 +288,13 @@ internal fun PlayerControlActions(
                 icon = if (userRating != null) Icons.Rounded.Star else Icons.Rounded.StarBorder,
             )
         },
-        onOpenInExternalPlayer?.let {
+        onOpenInExternalPlayer?.takeIf { !enhancedSettings.hidePlayerExternalPlayer }?.let {
             PlayerControlAction(
                 stringResource(Res.string.streams_open_external_player), it,
                 icon = Icons.AutoMirrored.Rounded.OpenInNew,
             )
         },
-        onInfoClick?.let {
+        onInfoClick?.takeIf { !enhancedSettings.hidePlayerInfo }?.let {
             PlayerControlAction(
                 stringResource(Res.string.compose_player_playback_info), it,
                 icon = Icons.Rounded.Info,
@@ -288,19 +306,13 @@ internal fun PlayerControlActions(
                 icon = Icons.Rounded.Info,
             )
         },
-        onSwitchEngineClick?.let {
-            PlayerControlAction(
-                stringResource(Res.string.cd_switch_player_engine), it,
-                icon = Icons.Rounded.SwapHoriz,
-            )
-        },
-        onVideoSettingsClick?.let {
+        onVideoSettingsClick?.takeIf { !enhancedSettings.hidePlayerVideoSettings }?.let {
             PlayerControlAction(
                 stringResource(Res.string.player_action_video_settings), it,
                 icon = Icons.Rounded.Build,
             )
         },
-        onSubmitIntroClick?.let {
+        onSubmitIntroClick?.takeIf { !enhancedSettings.hidePlayerSubmitIntro }?.let {
             PlayerControlAction(
                 stringResource(Res.string.submit_intro_action), it,
                 icon = Icons.Rounded.Flag,
