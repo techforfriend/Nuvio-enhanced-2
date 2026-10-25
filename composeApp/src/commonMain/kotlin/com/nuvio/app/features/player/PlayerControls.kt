@@ -548,7 +548,9 @@ private fun PlayerHeader(
             verticalAlignment = Alignment.Top,
         ) {
             Box(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = if (enhancedSettings.playerStatusOverlayEnabled) 36.dp else 12.dp),
             ) {
                 Column(
                     modifier = Modifier.graphicsLayer { alpha = metadataAlpha },
@@ -620,6 +622,7 @@ private fun PlayerHeader(
 
             if (showActions) {
                 Row(
+                    modifier = Modifier.padding(start = if (enhancedSettings.playerStatusOverlayEnabled) 36.dp else 0.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -1554,16 +1557,16 @@ private fun PlayerDeviceStatusOverlay(
     val remainingLabel = playerFinishRemainingLabel(playbackSnapshot)
     val finishClockLabel = playerFinishClockLabel(status.timeLabel, playbackSnapshot)
     Surface(
-        modifier = modifier.widthIn(min = 220.dp, max = 460.dp),
+        modifier = modifier.wrapContentWidth(),
         shape = RoundedCornerShape(999.dp),
-        color = Color.Black.copy(alpha = 0.34f),
+        color = Color.Black.copy(alpha = 0.42f),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-            horizontalArrangement = Arrangement.spacedBy(18.dp),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             PlayerDeviceStatusItem(
@@ -1583,9 +1586,9 @@ private fun PlayerDeviceStatusOverlay(
             )
             Text(
                 text = status.timeLabel,
-                style = typeScale.labelSm.copy(
-                    fontSize = metrics.metadataSize,
-                    lineHeight = metrics.metadataSize * 1.2f,
+                style = typeScale.labelSmall.copy(
+                    fontSize = 10.5.sp,
+                    lineHeight = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                 ),
                 color = Color.White.copy(alpha = 0.92f),
@@ -1652,20 +1655,20 @@ private fun PlayerDeviceStatusItem(
 ) {
     val typeScale = MaterialTheme.nuvioTypeScale
     Row(
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = Color.White.copy(alpha = 0.88f),
-            modifier = Modifier.size(metrics.headerIconSize * 0.74f),
+            modifier = Modifier.size(11.dp),
         )
         Text(
             text = text,
-            style = typeScale.labelSm.copy(
-                fontSize = metrics.metadataSize,
-                lineHeight = metrics.metadataSize * 1.2f,
+            style = typeScale.labelSmall.copy(
+                fontSize = 10.5.sp,
+                lineHeight = 12.sp,
                 fontWeight = FontWeight.SemiBold,
             ),
             color = Color.White.copy(alpha = 0.9f),
@@ -1682,7 +1685,7 @@ private fun PlayerBatteryStatusItem(
 ) {
     val typeScale = MaterialTheme.nuvioTypeScale
     Row(
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PlayerBatteryGlyph(
@@ -1692,9 +1695,9 @@ private fun PlayerBatteryStatusItem(
         )
         Text(
             text = percent?.let { "$it%" } ?: "--",
-            style = typeScale.labelSm.copy(
-                fontSize = metrics.metadataSize,
-                lineHeight = metrics.metadataSize * 1.2f,
+            style = typeScale.labelSmall.copy(
+                fontSize = 10.5.sp,
+                lineHeight = 12.sp,
                 fontWeight = FontWeight.SemiBold,
             ),
             color = Color.White.copy(alpha = 0.9f),
@@ -1717,10 +1720,10 @@ private fun PlayerBatteryGlyph(
         Color.White.copy(alpha = 0.9f)
     }
     val outlineColor = Color.White.copy(alpha = 0.72f)
-    val bodyWidth = metrics.headerIconSize * 0.86f
-    val bodyHeight = metrics.headerIconSize * 0.46f
-    val capWidth = metrics.headerIconSize * 0.08f
-    val capHeight = metrics.headerIconSize * 0.24f
+    val bodyWidth = 13.dp
+    val bodyHeight = 7.dp
+    val capWidth = 1.2.dp
+    val capHeight = 3.dp
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -1729,20 +1732,20 @@ private fun PlayerBatteryGlyph(
         Box(
             modifier = Modifier
                 .size(width = bodyWidth, height = bodyHeight)
-                .clip(RoundedCornerShape(3.dp))
+                .clip(RoundedCornerShape(2.dp))
                 .border(
-                    width = 1.2.dp,
+                    width = 1.dp,
                     color = outlineColor,
-                    shape = RoundedCornerShape(3.dp),
+                    shape = RoundedCornerShape(2.dp),
                 )
-                .padding(2.dp),
+                .padding(1.dp),
         ) {
             if (level != null) {
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
                         .fillMaxWidth(fillFraction)
-                        .clip(RoundedCornerShape(1.5.dp))
+                        .clip(RoundedCornerShape(1.dp))
                         .background(activeColor),
                 )
             }
@@ -1750,7 +1753,7 @@ private fun PlayerBatteryGlyph(
         Box(
             modifier = Modifier
                 .size(width = capWidth, height = capHeight)
-                .clip(RoundedCornerShape(topEnd = 1.5.dp, bottomEnd = 1.5.dp))
+                .clip(RoundedCornerShape(topEnd = 1.dp, bottomEnd = 1.dp))
                 .background(outlineColor),
         )
     }

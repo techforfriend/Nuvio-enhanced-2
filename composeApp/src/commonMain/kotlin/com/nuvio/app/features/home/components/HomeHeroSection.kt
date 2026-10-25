@@ -218,6 +218,9 @@ internal fun HomeHeroSection(
     showHeroOverview: Boolean = true,
     showHeroDetailsButton: Boolean = true,
     heroRefreshHapticsEnabled: Boolean = true,
+    heroDisplayMode: com.nuvio.app.features.settings.NuvioHeroDisplayMode = com.nuvio.app.features.settings.NuvioHeroDisplayMode.Balanced,
+    compactHeroMetadata: Boolean = false,
+    ratingsAboveMetadata: Boolean = false,
     onItemClick: ((MetaPreview) -> Unit)? = null,
     onActiveArtworkChange: ((String?) -> Unit)? = null,
 ) {
@@ -630,6 +633,9 @@ internal fun HomeHeroSection(
                                             showMdbListRatings = showMdbListRatings,
                                             showHeroOverview = showHeroOverview,
                                             showHeroDetailsButton = showHeroDetailsButton,
+                                            heroDisplayMode = heroDisplayMode,
+                                            compactHeroMetadata = compactHeroMetadata,
+                                            ratingsAboveMetadata = ratingsAboveMetadata,
                                             onItemClick = onItemClick,
                                         )
                                     }
@@ -814,12 +820,20 @@ private fun HeroContentBlock(
     showMdbListRatings: Boolean,
     showHeroOverview: Boolean,
     showHeroDetailsButton: Boolean,
+    heroDisplayMode: com.nuvio.app.features.settings.NuvioHeroDisplayMode = com.nuvio.app.features.settings.NuvioHeroDisplayMode.Balanced,
+    compactHeroMetadata: Boolean = false,
+    ratingsAboveMetadata: Boolean = false,
     onItemClick: ((MetaPreview) -> Unit)?,
 ) {
     var logoLoadError by remember(item.type, item.id, item.logo) {
         mutableStateOf(false)
     }
     val logoUrl = item.logo?.takeIf { it.isNotBlank() }
+    val effectiveLogoFraction = if (heroDisplayMode == com.nuvio.app.features.settings.NuvioHeroDisplayMode.Cinematic) {
+        (layout.logoWidthFraction * 1.15f).coerceAtMost(0.85f)
+    } else {
+        layout.logoWidthFraction
+    }
 
     Column(
         modifier = Modifier
@@ -832,7 +846,7 @@ private fun HeroContentBlock(
                 model = logoUrl,
                 contentDescription = item.name,
                 modifier = Modifier
-                    .fillMaxWidth(layout.logoWidthFraction)
+                    .fillMaxWidth(effectiveLogoFraction)
                     .aspectRatio(2.6f)
                     .clickable(enabled = onItemClick != null) {
                         onItemClick?.invoke(item)
@@ -889,29 +903,37 @@ private fun HeroContentBlock(
         }
         val synopsis = (item.description ?: details?.description)?.trim()?.takeIf { it.isNotBlank() }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(if (compactHeroMetadata) 8.dp else 12.dp))
         HomeHeroMetaRows(
             item = metaItem,
             isTablet = layout.isTablet,
             showImdbRating = showImdbRating,
             showMdbListRatings = showMdbListRatings,
+            compactMetadata = compactHeroMetadata,
+            ratingsAboveMetadata = ratingsAboveMetadata,
         )
 
+        val maxOverviewLines = when (heroDisplayMode) {
+            com.nuvio.app.features.settings.NuvioHeroDisplayMode.Cinematic -> 1
+            com.nuvio.app.features.settings.NuvioHeroDisplayMode.InfoRich -> 4
+            com.nuvio.app.features.settings.NuvioHeroDisplayMode.Balanced -> 2
+        }
+
         if (synopsis != null && showHeroOverview) {
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(if (compactHeroMetadata) 6.dp else 10.dp))
             Text(
                 text = synopsis,
                 modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.bodyMedium,
+                style = if (compactHeroMetadata) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
                 textAlign = if (layout.isTablet) TextAlign.Start else TextAlign.Center,
-                maxLines = 2,
+                maxLines = maxOverviewLines,
                 overflow = TextOverflow.Ellipsis,
             )
         }
 
         if (showHeroDetailsButton && onItemClick != null) {
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(if (compactHeroMetadata) 6.dp else 10.dp))
             Surface(
                 onClick = { onItemClick(item) },
                 shape = CircleShape,
