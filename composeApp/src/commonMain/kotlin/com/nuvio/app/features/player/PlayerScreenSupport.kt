@@ -6,7 +6,7 @@ import com.nuvio.app.features.streams.StreamItem
 
 internal const val PlaybackProgressPersistIntervalMs = 60_000L
 internal const val PlayerDoubleTapSeekResetDelayMs = 800L
-internal const val PlayerLockedOverlayDurationMs = 2_000L
+internal const val PlayerLockedOverlayDurationMs = 3_500L
 internal const val PlayerLeftGestureBoundary = 0.4f
 internal const val PlayerRightGestureBoundary = 0.6f
 internal const val PlayerVerticalGestureSensitivity = 0.65f

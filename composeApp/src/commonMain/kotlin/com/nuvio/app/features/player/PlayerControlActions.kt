@@ -157,15 +157,13 @@ internal fun PlayerToolbar(
                     onClick = onCastClick,
                 )
             }
-            if (!enhancedSettings.hidePlayerLock) {
-                PlayerAction(
-                    description = stringResource(
-                        if (isLocked) Res.string.compose_player_unlock_controls else Res.string.compose_player_lock_controls,
-                    ),
-                    icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
-                    onClick = onLockToggle,
-                )
-            }
+            PlayerAction(
+                description = stringResource(
+                    if (isLocked) Res.string.compose_player_unlock_controls else Res.string.compose_player_lock_controls,
+                ),
+                icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
+                onClick = onLockToggle,
+            )
         }
         Spacer(Modifier.width(8.dp))
         NuvioBackButton(
