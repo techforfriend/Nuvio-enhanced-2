@@ -18,6 +18,8 @@ import com.nuvio.app.features.plugins.pluginContentId
 import com.nuvio.app.features.plugins.PluginsUiState
 import com.nuvio.app.features.cloudstream.CloudStreamRepository
 import com.nuvio.app.features.cloudstream.parseCloudStreamRouteId
+import com.nuvio.app.features.vega.VegaRepository
+import com.nuvio.app.features.vega.resolveVegaProviderStreams
 import com.nuvio.app.features.servers.ServerStreams
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -133,6 +135,12 @@ object StreamsRepository {
         )
         val cloudStreamProviderGroups = if (AppFeaturePolicy.pluginsEnabled) {
             cloudStreamProviderGroupsForRequest(type, cloudStreamSearchRequest)
+        } else {
+            emptyList()
+        }
+        val vegaProviders = if (AppFeaturePolicy.pluginsEnabled) {
+            VegaRepository.initialize()
+            VegaRepository.getEnabledProviders()
         } else {
             emptyList()
         }
@@ -396,6 +404,13 @@ object StreamsRepository {
                 streams = emptyList(),
                 isLoading = true,
             )
+        } + vegaProviders.map { provider ->
+            AddonStreamGroup(
+                addonName = "Vega - ${provider.displayName}",
+                addonId = "vega:${provider.value}",
+                streams = emptyList(),
+                isLoading = true,
+            )
         } + serverSources.map { it.loadingGroup() }, installedAddonOrder, preferredGroupIds)
         val isInitiallyLoading = initialGroups.any { it.isLoading }
         _uiState.value = StreamsUiState(
@@ -418,7 +433,8 @@ object StreamsRepository {
             val totalTasks = streamAddons.size +
                 pluginProviderGroups.sumOf { it.scrapers.size } +
                 serverSources.size +
-                cloudStreamProviderGroups.size
+                cloudStreamProviderGroups.size +
+                vegaProviders.size
 
             val installedAddonNames = installedAddonOrder.toSet()
             val installedAddonIds = streamAddons.map { it.addonId }.toSet()
@@ -748,6 +764,29 @@ object StreamsRepository {
                         streams = emptyList(),
                         isLoading = false,
                         error = "${providerGroup.addonName} timed out",
+                    )
+                    publishCompletion(StreamLoadCompletion.Addon(group))
+                }
+            }
+            vegaProviders.forEach { provider ->
+                launch {
+                    val group = withTimeoutOrNull(STREAM_PROVIDER_TIMEOUT_MS) {
+                        resolveVegaProviderStreams(
+                            provider = provider,
+                            type = type,
+                            videoId = videoId,
+                            parentMetaId = parentMetaId,
+                            parentMetaType = parentMetaType,
+                            season = season,
+                            episode = episode,
+                            searchTitle = searchTitle,
+                        )
+                    } ?: AddonStreamGroup(
+                        addonName = "Vega - ${provider.displayName}",
+                        addonId = "vega:${provider.value}",
+                        streams = emptyList(),
+                        isLoading = false,
+                        error = "${provider.displayName} timed out",
                     )
                     publishCompletion(StreamLoadCompletion.Addon(group))
                 }

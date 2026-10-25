@@ -18,6 +18,8 @@ import com.nuvio.app.features.plugins.PluginsUiState
 import com.nuvio.app.features.servers.ServerRepository
 import com.nuvio.app.features.servers.ServerStreams
 
+import com.nuvio.app.features.vega.VegaRepository
+
 internal fun AddonManifest.supportsStream(type: String, videoId: String): Boolean =
     supportsResource("stream", type, videoId)
 
@@ -27,18 +29,21 @@ internal fun hasCompatiblePlaybackSource(
     type: String,
     videoId: String,
     hasCloudStreamProviders: Boolean = false,
+    hasVegaProviders: Boolean = false,
 ): Boolean = addons.any { it.enabled && it.manifest?.supportsStream(type, videoId) == true } ||
     (plugins.pluginsEnabled && plugins.scrapers.any { it.enabled && it.supportsType(type) }) ||
     parseCloudStreamRouteId(videoId) != null ||
-    hasCloudStreamProviders
+    hasCloudStreamProviders ||
+    hasVegaProviders
 
 internal class PlaybackAvailability(
     private val addons: List<ManagedAddon>,
     private val plugins: PluginsUiState,
     private val hasCloudStreamProviders: Boolean = false,
+    private val hasVegaProviders: Boolean = false,
 ) {
     fun canStream(type: String, videoId: String, parentMetaId: String? = null): Boolean =
-        hasCompatiblePlaybackSource(addons, plugins, type, videoId, hasCloudStreamProviders) ||
+        hasCompatiblePlaybackSource(addons, plugins, type, videoId, hasCloudStreamProviders, hasVegaProviders) ||
             MetaDetailsRepository.findEmbeddedStreams(videoId).isNotEmpty() ||
             ServerStreams.canServe(type, videoId) ||
             parseCloudStreamRouteId(videoId) != null ||
@@ -72,6 +77,12 @@ internal class PlaybackAvailability(
             } else {
                 false
             },
+            hasVegaProviders = if (AppFeaturePolicy.pluginsEnabled) {
+                VegaRepository.initialize()
+                VegaRepository.getEnabledProviders().isNotEmpty()
+            } else {
+                false
+            },
         )
     }
 }
@@ -98,6 +109,13 @@ internal fun rememberPlaybackAvailability(): PlaybackAvailability {
         }.collectAsStateWithLifecycle()
         state
     } else null
+    val vegaState = if (AppFeaturePolicy.pluginsEnabled) {
+        val state by remember {
+            VegaRepository.initialize()
+            VegaRepository.uiState
+        }.collectAsStateWithLifecycle()
+        state
+    } else null
     val downloads by remember {
         DownloadsRepository.ensureLoaded()
         DownloadsRepository.uiState
@@ -107,7 +125,8 @@ internal fun rememberPlaybackAvailability(): PlaybackAvailability {
         ServerRepository.uiState
     }.collectAsStateWithLifecycle()
     val hasCloudStreamProviders = cloudStreamState?.plugins?.any { it.isRunnable } == true
-    return remember(addons, plugins, downloads, servers.revision, hasCloudStreamProviders) {
-        PlaybackAvailability(addons.addons, plugins, hasCloudStreamProviders)
+    val hasVegaProviders = vegaState?.let { it.vegaEnabled && it.providers.any { p -> p.enabled } } == true
+    return remember(addons, plugins, downloads, servers.revision, hasCloudStreamProviders, hasVegaProviders) {
+        PlaybackAvailability(addons.addons, plugins, hasCloudStreamProviders, hasVegaProviders)
     }
 }
