@@ -119,3 +119,4 @@
 -keep class com.nuvio.app.features.player.PlayerCastOptionsProvider { *; }
 
 -keep class com.nuvio.app.features.player.aiostreams.AssSurface { *; }
+-keep interface com.nuvio.app.features.player.aiostreams.Thumbnails$Listener { *; }
