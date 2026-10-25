@@ -5,11 +5,6 @@ on:
     # Runs every 6 hours
     - cron: '0 */6 * * *'
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/sync-luqman-upstream.yml'
-
-
 
 permissions:
   contents: write
@@ -78,30 +73,39 @@ jobs:
           git push origin "${BRANCH_NAME}" --force
 
           # Check if PR already exists
-          EXISTING_PR="$(gh pr list --head "${BRANCH_NAME}" --state open --json number --jq '.[0].number')"
+          EXISTING_PR="$(gh pr list --head "${BRANCH_NAME}" --state open --json number --jq '.[0].number' 2>/dev/null || true)"
 
-          PR_TITLE="🔄 Upstream Sync: New updates from Luqman (${LATEST_LUQMAN_SHA:0:7})"
-          PR_BODY="## 🚀 New Commits from Luqman's Repository
+          PR_TITLE="Upstream Sync: New updates from Luqman (${LATEST_LUQMAN_SHA:0:7})"
 
-\`\`\`text
-${NEW_COMMITS}
-\`\`\`
+          STATUS_TEXT="Clean merge (No conflicts)"
+          if [[ "${MERGE_SUCCESS}" != "true" ]]; then
+            STATUS_TEXT="Merge conflicts detected - review before merging"
+          fi
+
+          cat << 'EOF' > /tmp/pr_body.md
+## New Commits from Luqman Repository
+
+```text
+EOF
+          echo "${NEW_COMMITS}" >> /tmp/pr_body.md
+          cat << EOF >> /tmp/pr_body.md
+```
 
 ---
 
-### ⚠️ Pre-Merge Checklist:
+### Pre-Merge Checklist:
 - [ ] Ensure **200% Digital Volume Boost** is intact.
 - [ ] Ensure **CS3 (CloudStream 3) Overhaul & Bug Fixes** are intact.
 - [ ] Ensure **HSV Custom Color Theme Picker** is intact.
 - [ ] Ensure **14 Player Button Hide Toggles** are intact.
 
-> [!NOTE]
-> Merge status: $(if [[ "${MERGE_SUCCESS}" == "true" ]]; then echo "Clean merge (No conflicts)"; else echo "Merge conflicts detected - review before merging"; fi)"
+> **Status:** ${STATUS_TEXT}
+EOF
 
           if [[ -n "${EXISTING_PR}" ]]; then
             echo "Updating existing PR #${EXISTING_PR}..."
-            gh pr edit "${EXISTING_PR}" --title "${PR_TITLE}" --body "${PR_BODY}"
+            gh pr edit "${EXISTING_PR}" --title "${PR_TITLE}" --body-file /tmp/pr_body.md
           else
             echo "Opening new Pull Request..."
-            gh pr create --base main --head "${BRANCH_NAME}" --title "${PR_TITLE}" --body "${PR_BODY}"
+            gh pr create --base main --head "${BRANCH_NAME}" --title "${PR_TITLE}" --body-file /tmp/pr_body.md
           fi
