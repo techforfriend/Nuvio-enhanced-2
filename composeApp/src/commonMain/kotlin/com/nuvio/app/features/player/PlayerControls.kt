@@ -1557,7 +1557,7 @@ private fun PlayerDeviceStatusOverlay(
     val remainingLabel = playerFinishRemainingLabel(playbackSnapshot)
     val finishClockLabel = playerFinishClockLabel(status.timeLabel, playbackSnapshot)
     Surface(
-        modifier = modifier.wrapContentWidth(),
+        modifier = modifier,
         shape = RoundedCornerShape(999.dp),
         color = Color.Black.copy(alpha = 0.42f),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
