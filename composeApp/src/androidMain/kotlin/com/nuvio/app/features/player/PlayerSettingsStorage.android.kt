@@ -30,6 +30,7 @@ actual object PlayerSettingsStorage {
     private const val holdToSpeedEnabledKey = "hold_to_speed_enabled"
     private const val holdToSpeedValueKey = "hold_to_speed_value"
     private const val skipBackwardSecondsKey = "skip_backward_seconds"
+    private const val toolbarLayoutKey = "player_toolbar_layout"
     private const val skipForwardSecondsKey = "skip_forward_seconds"
     private const val touchGesturesEnabledKey = "touch_gestures_enabled"
     private const val swipeToSeekEnabledKey = "swipe_to_seek_enabled"
@@ -353,6 +354,13 @@ actual object PlayerSettingsStorage {
 
     private fun saveLocalInt(keyBase: String, value: Int) {
         preferences?.edit()?.putInt(ProfileScopedKey.of(keyBase), value)?.apply()
+    }
+
+    actual fun loadToolbarLayout(): String? =
+        preferences?.getString(ProfileScopedKey.of(toolbarLayoutKey), null)
+
+    actual fun saveToolbarLayout(layout: String) {
+        preferences?.edit()?.putString(ProfileScopedKey.of(toolbarLayoutKey), layout)?.apply()
     }
 
     actual fun loadSkipBackwardSeconds(): Int? = loadLocalInt(skipBackwardSecondsKey)

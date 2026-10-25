@@ -2917,4 +2917,16 @@
     <string name="settings_advanced_dns_doh_format">%1$s (DNS over HTTPS)</string>
     <string name="settings_advanced_dns_note">Used for all of Nuvio\'s connections on this device: addons, metadata, images, sync, trackers and the ExoPlayer engine. Your phone\'s DNS stays the same for other apps. The libmpv engine and web sign-in pages still use the system DNS.</string>
     <string name="compose_player_ends_at">Ends at %1$s</string>
+    <string name="settings_playback_toolbar_layout">Player buttons</string>
+    <string name="settings_playback_toolbar_layout_description">Choose which buttons stay on the bar, which sit behind the arrow, and their order.</string>
+    <string name="settings_playback_toolbar_shown">Always shown</string>
+    <string name="settings_playback_toolbar_hidden">Behind the arrow</string>
+    <string name="settings_playback_toolbar_empty">No buttons here.</string>
+    <string name="settings_playback_toolbar_move_up">Move up</string>
+    <string name="settings_playback_toolbar_move_down">Move down</string>
+    <string name="settings_playback_toolbar_hide">Move behind the arrow</string>
+    <string name="settings_playback_toolbar_show">Always show</string>
+    <string name="settings_playback_toolbar_note">Buttons that do not apply to the current video, such as Next Episode on a movie, are skipped.</string>
+    <string name="player_toolbar_button_resize">Resize</string>
+    <string name="player_toolbar_button_quality">Quality</string>
 </resources>

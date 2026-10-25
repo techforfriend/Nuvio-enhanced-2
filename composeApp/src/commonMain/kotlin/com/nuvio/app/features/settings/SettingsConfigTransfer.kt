@@ -705,6 +705,7 @@ internal object SettingsConfigTransfer {
         PlayerSettingsStorage.loadHoldToSpeedEnabled()?.let { put("hold_to_speed_enabled", encodeSyncBoolean(it)) }
         PlayerSettingsStorage.loadHoldToSpeedValue()?.let { put("hold_to_speed_value", encodeSyncFloat(it)) }
         PlayerSettingsStorage.loadSkipBackwardSeconds()?.let { put("skip_backward_seconds", encodeSyncInt(it)) }
+        PlayerSettingsStorage.loadToolbarLayout()?.let { put("player_toolbar_layout", encodeSyncString(it)) }
         PlayerSettingsStorage.loadSkipForwardSeconds()?.let { put("skip_forward_seconds", encodeSyncInt(it)) }
         PlayerSettingsStorage.loadTouchGesturesEnabled()?.let { put("touch_gestures_enabled", encodeSyncBoolean(it)) }
         PlayerSettingsStorage.loadSwipeToSeekEnabled()?.let { put("swipe_to_seek_enabled", encodeSyncBoolean(it)) }
@@ -808,6 +809,7 @@ internal object SettingsConfigTransfer {
         payload.decodeSyncBoolean("hold_to_speed_enabled")?.let { PlayerSettingsStorage.saveHoldToSpeedEnabled(it) }
         payload.decodeSyncFloat("hold_to_speed_value")?.let { PlayerSettingsStorage.saveHoldToSpeedValue(it) }
         payload.decodeSyncInt("skip_backward_seconds")?.let { PlayerSettingsStorage.saveSkipBackwardSeconds(it) }
+        payload.decodeSyncString("player_toolbar_layout")?.let { PlayerSettingsStorage.saveToolbarLayout(it) }
         payload.decodeSyncInt("skip_forward_seconds")?.let { PlayerSettingsStorage.saveSkipForwardSeconds(it) }
         payload.decodeSyncBoolean("touch_gestures_enabled")?.let { PlayerSettingsStorage.saveTouchGesturesEnabled(it) }
         payload.decodeSyncBoolean("swipe_to_seek_enabled")?.let { PlayerSettingsStorage.saveSwipeToSeekEnabled(it) }

@@ -43,6 +43,7 @@ data class PlayerSettingsUiState(
     val holdToSpeedValue: Float = 2f,
     val skipBackwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
     val skipForwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
+    val toolbarLayout: PlayerToolbarLayout = PlayerToolbarLayout.Default,
     val touchGesturesEnabled: Boolean = true,
     val swipeToSeekEnabled: Boolean = true,
     val seekPreviewEnabled: Boolean = true,
@@ -137,6 +138,7 @@ object PlayerSettingsRepository {
     private var holdToSpeedValue = 2f
     private var skipBackwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
     private var skipForwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
+    private var toolbarLayout = PlayerToolbarLayout.Default
     private var touchGesturesEnabled = true
     private var swipeToSeekEnabled = true
     private var seekPreviewEnabled = true
@@ -236,6 +238,7 @@ object PlayerSettingsRepository {
         holdToSpeedValue = 2f
         skipBackwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
         skipForwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
+        toolbarLayout = PlayerToolbarLayout.Default
         touchGesturesEnabled = true
         swipeToSeekEnabled = true
         seekPreviewEnabled = true
@@ -330,6 +333,7 @@ object PlayerSettingsRepository {
         holdToSpeedValue = PlayerSettingsStorage.loadHoldToSpeedValue() ?: 2f
         skipBackwardSeconds = normalizePlayerSkipSeconds(PlayerSettingsStorage.loadSkipBackwardSeconds())
         skipForwardSeconds = normalizePlayerSkipSeconds(PlayerSettingsStorage.loadSkipForwardSeconds())
+        toolbarLayout = PlayerToolbarLayout.decode(PlayerSettingsStorage.loadToolbarLayout())
         touchGesturesEnabled = PlayerSettingsStorage.loadTouchGesturesEnabled() ?: true
         swipeToSeekEnabled = PlayerSettingsStorage.loadSwipeToSeekEnabled() ?: true
         seekPreviewEnabled = PlayerSettingsStorage.loadSeekPreviewEnabled() ?: true
@@ -569,6 +573,14 @@ object PlayerSettingsRepository {
         skipForwardSeconds = normalized
         publish()
         PlayerSettingsStorage.saveSkipForwardSeconds(normalized)
+    }
+
+    fun setToolbarLayout(layout: PlayerToolbarLayout) {
+        ensureLoaded()
+        if (toolbarLayout == layout) return
+        toolbarLayout = layout
+        publish()
+        PlayerSettingsStorage.saveToolbarLayout(layout.encode())
     }
 
     fun setTouchGesturesEnabled(enabled: Boolean) {
@@ -1277,6 +1289,7 @@ object PlayerSettingsRepository {
             holdToSpeedValue = holdToSpeedValue,
             skipBackwardSeconds = skipBackwardSeconds,
             skipForwardSeconds = skipForwardSeconds,
+            toolbarLayout = toolbarLayout,
             touchGesturesEnabled = touchGesturesEnabled,
             swipeToSeekEnabled = swipeToSeekEnabled,
             seekPreviewEnabled = seekPreviewEnabled,
