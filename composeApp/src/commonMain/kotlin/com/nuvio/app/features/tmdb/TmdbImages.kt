@@ -23,6 +23,20 @@ internal fun List<TmdbImage>.selectBestLocalizedImagePath(normalizedLanguage: St
     ).firstOrNull()?.filePath?.trim()
 }
 
+internal fun List<TmdbImage>.selectOriginalOrLocalizedImagePath(
+    normalizedLanguage: String,
+    originalLanguage: String?,
+): String? {
+    if (originalLanguage != null) {
+        filter { !it.filePath.isNullOrBlank() && it.iso6391.equals(originalLanguage, ignoreCase = true) }
+            .firstOrNull()
+            ?.filePath
+            ?.trim()
+            ?.let { return it }
+    }
+    return selectBestLocalizedImagePath(normalizedLanguage)
+}
+
 private val defaultLanguageRegions = mapOf(
     "pt" to "PT",
     "es" to "ES",
@@ -32,6 +46,7 @@ private val defaultLanguageRegions = mapOf(
 internal data class TmdbImagesResponse(
     val logos: List<TmdbImage> = emptyList(),
     val backdrops: List<TmdbImage> = emptyList(),
+    val posters: List<TmdbImage> = emptyList(),
 )
 
 @Serializable

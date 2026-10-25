@@ -35,6 +35,10 @@ object TmdbMetadataService {
     private val json = Json { ignoreUnknownKeys = true }
 
     private val enrichmentCache = mutableMapOf<String, TmdbEnrichment>()
+
+    internal fun clearEnrichmentCache() {
+        enrichmentCache.clear()
+    }
     private val episodeCache = mutableMapOf<String, Map<Pair<Int, Int>, TmdbEpisodeEnrichment>>()
     private val moreLikeThisCache = mutableMapOf<String, MoreLikeThisPage>()
     private val collectionCache = mutableMapOf<String, Pair<String?, List<MetaPreview>>>()
@@ -810,6 +814,13 @@ object TmdbMetadataService {
             )
         }
 
+        if (enrichment != null && settings.titleLanguage == TmdbTitleLanguage.ORIGINAL) {
+            updated = updated.copy(
+                name = enrichment.localizedTitle ?: updated.name,
+                logo = enrichment.logo ?: updated.logo,
+            )
+        }
+
         if (enrichment != null && settings.useBasicInfo) {
             updated = updated.copy(
                 name = enrichment.localizedTitle ?: updated.name,
@@ -936,11 +947,12 @@ object TmdbMetadataService {
         settings: TmdbSettings,
     ): TmdbEnrichment? = withContext(Dispatchers.Default) {
         val normalizedLanguage = normalizeTmdbLanguage(language)
-        val cacheKey = "$tmdbId:$mediaType:$normalizedLanguage"
+        val useOriginalTitle = settings.titleLanguage == TmdbTitleLanguage.ORIGINAL
+        val cacheKey = "$tmdbId:$mediaType:$normalizedLanguage:${settings.titleLanguage.storageId}"
         enrichmentCache[cacheKey]?.let { return@withContext it }
 
         val numericId = tmdbId.toIntOrNull() ?: return@withContext null
-        val includeImageLanguage = tmdbImageLanguages(normalizedLanguage)
+        val includeImageLanguage = if (useOriginalTitle) null else tmdbImageLanguages(normalizedLanguage)
 
         val response = coroutineScope {
             val details = async {
@@ -965,7 +977,7 @@ object TmdbMetadataService {
             val images = async {
                 fetch<TmdbImagesResponse>(
                     endpoint = "$mediaType/$numericId/images",
-                    query = mapOf("include_image_language" to includeImageLanguage),
+                    query = includeImageLanguage?.let { mapOf("include_image_language" to it) }.orEmpty(),
                 )
             }
             val ageRating = async {
@@ -1026,7 +1038,16 @@ object TmdbMetadataService {
         val genres = details.genres.mapNotNull { it.name?.trim()?.takeIf(String::isNotBlank) }
         val description = details.overview?.trim()?.takeIf(String::isNotBlank)
         val releaseInfo = details.releaseDate ?: details.firstAirDate
-        val localizedTitle = listOf(details.title, details.name).firstNotNullOfOrNull { it?.trim()?.takeIf(String::isNotBlank) }
+        val originalLanguage = details.originalLanguage?.trim()?.lowercase()?.takeIf(String::isNotBlank)
+        val originalArtworkLanguage = originalLanguage.takeIf { useOriginalTitle }
+        val localizedTitle = buildList {
+            if (useOriginalTitle) {
+                add(details.originalTitle)
+                add(details.originalName)
+            }
+            add(details.title)
+            add(details.name)
+        }.firstNotNullOfOrNull { it?.trim()?.takeIf(String::isNotBlank) }
         val people = buildPeople(
             details = details,
             credits = credits,
@@ -1054,9 +1075,21 @@ object TmdbMetadataService {
             localizedTitle = localizedTitle,
             description = description,
             genres = genres,
-            backdrop = buildImageUrl(details.backdropPath, "w1280"),
-            logo = buildImageUrl(images?.logos.orEmpty().selectBestLocalizedImagePath(normalizedLanguage), "w500"),
-            poster = buildImageUrl(details.posterPath, "w500"),
+            backdrop = buildImageUrl(
+                originalImagePath(images?.backdrops, originalArtworkLanguage) ?: details.backdropPath,
+                "w1280",
+            ),
+            logo = buildImageUrl(
+                images?.logos.orEmpty().selectOriginalOrLocalizedImagePath(
+                    normalizedLanguage = normalizedLanguage,
+                    originalLanguage = originalArtworkLanguage,
+                ),
+                "w500",
+            ),
+            poster = buildImageUrl(
+                originalImagePath(images?.posters, originalArtworkLanguage) ?: details.posterPath,
+                "w500",
+            ),
             people = people,
             director = directors,
             writer = writers,
@@ -1882,6 +1915,8 @@ private data class TmdbDetailsResponse(
     @SerialName("production_countries") val productionCountries: List<TmdbProductionCountry> = emptyList(),
     @SerialName("origin_country") val originCountry: List<String> = emptyList(),
     @SerialName("original_language") val originalLanguage: String? = null,
+    @SerialName("original_title") val originalTitle: String? = null,
+    @SerialName("original_name") val originalName: String? = null,
     @SerialName("poster_path") val posterPath: String? = null,
     @SerialName("backdrop_path") val backdropPath: String? = null,
     @SerialName("created_by") val createdBy: List<TmdbCreator> = emptyList(),
@@ -2288,3 +2323,11 @@ internal data class TmdbDiscoverResult(
     @SerialName("vote_average") val voteAverage: Double? = null,
     @SerialName("vote_count") val voteCount: Int? = null,
 )
+
+private fun originalImagePath(images: List<TmdbImage>?, originalLanguage: String?): String? {
+    originalLanguage ?: return null
+    return images.orEmpty()
+        .firstOrNull { !it.filePath.isNullOrBlank() && it.iso6391.equals(originalLanguage, ignoreCase = true) }
+        ?.filePath
+        ?.trim()
+}
