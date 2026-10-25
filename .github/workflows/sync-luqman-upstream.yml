@@ -5,6 +5,10 @@ on:
     # Runs every 6 hours
     - cron: '0 */6 * * *'
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/sync-luqman-upstream.yml'
+
 
 
 permissions:
