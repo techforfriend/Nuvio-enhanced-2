@@ -65,9 +65,10 @@ internal fun PlayerTimelineDetails(
     releaseInfo: String?,
     metrics: PlayerLayoutMetrics,
     badges: List<StreamBadge> = emptyList(),
+    modifier: Modifier = Modifier,
 ) {
     val typeScale = MaterialTheme.nuvioTypeScale
-    Column(Modifier.padding(horizontal = PlayerTimelineContentInset)) {
+    Column(modifier.padding(horizontal = PlayerTimelineContentInset)) {
         Text(
             text = title,
             style = typeScale.titleLg.copy(
