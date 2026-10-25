@@ -33,6 +33,7 @@ import nuvio.composeapp.generated.resources.compose_settings_page_omdb
 import nuvio.composeapp.generated.resources.compose_settings_page_playback
 import nuvio.composeapp.generated.resources.compose_settings_page_plugins
 import nuvio.composeapp.generated.resources.compose_settings_page_cloudstream
+import nuvio.composeapp.generated.resources.compose_settings_page_vega
 import nuvio.composeapp.generated.resources.compose_settings_page_poster_customization
 import nuvio.composeapp.generated.resources.compose_settings_page_profile
 import nuvio.composeapp.generated.resources.compose_settings_page_root
@@ -160,6 +161,11 @@ internal enum class SettingsPage(
     ),
     CloudStream(
         titleRes = Res.string.compose_settings_page_cloudstream,
+        category = SettingsCategory.General,
+        parentPage = ContentDiscovery,
+    ),
+    VegaProviders(
+        titleRes = Res.string.compose_settings_page_vega,
         category = SettingsCategory.General,
         parentPage = ContentDiscovery,
     ),

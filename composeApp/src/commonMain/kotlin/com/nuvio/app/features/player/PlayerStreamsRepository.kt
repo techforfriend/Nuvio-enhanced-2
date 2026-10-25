@@ -38,6 +38,8 @@ import com.nuvio.app.features.streams.buildCloudStreamSearchRequest
 import com.nuvio.app.features.streams.cloudStreamProviderGroupsForRequest
 import com.nuvio.app.features.streams.resolveCloudStreamProviderStreams
 import com.nuvio.app.features.streams.cloudStreamSourcesToStreamItems
+import com.nuvio.app.features.vega.VegaRepository
+import com.nuvio.app.features.vega.resolveVegaProviderStreams
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -236,6 +238,12 @@ object PlayerStreamsRepository {
         } else {
             emptyList()
         }
+        val vegaProviders = if (AppFeaturePolicy.pluginsEnabled) {
+            VegaRepository.initialize()
+            VegaRepository.getEnabledProviders()
+        } else {
+            emptyList()
+        }
         val requestKey = "$type::$videoId::$season::$episode::pluginsGrouped=${pluginUiState.groupStreamsByRepository}::cloudTarget=${cloudStreamSearchRequest?.cacheKey.orEmpty()}"
         PluginRepository.setLocalPluginSearchPaused(false)
         val current = stateFlow.value
@@ -376,8 +384,8 @@ object PlayerStreamsRepository {
             groupByRepository = pluginUiState.groupStreamsByRepository,
         )
 
-        if (installedAddons.isEmpty() && pluginProviderGroups.isEmpty() && serverSources.isEmpty() && cloudStreamProviderGroups.isEmpty()) {
-            InAppLogger.warn("Streams/PlayerStreamsRepository", "No stream addons, plugin scrapers, or CloudStream providers installed for type=$type id=$videoId")
+        if (installedAddons.isEmpty() && pluginProviderGroups.isEmpty() && serverSources.isEmpty() && cloudStreamProviderGroups.isEmpty() && vegaProviders.isEmpty()) {
+            InAppLogger.warn("Streams/PlayerStreamsRepository", "No stream addons, plugin scrapers, CloudStream, or Vega providers installed for type=$type id=$videoId")
             stateFlow.value = StreamsUiState(
                 isAnyLoading = false,
                 emptyStateReason = com.nuvio.app.features.streams.StreamsEmptyStateReason.NoAddonsInstalled,
@@ -399,12 +407,12 @@ object PlayerStreamsRepository {
 
         InAppLogger.info(
             "Streams/PlayerStreamsRepository",
-            "Found addons=${streamAddons.size} pluginGroups=${pluginProviderGroups.size} pluginScrapers=${pluginScrapers.size} " +
+            "Found addons=${streamAddons.size} pluginGroups=${pluginProviderGroups.size} pluginScrapers=${pluginScrapers.size} vega=${vegaProviders.size} " +
                 "for type=$type id=$videoId",
         )
 
-        if (streamAddons.isEmpty() && pluginProviderGroups.isEmpty() && serverSources.isEmpty() && cloudStreamProviderGroups.isEmpty()) {
-            InAppLogger.warn("Streams/PlayerStreamsRepository", "No compatible stream addon, plugin, or CloudStream provider for type=$type id=$videoId")
+        if (streamAddons.isEmpty() && pluginProviderGroups.isEmpty() && serverSources.isEmpty() && cloudStreamProviderGroups.isEmpty() && vegaProviders.isEmpty()) {
+            InAppLogger.warn("Streams/PlayerStreamsRepository", "No compatible stream addon, plugin, CloudStream, or Vega provider for type=$type id=$videoId")
             stateFlow.value = StreamsUiState(
                 isAnyLoading = false,
                 emptyStateReason = com.nuvio.app.features.streams.StreamsEmptyStateReason.NoCompatibleAddons,
@@ -434,6 +442,13 @@ object PlayerStreamsRepository {
                 streams = emptyList(),
                 isLoading = true,
             )
+        } + vegaProviders.map { provider ->
+            AddonStreamGroup(
+                addonName = "Vega - ${provider.displayName}",
+                addonId = "vega:${provider.value}",
+                streams = emptyList(),
+                isLoading = true,
+            )
         } + serverSources.map { it.loadingGroup() }, installedAddonOrder, preferredGroupIds)
         val isInitiallyLoading = initialGroups.any { it.isLoading }
         stateFlow.value = StreamsUiState(
@@ -452,7 +467,8 @@ object PlayerStreamsRepository {
             val totalTasks = streamAddons.size +
                 pluginProviderGroups.sumOf { it.scrapers.size } +
                 serverSources.size +
-                cloudStreamProviderGroups.size
+                cloudStreamProviderGroups.size +
+                vegaProviders.size
             val completions = Channel<StreamLoadCompletion>(capacity = Channel.BUFFERED)
             val debridAvailabilityJobs = mutableListOf<Job>()
 
@@ -629,6 +645,29 @@ object PlayerStreamsRepository {
                         streams = emptyList(),
                         isLoading = false,
                         error = "${providerGroup.addonName} timed out",
+                    )
+                    publishCompletion(StreamLoadCompletion.Addon(group))
+                }
+            }
+            vegaProviders.forEach { provider ->
+                launch {
+                    val group = withTimeoutOrNull(PLAYER_STREAM_PROVIDER_TIMEOUT_MS) {
+                        resolveVegaProviderStreams(
+                            provider = provider,
+                            type = type,
+                            videoId = videoId,
+                            parentMetaId = parentMetaId,
+                            parentMetaType = parentMetaType,
+                            season = season,
+                            episode = episode,
+                            searchTitle = searchTitle,
+                        )
+                    } ?: AddonStreamGroup(
+                        addonName = "Vega - ${provider.displayName}",
+                        addonId = "vega:${provider.value}",
+                        streams = emptyList(),
+                        isLoading = false,
+                        error = "${provider.displayName} timed out",
                     )
                     publishCompletion(StreamLoadCompletion.Addon(group))
                 }

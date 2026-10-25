@@ -3009,6 +3009,7 @@
     <string name="compose_player_sync_short">Sync</string>
     <string name="compose_search_people_title">Actors / People</string>
     <string name="compose_settings_page_cloudstream">CloudStream / CS3</string>
+    <string name="compose_settings_page_vega">Vega Providers</string>
     <string name="settings_advanced_doh_description">Routes Android addon requests through this DNS over HTTPS resolver where supported.</string>
     <string name="settings_advanced_doh_selected">Selected for DNS over HTTPS.</string>
     <string name="settings_advanced_hero_auto_scroll">Auto-Scroll Hero Carousel</string>
@@ -3031,6 +3032,7 @@
     <string name="settings_continue_watching_ready_badge_description">Show the ready signal badge, such as "Next episode ready", on Continue Watching cards.</string>
     <string name="settings_continue_watching_ready_badge_title">Show Ready Badge</string>
     <string name="settings_content_discovery_cloudstream_description">Install CloudStream CS3 repositories, search providers, and manage CloudStream sources.</string>
+    <string name="settings_content_discovery_vega_description">Install Vega provider repositories, search providers, and manage Vega JS sources.</string>
     <string name="compose_settings_page_ai_assistant">AI Assistant</string>
     <string name="settings_integrations_ai_description">Chat about movies and series with fast free Cerebras or Groq models</string>
     <string name="ai_settings_section_general">ASSISTANT</string>
