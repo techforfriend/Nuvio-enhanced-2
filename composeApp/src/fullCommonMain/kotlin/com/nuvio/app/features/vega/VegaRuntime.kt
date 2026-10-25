@@ -102,16 +102,6 @@ internal object VegaRuntime {
         };
     """.trimIndent()
 
-    suspend fun executeProvider(
-        provider: VegaProviderItem,
-        code: String,
-        tmdbId: String,
-        imdbId: String?,
-        title: String,
-        year: String?,
-        mediaType: String,
-        season: Int?,
-        episode: Int?,
     private suspend fun executeJs(
         provider: VegaProviderItem,
         code: String,
@@ -454,10 +444,10 @@ internal object VegaRuntime {
                         if (subUri.isBlank()) null
                         else StreamSubtitle(
                             url = subUri,
-                            lang = sub.language ?: "en",
-                            title = sub.title,
+                            language = sub.language ?: "en",
+                            name = sub.title,
                         )
-                    },
+                    } ?: emptyList(),
                 )
             }
         }.getOrElse { error ->
