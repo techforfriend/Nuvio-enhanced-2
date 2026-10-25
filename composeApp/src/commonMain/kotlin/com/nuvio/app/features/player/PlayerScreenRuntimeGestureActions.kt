@@ -53,6 +53,7 @@ internal fun PlayerScreenRuntime.clearLiveGestureFeedback() {
 }
 
 internal fun PlayerScreenRuntime.revealLockedOverlay() {
+    controlsActivityTick += 1
     controlsVisible = false
     lockedOverlayVisible = true
 }

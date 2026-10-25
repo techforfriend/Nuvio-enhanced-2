@@ -734,19 +734,17 @@ private fun PlayerHeader(
                             onClick = onVideoSettingsClick,
                         )
                     }
-                    if (!enhancedSettings.hidePlayerLock) {
-                        PlayerHeaderIconButton(
-                            icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
-                            contentDescription = if (isLocked) {
-                                stringResource(Res.string.compose_player_unlock_controls)
-                            } else {
-                                stringResource(Res.string.compose_player_lock_controls)
-                            },
-                            buttonSize = metrics.headerIconSize + 16.dp,
-                            iconSize = metrics.headerIconSize,
-                            onClick = onLockToggle,
-                        )
-                    }
+                    PlayerHeaderIconButton(
+                        icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
+                        contentDescription = if (isLocked) {
+                            stringResource(Res.string.compose_player_unlock_controls)
+                        } else {
+                            stringResource(Res.string.compose_player_lock_controls)
+                        },
+                        buttonSize = metrics.headerIconSize + 16.dp,
+                        iconSize = metrics.headerIconSize,
+                        onClick = onLockToggle,
+                    )
                     NuvioBackButton(
                         onClick = onBack,
                         modifier = Modifier.playerLiquidGlass(CircleShape, refractionHeight = 6.dp, refractionAmount = 8.dp),
@@ -1364,32 +1362,34 @@ internal fun LockedPlayerOverlay(
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 24.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .clickable(onClick = onUnlock)
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
                 modifier = Modifier
-                    .size(78.dp)
+                    .size(72.dp)
                     .playerLiquidGlass(
                         shape = CircleShape,
                         refractionHeight = 10.dp,
                         refractionAmount = 14.dp,
-                    )
-                    .clickable(onClick = onUnlock),
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.Lock,
+                    imageVector = Icons.Rounded.LockOpen,
                     contentDescription = stringResource(Res.string.compose_player_unlock_controls),
                     tint = Color.White,
                     modifier = Modifier.size(34.dp),
                 )
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = stringResource(Res.string.compose_player_tap_to_unlock),
                 style = MaterialTheme.nuvioTypeScale.bodyMd.copy(fontWeight = FontWeight.SemiBold),
-                color = Color.White.copy(alpha = 0.92f),
+                color = Color.White.copy(alpha = 0.95f),
             )
         }
 
