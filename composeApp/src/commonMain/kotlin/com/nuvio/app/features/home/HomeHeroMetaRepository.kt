@@ -1,5 +1,6 @@
 package com.nuvio.app.features.home
 
+import com.nuvio.app.features.tmdb.TmdbTitleLanguage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -114,7 +115,12 @@ internal object HomeHeroMetaRepository {
 
 internal fun MetaPreview.withHeroMeta(meta: HomeHeroMeta): MetaPreview {
     val details = meta.details
+    val useOriginalTitle = TmdbSettingsRepository.snapshot().let {
+        it.enabled && it.titleLanguage == TmdbTitleLanguage.ORIGINAL
+    }
     return copy(
+        name = details?.name?.takeIf { useOriginalTitle && it.isNotBlank() } ?: name,
+        logo = details?.logo?.takeIf { useOriginalTitle && it.isNotBlank() } ?: logo,
         genres = details?.genres?.takeIf { it.isNotEmpty() } ?: genres,
         imdbRating = details?.imdbRating?.takeIf { it.isNotBlank() } ?: imdbRating,
         runtime = details?.runtime?.takeIf { it.isNotBlank() } ?: runtime,
