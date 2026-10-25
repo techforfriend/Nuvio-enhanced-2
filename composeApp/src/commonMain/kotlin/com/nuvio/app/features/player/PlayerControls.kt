@@ -1586,7 +1586,7 @@ private fun PlayerDeviceStatusOverlay(
             )
             Text(
                 text = status.timeLabel,
-                style = typeScale.labelSmall.copy(
+                style = typeScale.labelSm.copy(
                     fontSize = 10.5.sp,
                     lineHeight = 12.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -1666,7 +1666,7 @@ private fun PlayerDeviceStatusItem(
         )
         Text(
             text = text,
-            style = typeScale.labelSmall.copy(
+            style = typeScale.labelSm.copy(
                 fontSize = 10.5.sp,
                 lineHeight = 12.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -1695,7 +1695,7 @@ private fun PlayerBatteryStatusItem(
         )
         Text(
             text = percent?.let { "$it%" } ?: "--",
-            style = typeScale.labelSmall.copy(
+            style = typeScale.labelSm.copy(
                 fontSize = 10.5.sp,
                 lineHeight = 12.sp,
                 fontWeight = FontWeight.SemiBold,
