@@ -1019,6 +1019,7 @@ internal object SettingsConfigTransfer {
         TmdbSettingsStorage.loadUseSeasonPosters()?.let { put("use_season_posters", encodeSyncBoolean(it)) }
         TmdbSettingsStorage.loadUseMoreLikeThis()?.let { put("use_more_like_this", encodeSyncBoolean(it)) }
         TmdbSettingsStorage.loadUseCollections()?.let { put("use_collections", encodeSyncBoolean(it)) }
+        TmdbSettingsStorage.loadTitleLanguage()?.let { put("title_language", encodeSyncString(it)) }
     }
 
     private fun importTmdbSettings(payload: JsonObject) {
@@ -1037,6 +1038,7 @@ internal object SettingsConfigTransfer {
         payload.decodeSyncBoolean("use_season_posters")?.let { TmdbSettingsStorage.saveUseSeasonPosters(it) }
         payload.decodeSyncBoolean("use_more_like_this")?.let { TmdbSettingsStorage.saveUseMoreLikeThis(it) }
         payload.decodeSyncBoolean("use_collections")?.let { TmdbSettingsStorage.saveUseCollections(it) }
+        payload.decodeSyncString("title_language")?.let { TmdbSettingsStorage.saveTitleLanguage(it) }
     }
 
     private fun exportMdbListSettings(includeCredentials: Boolean): JsonObject = buildJsonObject {
