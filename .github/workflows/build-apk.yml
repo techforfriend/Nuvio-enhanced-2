@@ -53,13 +53,6 @@ jobs:
           find androidApp/build/outputs/apk/ -name "*.apk" -exec cp {} build-apks/ \;
           ls -la build-apks/
 
-      - name: Upload APKs Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: NuvioEnhanced-APKs
-          path: build-apks/*.apk
-          retention-days: 14
-
       - name: Publish GitHub Testing Release
         uses: softprops/action-gh-release@v2
         if: success()
