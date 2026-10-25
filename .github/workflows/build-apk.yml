@@ -59,27 +59,26 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.4-beta.3-testing
-          name: "Nuvio Enhanced v0.6.4-beta.3 (Upstream 0.6.4-beta Merged, CS3 Overhaul & Volume Boost)"
+          tag_name: v0.6.4-beta.4
+          name: "Nuvio Enhanced v0.6.4-beta.4"
           body: |
-            ## What's New in v0.6.4-beta.3
+            ## What's New in v0.6.4-beta.4
             **by RAJA JI**
 
-            ### 🚀 Upstream 0.6.4-beta Full Merge:
-            - **DNS-over-HTTPS (DoH):** Cloudflare, Google, AdGuard, Quad9, and custom DoH resolver support.
-            - **Player Enhancements:** nuvio-libass atlas rendering, time-left toggle, stream end-time display, custom skip durations.
-            - **Ratings & Visuals:** Ratings on hero banners, poster zoom previews, liquid glass navigation & styling.
-            - **Optimizations:** Debrid regex caching, stream badge caching, tablet UI refinements, WeTrakr integration, WhatsNew screen.
+            ### 🚀 Vega Provider Overhaul & Stability:
+            - **Robust JS Runtime:** Removed wrapping closures to directly bind exports, window, and self to `globalThis`.
+            - **Complete Axios Polyfill:** Added query param serialization (`config.params`), `axios.create()`, and global bindings.
+            - **Extended Cheerio Support:** Support for `.closest()`, `.is()`, `.hasClass()`, `.data()`, `.val()`, `.remove()`, and HTML fragment selector parsing.
+            - **CommonJS Module Polyfills:** Added `url`, `querystring`, `qs`, and `path` module resolution.
+            - **Resilient Invocation Fallbacks:** Automatic fallback between object arguments and positional arguments, plus stream array normalization.
+            - **Script Fallback Resolution:** Fallback to non-`dist` paths if primary Vega provider bundle URL fails.
 
-            ### 🌟 Preserved Custom Enhancements:
-            - **CloudStream 3 (CS3) Repository Toggle:** Master ON/OFF toggle switch for every repository in Settings.
-            - **Home Screen Single Extension Selection:** Single selectable extensions with instant catalog loading.
-            - **CS3 Extension Catalog Loading Fix:** 30s timeout and automatic catalog recovery for community extensions.
-            - **11 CS3 Core Subsystem Bug Fixes:** Thread-safe cookies, storage locks, anime sub/dub collisions, native library handling, cache TTL.
-            - **Digital Volume Boost (Up to 200%):** Hardware-accelerated Loudness Enhancer for ExoPlayer and digital boost for libmpv with golden amber indicator.
-            - **Custom HSV Theme Picker:** Full custom color picker with Saturation/Value canvas and Hue slider.
-            - **Live TV & App Stability:** Live TV navigation tab, duplicate key crash fixes, and seamless background sync.
-          draft: true
+            ### 🏠 Home Screen Catalog Improvements:
+            - **Distinct Extension Shelves:** Clear, recognizable titles (`Vega • <Provider> - <Section>` and `CS3 • <Plugin> - <Section>`).
+            - **Strict Priority Ordering:** Stremio catalogs appear at the top, followed by Vega catalogs, followed by CS3 catalogs.
+            - **Simultaneous Extension Selection:** Select both Vega and CS3 providers together or toggle them individually ("off" state supported).
+            - **Concurrent Catalog Loading:** Vega and CS3 catalogs load in parallel, eliminating delays and timeouts.
+          draft: false
           prerelease: true
           files: build-apks/*.apk
         env:
