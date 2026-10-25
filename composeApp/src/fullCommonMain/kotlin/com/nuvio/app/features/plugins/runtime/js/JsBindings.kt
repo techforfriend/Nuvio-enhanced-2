@@ -1047,7 +1047,14 @@ internal object JsBindings {
                     return wrapper;
                 },
                 children: function(sel) { return this.find(sel || '*'); },
-                parent: function() { return createCheerioWrapperFromIds(docId, []); },
+                parent: function() {
+                    var parentIds = [];
+                    for (var i = 0; i < ids.length; i++) {
+                        var pId = __cheerio_parent(docId, ids[i]);
+                        if (pId && pId !== '__NONE__') parentIds.push(pId);
+                    }
+                    return createCheerioWrapperFromIds(docId, parentIds);
+                },
                 toArray: function() { return ids.map(function(id) { return createCheerioWrapperFromIds(docId, [id]); }); }
             };
             return wrapper;

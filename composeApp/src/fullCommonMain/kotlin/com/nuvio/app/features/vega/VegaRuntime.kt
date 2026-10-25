@@ -112,9 +112,12 @@ internal object VegaRuntime {
         mediaType: String,
         season: Int?,
         episode: Int?,
-    ): List<StreamItem> = withContext(Dispatchers.Default) {
-        log.d { "Executing Vega provider ${provider.displayName} for title=$title tmdb=$tmdbId type=$mediaType" }
-
+    private suspend fun executeJs(
+        provider: VegaProviderItem,
+        code: String,
+        invocationJs: String,
+        timeoutMs: Long = TIMEOUT_MS,
+    ): String = withContext(Dispatchers.Default) {
         val jsRuntime = JsRuntime()
         val deferred = CompletableDeferred<String>()
         val domBridge = DomBridge()
@@ -135,7 +138,7 @@ internal object VegaRuntime {
         }
 
         try {
-            withTimeout(TIMEOUT_MS) {
+            withTimeout(timeoutMs) {
                 jsRuntime.use {
                     hostRegistry.registerAll(this)
                     evaluate<Any?>(JsBindings.staticPolyfillCode)
@@ -149,62 +152,267 @@ internal object VegaRuntime {
                         })();
                     """.trimIndent()
                     evaluate<Any?>(wrappedCode)
-
-                    val tmdbIdArg = JsonPrimitive(tmdbId).toString()
-                    val imdbIdArg = JsonPrimitive(imdbId.orEmpty()).toString()
-                    val titleArg = JsonPrimitive(title).toString()
-                    val yearArg = JsonPrimitive(year.orEmpty()).toString()
-                    val mediaTypeArg = JsonPrimitive(mediaType).toString()
-                    val seasonArg = season?.toString() ?: "1"
-                    val episodeArg = episode?.toString() ?: "1"
-
-                    val callCode = """
-                        (async function() {
-                            try {
-                                var getStream = module.exports.getStream || globalThis.getStream;
-                                if (!getStream && typeof module.exports === 'function') {
-                                    getStream = module.exports;
-                                }
-                                if (!getStream) {
-                                    console.error("getStream not found in provider ${provider.displayName}");
-                                    __capture_result(JSON.stringify([]));
-                                    return;
-                                }
-                                var payload = {
-                                    tmdbId: $tmdbIdArg,
-                                    imdbId: $imdbIdArg,
-                                    title: $titleArg,
-                                    year: $yearArg,
-                                    type: $mediaTypeArg,
-                                    season: $seasonArg,
-                                    episode: $episodeArg
-                                };
-                                var result = await getStream({
-                                    link: JSON.stringify(payload),
-                                    type: $mediaTypeArg,
-                                    providerContext: providerContext,
-                                    signal: undefined,
-                                    isDownload: false
-                                });
-                                __capture_result(JSON.stringify(result || []));
-                            } catch (e) {
-                                console.error("Vega getStream error in ${provider.displayName}:", e && e.message ? e.message : e);
-                                __capture_result(JSON.stringify([]));
-                            }
-                        })();
-                    """.trimIndent()
-
-                    evaluate<Any?>(callCode)
+                    evaluate<Any?>(invocationJs)
                     deferred.await()
                 }
-
-                val rawResult = deferred.await()
-                parseVegaResults(provider, rawResult)
             }
         } catch (e: Exception) {
-            log.w(e) { "Vega execution failed for ${provider.displayName}" }
-            emptyList()
+            log.w(e) { "Vega JS execution error in ${provider.displayName}" }
+            "[]"
         }
+    }
+
+    suspend fun executeCatalog(provider: VegaProviderItem, code: String): List<VegaCatalogCategory> {
+        val invocation = """
+            (async function() {
+                try {
+                    var cat = module.exports.catalog || exports.catalog || globalThis.catalog;
+                    if (typeof cat === 'function') cat = cat();
+                    if (!cat || !Array.isArray(cat)) cat = [];
+                    __capture_result(JSON.stringify(cat));
+                } catch(e) {
+                    console.error("Vega catalog error in ${provider.displayName}:", e && e.message ? e.message : e);
+                    __capture_result(JSON.stringify([]));
+                }
+            })();
+        """.trimIndent()
+        val raw = executeJs(provider, code, invocation)
+        return runCatching {
+            json.decodeFromString<List<VegaCatalogCategory>>(raw)
+        }.getOrElse {
+            listOf(VegaCatalogCategory(title = "Featured", filter = ""))
+        }.ifEmpty {
+            listOf(VegaCatalogCategory(title = "Featured", filter = ""))
+        }
+    }
+
+    suspend fun executePosts(provider: VegaProviderItem, code: String, filter: String, page: Int): List<VegaPost> {
+        val filterArg = JsonPrimitive(filter).toString()
+        val pageArg = page.toString()
+        val invocation = """
+            (async function() {
+                try {
+                    var fn = module.exports.getPosts || exports.getPosts || globalThis.getPosts;
+                    if (!fn) {
+                        __capture_result(JSON.stringify([]));
+                        return;
+                    }
+                    var posts = await fn({
+                        filter: $filterArg,
+                        page: $pageArg,
+                        providerContext: providerContext,
+                        signal: undefined
+                    });
+                    __capture_result(JSON.stringify(posts || []));
+                } catch(e) {
+                    console.error("Vega getPosts error in ${provider.displayName}:", e && e.message ? e.message : e);
+                    __capture_result(JSON.stringify([]));
+                }
+            })();
+        """.trimIndent()
+        val raw = executeJs(provider, code, invocation)
+        return runCatching {
+            json.decodeFromString<List<VegaPost>>(raw)
+        }.getOrElse { emptyList() }
+    }
+
+    suspend fun executeSearchPosts(provider: VegaProviderItem, code: String, query: String, page: Int): List<VegaPost> {
+        val queryArg = JsonPrimitive(query).toString()
+        val pageArg = page.toString()
+        val invocation = """
+            (async function() {
+                try {
+                    var fn = module.exports.getSearchPosts || exports.getSearchPosts || globalThis.getSearchPosts;
+                    if (!fn) {
+                        __capture_result(JSON.stringify([]));
+                        return;
+                    }
+                    var posts = await fn({
+                        searchQuery: $queryArg,
+                        page: $pageArg,
+                        providerContext: providerContext,
+                        signal: undefined
+                    });
+                    __capture_result(JSON.stringify(posts || []));
+                } catch(e) {
+                    console.error("Vega getSearchPosts error in ${provider.displayName}:", e && e.message ? e.message : e);
+                    __capture_result(JSON.stringify([]));
+                }
+            })();
+        """.trimIndent()
+        val raw = executeJs(provider, code, invocation)
+        return runCatching {
+            json.decodeFromString<List<VegaPost>>(raw)
+        }.getOrElse { emptyList() }
+    }
+
+    suspend fun executeEpisodes(provider: VegaProviderItem, episodesCode: String, url: String): List<VegaEpisode> {
+        val urlArg = JsonPrimitive(url).toString()
+        val invocation = """
+            (async function() {
+                try {
+                    var fn = module.exports.getEpisodes || exports.getEpisodes || globalThis.getEpisodes;
+                    if (!fn) {
+                        __capture_result(JSON.stringify([]));
+                        return;
+                    }
+                    var eps = await fn({
+                        url: $urlArg,
+                        providerContext: providerContext,
+                        signal: undefined
+                    });
+                    __capture_result(JSON.stringify(eps || []));
+                } catch(e) {
+                    console.error("Vega getEpisodes error in ${provider.displayName}:", e && e.message ? e.message : e);
+                    __capture_result(JSON.stringify([]));
+                }
+            })();
+        """.trimIndent()
+        val raw = executeJs(provider, episodesCode, invocation)
+        return runCatching {
+            json.decodeFromString<List<VegaEpisode>>(raw)
+        }.getOrElse { emptyList() }
+    }
+
+    suspend fun executeMeta(provider: VegaProviderItem, metaCode: String, episodesCode: String?, link: String): VegaMetaResult? {
+        val linkArg = JsonPrimitive(link).toString()
+        val invocation = """
+            (async function() {
+                try {
+                    var fn = module.exports.getMeta || exports.getMeta || globalThis.getMeta;
+                    if (!fn) {
+                        __capture_result(JSON.stringify(null));
+                        return;
+                    }
+                    var meta = await fn({
+                        link: $linkArg,
+                        providerContext: providerContext,
+                        signal: undefined
+                    });
+                    __capture_result(JSON.stringify(meta || null));
+                } catch(e) {
+                    console.error("Vega getMeta error in ${provider.displayName}:", e && e.message ? e.message : e);
+                    __capture_result(JSON.stringify(null));
+                }
+            })();
+        """.trimIndent()
+        val raw = executeJs(provider, metaCode, invocation)
+        if (raw.isBlank() || raw == "null" || raw == "[]") return null
+        var metaResult = runCatching {
+            json.decodeFromString<VegaMetaResult>(raw)
+        }.getOrNull() ?: return null
+
+        if (episodesCode != null && metaResult.episodes.isEmpty()) {
+            val episodesLinks = metaResult.linkList.mapNotNull { it.episodesLink }.filter { it.isNotBlank() }
+            val allEpisodes = mutableListOf<VegaEpisode>()
+            if (episodesLinks.isNotEmpty()) {
+                for (epLink in episodesLinks) {
+                    val eps = executeEpisodes(provider, episodesCode, epLink)
+                    allEpisodes.addAll(eps)
+                }
+            } else if (metaResult.type.equals("series", ignoreCase = true) || metaResult.type.equals("tv", ignoreCase = true)) {
+                val eps = executeEpisodes(provider, episodesCode, link)
+                allEpisodes.addAll(eps)
+            }
+            if (allEpisodes.isNotEmpty()) {
+                metaResult = metaResult.copy(episodes = allEpisodes)
+            }
+        }
+        return metaResult
+    }
+
+    suspend fun executeDirectStream(provider: VegaProviderItem, code: String, link: String, type: String): List<StreamItem> {
+        val linkArg = JsonPrimitive(link).toString()
+        val typeArg = JsonPrimitive(type).toString()
+        val invocation = """
+            (async function() {
+                try {
+                    var getStream = module.exports.getStream || globalThis.getStream;
+                    if (!getStream && typeof module.exports === 'function') {
+                        getStream = module.exports;
+                    }
+                    if (!getStream) {
+                        console.error("getStream not found in provider ${provider.displayName}");
+                        __capture_result(JSON.stringify([]));
+                        return;
+                    }
+                    var result = await getStream({
+                        link: $linkArg,
+                        type: $typeArg,
+                        providerContext: providerContext,
+                        signal: undefined,
+                        isDownload: false
+                    });
+                    __capture_result(JSON.stringify(result || []));
+                } catch (e) {
+                    console.error("Vega direct getStream error in ${provider.displayName}:", e && e.message ? e.message : e);
+                    __capture_result(JSON.stringify([]));
+                }
+            })();
+        """.trimIndent()
+        val raw = executeJs(provider, code, invocation)
+        return parseVegaResults(provider, raw)
+    }
+
+    suspend fun executeProvider(
+        provider: VegaProviderItem,
+        code: String,
+        tmdbId: String,
+        imdbId: String?,
+        title: String,
+        year: String?,
+        mediaType: String,
+        season: Int?,
+        episode: Int?,
+    ): List<StreamItem> = withContext(Dispatchers.Default) {
+        log.d { "Executing Vega provider ${provider.displayName} for title=$title tmdb=$tmdbId type=$mediaType" }
+
+        val tmdbIdArg = JsonPrimitive(tmdbId).toString()
+        val imdbIdArg = JsonPrimitive(imdbId.orEmpty()).toString()
+        val titleArg = JsonPrimitive(title).toString()
+        val yearArg = JsonPrimitive(year.orEmpty()).toString()
+        val mediaTypeArg = JsonPrimitive(mediaType).toString()
+        val seasonArg = season?.toString() ?: "1"
+        val episodeArg = episode?.toString() ?: "1"
+
+        val callCode = """
+            (async function() {
+                try {
+                    var getStream = module.exports.getStream || globalThis.getStream;
+                    if (!getStream && typeof module.exports === 'function') {
+                        getStream = module.exports;
+                    }
+                    if (!getStream) {
+                        console.error("getStream not found in provider ${provider.displayName}");
+                        __capture_result(JSON.stringify([]));
+                        return;
+                    }
+                    var payload = {
+                        tmdbId: $tmdbIdArg,
+                        imdbId: $imdbIdArg,
+                        title: $titleArg,
+                        year: $yearArg,
+                        type: $mediaTypeArg,
+                        season: $seasonArg,
+                        episode: $episodeArg
+                    };
+                    var result = await getStream({
+                        link: JSON.stringify(payload),
+                        type: $mediaTypeArg,
+                        providerContext: providerContext,
+                        signal: undefined,
+                        isDownload: false
+                    });
+                    __capture_result(JSON.stringify(result || []));
+                } catch (e) {
+                    console.error("Vega getStream error in ${provider.displayName}:", e && e.message ? e.message : e);
+                    __capture_result(JSON.stringify([]));
+                }
+            })();
+        """.trimIndent()
+
+        val rawResult = executeJs(provider, code, callCode)
+        parseVegaResults(provider, rawResult)
     }
 
     private fun parseVegaResults(provider: VegaProviderItem, raw: String): List<StreamItem> {

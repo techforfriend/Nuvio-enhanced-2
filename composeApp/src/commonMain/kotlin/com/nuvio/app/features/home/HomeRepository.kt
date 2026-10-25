@@ -20,6 +20,10 @@ import com.nuvio.app.features.watchprogress.CurrentDateProvider
 import com.nuvio.app.features.cloudstream.CloudStreamPluginItem
 import com.nuvio.app.features.cloudstream.CloudStreamRepository
 import com.nuvio.app.features.cloudstream.toMetaPreview
+import com.nuvio.app.features.vega.VegaBridge
+import com.nuvio.app.features.vega.VegaProviderItem
+import com.nuvio.app.features.vega.VegaRepository
+import com.nuvio.app.features.vega.toMetaPreview
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -75,12 +79,31 @@ object HomeRepository {
         refresh(AddonRepository.uiState.value.addons.enabledAddons(), force = true)
     }
 
+    private val _selectedVegaProviderId = MutableStateFlow<String?>(null)
+    val selectedVegaProviderId: StateFlow<String?> = _selectedVegaProviderId.asStateFlow()
+
+    private fun restoreSelectedVegaProvider() {
+        val stored = HomeCatalogSettingsRepository.selectedVegaProviderId()
+        if (_selectedVegaProviderId.value != stored) {
+            _selectedVegaProviderId.value = stored
+        }
+    }
+
+    fun setSelectedVegaProvider(providerId: String?) {
+        val normalized = providerId?.trim()?.takeIf { it.isNotEmpty() }
+        if (_selectedVegaProviderId.value == normalized) return
+        _selectedVegaProviderId.value = normalized
+        HomeCatalogSettingsRepository.setVegaProviderId(normalized)
+        refresh(AddonRepository.uiState.value.addons.enabledAddons(), force = true)
+    }
+
     private var activeJob: Job? = null
     private var activeRequestKey: String? = null
     private var currentRequestKey: String? = null
     private var currentDefinitions: List<HomeCatalogDefinition> = emptyList()
     private var cachedSections: Map<String, HomeCatalogSection> = emptyMap()
     private var cachedCloudSections: List<HomeCatalogSection> = emptyList()
+    private var cachedVegaSections: List<HomeCatalogSection> = emptyList()
     private var cachedCollectionHeroItems: List<MetaPreview> = emptyList()
     private var collectionHeroJob: Job? = null
     private var collectionHeroRequestKey: String? = null
@@ -102,15 +125,28 @@ object HomeRepository {
     fun refresh(addons: List<ManagedAddon>, force: Boolean = false) {
         HomeCatalogSettingsRepository.snapshot()
         restoreSelectedCloudStreamProvider()
+        restoreSelectedVegaProvider()
         CloudStreamRepository.initialize()
+        VegaRepository.initialize()
         val cloudState = CloudStreamRepository.uiState.value
+        val vegaState = VegaRepository.uiState.value
         val selectedProviderId = _selectedCloudStreamProviderId.value
+        val selectedVegaId = _selectedVegaProviderId.value
         val runnableCloudPlugins = cloudState.plugins.filter(CloudStreamPluginItem::isRunnable)
+        val enabledVegaProviders = VegaRepository.getEnabledProviders()
         val effectiveSelectedProviderId = selectedProviderId?.takeIf { id ->
             runnableCloudPlugins.any { it.metadata.id.value == id }
         } ?: runnableCloudPlugins.firstOrNull()?.metadata?.id?.value
+        val effectiveSelectedVegaId = selectedVegaId?.takeIf { id ->
+            enabledVegaProviders.any { it.value == id }
+        } ?: enabledVegaProviders.firstOrNull()?.value
         val cloudPlugins = if (effectiveSelectedProviderId != null) {
             runnableCloudPlugins.filter { it.metadata.id.value == effectiveSelectedProviderId }
+        } else {
+            emptyList()
+        }
+        val vegaProviders = if (effectiveSelectedVegaId != null) {
+            enabledVegaProviders.filter { it.value == effectiveSelectedVegaId }
         } else {
             emptyList()
         }
@@ -128,6 +164,10 @@ object HomeRepository {
             append(cloudPlugins.joinToString(separator = ",") { it.metadata.id.value })
             append("|selectedCloudStreamProvider=")
             append(selectedProviderId.orEmpty())
+            append("|vega=")
+            append(vegaProviders.joinToString(separator = ",") { it.value })
+            append("|selectedVegaProvider=")
+            append(selectedVegaId.orEmpty())
         }
         currentRequestKey = requestKey
 
@@ -137,12 +177,13 @@ object HomeRepository {
         activeRequestKey = requestKey
         snapshotGeneration++
 
-        if (requests.isEmpty() && cloudPlugins.isEmpty()) {
+        if (requests.isEmpty() && cloudPlugins.isEmpty() && vegaProviders.isEmpty()) {
             activeJob?.cancel()
             activeJob = null
             activeRequestKey = null
             cachedSections = emptyMap()
             cachedCloudSections = emptyList()
+            cachedVegaSections = emptyList()
             lastErrorMessage = null
             publishCurrentState(
                 isLoading = false,
@@ -163,6 +204,10 @@ object HomeRepository {
             val cloudResult = loadCloudSections(cloudPlugins, requestKey)
             if (activeRequestKey != requestKey) return@launch
             cachedCloudSections = cloudResult.sections
+
+            val vegaResult = loadVegaSections(vegaProviders, requestKey)
+            if (activeRequestKey != requestKey) return@launch
+            cachedVegaSections = vegaResult.sections
 
             val prioritizedRequests = prioritizeDefinitions(
                 definitions = requests,
@@ -259,12 +304,14 @@ object HomeRepository {
     fun clear() {
         activeJob?.cancel()
         _selectedCloudStreamProviderId.value = null
+        _selectedVegaProviderId.value = null
         activeJob = null
         activeRequestKey = null
         currentRequestKey = null
         currentDefinitions = emptyList()
         cachedSections = emptyMap()
         cachedCloudSections = emptyList()
+        cachedVegaSections = emptyList()
         cachedCollectionHeroItems = emptyList()
         collectionHeroJob?.cancel()
         collectionHeroJob = null
@@ -363,7 +410,7 @@ object HomeRepository {
         if (entries.isNotEmpty() || currentDefinitions.isNotEmpty()) {
             lastPublishedEntries = entries
         }
-        val sections = entries.map { (_, section) -> section } + cachedCloudSections
+        val sections = entries.map { (_, section) -> section } + cachedCloudSections + cachedVegaSections
 
         val catalogHeroItems = if (snapshot.heroEnabled) {
             val heroRandom = Random((requestKey?.hashCode() ?: 0).absoluteValue + 1)
@@ -390,8 +437,19 @@ object HomeRepository {
             emptyList()
         }
 
+        val vegaHeroItems = if (snapshot.heroEnabled) {
+            val heroRandom = Random((requestKey?.hashCode() ?: 0).absoluteValue + 3)
+            cachedVegaSections
+                .flatMap { section -> section.items }
+                .distinctBy { item -> "${item.type}:${item.id}" }
+                .shuffled(heroRandom)
+                .take(HOME_HERO_ITEM_LIMIT)
+        } else {
+            emptyList()
+        }
+
         lastPublishedCatalogHeroEmpty =
-            snapshot.heroEnabled && catalogHeroItems.isEmpty() && cloudStreamHeroItems.isEmpty()
+            snapshot.heroEnabled && catalogHeroItems.isEmpty() && cloudStreamHeroItems.isEmpty() && vegaHeroItems.isEmpty()
         val visibleHeroItems = _uiState.value.heroItems
         val heroItems = if (snapshot.heroEnabled) {
             if (visibleHeroItems.isNotEmpty() && isHeroResolutionPending(isLoading)) {
@@ -399,6 +457,7 @@ object HomeRepository {
             } else {
                 catalogHeroItems
                     .ifEmpty { cloudStreamHeroItems }
+                    .ifEmpty { vegaHeroItems }
                     .ifEmpty { cachedCollectionHeroItems }
             }
         } else {
@@ -708,6 +767,68 @@ object HomeRepository {
                     if (firstError == null) firstError = result.errorMessage
                     if (sections.isNotEmpty() && activeRequestKey == requestKey) {
                         cachedCloudSections = sections.toList()
+                        publishCurrentState(isLoading = true, requestKey = requestKey)
+                    }
+                }
+            }
+            resultChannel.close()
+        }
+        return CloudHomeSectionsResult(sections = sections, errorMessage = firstError)
+    }
+
+    private suspend fun loadVegaSections(
+        providers: List<VegaProviderItem>,
+        requestKey: String,
+    ): CloudHomeSectionsResult {
+        val sections = mutableListOf<HomeCatalogSection>()
+        var firstError: String? = null
+        val scanProviders = providers.take(2)
+        withTimeoutOrNull(HOME_CLOUDSTREAM_TOTAL_PREVIEW_TIMEOUT_MS) {
+            val gate = Semaphore(2)
+            val resultChannel = Channel<Pair<VegaProviderItem, CloudHomeProviderResult>>(Channel.BUFFERED)
+            coroutineScope {
+                scanProviders.forEach { provider ->
+                    launch {
+                        val result = gate.withPermit {
+                            val providerSections = runCatching {
+                                withTimeoutOrNull(HOME_CLOUDSTREAM_PROVIDER_TIMEOUT_MS) {
+                                    val categories = VegaBridge.getCatalogCategories(provider)
+                                    val topCategories = categories.take(4)
+                                    topCategories.mapNotNull { category ->
+                                        val posts = VegaBridge.getPosts(provider, category.filter, page = 1)
+                                        if (posts.isEmpty()) return@mapNotNull null
+                                        val previews = posts.take(HOME_CATALOG_PREVIEW_FETCH_LIMIT).map { it.toMetaPreview(provider.value) }
+                                        HomeCatalogSection(
+                                            key = "vega:${provider.value}:${category.title.hashCode()}",
+                                            title = category.title,
+                                            subtitle = "${provider.displayName} · Vega",
+                                            addonName = provider.displayName,
+                                            target = CatalogTarget.Vega(
+                                                providerId = provider.value,
+                                                categoryName = category.title,
+                                                filter = category.filter,
+                                            ),
+                                            items = previews,
+                                            availableItemCount = posts.size,
+                                            hasMore = true,
+                                        )
+                                    }
+                                } ?: emptyList()
+                            }.getOrElse { emptyList() }
+                            CloudHomeProviderResult(providerSections, null)
+                        }
+                        resultChannel.send(provider to result)
+                    }
+                }
+                repeat(scanProviders.size) {
+                    val (_, result) = resultChannel.receive()
+                    if (sections.size < HOME_CLOUDSTREAM_SECTION_PREVIEW_LIMIT) {
+                        val remaining = HOME_CLOUDSTREAM_SECTION_PREVIEW_LIMIT - sections.size
+                        sections += result.sections.take(remaining)
+                    }
+                    if (firstError == null) firstError = result.errorMessage
+                    if (sections.isNotEmpty() && activeRequestKey == requestKey) {
+                        cachedVegaSections = sections.toList()
                         publishCurrentState(isLoading = true, requestKey = requestKey)
                     }
                 }

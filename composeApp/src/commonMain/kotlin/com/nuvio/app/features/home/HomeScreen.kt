@@ -62,6 +62,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.cloudstream.CloudStreamPluginItem
 import com.nuvio.app.features.cloudstream.CloudStreamRepository
+import com.nuvio.app.features.vega.VegaProviderItem
+import com.nuvio.app.features.vega.VegaRepository
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
 import com.nuvio.app.core.network.NetworkCondition
@@ -237,6 +239,13 @@ fun HomeScreen(
     }
     val selectedCloudStreamProviderId by HomeRepository.selectedCloudStreamProviderId.collectAsStateWithLifecycle()
 
+    val vegaUiState by VegaRepository.uiState.collectAsStateWithLifecycle()
+    val enabledVegaProviders = remember(vegaUiState.providers, vegaUiState.vegaEnabled) {
+        if (!vegaUiState.vegaEnabled) emptyList()
+        else vegaUiState.providers.filter { it.enabled }.sortedBy { it.displayName.lowercase() }
+    }
+    val selectedVegaProviderId by HomeRepository.selectedVegaProviderId.collectAsStateWithLifecycle()
+
     LaunchedEffect(runnableCloudStreamProviders, selectedCloudStreamProviderId) {
         if (runnableCloudStreamProviders.isNotEmpty()) {
             if (selectedCloudStreamProviderId == null ||
@@ -246,6 +255,18 @@ fun HomeScreen(
             }
         } else if (selectedCloudStreamProviderId != null) {
             HomeRepository.setSelectedCloudStreamProvider(null)
+        }
+    }
+
+    LaunchedEffect(enabledVegaProviders, selectedVegaProviderId) {
+        if (enabledVegaProviders.isNotEmpty()) {
+            if (selectedVegaProviderId == null ||
+                enabledVegaProviders.none { it.value == selectedVegaProviderId }
+            ) {
+                HomeRepository.setSelectedVegaProvider(enabledVegaProviders.first().value)
+            }
+        } else if (selectedVegaProviderId != null) {
+            HomeRepository.setSelectedVegaProvider(null)
         }
     }
 
@@ -1034,7 +1055,7 @@ fun HomeScreen(
         }
     }
 
-    val hasActiveAddons = enabledAddons.any { it.manifest != null } || runnableCloudStreamProviders.isNotEmpty()
+    val hasActiveAddons = enabledAddons.any { it.manifest != null } || runnableCloudStreamProviders.isNotEmpty() || enabledVegaProviders.isNotEmpty()
     val serversUiState by remember {
         ServerRepository.ensureLoaded()
         ServerRepository.uiState
@@ -1449,7 +1470,8 @@ fun HomeScreen(
             }
         }
 
-        if (runnableCloudStreamProviders.isNotEmpty()) {
+        val hasDiscoveryProviders = runnableCloudStreamProviders.isNotEmpty() || enabledVegaProviders.isNotEmpty()
+        if (hasDiscoveryProviders) {
             if (cloudStreamProviderMenuExpanded) {
                 Box(
                     modifier = Modifier
@@ -1482,7 +1504,7 @@ fun HomeScreen(
                     if (cloudStreamProviderMenuExpanded) {
                         Box(
                             modifier = Modifier
-                                .widthIn(min = 140.dp, max = 165.dp)
+                                .widthIn(min = 145.dp, max = 175.dp)
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(themeSurface.copy(alpha = 0.95f))
                                 .border(1.dp, themeAccent.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
@@ -1495,77 +1517,175 @@ fun HomeScreen(
                                     .verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
-                                runnableCloudStreamProviders.forEach { provider ->
-                                    val isSelected = provider.metadata.id.value == selectedCloudStreamProviderId
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .then(
-                                                if (isSelected) {
-                                                    Modifier.background(themeAccent.copy(alpha = 0.16f))
-                                                } else {
-                                                    Modifier
+                                if (runnableCloudStreamProviders.isNotEmpty()) {
+                                    if (enabledVegaProviders.isNotEmpty()) {
+                                        Text(
+                                            text = "CLOUDSTREAM",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = themeAccent,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        )
+                                    }
+                                    runnableCloudStreamProviders.forEach { provider ->
+                                        val isSelected = provider.metadata.id.value == selectedCloudStreamProviderId
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .then(
+                                                    if (isSelected) {
+                                                        Modifier.background(themeAccent.copy(alpha = 0.16f))
+                                                    } else {
+                                                        Modifier
+                                                    }
+                                                )
+                                                .clickable {
+                                                    HomeRepository.setSelectedCloudStreamProvider(provider.metadata.id.value)
+                                                    cloudStreamProviderMenuExpanded = false
                                                 }
-                                            )
-                                            .clickable {
-                                                HomeRepository.setSelectedCloudStreamProvider(provider.metadata.id.value)
-                                                cloudStreamProviderMenuExpanded = false
+                                                .padding(horizontal = 7.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            if (isSelected) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(22.dp)
+                                                        .background(themeAccent.copy(alpha = 0.25f), RoundedCornerShape(6.dp)),
+                                                    contentAlignment = Alignment.Center,
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.PlayArrow,
+                                                        contentDescription = null,
+                                                        tint = themeAccent,
+                                                        modifier = Modifier.size(14.dp),
+                                                    )
+                                                }
+                                            } else {
+                                                Box(
+                                                    modifier = Modifier.size(22.dp),
+                                                    contentAlignment = Alignment.Center,
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.Movie,
+                                                        contentDescription = null,
+                                                        tint = themeOnSurface.copy(alpha = 0.70f),
+                                                        modifier = Modifier.size(14.dp),
+                                                    )
+                                                }
                                             }
-                                            .padding(horizontal = 7.dp, vertical = 6.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        if (isSelected) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(22.dp)
-                                                    .background(themeAccent.copy(alpha = 0.25f), RoundedCornerShape(6.dp)),
-                                                contentAlignment = Alignment.Center,
-                                            ) {
+                                            Spacer(modifier = Modifier.width(7.dp))
+                                            Text(
+                                                text = provider.metadata.name,
+                                                color = if (isSelected) themeOnSurface else themeOnSurface.copy(alpha = 0.85f),
+                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                                fontSize = 12.sp,
+                                                modifier = Modifier.weight(1f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            if (isSelected) {
                                                 Icon(
-                                                    imageVector = Icons.Rounded.PlayArrow,
+                                                    imageVector = Icons.Rounded.Check,
                                                     contentDescription = null,
                                                     tint = themeAccent,
-                                                    modifier = Modifier.size(14.dp),
+                                                    modifier = Modifier.size(15.dp),
                                                 )
-                                            }
-                                        } else {
-                                            Box(
-                                                modifier = Modifier.size(22.dp),
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Rounded.Movie,
-                                                    contentDescription = null,
-                                                    tint = themeOnSurface.copy(alpha = 0.70f),
-                                                    modifier = Modifier.size(14.dp),
+                                            } else {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(14.dp)
+                                                        .border(1.2.dp, themeOnSurface.copy(alpha = 0.35f), CircleShape),
                                                 )
                                             }
                                         }
-                                        Spacer(modifier = Modifier.width(7.dp))
+                                    }
+                                }
+
+                                if (enabledVegaProviders.isNotEmpty()) {
+                                    if (runnableCloudStreamProviders.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(4.dp))
                                         Text(
-                                            text = provider.metadata.name,
-                                            color = if (isSelected) themeOnSurface else themeOnSurface.copy(alpha = 0.85f),
-                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                            fontSize = 12.sp,
-                                            modifier = Modifier.weight(1f),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
+                                            text = "VEGA PROVIDERS",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = themeAccent,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                         )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        if (isSelected) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.Check,
-                                                contentDescription = null,
-                                                tint = themeAccent,
-                                                modifier = Modifier.size(15.dp),
+                                    }
+                                    enabledVegaProviders.forEach { provider ->
+                                        val isSelected = provider.value == selectedVegaProviderId
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .then(
+                                                    if (isSelected) {
+                                                        Modifier.background(themeAccent.copy(alpha = 0.16f))
+                                                    } else {
+                                                        Modifier
+                                                    }
+                                                )
+                                                .clickable {
+                                                    HomeRepository.setSelectedVegaProvider(provider.value)
+                                                    cloudStreamProviderMenuExpanded = false
+                                                }
+                                                .padding(horizontal = 7.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            if (isSelected) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(22.dp)
+                                                        .background(themeAccent.copy(alpha = 0.25f), RoundedCornerShape(6.dp)),
+                                                    contentAlignment = Alignment.Center,
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.PlayArrow,
+                                                        contentDescription = null,
+                                                        tint = themeAccent,
+                                                        modifier = Modifier.size(14.dp),
+                                                    )
+                                                }
+                                            } else {
+                                                Box(
+                                                    modifier = Modifier.size(22.dp),
+                                                    contentAlignment = Alignment.Center,
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.Movie,
+                                                        contentDescription = null,
+                                                        tint = themeOnSurface.copy(alpha = 0.70f),
+                                                        modifier = Modifier.size(14.dp),
+                                                    )
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.width(7.dp))
+                                            Text(
+                                                text = provider.displayName,
+                                                color = if (isSelected) themeOnSurface else themeOnSurface.copy(alpha = 0.85f),
+                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                                fontSize = 12.sp,
+                                                modifier = Modifier.weight(1f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
                                             )
-                                        } else {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(14.dp)
-                                                    .border(1.2.dp, themeOnSurface.copy(alpha = 0.35f), CircleShape),
-                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            if (isSelected) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.Check,
+                                                    contentDescription = null,
+                                                    tint = themeAccent,
+                                                    modifier = Modifier.size(15.dp),
+                                                )
+                                            } else {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(14.dp)
+                                                        .border(1.2.dp, themeOnSurface.copy(alpha = 0.35f), CircleShape),
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -1576,8 +1696,13 @@ fun HomeScreen(
                     val selectedCloudStreamProvider = runnableCloudStreamProviders.firstOrNull {
                         it.metadata.id.value == selectedCloudStreamProviderId
                     }
-                    val pillLabel = selectedCloudStreamProvider?.metadata?.name
+                    val selectedVegaProvider = enabledVegaProviders.firstOrNull {
+                        it.value == selectedVegaProviderId
+                    }
+                    val pillLabel = selectedVegaProvider?.displayName
+                        ?: selectedCloudStreamProvider?.metadata?.name
                         ?: runnableCloudStreamProviders.firstOrNull()?.metadata?.name
+                        ?: enabledVegaProviders.firstOrNull()?.displayName
                         ?: "Extensions"
 
                     Row(

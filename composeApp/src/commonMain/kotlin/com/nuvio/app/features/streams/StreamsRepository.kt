@@ -18,7 +18,9 @@ import com.nuvio.app.features.plugins.pluginContentId
 import com.nuvio.app.features.plugins.PluginsUiState
 import com.nuvio.app.features.cloudstream.CloudStreamRepository
 import com.nuvio.app.features.cloudstream.parseCloudStreamRouteId
+import com.nuvio.app.features.vega.VegaBridge
 import com.nuvio.app.features.vega.VegaRepository
+import com.nuvio.app.features.vega.parseVegaRouteId
 import com.nuvio.app.features.vega.resolveVegaProviderStreams
 import com.nuvio.app.features.servers.ServerStreams
 import kotlinx.coroutines.CoroutineScope
@@ -311,6 +313,93 @@ object StreamsRepository {
                                     streams = emptyList(),
                                     isLoading = false,
                                     error = error.message ?: "CloudStream link resolution failed",
+                                ),
+                            ),
+                            activeAddonIds = setOf(providerAddonId),
+                            isAnyLoading = false,
+                            emptyStateReason = StreamsEmptyStateReason.StreamFetchFailed,
+                            autoPlayDecided = true,
+                            isDirectAutoPlayFlow = false,
+                            showDirectAutoPlayOverlay = false,
+                        )
+                    },
+                )
+            }
+            return
+        }
+
+        val vegaRoute = parseVegaRouteId(videoId)
+            ?: parentMetaId?.takeIf { type == "movie" }?.let { parseVegaRouteId(it) }
+        if (vegaRoute != null) {
+            VegaRepository.initialize()
+            val providerItem = VegaRepository.getProviderByValue(vegaRoute.providerId)
+            val providerName = providerItem?.displayName ?: "Vega"
+            val providerAddonId = "vega:${vegaRoute.providerId}"
+            _uiState.value = StreamsUiState(
+                requestToken = requestToken,
+                groups = listOf(
+                    AddonStreamGroup(
+                        addonName = providerName,
+                        addonId = providerAddonId,
+                        streams = emptyList(),
+                        isLoading = true,
+                    ),
+                ),
+                activeAddonIds = setOf(providerAddonId),
+                isAnyLoading = true,
+                isDirectAutoPlayFlow = isDirectAutoPlayFlow,
+                showDirectAutoPlayOverlay = isDirectAutoPlayFlow,
+            )
+            activeJob = scope.launch {
+                val result = runCatching {
+                    withTimeoutOrNull(STREAM_PROVIDER_TIMEOUT_MS) {
+                        if (providerItem != null) {
+                            VegaBridge.getStreams(providerItem, vegaRoute.link, type)
+                        } else {
+                            emptyList()
+                        }
+                    } ?: error("$providerName timed out")
+                }
+                if (activeRequestKey != requestKey) return@launch
+                result.fold(
+                    onSuccess = { streams ->
+                        val presentedGroup = StreamBadgePresentation.apply(
+                            groups = listOf(
+                                AddonStreamGroup(
+                                    addonName = providerName,
+                                    addonId = providerAddonId,
+                                    streams = streams,
+                                    isLoading = false,
+                                    error = if (streams.isEmpty()) "No links found" else null,
+                                ),
+                            ),
+                            rules = streamBadgeRules,
+                        )
+                        val autoPlayStream = if (isDirectAutoPlayFlow) streams.firstOrNull() else null
+                        _uiState.value = StreamsUiState(
+                            requestToken = requestToken,
+                            groups = presentedGroup,
+                            activeAddonIds = setOf(providerAddonId),
+                            isAnyLoading = false,
+                            emptyStateReason = if (streams.isEmpty()) StreamsEmptyStateReason.NoStreamsFound else null,
+                            autoPlayStream = autoPlayStream,
+                            autoPlayCandidates = if (isDirectAutoPlayFlow) streams else emptyList(),
+                            autoPlayDecided = true,
+                            isDirectAutoPlayFlow = isDirectAutoPlayFlow && autoPlayStream != null,
+                            showDirectAutoPlayOverlay = isDirectAutoPlayFlow && autoPlayStream != null,
+                        )
+                    },
+                    onFailure = { error ->
+                        log.w(error) { "Vega link resolution failed provider=${vegaRoute.providerId}" }
+                        _uiState.value = StreamsUiState(
+                            requestToken = requestToken,
+                            groups = listOf(
+                                AddonStreamGroup(
+                                    addonName = providerName,
+                                    addonId = providerAddonId,
+                                    streams = emptyList(),
+                                    isLoading = false,
+                                    error = error.message ?: "Vega link resolution failed",
                                 ),
                             ),
                             activeAddonIds = setOf(providerAddonId),
