@@ -84,9 +84,19 @@ jobs:
             - **Digital Volume Boost (Up to 200%):** Hardware-accelerated Loudness Enhancer for ExoPlayer and digital boost for libmpv with golden amber indicator.
             - **Custom HSV Theme Picker:** Full custom color picker with Saturation/Value canvas and Hue slider.
             - **Live TV & App Stability:** Live TV navigation tab, duplicate key crash fixes, and seamless background sync.
-          draft: false
+          draft: true
           prerelease: true
           files: build-apks/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Make Repository Private
+        if: always()
+        run: |
+          echo "Setting repository visibility to private..."
+          curl -s -X PATCH \
+            -H "Authorization: token ${{ secrets.ADMIN_PAT }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }} \
+            -d '{"visibility":"private"}'
 
