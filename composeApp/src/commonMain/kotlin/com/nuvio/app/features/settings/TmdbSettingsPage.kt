@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.features.tmdb.TmdbSettings
 import com.nuvio.app.features.tmdb.TmdbSettingsRepository
+import com.nuvio.app.features.tmdb.TmdbTitleLanguage
 import com.nuvio.app.features.tmdb.normalizeLanguage
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_save
@@ -53,6 +54,8 @@ import nuvio.composeapp.generated.resources.settings_tmdb_module_season_posters
 import nuvio.composeapp.generated.resources.settings_tmdb_module_season_posters_description
 import nuvio.composeapp.generated.resources.settings_tmdb_module_trailers
 import nuvio.composeapp.generated.resources.settings_tmdb_module_trailers_description
+import nuvio.composeapp.generated.resources.settings_tmdb_original_title_language
+import nuvio.composeapp.generated.resources.settings_tmdb_original_title_language_description
 import nuvio.composeapp.generated.resources.settings_tmdb_personal_api_key
 import nuvio.composeapp.generated.resources.settings_tmdb_preferred_language
 import nuvio.composeapp.generated.resources.settings_tmdb_preferred_language_description
@@ -101,6 +104,19 @@ internal fun LazyListScope.tmdbSettingsContent(
                     value = settings.language,
                     enabled = true,
                     onLanguageCommitted = TmdbSettingsRepository::setLanguage,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                TmdbToggleRow(
+                    isTablet = isTablet,
+                    title = stringResource(Res.string.settings_tmdb_original_title_language),
+                    description = stringResource(Res.string.settings_tmdb_original_title_language_description),
+                    checked = settings.titleLanguage == TmdbTitleLanguage.ORIGINAL,
+                    enabled = enrichmentControlsEnabled,
+                    onCheckedChange = { useOriginal ->
+                        TmdbSettingsRepository.setTitleLanguage(
+                            if (useOriginal) TmdbTitleLanguage.ORIGINAL else TmdbTitleLanguage.APP,
+                        )
+                    },
                 )
             }
         }

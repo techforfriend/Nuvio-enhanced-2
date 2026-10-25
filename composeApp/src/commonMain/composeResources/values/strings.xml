@@ -1510,6 +1510,8 @@
     <string name="settings_tmdb_module_trailers_description">Trailer candidates from TMDB videos for the detail trailer section</string>
     <string name="settings_tmdb_preferred_language">Language</string>
     <string name="settings_tmdb_preferred_language_description">TMDB metadata language for title, logo, and enabled fields</string>
+    <string name="settings_tmdb_original_title_language">Original language</string>
+    <string name="settings_tmdb_original_title_language_description">Show titles, title logos, posters, and backdrops in their original language. Falls back to the language above when unavailable.</string>
     <string name="settings_tmdb_section_localization">LOCALIZATION</string>
     <string name="settings_tmdb_section_modules">MODULES</string>
     <string name="settings_tmdb_section_title">TMDB ENRICHMENT</string>
