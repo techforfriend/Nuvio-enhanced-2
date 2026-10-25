@@ -243,7 +243,7 @@ object HomeRepository {
             val loadedSections = linkedMapOf<String, HomeCatalogSection>().apply {
                 putAll(cachedSections)
             }
-            var firstErrorMessage: String? = cloudResult.errorMessage
+            var firstErrorMessage: String? = cloudErrorMessage ?: vegaErrorMessage
             var publishedOnce = false
             var lastPublishMark = TimeSource.Monotonic.markNow()
             val fetchPermits = Semaphore(HOME_CATALOG_MAX_CONCURRENT_FETCHES)
