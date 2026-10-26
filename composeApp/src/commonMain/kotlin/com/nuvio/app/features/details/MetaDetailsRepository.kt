@@ -19,6 +19,7 @@ import com.nuvio.app.features.servers.ServerItemRef
 import com.nuvio.app.features.servers.ServerUserStateProjection
 import com.nuvio.app.features.servers.message
 import com.nuvio.app.features.servers.serverFailure
+import com.nuvio.app.features.plugins.MediaTitleCleaner
 import com.nuvio.app.features.tmdb.TmdbMetadataService
 import com.nuvio.app.features.tmdb.TmdbService
 import com.nuvio.app.features.tmdb.TmdbSettingsRepository
@@ -149,9 +150,10 @@ object MetaDetailsRepository {
                 }
                 if (activeRequestKey != requestKey) return@launch
                 if (cloudMeta != null) {
+                    val resolvedMeta = resolveExtensionEnrichedMeta(cloudMeta)
                     publishLoadedMeta(
                         requestKey = requestKey,
-                        meta = cloudMeta,
+                        meta = resolvedMeta,
                         fallbackItemId = id,
                         fallbackItemType = type,
                         mdbListSettings = mdbListSettings,
@@ -177,9 +179,10 @@ object MetaDetailsRepository {
                 }
                 if (activeRequestKey != requestKey) return@launch
                 if (vegaMeta != null) {
+                    val resolvedMeta = resolveExtensionEnrichedMeta(vegaMeta)
                     publishLoadedMeta(
                         requestKey = requestKey,
-                        meta = vegaMeta,
+                        meta = resolvedMeta,
                         fallbackItemId = id,
                         fallbackItemType = type,
                         mdbListSettings = mdbListSettings,
@@ -590,6 +593,36 @@ object MetaDetailsRepository {
             InAppLogger.info("Metadata/TMDB", "Standalone fallback loaded type=${result.type} id=${result.id} name=${result.name}")
         }
         return result
+    }
+
+    private suspend fun resolveExtensionEnrichedMeta(meta: MetaDetails): MetaDetails {
+        val tmdbSettings = TmdbSettingsRepository.snapshot()
+        if (!tmdbSettings.enabled) return meta
+
+        val cleaned = MediaTitleCleaner.clean(meta.name)
+        val query = cleaned.cleanTitle.ifBlank { meta.name }
+        val searchResult = runCatching {
+            TmdbService.ensureTmdbIdBySearch(
+                title = query,
+                mediaType = meta.type,
+                year = cleaned.year,
+            )
+        }.getOrNull() ?: return meta
+
+        val (tmdbId, imdbId) = searchResult
+        val metaWithImdb = meta.copy(imdbId = imdbId ?: meta.imdbId)
+
+        val tmdbEnriched = runCatching {
+            withTimeoutOrNull(TMDB_ENRICH_TIMEOUT_MS) {
+                TmdbMetadataService.enrichMeta(
+                    meta = metaWithImdb,
+                    fallbackItemId = tmdbId,
+                    settings = tmdbSettings,
+                )
+            }
+        }.getOrNull() ?: metaWithImdb
+
+        return tmdbEnriched
     }
 
     private suspend fun publishLoadedMeta(

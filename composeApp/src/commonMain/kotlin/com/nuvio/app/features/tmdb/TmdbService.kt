@@ -14,6 +14,7 @@ object TmdbService {
     private val json = Json { ignoreUnknownKeys = true }
     private val imdbToTmdbCache = linkedMapOf<String, String>()
     private val tmdbToImdbCache = linkedMapOf<String, String>()
+    private val searchToTmdbCache = linkedMapOf<String, Pair<String, String?>>()
     private val cacheMutex = Mutex()
 
     suspend fun ensureTmdbId(videoId: String, mediaType: String, fallbackImdbId: String? = null): String? {
@@ -48,6 +49,68 @@ object TmdbService {
         }
 
         return null
+    }
+
+    suspend fun ensureTmdbIdBySearch(
+        title: String,
+        mediaType: String,
+        year: Int? = null,
+    ): Pair<String, String?>? {
+        val apiKey = TmdbSettingsRepository.effectiveApiKey()
+        if (apiKey.isBlank()) return null
+        val normalizedType = normalizeMediaType(mediaType)
+        val cleanQuery = title.trim()
+        if (cleanQuery.isBlank()) return null
+
+        val cacheKey = "$cleanQuery:$normalizedType:${year ?: ""}"
+        cacheMutex.withLock {
+            searchToTmdbCache[cacheKey]?.let { return it }
+        }
+
+        val endpoint = when (normalizedType) {
+            "tv" -> "search/tv"
+            else -> "search/movie"
+        }
+
+        val queryParams = buildMap {
+            put("query", cleanQuery)
+            if (year != null) {
+                if (normalizedType == "tv") {
+                    put("first_air_date_year", year.toString())
+                } else {
+                    put("primary_release_year", year.toString())
+                }
+            }
+        }
+
+        var matchId: Int? = null
+        val body = fetch<TmdbSearchResponse>(endpoint = endpoint, apiKey = apiKey, query = queryParams)
+        matchId = body?.results?.firstOrNull()?.id?.takeIf { it > 0 }
+
+        if (matchId == null && year != null) {
+            val fallbackBody = fetch<TmdbSearchResponse>(endpoint = endpoint, apiKey = apiKey, query = mapOf("query" to cleanQuery))
+            matchId = fallbackBody?.results?.firstOrNull()?.id?.takeIf { it > 0 }
+        }
+
+        if (matchId == null) {
+            InAppLogger.debug("Metadata/TMDB", "No TMDB search match for query='$cleanQuery' type=$normalizedType")
+            return null
+        }
+
+        val tmdbIdStr = matchId.toString()
+        val imdbId = tmdbToImdb(tmdbId = matchId, mediaType = normalizedType)
+        val result = Pair(tmdbIdStr, imdbId)
+
+        cacheMutex.withLock {
+            searchToTmdbCache[cacheKey] = result
+            if (imdbId != null) {
+                imdbToTmdbCache["$imdbId:$normalizedType"] = tmdbIdStr
+                tmdbToImdbCache["$tmdbIdStr:$normalizedType"] = imdbId
+            }
+        }
+
+        InAppLogger.info("Metadata/TMDB", "Search matched '$cleanQuery' -> TMDB=$tmdbIdStr IMDb=$imdbId")
+        return result
     }
 
     suspend fun tmdbToImdb(tmdbId: Int, mediaType: String): String? {
@@ -172,4 +235,14 @@ private data class TmdbExternalResult(
 @Serializable
 private data class TmdbExternalIdsResponse(
     @SerialName("imdb_id") val imdbId: String? = null,
+)
+
+@Serializable
+private data class TmdbSearchResponse(
+    val results: List<TmdbSearchResultItem> = emptyList(),
+)
+
+@Serializable
+private data class TmdbSearchResultItem(
+    val id: Int,
 )

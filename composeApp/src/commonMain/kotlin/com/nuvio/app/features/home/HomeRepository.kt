@@ -19,8 +19,12 @@ import com.nuvio.app.features.trakt.TraktPublicListSourceResolver
 import com.nuvio.app.features.watchprogress.CurrentDateProvider
 import com.nuvio.app.features.cloudstream.CloudStreamPluginItem
 import com.nuvio.app.features.cloudstream.CloudStreamRepository
+import com.nuvio.app.features.cloudstream.CloudStreamSearchItem
 import com.nuvio.app.features.cloudstream.toMetaPreview
+import com.nuvio.app.features.plugins.MediaTitleCleaner
 import com.nuvio.app.features.vega.VegaBridge
+import com.nuvio.app.features.vega.VegaMergedPostsRepository
+import com.nuvio.app.features.vega.VegaPost
 import com.nuvio.app.features.vega.VegaProviderItem
 import com.nuvio.app.features.vega.VegaRepository
 import com.nuvio.app.features.vega.toMetaPreview
@@ -752,7 +756,17 @@ object HomeRepository {
                                     onSuccess = { categories ->
                                         val providerSections = categories.mapNotNull { (categoryName, items) ->
                                             if (items.isEmpty()) return@mapNotNull null
-                                            val previews = items.take(HOME_CATALOG_PREVIEW_FETCH_LIMIT).map { it.toMetaPreview() }
+                                            val deduplicatedItems = mutableListOf<CloudStreamSearchItem>()
+                                            val seenKeys = mutableSetOf<String>()
+                                            items.forEach { item ->
+                                                val cleaned = MediaTitleCleaner.clean(item.name)
+                                                if (seenKeys.add(cleaned.dedupeKey)) {
+                                                    val displayTitle = if (cleaned.year != null) "${cleaned.cleanTitle} (${cleaned.year})" else cleaned.cleanTitle
+                                                    deduplicatedItems.add(item.copy(name = displayTitle))
+                                                }
+                                            }
+                                            if (deduplicatedItems.isEmpty()) return@mapNotNull null
+                                            val previews = deduplicatedItems.take(HOME_CATALOG_PREVIEW_FETCH_LIMIT).map { it.toMetaPreview() }
                                             HomeCatalogSection(
                                                 key = "cloudstream:${plugin.metadata.id.storageKey}:${categoryName.hashCode()}",
                                                 title = "CS3 • ${plugin.metadata.name} - $categoryName",
@@ -761,12 +775,12 @@ object HomeRepository {
                                                 target = CatalogTarget.CloudStream(
                                                     providerId = plugin.metadata.id.value,
                                                     categoryName = categoryName,
-                                                    contentType = items.first().type.nuvioType,
+                                                    contentType = deduplicatedItems.first().type.nuvioType,
                                                     supportsPagination = false,
                                                 ),
                                                 items = previews,
-                                                availableItemCount = items.size,
-                                                hasMore = items.size > previews.size,
+                                                availableItemCount = deduplicatedItems.size,
+                                                hasMore = deduplicatedItems.size > previews.size,
                                             )
                                         }
                                         CloudHomeProviderResult(providerSections, null)
@@ -817,7 +831,18 @@ object HomeRepository {
                                     topCategories.mapNotNull { category ->
                                         val posts = VegaBridge.getPosts(provider, category.filter, page = 1)
                                         if (posts.isEmpty()) return@mapNotNull null
-                                        val previews = posts.take(HOME_CATALOG_PREVIEW_FETCH_LIMIT).map { it.toMetaPreview(provider.value) }
+                                        val deduplicatedPosts = mutableListOf<VegaPost>()
+                                        val seenKeys = mutableSetOf<String>()
+                                        posts.forEach { post ->
+                                            val cleaned = MediaTitleCleaner.clean(post.title)
+                                            val primaryLink = VegaMergedPostsRepository.register(provider.value, cleaned.dedupeKey, post)
+                                            if (primaryLink == post.link && seenKeys.add(cleaned.dedupeKey)) {
+                                                val displayTitle = if (cleaned.year != null) "${cleaned.cleanTitle} (${cleaned.year})" else cleaned.cleanTitle
+                                                deduplicatedPosts.add(post.copy(title = displayTitle))
+                                            }
+                                        }
+                                        if (deduplicatedPosts.isEmpty()) return@mapNotNull null
+                                        val previews = deduplicatedPosts.take(HOME_CATALOG_PREVIEW_FETCH_LIMIT).map { it.toMetaPreview(provider.value) }
                                         HomeCatalogSection(
                                             key = "vega:${provider.value}:${category.title.hashCode()}",
                                             title = "Vega • ${provider.displayName} - ${category.title}",
@@ -829,7 +854,7 @@ object HomeRepository {
                                                 filter = category.filter,
                                             ),
                                             items = previews,
-                                            availableItemCount = posts.size,
+                                            availableItemCount = deduplicatedPosts.size,
                                             hasMore = true,
                                         )
                                     }

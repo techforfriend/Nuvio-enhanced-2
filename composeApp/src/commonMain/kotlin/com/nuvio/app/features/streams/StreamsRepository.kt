@@ -18,6 +18,7 @@ import com.nuvio.app.features.plugins.pluginContentId
 import com.nuvio.app.features.plugins.PluginsUiState
 import com.nuvio.app.features.cloudstream.CloudStreamRepository
 import com.nuvio.app.features.cloudstream.parseCloudStreamRouteId
+import com.nuvio.app.features.vega.VegaMergedPostsRepository
 import com.nuvio.app.features.vega.VegaBridge
 import com.nuvio.app.features.vega.VegaRepository
 import com.nuvio.app.features.vega.parseVegaRouteId
@@ -351,65 +352,67 @@ object StreamsRepository {
                 showDirectAutoPlayOverlay = isDirectAutoPlayFlow,
             )
             activeJob = scope.launch {
-                val result = runCatching {
-                    withTimeoutOrNull(STREAM_PROVIDER_TIMEOUT_MS) {
-                        if (providerItem != null) {
-                            VegaBridge.getStreams(providerItem, vegaRoute.link, type)
-                        } else {
-                            emptyList()
+                val alternatePosts = VegaMergedPostsRepository.getAlternatePosts(vegaRoute.providerId, vegaRoute.link)
+                val allLinks = if (alternatePosts.isNotEmpty()) {
+                    alternatePosts.map { it.link to it.title }.distinctBy { it.first }
+                } else {
+                    listOf(vegaRoute.link to "")
+                }
+
+                val allStreams = mutableListOf<com.nuvio.app.features.streams.StreamItem>()
+                coroutineScope {
+                    allLinks.forEach { (link, postTitle) ->
+                        launch {
+                            val streams = runCatching {
+                                withTimeoutOrNull(STREAM_PROVIDER_TIMEOUT_MS) {
+                                    if (providerItem != null) {
+                                        VegaBridge.getStreams(providerItem, link, type)
+                                    } else {
+                                        emptyList()
+                                    }
+                                } ?: emptyList()
+                            }.getOrElse { emptyList() }
+
+                            val qualityTag = Regex("""(?i)\b(2160p|1080p|720p|480p|4k)\b""").find(postTitle)?.value
+                            val tagged = streams.map { stream ->
+                                if (qualityTag != null && !stream.name.contains(qualityTag, ignoreCase = true)) {
+                                    stream.copy(name = "${stream.name} • $qualityTag")
+                                } else {
+                                    stream
+                                }
+                            }
+                            synchronized(allStreams) {
+                                allStreams.addAll(tagged)
+                            }
                         }
-                    } ?: error("$providerName timed out")
+                    }
                 }
                 if (activeRequestKey != requestKey) return@launch
-                result.fold(
-                    onSuccess = { streams ->
-                        val presentedGroup = StreamBadgePresentation.apply(
-                            groups = listOf(
-                                AddonStreamGroup(
-                                    addonName = providerName,
-                                    addonId = providerAddonId,
-                                    streams = streams,
-                                    isLoading = false,
-                                    error = if (streams.isEmpty()) "No links found" else null,
-                                ),
-                            ),
-                            rules = streamBadgeRules,
-                        )
-                        val autoPlayStream = if (isDirectAutoPlayFlow) streams.firstOrNull() else null
-                        _uiState.value = StreamsUiState(
-                            requestToken = requestToken,
-                            groups = presentedGroup,
-                            activeAddonIds = setOf(providerAddonId),
-                            isAnyLoading = false,
-                            emptyStateReason = if (streams.isEmpty()) StreamsEmptyStateReason.NoStreamsFound else null,
-                            autoPlayStream = autoPlayStream,
-                            autoPlayCandidates = if (isDirectAutoPlayFlow) streams else emptyList(),
-                            autoPlayDecided = true,
-                            isDirectAutoPlayFlow = isDirectAutoPlayFlow && autoPlayStream != null,
-                            showDirectAutoPlayOverlay = isDirectAutoPlayFlow && autoPlayStream != null,
-                        )
-                    },
-                    onFailure = { error ->
-                        log.w(error) { "Vega link resolution failed provider=${vegaRoute.providerId}" }
-                        _uiState.value = StreamsUiState(
-                            requestToken = requestToken,
-                            groups = listOf(
-                                AddonStreamGroup(
-                                    addonName = providerName,
-                                    addonId = providerAddonId,
-                                    streams = emptyList(),
-                                    isLoading = false,
-                                    error = error.message ?: "Vega link resolution failed",
-                                ),
-                            ),
-                            activeAddonIds = setOf(providerAddonId),
-                            isAnyLoading = false,
-                            emptyStateReason = StreamsEmptyStateReason.StreamFetchFailed,
-                            autoPlayDecided = true,
-                            isDirectAutoPlayFlow = false,
-                            showDirectAutoPlayOverlay = false,
-                        )
-                    },
+                val distinctStreams = allStreams.distinctBy { it.url }
+                val presentedGroup = StreamBadgePresentation.apply(
+                    groups = listOf(
+                        AddonStreamGroup(
+                            addonName = providerName,
+                            addonId = providerAddonId,
+                            streams = distinctStreams,
+                            isLoading = false,
+                            error = if (distinctStreams.isEmpty()) "No links found" else null,
+                        ),
+                    ),
+                    rules = streamBadgeRules,
+                )
+                val autoPlayStream = if (isDirectAutoPlayFlow) distinctStreams.firstOrNull() else null
+                _uiState.value = StreamsUiState(
+                    requestToken = requestToken,
+                    groups = presentedGroup,
+                    activeAddonIds = setOf(providerAddonId),
+                    isAnyLoading = false,
+                    emptyStateReason = if (distinctStreams.isEmpty()) StreamsEmptyStateReason.NoStreamsFound else null,
+                    autoPlayStream = autoPlayStream,
+                    autoPlayCandidates = if (isDirectAutoPlayFlow) distinctStreams else emptyList(),
+                    autoPlayDecided = true,
+                    isDirectAutoPlayFlow = isDirectAutoPlayFlow && autoPlayStream != null,
+                    showDirectAutoPlayOverlay = isDirectAutoPlayFlow && autoPlayStream != null,
                 )
             }
             return
