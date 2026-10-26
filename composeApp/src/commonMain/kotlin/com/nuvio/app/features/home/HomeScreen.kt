@@ -62,8 +62,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.cloudstream.CloudStreamPluginItem
 import com.nuvio.app.features.cloudstream.CloudStreamRepository
-import com.nuvio.app.features.vega.VegaProviderItem
-import com.nuvio.app.features.vega.VegaRepository
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
 import com.nuvio.app.core.network.NetworkCondition
@@ -239,13 +237,6 @@ fun HomeScreen(
     }
     val selectedCloudStreamProviderId by HomeRepository.selectedCloudStreamProviderId.collectAsStateWithLifecycle()
 
-    val vegaUiState by VegaRepository.uiState.collectAsStateWithLifecycle()
-    val enabledVegaProviders = remember(vegaUiState.providers, vegaUiState.vegaEnabled) {
-        if (!vegaUiState.vegaEnabled) emptyList()
-        else vegaUiState.providers.filter { it.enabled }.sortedBy { it.displayName.lowercase() }
-    }
-    val selectedVegaProviderId by HomeRepository.selectedVegaProviderId.collectAsStateWithLifecycle()
-
     LaunchedEffect(runnableCloudStreamProviders, selectedCloudStreamProviderId) {
         if (runnableCloudStreamProviders.isNotEmpty()) {
             if (selectedCloudStreamProviderId == null) {
@@ -258,21 +249,6 @@ fun HomeScreen(
             }
         } else if (selectedCloudStreamProviderId != null && selectedCloudStreamProviderId != "off") {
             HomeRepository.setSelectedCloudStreamProvider(null)
-        }
-    }
-
-    LaunchedEffect(enabledVegaProviders, selectedVegaProviderId) {
-        if (enabledVegaProviders.isNotEmpty()) {
-            if (selectedVegaProviderId == null) {
-                HomeRepository.setSelectedVegaProvider(enabledVegaProviders.first().value)
-            } else if (selectedVegaProviderId != "off" &&
-                selectedVegaProviderId != "all" &&
-                enabledVegaProviders.none { it.value == selectedVegaProviderId }
-            ) {
-                HomeRepository.setSelectedVegaProvider(enabledVegaProviders.first().value)
-            }
-        } else if (selectedVegaProviderId != null && selectedVegaProviderId != "off") {
-            HomeRepository.setSelectedVegaProvider(null)
         }
     }
 
@@ -1061,7 +1037,7 @@ fun HomeScreen(
         }
     }
 
-    val hasActiveAddons = enabledAddons.any { it.manifest != null } || runnableCloudStreamProviders.isNotEmpty() || enabledVegaProviders.isNotEmpty()
+    val hasActiveAddons = enabledAddons.any { it.manifest != null } || runnableCloudStreamProviders.isNotEmpty()
     val serversUiState by remember {
         ServerRepository.ensureLoaded()
         ServerRepository.uiState
@@ -1086,10 +1062,6 @@ fun HomeScreen(
     }
     val sectionsMap = remember(homeUiState.sections) {
         homeUiState.sections.associateBy(HomeCatalogSection::key)
-    }
-    val vegaHomeSections = remember(homeUiState.sections) {
-        homeUiState.sections
-            .filter { it.key.startsWith("vega:") && it.items.isNotEmpty() }
     }
     val cloudStreamHomeSections = remember(homeUiState.sections) {
         homeUiState.sections
@@ -1455,26 +1427,6 @@ fun HomeScreen(
                             }
                         }
 
-                        vegaHomeSections.forEach { section ->
-                            item(key = section.key, contentType = "catalog") {
-                                HomeCatalogRowSection(
-                                    section = section,
-                                    entries = section.items.take(HOME_CATALOG_PREVIEW_LIMIT),
-                                    posterCardStyle = posterCardStyle,
-                                    modifier = Modifier.padding(bottom = 12.dp),
-                                    sectionPadding = homeSectionPadding,
-                                    onViewAllClick = if (section.canOpenCatalog(HOME_CATALOG_PREVIEW_LIMIT)) {
-                                        onCatalogClick?.let { { it(section) } }
-                                    } else {
-                                        null
-                                    },
-                                    watchedKeys = watchedUiState.watchedKeys,
-                                    fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-                                    onPosterClick = onPosterClick,
-                                    onPosterLongClick = onPosterLongClick,
-                                )
-                            }
-                        }
 
                         cloudStreamHomeSections.forEach { section ->
                             item(key = section.key, contentType = "catalog") {
@@ -1501,7 +1453,7 @@ fun HomeScreen(
             }
         }
 
-        val hasDiscoveryProviders = runnableCloudStreamProviders.isNotEmpty() || enabledVegaProviders.isNotEmpty()
+        val hasDiscoveryProviders = runnableCloudStreamProviders.isNotEmpty()
         if (hasDiscoveryProviders) {
             if (cloudStreamProviderMenuExpanded) {
                 Box(
@@ -1548,11 +1500,8 @@ fun HomeScreen(
                                     .verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
-                                val hasAnyExtensions = enabledVegaProviders.isNotEmpty() || runnableCloudStreamProviders.isNotEmpty()
-                                val isAllExtensionsSelected = hasAnyExtensions &&
-                                    (enabledVegaProviders.isEmpty() || selectedVegaProviderId == "all") &&
-                                    (runnableCloudStreamProviders.isEmpty() || selectedCloudStreamProviderId == "all") &&
-                                    (selectedVegaProviderId == "all" || selectedCloudStreamProviderId == "all")
+                                val hasAnyExtensions = runnableCloudStreamProviders.isNotEmpty()
+                                val isAllExtensionsSelected = selectedCloudStreamProviderId == "all"
 
                                 if (hasAnyExtensions) {
                                     Row(
@@ -1568,11 +1517,9 @@ fun HomeScreen(
                                             )
                                             .clickable {
                                                 if (isAllExtensionsSelected) {
-                                                    if (enabledVegaProviders.isNotEmpty()) HomeRepository.setSelectedVegaProvider("off")
-                                                    if (runnableCloudStreamProviders.isNotEmpty()) HomeRepository.setSelectedCloudStreamProvider("off")
+                                                    HomeRepository.setSelectedCloudStreamProvider("off")
                                                 } else {
-                                                    if (enabledVegaProviders.isNotEmpty()) HomeRepository.setSelectedVegaProvider("all")
-                                                    if (runnableCloudStreamProviders.isNotEmpty()) HomeRepository.setSelectedCloudStreamProvider("all")
+                                                    HomeRepository.setSelectedCloudStreamProvider("all")
                                                 }
                                             }
                                             .padding(horizontal = 7.dp, vertical = 6.dp),
@@ -1634,115 +1581,7 @@ fun HomeScreen(
                                     Spacer(modifier = Modifier.height(2.dp))
                                 }
 
-                                if (enabledVegaProviders.isNotEmpty()) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    ) {
-                                        Text(
-                                            text = "VEGA PROVIDERS",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = themeAccent,
-                                            fontWeight = FontWeight.Bold,
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .background(themeAccent.copy(alpha = 0.18f), RoundedCornerShape(4.dp))
-                                                .border(0.7.dp, themeAccent.copy(alpha = 0.55f), RoundedCornerShape(4.dp))
-                                                .padding(horizontal = 4.dp, vertical = 1.dp),
-                                        ) {
-                                            Text(
-                                                text = "BETA",
-                                                style = MaterialTheme.typography.labelSmall.copy(
-                                                    fontSize = 8.sp,
-                                                    fontWeight = FontWeight.ExtraBold,
-                                                    letterSpacing = 0.5.sp,
-                                                ),
-                                                color = themeAccent,
-                                            )
-                                        }
-                                    }
-                                    enabledVegaProviders.forEach { provider ->
-                                        val isSelected = provider.value == selectedVegaProviderId && selectedVegaProviderId != "off"
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .then(
-                                                    if (isSelected) {
-                                                        Modifier.background(themeAccent.copy(alpha = 0.16f))
-                                                    } else {
-                                                        Modifier
-                                                    }
-                                                )
-                                                .clickable {
-                                                    val next = if (isSelected) "off" else provider.value
-                                                    HomeRepository.setSelectedVegaProvider(next)
-                                                }
-                                                .padding(horizontal = 7.dp, vertical = 6.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            if (isSelected) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(22.dp)
-                                                        .background(themeAccent.copy(alpha = 0.25f), RoundedCornerShape(6.dp)),
-                                                    contentAlignment = Alignment.Center,
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Rounded.PlayArrow,
-                                                        contentDescription = null,
-                                                        tint = themeAccent,
-                                                        modifier = Modifier.size(14.dp),
-                                                    )
-                                                }
-                                            } else {
-                                                Box(
-                                                    modifier = Modifier.size(22.dp),
-                                                    contentAlignment = Alignment.Center,
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Rounded.Movie,
-                                                        contentDescription = null,
-                                                        tint = themeOnSurface.copy(alpha = 0.70f),
-                                                        modifier = Modifier.size(14.dp),
-                                                    )
-                                                }
-                                            }
-                                            Spacer(modifier = Modifier.width(7.dp))
-                                            Text(
-                                                text = provider.displayName,
-                                                color = if (isSelected) themeOnSurface else themeOnSurface.copy(alpha = 0.85f),
-                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                                fontSize = 12.sp,
-                                                modifier = Modifier.weight(1f),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                            )
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            if (isSelected) {
-                                                Icon(
-                                                    imageVector = Icons.Rounded.Check,
-                                                    contentDescription = null,
-                                                    tint = themeAccent,
-                                                    modifier = Modifier.size(15.dp),
-                                                )
-                                            } else {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(14.dp)
-                                                        .border(1.2.dp, themeOnSurface.copy(alpha = 0.35f), CircleShape),
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
                                 if (runnableCloudStreamProviders.isNotEmpty()) {
-                                    if (enabledVegaProviders.isNotEmpty()) {
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                    }
                                     Text(
                                         text = "CLOUDSTREAM",
                                         style = MaterialTheme.typography.labelSmall,
@@ -1847,21 +1686,11 @@ fun HomeScreen(
                         }
                     }
 
-                    val isVegaActive = (selectedVegaProviderId != null && selectedVegaProviderId != "off") && enabledVegaProviders.isNotEmpty()
                     val isCs3Active = (selectedCloudStreamProviderId != null && selectedCloudStreamProviderId != "off") && runnableCloudStreamProviders.isNotEmpty()
-
                     val selectedCloudStreamProvider = runnableCloudStreamProviders.firstOrNull {
                         it.metadata.id.value == selectedCloudStreamProviderId && selectedCloudStreamProviderId != "off"
                     }
-                    val selectedVegaProvider = enabledVegaProviders.firstOrNull {
-                        it.value == selectedVegaProviderId && selectedVegaProviderId != "off"
-                    }
                     val pillLabel = when {
-                        isVegaActive && isCs3Active -> "cs3-vega (BETA)"
-                        isVegaActive -> {
-                            if (selectedVegaProviderId == "all") "All Vega (BETA)"
-                            else "${selectedVegaProvider?.displayName ?: "Vega"} (BETA)"
-                        }
                         isCs3Active -> {
                             if (selectedCloudStreamProviderId == "all") "All CS3"
                             else (selectedCloudStreamProvider?.metadata?.name ?: "CloudStream")

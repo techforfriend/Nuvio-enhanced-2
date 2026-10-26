@@ -48,9 +48,6 @@ import org.jetbrains.compose.resources.getString
 import com.nuvio.app.features.cloudstream.CloudStreamRepository
 import com.nuvio.app.features.cloudstream.parseCloudStreamRouteId
 import com.nuvio.app.features.cloudstream.toMetaDetails
-import com.nuvio.app.features.vega.VegaBridge
-import com.nuvio.app.features.vega.VegaRepository
-import com.nuvio.app.features.vega.parseVegaRouteId
 
 object MetaDetailsRepository {
     private data class CachedMetaEntry(
@@ -161,35 +158,6 @@ object MetaDetailsRepository {
                     )
                 } else {
                     log.w { "Failed to load CloudStream meta for provider=${route.providerId} data=${route.data}" }
-                    _uiState.value = MetaDetailsUiState(
-                        errorMessage = "Could not load content details",
-                    )
-                    activeRequestKey = null
-                }
-                return@launch
-            }
-
-            parseVegaRouteId(id)?.let { route ->
-                VegaRepository.initialize()
-                val provider = VegaRepository.getProviderByValue(route.providerId)
-                val vegaMeta = provider?.let {
-                    withTimeoutOrNull(CLOUDSTREAM_DETAIL_TIMEOUT_MS) {
-                        VegaBridge.getMetaDetails(it, route.link)
-                    }
-                }
-                if (activeRequestKey != requestKey) return@launch
-                if (vegaMeta != null) {
-                    val resolvedMeta = resolveExtensionEnrichedMeta(vegaMeta)
-                    publishLoadedMeta(
-                        requestKey = requestKey,
-                        meta = resolvedMeta,
-                        fallbackItemId = id,
-                        fallbackItemType = type,
-                        mdbListSettings = mdbListSettings,
-                        metaScreenSettingsFingerprint = metaScreenSettingsFingerprint,
-                    )
-                } else {
-                    log.w { "Failed to load Vega meta for provider=${route.providerId} link=${route.link}" }
                     _uiState.value = MetaDetailsUiState(
                         errorMessage = "Could not load content details",
                     )
@@ -315,20 +283,6 @@ object MetaDetailsRepository {
                 cachedMetaByRequestKey[requestKey] = CachedMetaEntry(baseMeta = cloudMeta)
             }
             return cloudMeta
-        }
-
-        parseVegaRouteId(id)?.let { route ->
-            VegaRepository.initialize()
-            val provider = VegaRepository.getProviderByValue(route.providerId)
-            val vegaMeta = provider?.let {
-                withTimeoutOrNull(CLOUDSTREAM_DETAIL_TIMEOUT_MS) {
-                    VegaBridge.getMetaDetails(it, route.link)
-                }
-            }
-            if (vegaMeta != null && cacheResult) {
-                cachedMetaByRequestKey[requestKey] = CachedMetaEntry(baseMeta = vegaMeta)
-            }
-            return vegaMeta
         }
 
         val metaLookupId = resolveMetaLookupId(itemId = id, itemType = type)

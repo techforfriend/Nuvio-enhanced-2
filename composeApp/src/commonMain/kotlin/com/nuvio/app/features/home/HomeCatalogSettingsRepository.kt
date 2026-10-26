@@ -43,7 +43,6 @@ internal data class HomeCatalogSettingsUiState(
     val showCatalogType: Boolean = true,
     val hideUnreleasedContent: Boolean = false,
     val cloudStreamProviderId: String? = null,
-    val vegaProviderId: String? = null,
     val items: List<HomeCatalogSettingsItem> = emptyList(),
 ) {
     val signature: String
@@ -63,8 +62,6 @@ internal data class HomeCatalogSettingsUiState(
             append(hideUnreleasedContent)
             append('|')
             append(cloudStreamProviderId.orEmpty())
-            append('|')
-            append(vegaProviderId.orEmpty())
             append('|')
             append(
                 items.joinToString(separator = "|") { item ->
@@ -121,7 +118,6 @@ internal data class HomeCatalogSettingsSnapshot(
     val showCatalogType: Boolean,
     val hideUnreleasedContent: Boolean,
     val cloudStreamProviderId: String? = null,
-    val vegaProviderId: String? = null,
     val preferences: Map<String, HomeCatalogPreference>,
 )
 
@@ -144,7 +140,6 @@ private data class StoredHomeCatalogSettingsPayload(
     val showCatalogType: Boolean = true,
     val hideUnreleasedContent: Boolean = false,
     val cloudStreamProviderId: String? = null,
-    val vegaProviderId: String? = null,
     val items: List<StoredHomeCatalogPreference> = emptyList(),
 )
 
@@ -183,7 +178,6 @@ object HomeCatalogSettingsRepository {
     private var showCatalogType = true
     private var hideUnreleasedContent = false
     private var cloudStreamProviderId: String? = null
-    private var vegaProviderId: String? = null
 
     fun onProfileChanged() {
         hasLoaded = false
@@ -196,7 +190,6 @@ object HomeCatalogSettingsRepository {
         showCatalogType = true
         hideUnreleasedContent = false
         cloudStreamProviderId = null
-        vegaProviderId = null
         definitions = emptyList()
         collectionDefinitions = emptyList()
         lastCatalogSync = null
@@ -219,7 +212,6 @@ object HomeCatalogSettingsRepository {
         showCatalogType = true
         hideUnreleasedContent = false
         cloudStreamProviderId = null
-        vegaProviderId = null
         _uiState.value = HomeCatalogSettingsUiState()
     }
 
@@ -268,7 +260,6 @@ object HomeCatalogSettingsRepository {
             showCatalogType = showCatalogType,
             hideUnreleasedContent = hideUnreleasedContent,
             cloudStreamProviderId = cloudStreamProviderId,
-            vegaProviderId = vegaProviderId,
             preferences = preferences.mapValues { (_, value) ->
                 HomeCatalogPreference(
                     customTitle = value.customTitle,
@@ -290,19 +281,6 @@ object HomeCatalogSettingsRepository {
         val normalized = providerId?.trim()?.takeIf { it.isNotEmpty() }
         if (cloudStreamProviderId == normalized) return
         cloudStreamProviderId = normalized
-        persist()
-    }
-
-    fun selectedVegaProviderId(): String? {
-        ensureLoaded()
-        return vegaProviderId
-    }
-
-    fun setVegaProviderId(providerId: String?) {
-        ensureLoaded()
-        val normalized = providerId?.trim()?.takeIf { it.isNotEmpty() }
-        if (vegaProviderId == normalized) return
-        vegaProviderId = normalized
         persist()
     }
 
@@ -469,7 +447,6 @@ object HomeCatalogSettingsRepository {
             showCatalogType = parsedPayload.showCatalogType
             hideUnreleasedContent = parsedPayload.hideUnreleasedContent
             cloudStreamProviderId = parsedPayload.cloudStreamProviderId
-            vegaProviderId = parsedPayload.vegaProviderId
             preferences = parsedPayload.items.associateBy { it.key }
             publish()
             return
@@ -575,7 +552,6 @@ object HomeCatalogSettingsRepository {
             showCatalogType = showCatalogType,
             hideUnreleasedContent = hideUnreleasedContent,
             cloudStreamProviderId = cloudStreamProviderId,
-            vegaProviderId = vegaProviderId,
             items = items,
         )
     }
@@ -592,7 +568,6 @@ object HomeCatalogSettingsRepository {
                     showCatalogType = showCatalogType,
                     hideUnreleasedContent = hideUnreleasedContent,
                     cloudStreamProviderId = cloudStreamProviderId,
-                    vegaProviderId = vegaProviderId,
                     items = preferences.values.sortedBy { it.order },
                 ),
             ),
