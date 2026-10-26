@@ -654,7 +654,7 @@
     <string name="settings_appearance_amoled_black">AMOLED черно</string>
     <string name="settings_appearance_amoled_description">Използвай чисто черни фонове за OLED екрани.</string>
     <string name="settings_appearance_app_icon">Икона на приложението</string>
-    <string name="settings_appearance_app_icon_arctic_blue">Арктиеско синьо</string>
+    <string name="settings_appearance_app_icon_arctic_blue">Арктическо синьо</string>
     <string name="settings_appearance_app_icon_android_confirmation_message">Промяната към %1$s ще затвори Nuvio. Натиснете OK, за да продължите.</string>
     <string name="settings_appearance_app_icon_android_confirmation_title">Промяна на иконата?</string>
     <string name="settings_appearance_app_icon_change_failed">Иконата не можа да бъде променена. Опитайте отново.</string>
