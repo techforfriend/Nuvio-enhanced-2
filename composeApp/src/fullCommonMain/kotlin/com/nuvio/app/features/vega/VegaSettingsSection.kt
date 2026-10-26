@@ -132,7 +132,7 @@ internal fun VegaSettingsSection() {
                 repositoryUrl = it
                 message = null
             },
-            placeholder = "https://.../manifest.json",
+            placeholder = "Shortcode, username, or manifest URL (e.g. vega-org)",
         )
         Spacer(Modifier.height(12.dp))
         Row(

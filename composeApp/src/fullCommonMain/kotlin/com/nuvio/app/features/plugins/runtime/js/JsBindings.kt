@@ -219,6 +219,7 @@ internal object JsBindings {
                 }
             };
         };
+        globalThis.fetch = fetch;
     """.trimIndent()
 
     private fun abortControllerPolyfill() = """
