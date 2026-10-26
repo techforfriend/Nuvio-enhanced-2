@@ -918,12 +918,10 @@ private fun MobileSettingsScreen(
                     isTablet = false,
                     showPluginsEntry = AppFeaturePolicy.pluginsEnabled,
                     showCloudStreamEntry = AppFeaturePolicy.pluginsEnabled,
-                    showVegaEntry = AppFeaturePolicy.pluginsEnabled,
                     onAddonsClick = onAddonsClick,
                     onPluginsClick = onPluginsClick,
                     onMediaServersClick = { onPageChange(SettingsPage.MediaServers) },
                     onCloudStreamClick = { onPageChange(SettingsPage.CloudStream) },
-                    onVegaClick = { onPageChange(SettingsPage.VegaProviders) },
                 )
                 SettingsPage.Addons -> addonsSettingsContent()
                 SettingsPage.MediaServers -> mediaServersSettingsContent(
@@ -936,7 +934,6 @@ private fun MobileSettingsScreen(
                 )
                 SettingsPage.Plugins -> if (AppFeaturePolicy.pluginsEnabled) pluginsSettingsContent() else addonsSettingsContent()
                 SettingsPage.CloudStream -> if (AppFeaturePolicy.pluginsEnabled) cloudStreamSettingsContent() else addonsSettingsContent()
-                SettingsPage.VegaProviders -> if (AppFeaturePolicy.pluginsEnabled) vegaSettingsContent() else addonsSettingsContent()
                 SettingsPage.Homescreen -> homescreenSettingsContent(
                     isTablet = false,
                     heroEnabled = homescreenHeroEnabled,
@@ -1428,12 +1425,10 @@ private fun TabletSettingsScreen(
                         isTablet = true,
                         showPluginsEntry = AppFeaturePolicy.pluginsEnabled,
                         showCloudStreamEntry = AppFeaturePolicy.pluginsEnabled,
-                        showVegaEntry = AppFeaturePolicy.pluginsEnabled,
                         onAddonsClick = { openInlinePage(SettingsPage.Addons) },
                         onPluginsClick = { openInlinePage(SettingsPage.Plugins) },
                         onMediaServersClick = { openInlinePage(SettingsPage.MediaServers) },
                         onCloudStreamClick = { openInlinePage(SettingsPage.CloudStream) },
-                        onVegaClick = { openInlinePage(SettingsPage.VegaProviders) },
                     )
                     SettingsPage.Addons -> addonsSettingsContent()
                     SettingsPage.MediaServers -> mediaServersSettingsContent(
@@ -1446,7 +1441,6 @@ private fun TabletSettingsScreen(
                     )
                     SettingsPage.Plugins -> if (AppFeaturePolicy.pluginsEnabled) pluginsSettingsContent() else addonsSettingsContent()
                     SettingsPage.CloudStream -> if (AppFeaturePolicy.pluginsEnabled) cloudStreamSettingsContent() else addonsSettingsContent()
-                    SettingsPage.VegaProviders -> if (AppFeaturePolicy.pluginsEnabled) vegaSettingsContent() else addonsSettingsContent()
                     SettingsPage.Homescreen -> homescreenSettingsContent(
                         isTablet = true,
                         heroEnabled = homescreenHeroEnabled,

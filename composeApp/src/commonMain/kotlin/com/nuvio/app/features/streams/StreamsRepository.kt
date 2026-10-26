@@ -18,13 +18,6 @@ import com.nuvio.app.features.plugins.pluginContentId
 import com.nuvio.app.features.plugins.PluginsUiState
 import com.nuvio.app.features.cloudstream.CloudStreamRepository
 import com.nuvio.app.features.cloudstream.parseCloudStreamRouteId
-import com.nuvio.app.features.vega.VegaRouteData
-import com.nuvio.app.features.vega.VegaMergedPostsRepository
-import com.nuvio.app.features.vega.VegaBridge
-import com.nuvio.app.features.vega.VegaRepository
-import com.nuvio.app.features.vega.cleanLink
-import com.nuvio.app.features.vega.parseVegaRouteId
-import com.nuvio.app.features.vega.resolveVegaProviderStreams
 import com.nuvio.app.features.servers.ServerStreams
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
@@ -141,12 +134,6 @@ object StreamsRepository {
         )
         val cloudStreamProviderGroups = if (AppFeaturePolicy.pluginsEnabled) {
             cloudStreamProviderGroupsForRequest(type, cloudStreamSearchRequest)
-        } else {
-            emptyList()
-        }
-        val vegaProviders = if (AppFeaturePolicy.pluginsEnabled) {
-            VegaRepository.initialize()
-            VegaRepository.getEnabledProviders()
         } else {
             emptyList()
         }
@@ -332,126 +319,6 @@ object StreamsRepository {
             return
         }
 
-        val rawVegaRoute = parseVegaRouteId(videoId)
-            ?: parentMetaId?.let { parseVegaRouteId(it) }
-        val vegaRoute = rawVegaRoute?.let { it.copy(link = it.cleanLink()) }
-        if (vegaRoute != null) {
-            VegaRepository.initialize()
-            val providerItem = VegaRepository.getProviderByValue(vegaRoute.providerId)
-            val providerName = providerItem?.displayName ?: "Vega"
-            val providerAddonId = "vega:${vegaRoute.providerId}"
-            _uiState.value = StreamsUiState(
-                requestToken = requestToken,
-                groups = listOf(
-                    AddonStreamGroup(
-                        addonName = providerName,
-                        addonId = providerAddonId,
-                        streams = emptyList(),
-                        isLoading = true,
-                    ),
-                ),
-                activeAddonIds = setOf(providerAddonId),
-                isAnyLoading = true,
-                isDirectAutoPlayFlow = isDirectAutoPlayFlow,
-                showDirectAutoPlayOverlay = isDirectAutoPlayFlow,
-            )
-            activeJob = scope.launch {
-                val primaryLinks = resolvePlayableVegaLinks(
-                    providerItem = providerItem,
-                    route = vegaRoute,
-                    type = type,
-                    videoId = videoId,
-                    parentMetaId = parentMetaId,
-                    season = season,
-                    episode = episode,
-                )
-                val alternatePosts = VegaMergedPostsRepository.getAlternatePosts(vegaRoute.providerId, vegaRoute.link)
-                val altLinks = mutableListOf<Pair<String, String>>()
-                if (alternatePosts.isNotEmpty()) {
-                    coroutineScope {
-                        alternatePosts.forEach { alt ->
-                            launch {
-                                val altRoute = VegaRouteData(vegaRoute.providerId, alt.link)
-                                val resolved = resolvePlayableVegaLinks(
-                                    providerItem = providerItem,
-                                    route = altRoute.copy(link = altRoute.cleanLink()),
-                                    type = type,
-                                    videoId = alt.link,
-                                    parentMetaId = null,
-                                    season = season,
-                                    episode = episode,
-                                )
-                                synchronized(altLinks) {
-                                    altLinks.addAll(resolved.map { it.first to (it.second.ifBlank { alt.title }) })
-                                }
-                            }
-                        }
-                    }
-                }
-
-                val allLinks = (primaryLinks + altLinks).distinctBy { it.first }
-                    .ifEmpty { listOf(vegaRoute.link to "") }
-
-                val allStreams = mutableListOf<com.nuvio.app.features.streams.StreamItem>()
-                coroutineScope {
-                    allLinks.forEach { (link, postTitle) ->
-                        launch {
-                            val streams = runCatching {
-                                withTimeoutOrNull(STREAM_PROVIDER_TIMEOUT_MS) {
-                                    if (providerItem != null) {
-                                        VegaBridge.getStreams(providerItem, link, type)
-                                    } else {
-                                        emptyList()
-                                    }
-                                } ?: emptyList()
-                            }.getOrElse { emptyList() }
-
-                            val qualityTag = Regex("""(?i)\b(2160p|1080p|720p|480p|4k)\b""").find(postTitle)?.value
-                            val tagged = streams.map { stream ->
-                                val streamName = stream.name.orEmpty()
-                                if (qualityTag != null && !streamName.contains(qualityTag, ignoreCase = true)) {
-                                    stream.copy(name = if (streamName.isBlank()) qualityTag else "$streamName • $qualityTag")
-                                } else {
-                                    stream
-                                }
-                            }
-                            synchronized(allStreams) {
-                                allStreams.addAll(tagged)
-                            }
-                        }
-                    }
-                }
-                if (activeRequestKey != requestKey) return@launch
-                val distinctStreams = allStreams.distinctBy { it.url }
-                val presentedGroup = StreamBadgePresentation.apply(
-                    groups = listOf(
-                        AddonStreamGroup(
-                            addonName = providerName,
-                            addonId = providerAddonId,
-                            streams = distinctStreams,
-                            isLoading = false,
-                            error = if (distinctStreams.isEmpty()) "No links found" else null,
-                        ),
-                    ),
-                    rules = streamBadgeRules,
-                )
-                val autoPlayStream = if (isDirectAutoPlayFlow) distinctStreams.firstOrNull() else null
-                _uiState.value = StreamsUiState(
-                    requestToken = requestToken,
-                    groups = presentedGroup,
-                    activeAddonIds = setOf(providerAddonId),
-                    isAnyLoading = false,
-                    emptyStateReason = if (distinctStreams.isEmpty()) StreamsEmptyStateReason.NoStreamsFound else null,
-                    autoPlayStream = autoPlayStream,
-                    autoPlayCandidates = if (isDirectAutoPlayFlow) distinctStreams else emptyList(),
-                    autoPlayDecided = true,
-                    isDirectAutoPlayFlow = isDirectAutoPlayFlow && autoPlayStream != null,
-                    showDirectAutoPlayOverlay = isDirectAutoPlayFlow && autoPlayStream != null,
-                )
-            }
-            return
-        }
-
         val isNativeServerRequest = ServerStreams.isNativeRequest(videoId)
         val serverSources = ServerStreams.sources(type, videoId, season, episode, forceRefresh)
         val preferredGroupIds = serverSources.filter { it.preferred }.mapTo(mutableSetOf()) { it.addonId }
@@ -530,13 +397,6 @@ object StreamsRepository {
                 streams = emptyList(),
                 isLoading = true,
             )
-        } + vegaProviders.map { provider ->
-            AddonStreamGroup(
-                addonName = "Vega - ${provider.displayName}",
-                addonId = "vega:${provider.value}",
-                streams = emptyList(),
-                isLoading = true,
-            )
         } + serverSources.map { it.loadingGroup() }, installedAddonOrder, preferredGroupIds)
         val isInitiallyLoading = initialGroups.any { it.isLoading }
         _uiState.value = StreamsUiState(
@@ -559,8 +419,7 @@ object StreamsRepository {
             val totalTasks = streamAddons.size +
                 pluginProviderGroups.sumOf { it.scrapers.size } +
                 serverSources.size +
-                cloudStreamProviderGroups.size +
-                vegaProviders.size
+                cloudStreamProviderGroups.size
 
             val installedAddonNames = installedAddonOrder.toSet()
             val installedAddonIds = streamAddons.map { it.addonId }.toSet()
@@ -894,29 +753,6 @@ object StreamsRepository {
                     publishCompletion(StreamLoadCompletion.Addon(group))
                 }
             }
-            vegaProviders.forEach { provider ->
-                launch {
-                    val group = withTimeoutOrNull(STREAM_PROVIDER_TIMEOUT_MS) {
-                        resolveVegaProviderStreams(
-                            provider = provider,
-                            type = type,
-                            videoId = videoId,
-                            parentMetaId = parentMetaId,
-                            parentMetaType = parentMetaType,
-                            season = season,
-                            episode = episode,
-                            searchTitle = searchTitle,
-                        )
-                    } ?: AddonStreamGroup(
-                        addonName = "Vega - ${provider.displayName}",
-                        addonId = "vega:${provider.value}",
-                        streams = emptyList(),
-                        isLoading = false,
-                        error = "${provider.displayName} timed out",
-                    )
-                    publishCompletion(StreamLoadCompletion.Addon(group))
-                }
-            }
 
             repeat(totalTasks) {
                 when (val completion = completions.receive()) {
@@ -1082,106 +918,5 @@ object StreamsRepository {
 
     fun setOverlayVisible(visible: Boolean, message: String? = null) {
         _uiState.update { it.copy(showDirectAutoPlayOverlay = visible, overlayMessage = message) }
-    }
-
-    internal suspend fun resolvePlayableVegaLinks(
-        providerItem: com.nuvio.app.features.vega.VegaProviderItem?,
-        route: com.nuvio.app.features.vega.VegaRouteData,
-        type: String,
-        videoId: String,
-        parentMetaId: String?,
-        season: Int? = null,
-        episode: Int? = null,
-    ): List<Pair<String, String>> {
-        if (providerItem == null) return emptyList()
-        val link = route.cleanLink()
-
-        val isDirectEpisodeOrFile = link.startsWith("{") ||
-            link.contains("hubcloud") ||
-            link.contains("vcloud") ||
-            link.contains("vegadrive") ||
-            link.contains("fastdl") ||
-            link.contains("gofile") ||
-            link.contains("pixeldrain") ||
-            link.contains("nexdrive")
-
-        if (type == "series") {
-            if (isDirectEpisodeOrFile && !link.contains("/download-") && !link.contains("/series/")) {
-                return listOf(link to "")
-            }
-
-            val peekedMeta = MetaDetailsRepository.peek(type, parentMetaId ?: videoId)
-                ?: (parentMetaId?.let { MetaDetailsRepository.peek(type, it) })
-                ?: (videoId.takeIf { it != parentMetaId }?.let { MetaDetailsRepository.peek(type, it) })
-
-            val matchingVideo = peekedMeta?.videos?.firstOrNull { v ->
-                (season == null || v.season == season) && (episode == null || v.episode == episode)
-            } ?: peekedMeta?.videos?.firstOrNull()
-
-            if (matchingVideo != null) {
-                val epRoute = parseVegaRouteId(matchingVideo.id)
-                if (epRoute != null && epRoute.cleanLink().isNotBlank() && epRoute.cleanLink() != link) {
-                    return listOf(epRoute.cleanLink() to matchingVideo.title)
-                }
-            }
-
-            val meta = runCatching {
-                withTimeoutOrNull(15_000L) {
-                    VegaBridge.getMetaDetails(providerItem, link)
-                }
-            }.getOrNull()
-
-            val fetchedVideo = meta?.videos?.firstOrNull { v ->
-                (season == null || v.season == season) && (episode == null || v.episode == episode)
-            } ?: meta?.videos?.firstOrNull()
-
-            if (fetchedVideo != null) {
-                val epRoute = parseVegaRouteId(fetchedVideo.id)
-                if (epRoute != null && epRoute.cleanLink().isNotBlank() && epRoute.cleanLink() != link) {
-                    return listOf(epRoute.cleanLink() to fetchedVideo.title)
-                }
-            }
-
-            return listOf(link to "")
-        }
-
-        if (isDirectEpisodeOrFile && !link.contains("/download-")) {
-            return listOf(link to "")
-        }
-
-        val peekedMeta = MetaDetailsRepository.peek(type, videoId)
-            ?: parentMetaId?.let { MetaDetailsRepository.peek(type, it) }
-
-        val peekedDirectLinks = peekedMeta?.videos?.mapNotNull { v ->
-            val vRoute = parseVegaRouteId(v.id) ?: return@mapNotNull null
-            val cleaned = vRoute.cleanLink()
-            if (cleaned != link && cleaned.isNotBlank()) {
-                cleaned to v.title
-            } else null
-        }?.distinctBy { it.first }
-
-        if (!peekedDirectLinks.isNullOrEmpty()) {
-            return peekedDirectLinks
-        }
-
-        val meta = runCatching {
-            withTimeoutOrNull(15_000L) {
-                VegaBridge.getMetaDetails(providerItem, link)
-            }
-        }.getOrNull()
-
-        val metaLinks = meta?.videos?.mapNotNull { v ->
-            val vRoute = parseVegaRouteId(v.id) ?: return@mapNotNull null
-            val cleaned = vRoute.cleanLink()
-            if (cleaned != link && cleaned.isNotBlank()) {
-                cleaned to v.title
-            } else null
-        }?.distinctBy { it.first }
-
-        if (!metaLinks.isNullOrEmpty()) {
-            return metaLinks
-        }
-
-        return listOf(link to "")
     }
 }

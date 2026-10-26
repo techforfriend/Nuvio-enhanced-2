@@ -17,9 +17,6 @@ import com.nuvio.app.features.servers.ServerCatalog
 import com.nuvio.app.features.servers.serverMessage
 import com.nuvio.app.features.cloudstream.CloudStreamRepository
 import com.nuvio.app.features.cloudstream.toMetaPreview
-import com.nuvio.app.features.vega.VegaBridge
-import com.nuvio.app.features.vega.VegaRepository
-import com.nuvio.app.features.vega.toMetaPreview
 import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.home.filterReleasedItems
 import com.nuvio.app.features.trakt.TraktPublicListSourceResolver
@@ -195,28 +192,6 @@ object CatalogRepository {
                             items = items,
                             rawItemCount = items.size,
                             nextSkip = null,
-                        )
-                    }
-
-                    is CatalogTarget.Vega -> {
-                        val pageNumber = requestedSkip.takeIf { it > 0 } ?: 1
-                        VegaRepository.initialize()
-                        val provider = VegaRepository.getProviderByValue(target.providerId)
-                        val items = if (provider != null) {
-                            if (!target.searchQuery.isNullOrBlank()) {
-                                VegaBridge.getSearchPosts(provider, target.searchQuery, pageNumber)
-                                    .map { it.toMetaPreview(target.providerId) }
-                            } else {
-                                VegaBridge.getPosts(provider, target.filter, pageNumber)
-                                    .map { it.toMetaPreview(target.providerId) }
-                            }
-                        } else {
-                            emptyList()
-                        }
-                        CatalogPage(
-                            items = items,
-                            rawItemCount = items.size,
-                            nextSkip = if (items.isNotEmpty()) pageNumber + 1 else null,
                         )
                     }
 

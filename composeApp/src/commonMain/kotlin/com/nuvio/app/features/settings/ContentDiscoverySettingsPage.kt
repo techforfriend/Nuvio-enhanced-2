@@ -20,20 +20,16 @@ import nuvio.composeapp.generated.resources.settings_content_discovery_recent_se
 import nuvio.composeapp.generated.resources.settings_content_discovery_recent_searches_description
 import nuvio.composeapp.generated.resources.compose_settings_page_cloudstream
 import nuvio.composeapp.generated.resources.settings_content_discovery_cloudstream_description
-import nuvio.composeapp.generated.resources.compose_settings_page_vega
-import nuvio.composeapp.generated.resources.settings_content_discovery_vega_description
 import org.jetbrains.compose.resources.stringResource
 
 internal fun LazyListScope.contentDiscoveryContent(
     isTablet: Boolean,
     showPluginsEntry: Boolean,
     showCloudStreamEntry: Boolean = AppFeaturePolicy.pluginsEnabled,
-    showVegaEntry: Boolean = AppFeaturePolicy.pluginsEnabled,
     onAddonsClick: () -> Unit,
     onPluginsClick: () -> Unit,
     onMediaServersClick: () -> Unit,
     onCloudStreamClick: () -> Unit = {},
-    onVegaClick: () -> Unit = {},
 ) {
     item {
         val recentSearchesEnabled by remember {
@@ -95,14 +91,6 @@ internal fun LazyListScope.contentDiscoveryContent(
                         description = stringResource(Res.string.settings_content_discovery_cloudstream_description),
                         isTablet = isTablet,
                         onClick = onCloudStreamClick,
-                    )
-                }
-                if (showVegaEntry) {
-                    SettingsNavigationRow(
-                        title = stringResource(Res.string.compose_settings_page_vega),
-                        description = stringResource(Res.string.settings_content_discovery_vega_description),
-                        isTablet = isTablet,
-                        onClick = onVegaClick,
                     )
                 }
             }
