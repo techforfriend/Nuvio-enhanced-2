@@ -941,6 +941,8 @@
     <string name="settings_mdb_section_api_key">CHAVE DE API</string>
     <string name="settings_mdb_section_rating_providers">PROVEDORES EXTERNOS DE CLASSIFICAÇÕES</string>
     <string name="settings_mdb_section_title">CLASSIFICAÇÕES DO MDBList</string>
+    <string name="settings_mdb_show_on_hero">Usar avaliações no destaque</string>
+    <string name="settings_mdb_show_on_hero_description">Exibir avaliações do MDBList no destaque da tela inicial</string>
     <string name="settings_meta_actions">Ações</string>
     <string name="settings_meta_actions_description">Controles de reprodução e salvamento.</string>
     <string name="settings_meta_cast">Elenco</string>
@@ -1146,6 +1148,8 @@
     <string name="settings_playback_regex_preset_quality_720p_smaller">720p / Menor</string>
     <string name="settings_playback_regex_preset_web_sources">Fontes WEB</string>
     <string name="settings_playback_render_type">Modo de Renderização Libass</string>
+    <string name="settings_playback_render_scale">Resolução de renderização das legendas</string>
+    <string name="settings_playback_render_scale_description">Resolução menor melhora o desempenho em legendas com formatação pesada, ao custo de nitidez</string>
     <string name="settings_playback_reuse_last_link">Reutilizar Último Link</string>
     <string name="settings_playback_reuse_last_link_description">Reproduzir automaticamente sua última stream funcional para este mesmo filme/episódio enquanto o cache estiver válido</string>
     <string name="settings_playback_secondary_audio_language">Segundo Idioma de Áudio</string>
