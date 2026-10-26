@@ -2395,7 +2395,6 @@
     <string name="layout_ratings_hide_unwatched">Ẩn mục Chưa xem</string>
      <string name="settings_playback_legacy_layout">Bố cục kiểu cũ</string>
     <string name="settings_playback_legacy_layout_description">Sử dụng các nút điều khiển gốc của trình phát.</string>
-    <string name="compose_player_via">Qua %1$s</string>
     <string name="compose_player_episode_code">M%1$d T%2$d</string>
     <string name="compose_player_more_actions">Thêm nút điều khiển</string>
     <string name="compose_player_fewer_actions">Ẩn nút điều khiển</string>
