@@ -305,17 +305,25 @@ internal object JsBindings {
             }
             var parsed = __native_parse_url(fullUrl);
             var data = JSON.parse(parsed);
-            this.href = fullUrl;
+            this._baseHref = fullUrl.split('#')[0];
+            this._hash = data.hash || '';
             this.protocol = data.protocol;
             this.host = data.host;
             this.hostname = data.hostname;
             this.port = data.port;
             this.pathname = data.pathname;
             this.search = data.search;
-            this.hash = data.hash;
             this.origin = data.protocol + '//' + data.host;
             this.searchParams = new URLSearchParams(data.search || '');
         };
+        Object.defineProperty(URL.prototype, 'href', {
+            get: function() { return this._baseHref + (this._hash ? (this._hash.charAt(0) === '#' ? this._hash : '#' + this._hash) : ''); },
+            set: function(v) { this._baseHref = v.split('#')[0]; this._hash = v.indexOf('#') !== -1 ? v.substring(v.indexOf('#')) : ''; }
+        });
+        Object.defineProperty(URL.prototype, 'hash', {
+            get: function() { return this._hash; },
+            set: function(v) { this._hash = v ? (v.charAt(0) === '#' ? v : '#' + v) : ''; }
+        });
         URL.prototype.toString = function() { return this.href; };
 
         var URLSearchParams = function(init) {

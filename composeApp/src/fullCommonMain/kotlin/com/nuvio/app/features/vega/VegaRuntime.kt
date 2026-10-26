@@ -17,6 +17,8 @@ import com.nuvio.app.features.streams.StreamSubtitle
 import com.nuvio.app.features.streams.normalizeStreamType
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.decodeFromString
@@ -85,6 +87,22 @@ internal object VegaRuntime {
                         for (var k in response.headers) {
                             respHeaders[k.toLowerCase()] = response.headers[k];
                         }
+                    }
+                }
+                if (response.status < 200 || response.status >= 300) {
+                    var validateStatus = config.validateStatus || function(status) { return status >= 200 && status < 300; };
+                    if (!validateStatus(response.status)) {
+                        var err = new Error("Request failed with status code " + response.status);
+                        err.response = {
+                            data: data,
+                            status: response.status,
+                            statusText: response.statusText,
+                            headers: respHeaders,
+                            config: config
+                        };
+                        err.config = config;
+                        err.isAxiosError = true;
+                        throw err;
                     }
                 }
                 return {
@@ -379,19 +397,79 @@ internal object VegaRuntime {
         }.getOrNull() ?: return null
 
         if (episodesCode != null && metaResult.episodes.isEmpty()) {
-            val episodesLinks = metaResult.linkList.mapNotNull { it.episodesLink }.filter { it.isNotBlank() }
+            val groupsWithEpLinks = metaResult.linkList.filter { !it.episodesLink.isNullOrBlank() }
             val allEpisodes = mutableListOf<VegaEpisode>()
-            if (episodesLinks.isNotEmpty()) {
-                for (epLink in episodesLinks) {
-                    val eps = executeEpisodes(provider, episodesCode, epLink)
-                    allEpisodes.addAll(eps)
+
+            if (groupsWithEpLinks.isNotEmpty()) {
+                val seasonsGrouped = groupsWithEpLinks.groupBy { group ->
+                    val seasonMatch = Regex("""(?i)\b(?:season|s)\s*(\d+)\b""").find(group.title)
+                        ?: Regex("""(?i)\b(?:season|s)\s*(\d+)\b""").find(group.episodesLink.orEmpty())
+                    seasonMatch?.groupValues?.get(1)?.toIntOrNull() ?: 1
+                }
+
+                coroutineScope {
+                    seasonsGrouped.forEach { (seasonNum, seasonGroups) ->
+                        val bestGroup = seasonGroups.firstOrNull { it.quality?.contains("1080", ignoreCase = true) == true }
+                            ?: seasonGroups.firstOrNull { it.quality?.contains("720", ignoreCase = true) == true }
+                            ?: seasonGroups.first()
+                        val epLink = bestGroup.episodesLink ?: return@forEach
+
+                        launch {
+                            val eps = runCatching {
+                                executeEpisodes(provider, episodesCode, epLink)
+                            }.getOrElse { emptyList() }
+
+                            val taggedEpisodes = eps.mapIndexed { idx, ep ->
+                                val epNumMatch = Regex("""(?i)\b(?:episode|ep|e)\s*[:\s]*(\d+)\b""").find(ep.title)
+                                    ?: Regex("""(?i)\b(?:episode|ep|e)\s*[:\s]*(\d+)\b""").find(ep.link)
+                                val epNum = ep.episode ?: epNumMatch?.groupValues?.get(1)?.toIntOrNull() ?: (idx + 1)
+                                val cleanTitle = ep.title
+                                    .replace(Regex("""^[-:\s•]+|[-:\s•]+$"""), "")
+                                    .replace(Regex("""(?i)^[-:\s]*episode\s*[:\s]*(\d+)"""), "Episode $1")
+                                    .ifBlank { "Episode $epNum" }
+
+                                ep.copy(
+                                    title = cleanTitle,
+                                    season = ep.season ?: seasonNum,
+                                    episode = epNum,
+                                )
+                            }.distinctBy { it.episode }
+
+                            synchronized(allEpisodes) {
+                                allEpisodes.addAll(taggedEpisodes)
+                            }
+                        }
+                    }
                 }
             } else if (metaResult.type.equals("series", ignoreCase = true) || metaResult.type.equals("tv", ignoreCase = true)) {
-                val eps = executeEpisodes(provider, episodesCode, link)
-                allEpisodes.addAll(eps)
+                val eps = runCatching {
+                    executeEpisodes(provider, episodesCode, link)
+                }.getOrElse { emptyList() }
+
+                val taggedEpisodes = eps.mapIndexed { idx, ep ->
+                    val epNumMatch = Regex("""(?i)\b(?:episode|ep|e)\s*[:\s]*(\d+)\b""").find(ep.title)
+                        ?: Regex("""(?i)\b(?:episode|ep|e)\s*[:\s]*(\d+)\b""").find(ep.link)
+                    val epNum = ep.episode ?: epNumMatch?.groupValues?.get(1)?.toIntOrNull() ?: (idx + 1)
+                    val cleanTitle = ep.title
+                        .replace(Regex("""^[-:\s•]+|[-:\s•]+$"""), "")
+                        .replace(Regex("""(?i)^[-:\s]*episode\s*[:\s]*(\d+)"""), "Episode $1")
+                        .ifBlank { "Episode $epNum" }
+
+                    ep.copy(
+                        title = cleanTitle,
+                        season = ep.season ?: 1,
+                        episode = epNum,
+                    )
+                }.distinctBy { it.episode }
+
+                allEpisodes.addAll(taggedEpisodes)
             }
+
             if (allEpisodes.isNotEmpty()) {
-                metaResult = metaResult.copy(episodes = allEpisodes)
+                metaResult = metaResult.copy(
+                    type = "series",
+                    episodes = allEpisodes.sortedWith(compareBy({ it.season ?: 1 }, { it.episode ?: 0 })),
+                )
             }
         }
         return metaResult

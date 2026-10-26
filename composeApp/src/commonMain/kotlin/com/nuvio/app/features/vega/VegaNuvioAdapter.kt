@@ -81,26 +81,36 @@ data class VegaMetaResult(
     val linkList: List<VegaLinkGroup> = emptyList(),
 )
 
-fun VegaPost.toMetaPreview(providerId: String): MetaPreview = MetaPreview(
-    id = vegaRouteId(providerId, link),
-    type = "movie",
-    name = title,
-    poster = image.ifBlank { null },
-    banner = image.ifBlank { null },
-    posterShape = PosterShape.Poster,
-    description = tag,
-)
+fun VegaPost.toMetaPreview(providerId: String): MetaPreview {
+    val isSeries = Regex("""(?i)\b(?:season|s\d+|series|episodes?|complete)\b""").containsMatchIn(title)
+    return MetaPreview(
+        id = vegaRouteId(providerId, link),
+        type = if (isSeries) "series" else "movie",
+        name = title,
+        poster = image.ifBlank { null },
+        banner = image.ifBlank { null },
+        posterShape = PosterShape.Poster,
+        description = tag,
+    )
+}
 
 fun VegaMetaResult.toMetaDetails(providerId: String, routeLink: String): MetaDetails {
     val routeId = vegaRouteId(providerId, routeLink)
+    val isSeries = episodes.isNotEmpty() ||
+        type.equals("series", ignoreCase = true) ||
+        type.equals("tv", ignoreCase = true) ||
+        linkList.any { !it.episodesLink.isNullOrBlank() }
+
     val videos = when {
         episodes.isNotEmpty() -> {
             episodes.mapIndexed { index, ep ->
+                val epSeason = ep.season ?: 1
+                val epNum = ep.episode ?: (index + 1)
                 MetaVideo(
                     id = vegaRouteId(providerId, ep.link),
-                    title = ep.title.ifBlank { "Episode ${index + 1}" },
-                    season = ep.season ?: 1,
-                    episode = ep.episode ?: (index + 1),
+                    title = ep.title.ifBlank { "Episode $epNum" },
+                    season = epSeason,
+                    episode = epNum,
                     available = true,
                     thumbnail = ep.image ?: image,
                     overview = ep.description,
@@ -133,6 +143,34 @@ fun VegaMetaResult.toMetaDetails(providerId: String, routeLink: String): MetaDet
                 )
             }
         }
+        isSeries -> {
+            val groupsWithEpLinks = linkList.filter { !it.episodesLink.isNullOrBlank() }
+            if (groupsWithEpLinks.isNotEmpty()) {
+                groupsWithEpLinks.mapIndexed { idx, grp ->
+                    val sMatch = Regex("""(?i)\b(?:season|s)\s*(\d+)\b""").find(grp.title)
+                    val sNum = sMatch?.groupValues?.get(1)?.toIntOrNull() ?: (idx + 1)
+                    MetaVideo(
+                        id = vegaRouteId(providerId, grp.episodesLink.orEmpty().ifBlank { routeLink }),
+                        title = grp.title.ifBlank { "Season $sNum Episode 1" },
+                        season = sNum,
+                        episode = 1,
+                        available = true,
+                        thumbnail = image,
+                    )
+                }
+            } else {
+                listOf(
+                    MetaVideo(
+                        id = routeId,
+                        title = "Episode 1",
+                        season = 1,
+                        episode = 1,
+                        available = true,
+                        thumbnail = image,
+                    ),
+                )
+            }
+        }
         else -> {
             listOf(
                 MetaVideo(
@@ -144,11 +182,6 @@ fun VegaMetaResult.toMetaDetails(providerId: String, routeLink: String): MetaDet
             )
         }
     }
-
-    val isSeries = episodes.isNotEmpty() ||
-        type.equals("series", ignoreCase = true) ||
-        type.equals("tv", ignoreCase = true) ||
-        linkList.any { it.episodesLink != null }
 
     return MetaDetails(
         id = routeId,

@@ -323,7 +323,8 @@ actual suspend fun httpRequestRaw(
     withContext(Dispatchers.IO) {
         val normalizedMethod = method.uppercase()
         val sanitizedHeaders = headers.withoutAcceptEncoding()
-        val builder = Request.Builder().url(url)
+        val cleanUrl = if (url.contains('#')) url.substringBefore('#') else url
+        val builder = Request.Builder().url(cleanUrl)
         sanitizedHeaders.forEach { (key, value) ->
             builder.header(key, value)
         }
