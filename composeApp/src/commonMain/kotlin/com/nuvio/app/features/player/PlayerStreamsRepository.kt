@@ -445,7 +445,6 @@ object PlayerStreamsRepository {
             setJob(job)
             return
         }
-        }
 
         val isNativeServerRequest = ServerStreams.isNativeRequest(videoId)
         val serverSources = ServerStreams.sources(type, videoId, season, episode, forceRefresh)
