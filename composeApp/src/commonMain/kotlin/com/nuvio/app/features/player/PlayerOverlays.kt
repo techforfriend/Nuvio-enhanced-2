@@ -22,6 +22,7 @@ import androidx.compose.material.icons.rounded.Brightness6
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.ZoomOutMap
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -62,6 +63,7 @@ internal enum class GestureFeedbackIcon {
     VolumeMuted,
     SeekForward,
     SeekBackward,
+    VideoZoom,
 }
 
 internal data class GestureFeedbackState(
@@ -100,6 +102,7 @@ internal fun GestureFeedbackPill(
         GestureFeedbackIcon.VolumeMuted -> Icons.AutoMirrored.Rounded.VolumeOff
         GestureFeedbackIcon.SeekForward -> Icons.Rounded.FastForward
         GestureFeedbackIcon.SeekBackward -> Icons.Rounded.FastRewind
+        GestureFeedbackIcon.VideoZoom -> Icons.Rounded.ZoomOutMap
     }
     val iconTint = if (feedback.isDanger) Color(0xFFFFC1C1) else Color.White
     val messageText = feedback.messageRes?.let { resource ->

@@ -322,7 +322,12 @@ internal fun PlayerScreenRuntime.pinchVideoZoom(zoomFactor: Float) {
     if (next == videoZoom) return
     videoZoom = next
     playerController?.setVideoZoom(next)
-    showGestureMessage("${(next * 100f).roundToInt()}%")
+    showGestureFeedback(
+        GestureFeedbackState(
+            message = "${(next * 100f).roundToInt()}%",
+            icon = GestureFeedbackIcon.VideoZoom,
+        ),
+    )
 }
 
 internal fun PlayerScreenRuntime.setPlaybackSpeedFromPicker(speed: Float) {
