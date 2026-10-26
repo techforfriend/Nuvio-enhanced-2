@@ -283,7 +283,7 @@ internal fun PlayerControlsShell(
                     isVisible = showParentalGuide,
                     onAnimationComplete = onParentalGuideAnimationComplete,
                     contentPadding = PaddingValues(
-                        horizontal = horizontalSafePadding + metrics.horizontalPadding,
+                        horizontal = metrics.horizontalPadding + playerTextCutoutPadding(metrics),
                         vertical = metrics.verticalPadding,
                     ),
                     modifier = Modifier.align(Alignment.TopStart),
@@ -361,7 +361,7 @@ internal fun PlayerControlsShell(
                 ) {
                     if (!hideDetails) {
                         PlayerTimelineDetails(
-                            modifier = Modifier.padding(horizontal = horizontalSafePadding),
+                            modifier = Modifier.padding(horizontal = playerTextCutoutPadding(metrics)),
                             title = title,
                             seasonNumber = seasonNumber,
                             episodeNumber = episodeNumber,
@@ -374,7 +374,7 @@ internal fun PlayerControlsShell(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = horizontalSafePadding),
+                            .padding(horizontal = playerTextCutoutPadding(metrics)),
                         verticalAlignment = Alignment.Bottom,
                     ) {
                         Box(modifier = Modifier.weight(1f)) {

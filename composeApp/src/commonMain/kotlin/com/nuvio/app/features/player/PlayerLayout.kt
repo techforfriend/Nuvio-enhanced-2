@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nuvio.app.isIos
@@ -128,6 +129,16 @@ internal fun playerHorizontalSafePadding(): Dp {
     val left = safePadding.calculateLeftPadding(layoutDirection)
     val right = safePadding.calculateRightPadding(layoutDirection)
     return if (left > right) left else right
+}
+
+@Composable
+internal fun playerTextCutoutPadding(metrics: PlayerLayoutMetrics): Dp {
+    val layoutDirection = LocalLayoutDirection.current
+    val cutout = WindowInsets.displayCutout.asPaddingValues()
+    val left = cutout.calculateLeftPadding(layoutDirection)
+    val right = cutout.calculateRightPadding(layoutDirection)
+    val widest = if (left > right) left else right
+    return (widest - metrics.horizontalPadding).coerceAtLeast(0.dp)
 }
 
 @Composable
