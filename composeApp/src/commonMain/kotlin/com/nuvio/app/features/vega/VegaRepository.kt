@@ -8,6 +8,7 @@ import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import com.nuvio.app.features.addons.httpRequestRaw
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,7 +29,7 @@ internal object VegaRepository {
         encodeDefaults = true
     }
 
-    const val DEFAULT_REPO_URL = "https://raw.githubusercontent.com/Zenda-Cross/vega-providers/main/manifest.json"
+    const val DEFAULT_REPO_URL = "https://raw.githubusercontent.com/vega-org/vega-providers/main/manifest.json"
 
     private val _uiState = MutableStateFlow(VegaUiState())
     val uiState: StateFlow<VegaUiState> = _uiState.asStateFlow()
@@ -79,6 +80,114 @@ internal object VegaRepository {
         persistState()
     }
 
+    private suspend fun resolveShortLink(url: String): String {
+        var currentUrl = url
+        for (i in 0 until 5) {
+            val response = try {
+                httpRequestRaw(
+                    method = "GET",
+                    url = currentUrl,
+                    headers = mapOf("User-Agent" to "Nuvio/1.0"),
+                    body = "",
+                    followRedirects = false,
+                )
+            } catch (e: Exception) {
+                break
+            }
+            val location = response.headers["location"]?.substringBefore(',')?.trim()
+                ?: response.headers["Location"]?.substringBefore(',')?.trim()
+            if (!location.isNullOrBlank()) {
+                currentUrl = if (location.startsWith("/")) {
+                    val base = currentUrl.substringBefore("://") + "://" + currentUrl.substringAfter("://").substringBefore("/")
+                    base + location
+                } else {
+                    location
+                }
+            } else {
+                break
+            }
+        }
+        return currentUrl
+    }
+
+    suspend fun resolveRepositoryInput(raw: String): String {
+        val trimmed = raw.trim()
+        if (trimmed.isBlank()) error("Repository URL or shortcode cannot be empty")
+
+        if (trimmed.equals("official", ignoreCase = true) ||
+            trimmed.equals("vega", ignoreCase = true) ||
+            trimmed.equals("default", ignoreCase = true) ||
+            trimmed.equals("vega-org", ignoreCase = true)) {
+            return DEFAULT_REPO_URL
+        }
+
+        // 1. CloudStream style shortcode starting with !
+        if (trimmed.startsWith("!")) {
+            val shortcode = trimmed.removePrefix("!")
+            val resolved = resolveShortLink("https://py.md/$shortcode")
+            return normalizeRepoUrl(resolved)
+        }
+
+        // 2. Known shorteners
+        if (trimmed.startsWith("https://py.md/") || trimmed.startsWith("http://py.md/") ||
+            trimmed.startsWith("https://cutt.ly/") || trimmed.startsWith("http://cutt.ly/") ||
+            trimmed.startsWith("https://tinyurl.com/") || trimmed.startsWith("http://tinyurl.com/") ||
+            trimmed.startsWith("https://bit.ly/") || trimmed.startsWith("http://bit.ly/") ||
+            trimmed.startsWith("https://is.gd/") || trimmed.startsWith("http://is.gd/")) {
+            val resolved = resolveShortLink(trimmed)
+            return normalizeRepoUrl(resolved)
+        }
+
+        // 3. GitHub username or org shorthand (e.g. "vega-org", "Zenda-Cross")
+        if (!trimmed.contains("://") && !trimmed.contains("/") && !trimmed.contains(".")) {
+            // Check if it might be a cutt.ly shortcode
+            val shortRedirect = runCatching { resolveShortLink("https://cutt.ly/$trimmed") }.getOrNull()
+            if (shortRedirect != null && !shortRedirect.contains("/404") && !shortRedirect.endsWith("cutt.ly/$trimmed")) {
+                return normalizeRepoUrl(shortRedirect)
+            }
+
+            // In Vega standard: username maps to <username>/vega-providers/main/manifest.json
+            val candidateMain = "https://raw.githubusercontent.com/$trimmed/vega-providers/main/manifest.json"
+            val candidateMaster = "https://raw.githubusercontent.com/$trimmed/vega-providers/master/manifest.json"
+
+            val worksMain = runCatching {
+                httpClient.get(candidateMain).status.value in 200..299
+            }.getOrDefault(false)
+            if (worksMain) return candidateMain
+
+            val worksMaster = runCatching {
+                httpClient.get(candidateMaster).status.value in 200..299
+            }.getOrDefault(false)
+            if (worksMaster) return candidateMaster
+
+            return candidateMain
+        }
+
+        // 4. GitHub "owner/repo" shorthand (e.g. "vega-org/vega-providers")
+        if (!trimmed.contains("://") && trimmed.contains("/") && !trimmed.contains(".") && trimmed.split("/").size == 2) {
+            val candidateMain = "https://raw.githubusercontent.com/$trimmed/main/manifest.json"
+            val candidateMaster = "https://raw.githubusercontent.com/$trimmed/master/manifest.json"
+
+            val worksMain = runCatching {
+                httpClient.get(candidateMain).status.value in 200..299
+            }.getOrDefault(false)
+            if (worksMain) return candidateMain
+
+            val worksMaster = runCatching {
+                httpClient.get(candidateMaster).status.value in 200..299
+            }.getOrDefault(false)
+            if (worksMaster) return candidateMaster
+
+            return candidateMain
+        }
+
+        var url = trimmed
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            url = "https://$url"
+        }
+        return normalizeRepoUrl(url)
+    }
+
     fun normalizeRepoUrl(raw: String): String {
         var url = raw.trim()
         if (url.startsWith("https://github.com/") && !url.contains("/raw/")) {
@@ -88,6 +197,12 @@ internal object VegaRepository {
                 url += "main/"
             }
         }
+        if (url.contains("/blob/main/")) {
+            url = url.replace("/blob/main/", "/main/")
+        }
+        if (url.contains("/blob/master/")) {
+            url = url.replace("/blob/master/", "/master/")
+        }
         if (!url.endsWith(".json")) {
             if (!url.endsWith("/")) url += "/"
             url += "manifest.json"
@@ -96,7 +211,11 @@ internal object VegaRepository {
     }
 
     suspend fun addRepository(rawUrl: String): AddVegaRepositoryResult = withContext(Dispatchers.Default) {
-        val normalizedUrl = normalizeRepoUrl(rawUrl)
+        val normalizedUrl = try {
+            resolveRepositoryInput(rawUrl)
+        } catch (e: Exception) {
+            return@withContext AddVegaRepositoryResult.Error(e.message ?: "Invalid repository input")
+        }
         if (_uiState.value.repositories.any { it.url.equals(normalizedUrl, ignoreCase = true) }) {
             return@withContext AddVegaRepositoryResult.Error("Repository already installed")
         }
@@ -137,6 +256,7 @@ internal object VegaRepository {
             _uiState.update { current ->
                 val newRepos = current.repositories + repoItem
                 current.copy(
+                    vegaEnabled = true,
                     repositories = newRepos,
                     providers = newRepos.flatMap { it.providers },
                 )

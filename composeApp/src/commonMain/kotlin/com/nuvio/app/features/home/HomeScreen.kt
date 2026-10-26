@@ -251,6 +251,7 @@ fun HomeScreen(
             if (selectedCloudStreamProviderId == null) {
                 HomeRepository.setSelectedCloudStreamProvider(runnableCloudStreamProviders.first().metadata.id.value)
             } else if (selectedCloudStreamProviderId != "off" &&
+                selectedCloudStreamProviderId != "all" &&
                 runnableCloudStreamProviders.none { it.metadata.id.value == selectedCloudStreamProviderId }
             ) {
                 HomeRepository.setSelectedCloudStreamProvider(runnableCloudStreamProviders.first().metadata.id.value)
@@ -265,6 +266,7 @@ fun HomeScreen(
             if (selectedVegaProviderId == null) {
                 HomeRepository.setSelectedVegaProvider(enabledVegaProviders.first().value)
             } else if (selectedVegaProviderId != "off" &&
+                selectedVegaProviderId != "all" &&
                 enabledVegaProviders.none { it.value == selectedVegaProviderId }
             ) {
                 HomeRepository.setSelectedVegaProvider(enabledVegaProviders.first().value)
@@ -1085,6 +1087,10 @@ fun HomeScreen(
     val sectionsMap = remember(homeUiState.sections) {
         homeUiState.sections.associateBy(HomeCatalogSection::key)
     }
+    val vegaHomeSections = remember(homeUiState.sections) {
+        homeUiState.sections
+            .filter { it.key.startsWith("vega:") && it.items.isNotEmpty() }
+    }
     val cloudStreamHomeSections = remember(homeUiState.sections) {
         homeUiState.sections
             .filter { it.key.startsWith("cloudstream:") && it.items.isNotEmpty() }
@@ -1409,27 +1415,6 @@ fun HomeScreen(
                             }
                         }
 
-                        cloudStreamHomeSections.forEach { section ->
-                            item(key = section.key, contentType = "catalog") {
-                                HomeCatalogRowSection(
-                                    section = section,
-                                    entries = section.items.take(HOME_CATALOG_PREVIEW_LIMIT),
-                                    posterCardStyle = posterCardStyle,
-                                    modifier = Modifier.padding(bottom = 12.dp),
-                                    sectionPadding = homeSectionPadding,
-                                    onViewAllClick = if (section.canOpenCatalog(HOME_CATALOG_PREVIEW_LIMIT)) {
-                                        onCatalogClick?.let { { it(section) } }
-                                    } else {
-                                        null
-                                    },
-                                    watchedKeys = watchedUiState.watchedKeys,
-                                    fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-                                    onPosterClick = onPosterClick,
-                                    onPosterLongClick = onPosterLongClick,
-                                )
-                            }
-                        }
-
                         keyedEnabledHomeItems.forEach { keyedSettingsItem ->
                             val settingsItem = keyedSettingsItem.value
                             if (settingsItem.isCollection) {
@@ -1467,6 +1452,48 @@ fun HomeScreen(
                                         )
                                     }
                                 }
+                            }
+                        }
+
+                        vegaHomeSections.forEach { section ->
+                            item(key = section.key, contentType = "catalog") {
+                                HomeCatalogRowSection(
+                                    section = section,
+                                    entries = section.items.take(HOME_CATALOG_PREVIEW_LIMIT),
+                                    posterCardStyle = posterCardStyle,
+                                    modifier = Modifier.padding(bottom = 12.dp),
+                                    sectionPadding = homeSectionPadding,
+                                    onViewAllClick = if (section.canOpenCatalog(HOME_CATALOG_PREVIEW_LIMIT)) {
+                                        onCatalogClick?.let { { it(section) } }
+                                    } else {
+                                        null
+                                    },
+                                    watchedKeys = watchedUiState.watchedKeys,
+                                    fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                                    onPosterClick = onPosterClick,
+                                    onPosterLongClick = onPosterLongClick,
+                                )
+                            }
+                        }
+
+                        cloudStreamHomeSections.forEach { section ->
+                            item(key = section.key, contentType = "catalog") {
+                                HomeCatalogRowSection(
+                                    section = section,
+                                    entries = section.items.take(HOME_CATALOG_PREVIEW_LIMIT),
+                                    posterCardStyle = posterCardStyle,
+                                    modifier = Modifier.padding(bottom = 12.dp),
+                                    sectionPadding = homeSectionPadding,
+                                    onViewAllClick = if (section.canOpenCatalog(HOME_CATALOG_PREVIEW_LIMIT)) {
+                                        onCatalogClick?.let { { it(section) } }
+                                    } else {
+                                        null
+                                    },
+                                    watchedKeys = watchedUiState.watchedKeys,
+                                    fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                                    onPosterClick = onPosterClick,
+                                    onPosterLongClick = onPosterLongClick,
+                                )
                             }
                         }
                     }
@@ -1508,7 +1535,7 @@ fun HomeScreen(
                     if (cloudStreamProviderMenuExpanded) {
                         Box(
                             modifier = Modifier
-                                .widthIn(min = 145.dp, max = 175.dp)
+                                .widthIn(min = 160.dp, max = 200.dp)
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(themeSurface.copy(alpha = 0.95f))
                                 .border(1.dp, themeAccent.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
@@ -1521,6 +1548,92 @@ fun HomeScreen(
                                     .verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
+                                val hasAnyExtensions = enabledVegaProviders.isNotEmpty() || runnableCloudStreamProviders.isNotEmpty()
+                                val isAllExtensionsSelected = hasAnyExtensions &&
+                                    (enabledVegaProviders.isEmpty() || selectedVegaProviderId == "all") &&
+                                    (runnableCloudStreamProviders.isEmpty() || selectedCloudStreamProviderId == "all") &&
+                                    (selectedVegaProviderId == "all" || selectedCloudStreamProviderId == "all")
+
+                                if (hasAnyExtensions) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .then(
+                                                if (isAllExtensionsSelected) {
+                                                    Modifier.background(themeAccent.copy(alpha = 0.16f))
+                                                } else {
+                                                    Modifier
+                                                }
+                                            )
+                                            .clickable {
+                                                if (isAllExtensionsSelected) {
+                                                    if (enabledVegaProviders.isNotEmpty()) HomeRepository.setSelectedVegaProvider("off")
+                                                    if (runnableCloudStreamProviders.isNotEmpty()) HomeRepository.setSelectedCloudStreamProvider("off")
+                                                } else {
+                                                    if (enabledVegaProviders.isNotEmpty()) HomeRepository.setSelectedVegaProvider("all")
+                                                    if (runnableCloudStreamProviders.isNotEmpty()) HomeRepository.setSelectedCloudStreamProvider("all")
+                                                }
+                                            }
+                                            .padding(horizontal = 7.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        if (isAllExtensionsSelected) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(22.dp)
+                                                    .background(themeAccent.copy(alpha = 0.25f), RoundedCornerShape(6.dp)),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.PlayArrow,
+                                                    contentDescription = null,
+                                                    tint = themeAccent,
+                                                    modifier = Modifier.size(14.dp),
+                                                )
+                                            }
+                                        } else {
+                                            Box(
+                                                modifier = Modifier.size(22.dp),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.Layers,
+                                                    contentDescription = null,
+                                                    tint = themeOnSurface.copy(alpha = 0.70f),
+                                                    modifier = Modifier.size(14.dp),
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.width(7.dp))
+                                        Text(
+                                            text = "All Extensions",
+                                            color = if (isAllExtensionsSelected) themeOnSurface else themeOnSurface.copy(alpha = 0.85f),
+                                            fontWeight = if (isAllExtensionsSelected) FontWeight.Bold else FontWeight.Medium,
+                                            fontSize = 12.sp,
+                                            modifier = Modifier.weight(1f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        if (isAllExtensionsSelected) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Check,
+                                                contentDescription = null,
+                                                tint = themeAccent,
+                                                modifier = Modifier.size(15.dp),
+                                            )
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(14.dp)
+                                                    .border(1.2.dp, themeOnSurface.copy(alpha = 0.35f), CircleShape),
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                }
+
                                 if (enabledVegaProviders.isNotEmpty()) {
                                     Text(
                                         text = "VEGA PROVIDERS",
@@ -1713,6 +1826,9 @@ fun HomeScreen(
                         }
                     }
 
+                    val isVegaActive = (selectedVegaProviderId != null && selectedVegaProviderId != "off") && enabledVegaProviders.isNotEmpty()
+                    val isCs3Active = (selectedCloudStreamProviderId != null && selectedCloudStreamProviderId != "off") && runnableCloudStreamProviders.isNotEmpty()
+
                     val selectedCloudStreamProvider = runnableCloudStreamProviders.firstOrNull {
                         it.metadata.id.value == selectedCloudStreamProviderId && selectedCloudStreamProviderId != "off"
                     }
@@ -1720,10 +1836,15 @@ fun HomeScreen(
                         it.value == selectedVegaProviderId && selectedVegaProviderId != "off"
                     }
                     val pillLabel = when {
-                        selectedVegaProvider != null && selectedCloudStreamProvider != null ->
-                            "${selectedVegaProvider.displayName} • ${selectedCloudStreamProvider.metadata.name}"
-                        selectedVegaProvider != null -> selectedVegaProvider.displayName
-                        selectedCloudStreamProvider != null -> selectedCloudStreamProvider.metadata.name
+                        isVegaActive && isCs3Active -> "cs3-vega"
+                        isVegaActive -> {
+                            if (selectedVegaProviderId == "all") "All Vega"
+                            else (selectedVegaProvider?.displayName ?: "Vega")
+                        }
+                        isCs3Active -> {
+                            if (selectedCloudStreamProviderId == "all") "All CS3"
+                            else (selectedCloudStreamProvider?.metadata?.name ?: "CloudStream")
+                        }
                         else -> "Extensions"
                     }
 

@@ -129,6 +129,9 @@ internal object VegaRuntime {
         };
 
         globalThis.providerContext = providerContext;
+        if (typeof fetch !== 'undefined') {
+            globalThis.fetch = fetch;
+        }
     """.trimIndent()
 
     private suspend fun executeJs(
@@ -209,6 +212,7 @@ internal object VegaRuntime {
     suspend fun executePosts(provider: VegaProviderItem, code: String, filter: String, page: Int): List<VegaPost> {
         val filterArg = JsonPrimitive(filter).toString()
         val pageArg = page.toString()
+        val providerValueArg = JsonPrimitive(provider.value).toString()
         val invocation = """
             (async function() {
                 try {
@@ -222,6 +226,7 @@ internal object VegaRuntime {
                         posts = await fn({
                             filter: $filterArg,
                             page: $pageArg,
+                            providerValue: $providerValueArg,
                             providerContext: providerContext,
                             signal: undefined
                         });
@@ -251,6 +256,7 @@ internal object VegaRuntime {
     suspend fun executeSearchPosts(provider: VegaProviderItem, code: String, query: String, page: Int): List<VegaPost> {
         val queryArg = JsonPrimitive(query).toString()
         val pageArg = page.toString()
+        val providerValueArg = JsonPrimitive(provider.value).toString()
         val invocation = """
             (async function() {
                 try {
@@ -264,6 +270,7 @@ internal object VegaRuntime {
                         posts = await fn({
                             searchQuery: $queryArg,
                             page: $pageArg,
+                            providerValue: $providerValueArg,
                             providerContext: providerContext,
                             signal: undefined
                         });
@@ -292,6 +299,7 @@ internal object VegaRuntime {
 
     suspend fun executeEpisodes(provider: VegaProviderItem, episodesCode: String, url: String): List<VegaEpisode> {
         val urlArg = JsonPrimitive(url).toString()
+        val providerValueArg = JsonPrimitive(provider.value).toString()
         val invocation = """
             (async function() {
                 try {
@@ -304,6 +312,7 @@ internal object VegaRuntime {
                     try {
                         eps = await fn({
                             url: $urlArg,
+                            providerValue: $providerValueArg,
                             providerContext: providerContext,
                             signal: undefined
                         });
@@ -332,6 +341,7 @@ internal object VegaRuntime {
 
     suspend fun executeMeta(provider: VegaProviderItem, metaCode: String, episodesCode: String?, link: String): VegaMetaResult? {
         val linkArg = JsonPrimitive(link).toString()
+        val providerValueArg = JsonPrimitive(provider.value).toString()
         val invocation = """
             (async function() {
                 try {
@@ -344,6 +354,7 @@ internal object VegaRuntime {
                     try {
                         meta = await fn({
                             link: $linkArg,
+                            providerValue: $providerValueArg,
                             providerContext: providerContext,
                             signal: undefined
                         });
@@ -389,6 +400,7 @@ internal object VegaRuntime {
     suspend fun executeDirectStream(provider: VegaProviderItem, code: String, link: String, type: String): List<StreamItem> {
         val linkArg = JsonPrimitive(link).toString()
         val typeArg = JsonPrimitive(type).toString()
+        val providerValueArg = JsonPrimitive(provider.value).toString()
         val invocation = """
             (async function() {
                 try {
@@ -406,6 +418,7 @@ internal object VegaRuntime {
                         result = await getStream({
                             link: $linkArg,
                             type: $typeArg,
+                            providerValue: $providerValueArg,
                             providerContext: providerContext,
                             signal: undefined,
                             isDownload: false

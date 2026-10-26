@@ -134,21 +134,27 @@ object HomeRepository {
         val selectedVegaId = _selectedVegaProviderId.value
         val runnableCloudPlugins = cloudState.plugins.filter(CloudStreamPluginItem::isRunnable)
         val enabledVegaProviders = VegaRepository.getEnabledProviders()
-        val effectiveSelectedProviderId = selectedProviderId?.takeIf { id ->
-            id != "off" && runnableCloudPlugins.any { it.metadata.id.value == id }
-        } ?: if (selectedProviderId == "off") null else runnableCloudPlugins.firstOrNull()?.metadata?.id?.value
-        val effectiveSelectedVegaId = selectedVegaId?.takeIf { id ->
-            id != "off" && enabledVegaProviders.any { it.value == id }
-        } ?: if (selectedVegaId == "off") null else enabledVegaProviders.firstOrNull()?.value
-        val cloudPlugins = if (effectiveSelectedProviderId != null) {
-            runnableCloudPlugins.filter { it.metadata.id.value == effectiveSelectedProviderId }
-        } else {
-            emptyList()
+        val effectiveSelectedProviderId = when (selectedProviderId) {
+            "all" -> "all"
+            "off" -> null
+            else -> selectedProviderId?.takeIf { id -> runnableCloudPlugins.any { it.metadata.id.value == id } }
+                ?: if (selectedProviderId == "off") null else runnableCloudPlugins.firstOrNull()?.metadata?.id?.value
         }
-        val vegaProviders = if (effectiveSelectedVegaId != null) {
-            enabledVegaProviders.filter { it.value == effectiveSelectedVegaId }
-        } else {
-            emptyList()
+        val effectiveSelectedVegaId = when (selectedVegaId) {
+            "all" -> "all"
+            "off" -> null
+            else -> selectedVegaId?.takeIf { id -> enabledVegaProviders.any { it.value == id } }
+                ?: if (selectedVegaId == "off") null else enabledVegaProviders.firstOrNull()?.value
+        }
+        val cloudPlugins = when (effectiveSelectedProviderId) {
+            "all" -> runnableCloudPlugins
+            null -> emptyList()
+            else -> runnableCloudPlugins.filter { it.metadata.id.value == effectiveSelectedProviderId }
+        }
+        val vegaProviders = when (effectiveSelectedVegaId) {
+            "all" -> enabledVegaProviders
+            null -> emptyList()
+            else -> enabledVegaProviders.filter { it.value == effectiveSelectedVegaId }
         }
         val activeAddons = addons.enabledAddons()
         lastRefreshAddonSignature = buildAddonCatalogRefreshSignature(addons)
@@ -796,9 +802,9 @@ object HomeRepository {
     ): CloudHomeSectionsResult {
         val sections = mutableListOf<HomeCatalogSection>()
         var firstError: String? = null
-        val scanProviders = providers.take(2)
+        val scanProviders = providers.take(HOME_CLOUDSTREAM_PROVIDER_SCAN_LIMIT)
         withTimeoutOrNull(HOME_CLOUDSTREAM_TOTAL_PREVIEW_TIMEOUT_MS) {
-            val gate = Semaphore(2)
+            val gate = Semaphore(HOME_CLOUDSTREAM_PROVIDER_CONCURRENCY)
             val resultChannel = Channel<Pair<VegaProviderItem, CloudHomeProviderResult>>(Channel.BUFFERED)
             coroutineScope {
                 scanProviders.forEach { provider ->
