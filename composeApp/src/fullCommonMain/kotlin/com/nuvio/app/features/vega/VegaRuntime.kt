@@ -68,6 +68,9 @@ internal object VegaRuntime {
                     method: method,
                     headers: headers
                 };
+                if (config.maxRedirects === 0 || config.followRedirects === false) {
+                    fetchOpts.redirect = 'manual';
+                }
                 if (method !== 'GET' && method !== 'HEAD' && body !== undefined) {
                     fetchOpts.body = body;
                 }
@@ -80,14 +83,21 @@ internal object VegaRuntime {
                     data = text;
                 }
                 var respHeaders = {};
-                if (response.headers) {
-                    if (typeof response.headers.forEach === 'function') {
-                        response.headers.forEach(function(v, k) { respHeaders[k.toLowerCase()] = v; });
-                    } else {
-                        for (var k in response.headers) {
-                            respHeaders[k.toLowerCase()] = response.headers[k];
-                        }
-                    }
+                var raw = response._rawHeaders || {};
+                for (var rk in raw) {
+                    var val = raw[rk];
+                    var lk = rk.toLowerCase();
+                    respHeaders[lk] = val;
+                    if (lk === 'location') respHeaders['Location'] = val;
+                    if (lk === 'set-cookie') respHeaders['Set-Cookie'] = val;
+                }
+                if (response.headers && typeof response.headers.forEach === 'function') {
+                    response.headers.forEach(function(v, k) {
+                        var lk = k.toLowerCase();
+                        respHeaders[lk] = v;
+                        if (lk === 'location') respHeaders['Location'] = v;
+                        if (lk === 'set-cookie') respHeaders['Set-Cookie'] = v;
+                    });
                 }
                 if (response.status < 200 || response.status >= 300) {
                     var validateStatus = config.validateStatus || function(status) { return status >= 200 && status < 300; };
@@ -476,7 +486,8 @@ internal object VegaRuntime {
     }
 
     suspend fun executeDirectStream(provider: VegaProviderItem, code: String, link: String, type: String): List<StreamItem> {
-        val linkArg = JsonPrimitive(link).toString()
+        val sanitizedLink = link.substringBefore('#').replace(Regex(""":\d+:\d+$"""), "")
+        val linkArg = JsonPrimitive(sanitizedLink).toString()
         val typeArg = JsonPrimitive(type).toString()
         val providerValueArg = JsonPrimitive(provider.value).toString()
         val invocation = """
@@ -512,6 +523,19 @@ internal object VegaRuntime {
                         result = result.streams || result.data || [result];
                     }
                     if (!Array.isArray(result)) result = [];
+                    if (result.length === 0 && ($linkArg.includes("fastdl") || $linkArg.includes("g-direct"))) {
+                        try {
+                            var fastDlRes = await axios.get($linkArg, { headers: providerContext.commonHeaders });
+                            var html = typeof fastDlRes.data === 'string' ? fastDlRes.data : '';
+                            var m = html.match(/reurl\s*=\s*["']([^"']+)["']/);
+                            if (m) {
+                                var targetUrl = m[1].includes("link=") ? decodeURIComponent(m[1].split("link=")[1]) : m[1];
+                                if (targetUrl && (targetUrl.includes("googleusercontent.com") || targetUrl.startsWith("http"))) {
+                                    result.push({ server: "FastDL (Google CDN)", link: targetUrl, type: "mkv" });
+                                }
+                            }
+                        } catch(eFast) {}
+                    }
                     __capture_result(JSON.stringify(result));
                 } catch (e) {
                     console.error("Vega direct getStream error in ${provider.displayName}:", e && e.message ? e.message : e);

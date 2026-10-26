@@ -1635,13 +1635,34 @@ fun HomeScreen(
                                 }
 
                                 if (enabledVegaProviders.isNotEmpty()) {
-                                    Text(
-                                        text = "VEGA PROVIDERS",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = themeAccent,
-                                        fontWeight = FontWeight.Bold,
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    )
+                                    ) {
+                                        Text(
+                                            text = "VEGA PROVIDERS",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = themeAccent,
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .background(themeAccent.copy(alpha = 0.18f), RoundedCornerShape(4.dp))
+                                                .border(0.7.dp, themeAccent.copy(alpha = 0.55f), RoundedCornerShape(4.dp))
+                                                .padding(horizontal = 4.dp, vertical = 1.dp),
+                                        ) {
+                                            Text(
+                                                text = "BETA",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    letterSpacing = 0.5.sp,
+                                                ),
+                                                color = themeAccent,
+                                            )
+                                        }
+                                    }
                                     enabledVegaProviders.forEach { provider ->
                                         val isSelected = provider.value == selectedVegaProviderId && selectedVegaProviderId != "off"
                                         Row(
@@ -1836,10 +1857,10 @@ fun HomeScreen(
                         it.value == selectedVegaProviderId && selectedVegaProviderId != "off"
                     }
                     val pillLabel = when {
-                        isVegaActive && isCs3Active -> "cs3-vega"
+                        isVegaActive && isCs3Active -> "cs3-vega (BETA)"
                         isVegaActive -> {
-                            if (selectedVegaProviderId == "all") "All Vega"
-                            else (selectedVegaProvider?.displayName ?: "Vega")
+                            if (selectedVegaProviderId == "all") "All Vega (BETA)"
+                            else "${selectedVegaProvider?.displayName ?: "Vega"} (BETA)"
                         }
                         isCs3Active -> {
                             if (selectedCloudStreamProviderId == "all") "All CS3"
