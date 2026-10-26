@@ -72,10 +72,11 @@ internal class FetchBridge : HostModule {
                 "bodyKind=$bodyKind bodyChars=${body.length} followRedirects=$followRedirects",
         )
 
+        val cleanUrl = if (url.contains('#')) url.substringBefore('#') else url
         val response = runBlocking {
             httpRequestRaw(
                 method = method,
-                url = url,
+                url = cleanUrl,
                 headers = headers,
                 body = if (bodyKind == "text") body else "",
                 followRedirects = followRedirects,
