@@ -18,6 +18,7 @@ import com.nuvio.app.features.plugins.pluginContentId
 import com.nuvio.app.features.plugins.PluginsUiState
 import com.nuvio.app.features.cloudstream.CloudStreamRepository
 import com.nuvio.app.features.cloudstream.parseCloudStreamRouteId
+import com.nuvio.app.features.vega.VegaRouteData
 import com.nuvio.app.features.vega.VegaMergedPostsRepository
 import com.nuvio.app.features.vega.VegaBridge
 import com.nuvio.app.features.vega.VegaRepository
