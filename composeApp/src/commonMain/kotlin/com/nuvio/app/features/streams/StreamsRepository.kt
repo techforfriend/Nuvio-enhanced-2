@@ -25,6 +25,7 @@ import com.nuvio.app.features.vega.parseVegaRouteId
 import com.nuvio.app.features.vega.resolveVegaProviderStreams
 import com.nuvio.app.features.servers.ServerStreams
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -375,8 +376,9 @@ object StreamsRepository {
 
                             val qualityTag = Regex("""(?i)\b(2160p|1080p|720p|480p|4k)\b""").find(postTitle)?.value
                             val tagged = streams.map { stream ->
-                                if (qualityTag != null && !stream.name.contains(qualityTag, ignoreCase = true)) {
-                                    stream.copy(name = "${stream.name} • $qualityTag")
+                                val streamName = stream.name.orEmpty()
+                                if (qualityTag != null && !streamName.contains(qualityTag, ignoreCase = true)) {
+                                    stream.copy(name = if (streamName.isBlank()) qualityTag else "$streamName • $qualityTag")
                                 } else {
                                     stream
                                 }
