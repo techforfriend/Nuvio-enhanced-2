@@ -94,6 +94,11 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
             )
         }
 
+        fun prop(key: String, fallback: String = ""): String =
+            props.getProperty(key)?.trim()?.takeIf { it.isNotEmpty() }
+                ?: System.getenv(key)?.trim()?.takeIf { it.isNotEmpty() }
+                ?: fallback
+
         outDir.resolve("com/nuvio/app/features/trakt").apply {
             mkdirs()
             resolve("TraktConfig.kt").writeText(
@@ -101,9 +106,9 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 |package com.nuvio.app.features.trakt
                 |
                 |object TraktConfig {
-                |    const val CLIENT_ID = "${props.getProperty("TRAKT_CLIENT_ID", "")}" 
-                |    const val CLIENT_SECRET = "${props.getProperty("TRAKT_CLIENT_SECRET", "")}" 
-                |    const val REDIRECT_URI = "${props.getProperty("TRAKT_REDIRECT_URI", "nuvio://auth/trakt")}" 
+                |    const val CLIENT_ID = "${prop("TRAKT_CLIENT_ID", "4ab0ead6d5510bf39180a5e1dd7b452f5ad700b7794564befdd6bca56e0f7ce4")}" 
+                |    const val CLIENT_SECRET = "${prop("TRAKT_CLIENT_SECRET", "64d24f12e4628dcf0dda74a61f2235c086daaf8146384016b6a86c196e419c26")}" 
+                |    const val REDIRECT_URI = "${prop("TRAKT_REDIRECT_URI", "nuvio://auth/trakt")}" 
                 |}
                 """.trimMargin()
             )
@@ -116,9 +121,9 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 |package com.nuvio.app.features.simkl
                 |
                 |object SimklConfig {
-                |    const val CLIENT_ID = "${props.getProperty("SIMKL_CLIENT_ID", "")}"
-                |    const val REDIRECT_URI = "${props.getProperty("SIMKL_REDIRECT_URI", "nuvio://auth/simkl")}"
-                |    const val APP_NAME = "${props.getProperty("SIMKL_APP_NAME", "nuvio")}"
+                |    const val CLIENT_ID = "${prop("SIMKL_CLIENT_ID", "966b70652bf3ebbe46556dde9aa5a88e903790ae448c30b9866584743a6fc39e")}"
+                |    const val REDIRECT_URI = "${prop("SIMKL_REDIRECT_URI", "nuvio://auth/simkl")}"
+                |    const val APP_NAME = "${prop("SIMKL_APP_NAME", "nuvio")}"
                 |}
                 """.trimMargin()
             )
@@ -131,7 +136,7 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 |package com.nuvio.app.features.mdblist
                 |
                 |object MdbListConfig {
-                |    const val CLIENT_ID = "${props.getProperty("MDBLIST_CLIENT_ID", "")}"
+                |    const val CLIENT_ID = "${prop("MDBLIST_CLIENT_ID", "xOUwKUPdGEbHif6aKwW2gCxCAvFx7m0Q3jX0ZxXZ")}"
                 |}
                 """.trimMargin()
             )
@@ -144,7 +149,7 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 |package com.nuvio.app.features.player.skip
                 |
                 |object IntroDbConfig {
-                |    const val URL = "${props.getProperty("INTRODB_API_URL", "")}" 
+                |    const val URL = "${prop("INTRODB_API_URL", "https://api.introdb.app/")}" 
                 |}
                 """.trimMargin()
             )
