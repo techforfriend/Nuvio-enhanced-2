@@ -22,6 +22,7 @@ import com.nuvio.app.features.vega.VegaRouteData
 import com.nuvio.app.features.vega.VegaMergedPostsRepository
 import com.nuvio.app.features.vega.VegaBridge
 import com.nuvio.app.features.vega.VegaRepository
+import com.nuvio.app.features.vega.cleanLink
 import com.nuvio.app.features.vega.parseVegaRouteId
 import com.nuvio.app.features.vega.resolveVegaProviderStreams
 import com.nuvio.app.features.servers.ServerStreams
@@ -331,8 +332,9 @@ object StreamsRepository {
             return
         }
 
-        val vegaRoute = parseVegaRouteId(videoId)
-            ?: parentMetaId?.takeIf { type == "movie" }?.let { parseVegaRouteId(it) }
+        val rawVegaRoute = parseVegaRouteId(videoId)
+            ?: parentMetaId?.let { parseVegaRouteId(it) }
+        val vegaRoute = rawVegaRoute?.let { it.copy(link = it.cleanLink()) }
         if (vegaRoute != null) {
             VegaRepository.initialize()
             val providerItem = VegaRepository.getProviderByValue(vegaRoute.providerId)
@@ -354,7 +356,15 @@ object StreamsRepository {
                 showDirectAutoPlayOverlay = isDirectAutoPlayFlow,
             )
             activeJob = scope.launch {
-                val primaryLinks = resolvePlayableVegaLinks(providerItem, vegaRoute, type, videoId, parentMetaId)
+                val primaryLinks = resolvePlayableVegaLinks(
+                    providerItem = providerItem,
+                    route = vegaRoute,
+                    type = type,
+                    videoId = videoId,
+                    parentMetaId = parentMetaId,
+                    season = season,
+                    episode = episode,
+                )
                 val alternatePosts = VegaMergedPostsRepository.getAlternatePosts(vegaRoute.providerId, vegaRoute.link)
                 val altLinks = mutableListOf<Pair<String, String>>()
                 if (alternatePosts.isNotEmpty()) {
@@ -362,7 +372,15 @@ object StreamsRepository {
                         alternatePosts.forEach { alt ->
                             launch {
                                 val altRoute = VegaRouteData(vegaRoute.providerId, alt.link)
-                                val resolved = resolvePlayableVegaLinks(providerItem, altRoute, type, alt.link, null)
+                                val resolved = resolvePlayableVegaLinks(
+                                    providerItem = providerItem,
+                                    route = altRoute.copy(link = altRoute.cleanLink()),
+                                    type = type,
+                                    videoId = alt.link,
+                                    parentMetaId = null,
+                                    season = season,
+                                    episode = episode,
+                                )
                                 synchronized(altLinks) {
                                     altLinks.addAll(resolved.map { it.first to (it.second.ifBlank { alt.title }) })
                                 }
@@ -1066,25 +1084,68 @@ object StreamsRepository {
         _uiState.update { it.copy(showDirectAutoPlayOverlay = visible, overlayMessage = message) }
     }
 
-    private suspend fun resolvePlayableVegaLinks(
+    internal suspend fun resolvePlayableVegaLinks(
         providerItem: com.nuvio.app.features.vega.VegaProviderItem?,
         route: com.nuvio.app.features.vega.VegaRouteData,
         type: String,
         videoId: String,
         parentMetaId: String?,
+        season: Int? = null,
+        episode: Int? = null,
     ): List<Pair<String, String>> {
         if (providerItem == null) return emptyList()
-        val link = route.link
+        val link = route.cleanLink()
 
-        val isEpisodeOrDirect = link.startsWith("{") ||
+        val isDirectEpisodeOrFile = link.startsWith("{") ||
             link.contains("hubcloud") ||
             link.contains("vcloud") ||
             link.contains("vegadrive") ||
             link.contains("fastdl") ||
             link.contains("gofile") ||
+            link.contains("pixeldrain") ||
             link.contains("nexdrive")
 
-        if (type == "series" || isEpisodeOrDirect) {
+        if (type == "series") {
+            if (isDirectEpisodeOrFile && !link.contains("/download-") && !link.contains("/series/")) {
+                return listOf(link to "")
+            }
+
+            val peekedMeta = MetaDetailsRepository.peek(type, parentMetaId ?: videoId)
+                ?: (parentMetaId?.let { MetaDetailsRepository.peek(type, it) })
+                ?: (videoId.takeIf { it != parentMetaId }?.let { MetaDetailsRepository.peek(type, it) })
+
+            val matchingVideo = peekedMeta?.videos?.firstOrNull { v ->
+                (season == null || v.season == season) && (episode == null || v.episode == episode)
+            } ?: peekedMeta?.videos?.firstOrNull()
+
+            if (matchingVideo != null) {
+                val epRoute = parseVegaRouteId(matchingVideo.id)
+                if (epRoute != null && epRoute.cleanLink().isNotBlank() && epRoute.cleanLink() != link) {
+                    return listOf(epRoute.cleanLink() to matchingVideo.title)
+                }
+            }
+
+            val meta = runCatching {
+                withTimeoutOrNull(15_000L) {
+                    VegaBridge.getMetaDetails(providerItem, link)
+                }
+            }.getOrNull()
+
+            val fetchedVideo = meta?.videos?.firstOrNull { v ->
+                (season == null || v.season == season) && (episode == null || v.episode == episode)
+            } ?: meta?.videos?.firstOrNull()
+
+            if (fetchedVideo != null) {
+                val epRoute = parseVegaRouteId(fetchedVideo.id)
+                if (epRoute != null && epRoute.cleanLink().isNotBlank() && epRoute.cleanLink() != link) {
+                    return listOf(epRoute.cleanLink() to fetchedVideo.title)
+                }
+            }
+
+            return listOf(link to "")
+        }
+
+        if (isDirectEpisodeOrFile && !link.contains("/download-")) {
             return listOf(link to "")
         }
 
@@ -1093,8 +1154,9 @@ object StreamsRepository {
 
         val peekedDirectLinks = peekedMeta?.videos?.mapNotNull { v ->
             val vRoute = parseVegaRouteId(v.id) ?: return@mapNotNull null
-            if (vRoute.link != link && vRoute.link.isNotBlank()) {
-                vRoute.link to v.title
+            val cleaned = vRoute.cleanLink()
+            if (cleaned != link && cleaned.isNotBlank()) {
+                cleaned to v.title
             } else null
         }?.distinctBy { it.first }
 
@@ -1110,8 +1172,9 @@ object StreamsRepository {
 
         val metaLinks = meta?.videos?.mapNotNull { v ->
             val vRoute = parseVegaRouteId(v.id) ?: return@mapNotNull null
-            if (vRoute.link != link && vRoute.link.isNotBlank()) {
-                vRoute.link to v.title
+            val cleaned = vRoute.cleanLink()
+            if (cleaned != link && cleaned.isNotBlank()) {
+                cleaned to v.title
             } else null
         }?.distinctBy { it.first }
 

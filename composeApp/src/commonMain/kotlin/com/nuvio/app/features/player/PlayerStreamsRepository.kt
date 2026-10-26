@@ -38,8 +38,10 @@ import com.nuvio.app.features.streams.buildCloudStreamSearchRequest
 import com.nuvio.app.features.streams.cloudStreamProviderGroupsForRequest
 import com.nuvio.app.features.streams.resolveCloudStreamProviderStreams
 import com.nuvio.app.features.streams.cloudStreamSourcesToStreamItems
+import com.nuvio.app.features.streams.StreamsRepository
 import com.nuvio.app.features.vega.VegaBridge
 import com.nuvio.app.features.vega.VegaRepository
+import com.nuvio.app.features.vega.cleanLink
 import com.nuvio.app.features.vega.parseVegaRouteId
 import com.nuvio.app.features.vega.resolveVegaProviderStreams
 import kotlinx.coroutines.CoroutineScope
@@ -369,8 +371,9 @@ object PlayerStreamsRepository {
             return
         }
 
-        val vegaRoute = parseVegaRouteId(videoId)
-            ?: parentMetaId?.takeIf { type == "movie" }?.let { parseVegaRouteId(it) }
+        val rawVegaRoute = parseVegaRouteId(videoId)
+            ?: parentMetaId?.let { parseVegaRouteId(it) }
+        val vegaRoute = rawVegaRoute?.let { it.copy(link = it.cleanLink()) }
         if (vegaRoute != null) {
             VegaRepository.initialize()
             val providerItem = VegaRepository.getProviderByValue(vegaRoute.providerId)
@@ -389,58 +392,59 @@ object PlayerStreamsRepository {
                 isAnyLoading = true,
             )
             val job = scope.launch {
-                val result = runCatching {
-                    withTimeoutOrNull(PLAYER_STREAM_PROVIDER_TIMEOUT_MS) {
-                        if (providerItem != null) {
-                            VegaBridge.getStreams(providerItem, vegaRoute.link, type)
-                        } else {
-                            emptyList()
+                val resolvedLinks = StreamsRepository.resolvePlayableVegaLinks(
+                    providerItem = providerItem,
+                    route = vegaRoute,
+                    type = type,
+                    videoId = videoId,
+                    parentMetaId = parentMetaId,
+                    season = season,
+                    episode = episode,
+                )
+                val linksToQuery = resolvedLinks.map { it.first }.ifEmpty { listOf(vegaRoute.link) }
+                val allStreams = mutableListOf<com.nuvio.app.features.streams.StreamItem>()
+                coroutineScope {
+                    linksToQuery.forEach { link ->
+                        launch {
+                            val streams = runCatching {
+                                withTimeoutOrNull(PLAYER_STREAM_PROVIDER_TIMEOUT_MS) {
+                                    if (providerItem != null) {
+                                        VegaBridge.getStreams(providerItem, link, type)
+                                    } else {
+                                        emptyList()
+                                    }
+                                } ?: emptyList()
+                            }.getOrElse { emptyList() }
+                            synchronized(allStreams) {
+                                allStreams.addAll(streams)
+                            }
                         }
-                    } ?: error("$providerName timed out")
+                    }
                 }
                 if (requestKeyHolder() != requestKey) return@launch
-                result.fold(
-                    onSuccess = { streams ->
-                        val presentedGroup = StreamBadgePresentation.apply(
-                            groups = listOf(
-                                AddonStreamGroup(
-                                    addonName = providerName,
-                                    addonId = providerAddonId,
-                                    streams = streams,
-                                    isLoading = false,
-                                    error = if (streams.isEmpty()) "No links found" else null,
-                                ),
-                            ),
-                            rules = streamBadgeRules,
-                        )
-                        stateFlow.value = StreamsUiState(
-                            groups = presentedGroup,
-                            activeAddonIds = setOf(providerAddonId),
-                            isAnyLoading = false,
-                            emptyStateReason = if (streams.isEmpty()) com.nuvio.app.features.streams.StreamsEmptyStateReason.NoStreamsFound else null,
-                        )
-                    },
-                    onFailure = { error ->
-                        log.w(error) { "Vega link resolution failed provider=${vegaRoute.providerId}" }
-                        stateFlow.value = StreamsUiState(
-                            groups = listOf(
-                                AddonStreamGroup(
-                                    addonName = providerName,
-                                    addonId = providerAddonId,
-                                    streams = emptyList(),
-                                    isLoading = false,
-                                    error = error.message ?: "Vega link resolution failed",
-                                ),
-                            ),
-                            activeAddonIds = setOf(providerAddonId),
-                            isAnyLoading = false,
-                            emptyStateReason = com.nuvio.app.features.streams.StreamsEmptyStateReason.StreamFetchFailed,
-                        )
-                    },
+                val distinctStreams = allStreams.distinctBy { it.url }
+                val presentedGroup = StreamBadgePresentation.apply(
+                    groups = listOf(
+                        AddonStreamGroup(
+                            addonName = providerName,
+                            addonId = providerAddonId,
+                            streams = distinctStreams,
+                            isLoading = false,
+                            error = if (distinctStreams.isEmpty()) "No links found" else null,
+                        ),
+                    ),
+                    rules = streamBadgeRules,
+                )
+                stateFlow.value = StreamsUiState(
+                    groups = presentedGroup,
+                    activeAddonIds = setOf(providerAddonId),
+                    isAnyLoading = false,
+                    emptyStateReason = if (distinctStreams.isEmpty()) com.nuvio.app.features.streams.StreamsEmptyStateReason.NoStreamsFound else null,
                 )
             }
             setJob(job)
             return
+        }
         }
 
         val isNativeServerRequest = ServerStreams.isNativeRequest(videoId)

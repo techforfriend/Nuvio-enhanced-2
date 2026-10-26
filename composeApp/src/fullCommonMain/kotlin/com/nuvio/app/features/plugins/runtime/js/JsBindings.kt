@@ -199,8 +199,24 @@ internal object JsBindings {
                 headers: {
                     get: function(name) {
                         return parsed.headers[name.toLowerCase()] || null;
+                    },
+                    has: function(name) {
+                        return name.toLowerCase() in parsed.headers;
+                    },
+                    forEach: function(callback) {
+                        for (var k in parsed.headers) {
+                            callback(parsed.headers[k], k);
+                        }
+                    },
+                    entries: function() {
+                        var res = [];
+                        for (var k in parsed.headers) {
+                            res.push([k, parsed.headers[k]]);
+                        }
+                        return res;
                     }
                 },
+                _rawHeaders: parsed.headers,
                 arrayBuffer: function() {
                     var copy = new Uint8Array(responseBytes.length);
                     copy.set(responseBytes);

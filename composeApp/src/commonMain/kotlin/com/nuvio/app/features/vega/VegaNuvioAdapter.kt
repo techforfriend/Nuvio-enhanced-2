@@ -13,6 +13,9 @@ data class VegaRouteData(
     val link: String,
 )
 
+fun VegaRouteData.cleanLink(): String =
+    link.substringBefore('#').replace(Regex(""":\d+:\d+$"""), "")
+
 fun vegaRouteId(providerId: String, link: String): String =
     "$VEGA_ROUTE_PREFIX${providerId.length}:$providerId$link"
 
