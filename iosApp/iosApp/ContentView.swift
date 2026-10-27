@@ -143,6 +143,7 @@ final class RootComposeViewController: UIViewController {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        enforceContainingTabBarVisibility()
         guard view.bounds.size != foldBoundsSize else { return }
         foldBoundsSize = view.bounds.size
         updateFold()
@@ -237,11 +238,6 @@ final class RootComposeViewController: UIViewController {
         if let tabBarController {
             onTabBarControllerAvailable?(tabBarController)
         }
-    }
-
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        enforceContainingTabBarVisibility()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
