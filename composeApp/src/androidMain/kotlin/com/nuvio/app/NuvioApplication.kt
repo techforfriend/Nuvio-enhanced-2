@@ -11,6 +11,7 @@ import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.CachePolicy
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
+import com.nuvio.app.core.diagnostics.CrashDiagnostics
 import com.nuvio.app.core.network.DnsPlatform
 import com.nuvio.app.core.network.SharedOkHttpClient
 import com.nuvio.app.core.poster.CustomPosterFallbackInterceptor
@@ -27,6 +28,10 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
+        // Global handler: captures uncaught crashes anywhere, including
+        // Nuvio Enhanced settings, so Copy last crash report in Advanced
+        // > Diagnostics can show them. Without this, no report is saved.
+        CrashDiagnostics.initialize(this)
         DnsPlatform.initialize(this)
         com.nuvio.app.features.updater.AndroidAppUpdaterPlatform.initialize(this)
         com.nuvio.app.features.settings.NuvioEnhancedSettingsStorage.initialize(this)
