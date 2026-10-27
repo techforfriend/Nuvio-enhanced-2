@@ -144,7 +144,7 @@ internal fun HomeHeroMetaRows(
 private fun HeroImdbRating(rating: String) {
     val textStyle = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
     Row(verticalAlignment = Alignment.CenterVertically) {
-        ImdbRatingSourceLabel(storeTextStyle = textStyle)
+        ImdbRatingSourceLabel(storeTextStyle = textStyle, storeTextColor = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.width(5.dp))
         Text(
             text = rating,

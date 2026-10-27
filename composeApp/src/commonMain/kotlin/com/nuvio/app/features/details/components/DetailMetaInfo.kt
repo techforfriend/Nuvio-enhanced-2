@@ -424,7 +424,7 @@ private fun DetailStandardOverview(
 }
 
 @Composable
-private fun DetailRatingsRow(
+internal fun DetailRatingsRow(
     ratings: List<MetaExternalRating>,
     horizontalScrollPadding: Dp,
     onClick: (() -> Unit)?,
@@ -748,7 +748,7 @@ private val EpisodeRatingBad = Color(0xFFFF1744)
 private val EpisodeRatingGarbage = Color(0xFF9C4DCC)
 
 @Composable
-private fun ImdbRatingSourceLabel(
+internal fun ImdbRatingSourceLabel(
     storeTextStyle: TextStyle,
     storeTextColor: Color,
 ) {
@@ -799,9 +799,10 @@ private fun MetaLabelValueRow(
 }
 
 @Composable
-private fun DetailHeroMetaBadge(
+internal fun DetailHeroMetaBadge(
     text: String,
     contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    secondaryText: String? = null,
 ) {
     Box(
         modifier = Modifier
@@ -812,17 +813,37 @@ private fun DetailHeroMetaBadge(
             .padding(horizontal = 8.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            color = contentColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                color = contentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            secondaryText?.let { secondary ->
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(12.dp)
+                        .background(contentColor.copy(alpha = 0.55f)),
+                )
+                Text(
+                    text = secondary,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = contentColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
     }
 }
 
-private val ImdbYellow = Color(0xFFF5C518)
+internal val ImdbYellow = Color(0xFFF5C518)
 private val ImdbBlack = Color(0xFF000000)
 
 private data class RatingVisuals(

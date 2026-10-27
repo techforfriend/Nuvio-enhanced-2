@@ -319,10 +319,13 @@ fun TabletDetailHero(
                 ) {
                     Column {
                         Spacer(modifier = Modifier.height(space.s12))
-                        DetailRatingsRow(
-                            ratings = meta.externalRatings,
-                            modifier = Modifier.widthIn(max = 520.dp),
-                        )
+                        Box(modifier = Modifier.widthIn(max = 520.dp)) {
+                            DetailRatingsRow(
+                                ratings = meta.externalRatings,
+                                horizontalScrollPadding = 0.dp,
+                                onClick = null,
+                            )
+                        }
                     }
                 }
             }
@@ -424,7 +427,7 @@ private fun TabletHeroMetaRow(meta: MetaDetails, showImdbRating: Boolean) {
         }
         if (validImdbRating != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ImdbRatingSourceLabel(storeTextStyle = itemStyle)
+                ImdbRatingSourceLabel(storeTextStyle = itemStyle, storeTextColor = colorScheme.onBackground)
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = validImdbRating,
