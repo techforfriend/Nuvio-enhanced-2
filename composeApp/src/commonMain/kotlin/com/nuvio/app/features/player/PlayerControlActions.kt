@@ -306,7 +306,14 @@ internal fun PlayerControlActions(
             )
         },
     )
-    val hasOverflow = secondaryActions.isNotEmpty()
+    // Default player bottom-left pill: show only the first 4 actions up front.
+    // Everything else (remaining primary actions + all secondary actions) stays
+    // hidden inside, and appears only after tapping the expand (>) button.
+    // The first 4 follow the existing priority order, skipping any action that
+    // is unavailable or hidden by Enhanced settings.
+    val visibleActions = primaryActions.take(4)
+    val hiddenActions = primaryActions.drop(4) + secondaryActions
+    val hasOverflow = hiddenActions.isNotEmpty()
     var expanded by remember(hasOverflow) { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     LaunchedEffect(expanded, scrollState.maxValue) {
@@ -329,7 +336,7 @@ internal fun PlayerControlActions(
                         .horizontalScroll(scrollState),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    (if (expanded) primaryActions + secondaryActions else primaryActions).forEach { action ->
+                    (if (expanded) primaryActions + secondaryActions else visibleActions).forEach { action ->
                         Box {
                             PlayerAction(
                                 description = action.description,
