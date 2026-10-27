@@ -14,8 +14,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.horizontalScroll
-import androidx.compose.foundation.layout.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -127,7 +127,7 @@ internal fun PlayerTimelineDetails(
                     ) {
                         Text(
                             text = pill,
-                            style = typeScale.labelMd.copy(fontWeight = FontWeight.Bold),
+                            style = typeScale.labelSm.copy(fontWeight = FontWeight.Bold),
                             color = Color.White,
                             maxLines = 1,
                         )
