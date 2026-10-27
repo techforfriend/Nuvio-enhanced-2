@@ -736,7 +736,7 @@ private fun PlayerHeader(
                         )
                     }
                     PlayerHeaderIconButton(
-                        icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
+                        icon = if (isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
                         contentDescription = if (isLocked) {
                             stringResource(Res.string.compose_player_unlock_controls)
                         } else {
