@@ -86,6 +86,7 @@ internal fun PlayerTimelineDetails(
     onHeightChanged: (Dp) -> Unit = {},
 ) {
     val typeScale = MaterialTheme.nuvioTypeScale
+    val density = LocalDensity.current
     // Screenshot-style title block, default player only (legacy uses
     // ProgressControls and does not call this). Order matches the
     // screenshot: large title, badge pills, then the meta line, with
@@ -97,7 +98,7 @@ internal fun PlayerTimelineDetails(
         Modifier
             .padding(horizontal = PlayerTimelineContentInset)
             .padding(bottom = 8.dp)
-            .onSizeChanged { size -> onHeightChanged(with(LocalDensity.current) { size.height.toDp() }) },
+            .onSizeChanged { size -> onHeightChanged(with(density) { size.height.toDp() }) },
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
