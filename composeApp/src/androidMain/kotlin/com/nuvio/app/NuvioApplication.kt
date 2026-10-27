@@ -11,6 +11,7 @@ import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.CachePolicy
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
+import com.nuvio.app.core.diagnostics.CrashDiagnostics
 import com.nuvio.app.core.network.DnsPlatform
 import com.nuvio.app.core.network.SharedOkHttpClient
 import com.nuvio.app.core.poster.CustomPosterFallbackInterceptor
@@ -27,6 +28,10 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
+        // Must run before MainActivity/Sentry: this installs the uncaught-
+        // exception handler that saves the last crash report. It was never
+        // called before, so Copy last crash report could never become enabled.
+        CrashDiagnostics.initialize(this)
         DnsPlatform.initialize(this)
         com.nuvio.app.features.updater.AndroidAppUpdaterPlatform.initialize(this)
         com.nuvio.app.features.settings.NuvioEnhancedSettingsStorage.initialize(this)
