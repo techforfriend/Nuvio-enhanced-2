@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -13,9 +14,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.core.diagnostics.CrashDiagnostics
 import com.nuvio.app.core.network.DnsProvider
+import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.network.DnsSettingsRepository
 import com.nuvio.app.core.ui.DialogButton
 import com.nuvio.app.core.ui.DialogButtons
@@ -53,6 +58,12 @@ import nuvio.composeapp.generated.resources.settings_advanced_remember_last_prof
 import nuvio.composeapp.generated.resources.settings_advanced_remember_last_profile_description
 import nuvio.composeapp.generated.resources.settings_advanced_section_cache
 import nuvio.composeapp.generated.resources.settings_advanced_section_debugging
+import nuvio.composeapp.generated.resources.nuvio_enhanced_copy_diagnostics_desc
+import nuvio.composeapp.generated.resources.nuvio_enhanced_copy_diagnostics_title
+import nuvio.composeapp.generated.resources.nuvio_enhanced_copy_last_crash_empty_desc
+import nuvio.composeapp.generated.resources.nuvio_enhanced_copy_last_crash_title
+import nuvio.composeapp.generated.resources.nuvio_enhanced_toast_crash_copied
+import nuvio.composeapp.generated.resources.nuvio_enhanced_toast_diagnostics_copied
 import nuvio.composeapp.generated.resources.settings_advanced_section_diagnostics
 import nuvio.composeapp.generated.resources.settings_advanced_section_startup
 import nuvio.composeapp.generated.resources.settings_advanced_sentry_reports
@@ -125,20 +136,32 @@ internal fun LazyListScope.advancedSettingsContent(
             }
         }
     }
-    if (SentrySettingsRepository.isSupported) {
-        item {
-            val sentryEnabledFlow = remember {
-                SentrySettingsRepository.ensureLoaded()
-                SentrySettingsRepository.enabled
-            }
-            val sentryEnabled by sentryEnabledFlow.collectAsStateWithLifecycle()
-            var showSentryDialog by rememberSaveable { mutableStateOf(false) }
+    // All diagnostics in one place (Advanced > Diagnostics), not only Sentry:
+    // Luqman's Sentry reports switch, plus the local report rows. The
+    // CrashDiagnostics handler is global, so a crash in Nuvio Enhanced
+    // settings (or anywhere else) is also saved and appears as the last
+    // crash report here.
+    item {
+        val sentrySupported = SentrySettingsRepository.isSupported
+        val sentryEnabledFlow = remember {
+            SentrySettingsRepository.ensureLoaded()
+            SentrySettingsRepository.enabled
+        }
+        val sentryEnabled by sentryEnabledFlow.collectAsStateWithLifecycle()
+        var showSentryDialog by rememberSaveable { mutableStateOf(false) }
+        val lastCrashReport by remember {
+            CrashDiagnostics.lastReport
+        }.collectAsStateWithLifecycle()
+        val clipboardManager = LocalClipboardManager.current
+        val diagnosticsCopiedMessage = stringResource(Res.string.nuvio_enhanced_toast_diagnostics_copied)
+        val crashCopiedMessage = stringResource(Res.string.nuvio_enhanced_toast_crash_copied)
 
-            SettingsSection(
-                title = stringResource(Res.string.settings_advanced_section_diagnostics),
-                isTablet = isTablet,
-            ) {
-                SettingsGroup(isTablet = isTablet) {
+        SettingsSection(
+            title = stringResource(Res.string.settings_advanced_section_diagnostics),
+            isTablet = isTablet,
+        ) {
+            SettingsGroup(isTablet = isTablet) {
+                if (sentrySupported) {
                     SettingsSwitchRow(
                         title = stringResource(Res.string.settings_advanced_sentry_reports),
                         description = stringResource(Res.string.settings_advanced_sentry_reports_subtitle),
@@ -146,20 +169,50 @@ internal fun LazyListScope.advancedSettingsContent(
                         isTablet = isTablet,
                         onCheckedChange = { showSentryDialog = true },
                     )
+                    SettingsGroupDivider(isTablet = isTablet)
+                }
+                if (CrashDiagnostics.reportsSupported) {
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.nuvio_enhanced_copy_diagnostics_title),
+                        description = stringResource(Res.string.nuvio_enhanced_copy_diagnostics_desc),
+                        icon = Icons.Rounded.ContentCopy,
+                        isTablet = isTablet,
+                        onClick = {
+                            clipboardManager.setText(AnnotatedString(CrashDiagnostics.currentReport()))
+                            NuvioToastController.show(diagnosticsCopiedMessage)
+                        },
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.nuvio_enhanced_copy_last_crash_title),
+                        description = lastCrashReport?.let { report ->
+                            listOf(report.contextSummary, report.summary)
+                                .filter(String::isNotBlank)
+                                .joinToString("\n")
+                        } ?: stringResource(Res.string.nuvio_enhanced_copy_last_crash_empty_desc),
+                        icon = Icons.Rounded.ContentCopy,
+                        enabled = lastCrashReport != null,
+                        isTablet = isTablet,
+                        onClick = {
+                            val report = lastCrashReport ?: return@SettingsNavigationRow
+                            clipboardManager.setText(AnnotatedString(report.details))
+                            NuvioToastController.show(crashCopiedMessage)
+                        },
+                    )
                 }
             }
+        }
 
-            if (showSentryDialog) {
-                SentrySettingsDialog(
-                    enabled = sentryEnabled,
-                    onConfirm = {
-                        SentrySettingsRepository.setEnabled(!sentryEnabled)
-                    },
-                    onDismiss = {
-                        showSentryDialog = false
-                    },
-                )
-            }
+        if (showSentryDialog) {
+            SentrySettingsDialog(
+                enabled = sentryEnabled,
+                onConfirm = {
+                    SentrySettingsRepository.setEnabled(!sentryEnabled)
+                },
+                onDismiss = {
+                    showSentryDialog = false
+                },
+            )
         }
     }
     item {
