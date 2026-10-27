@@ -1124,6 +1124,10 @@ private fun NuvioEnhancedSettingsPageContent(
             }
         }
 
+        }
+        // Diagnostics is intentionally outside the category blocks above:
+        // it was previously only under System, so users on Core/Player/Home
+        // never saw it. It must be reachable from every category.
         if (CrashDiagnostics.reportsSupported) {
             SettingsSection(
                 title = stringResource(Res.string.nuvio_enhanced_section_diagnostics),
@@ -1161,7 +1165,6 @@ private fun NuvioEnhancedSettingsPageContent(
             }
         }
 
-        }
     }
 
     backupPayload?.let { payload ->
