@@ -314,11 +314,18 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
         }
     }
 
-    LaunchedEffect(playbackSnapshot.isLoading, playerController, playerControllerSourceUrl, activeSourceUrl) {
+    LaunchedEffect(
+        playbackSnapshot.isLoading,
+        playerController,
+        playerControllerSourceUrl,
+        activeSourceUrl,
+        playerSettingsUiState.androidExoChaptersEnabled,
+    ) {
+        clearChaptersIfDisabled()
         if (!playbackSnapshot.isLoading) loadChaptersIfNeeded()
     }
 
-    LaunchedEffect(playbackSnapshot.chapters, chapters) {
+    LaunchedEffect(playbackSnapshot.chapters, chapters, playerSettingsUiState.androidExoChaptersEnabled) {
         adoptSnapshotChaptersIfNeeded()
     }
 
