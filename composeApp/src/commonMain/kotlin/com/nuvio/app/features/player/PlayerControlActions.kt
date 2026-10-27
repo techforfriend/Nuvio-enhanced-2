@@ -78,94 +78,12 @@ internal fun playerOrientationToggleLabel(isPortraitPlayback: Boolean): StringRe
 
 @Composable
 internal fun PlayerToolbar(
-    isLocked: Boolean,
-    onLockToggle: () -> Unit,
     onBack: () -> Unit,
-    onCastClick: (() -> Unit)? = null,
-    isCasting: Boolean = false,
     modifier: Modifier = Modifier,
-    onPartyClick: (() -> Unit)? = null,
-    partyActive: Boolean = false,
-    onSwitchEngineClick: (() -> Unit)? = null,
-    randomNextEpisodeMode: Boolean = false,
-    onRandomNextEpisodeModeToggle: (() -> Unit)? = null,
-    onOrientationToggleClick: (() -> Unit)? = null,
-    isPortraitPlayback: Boolean = false,
-    onPictureInPictureClick: (() -> Unit)? = null,
 ) {
-    val enhancedSettings by remember {
-        NuvioEnhancedSettingsRepository.ensureLoaded()
-        NuvioEnhancedSettingsRepository.uiState
-    }.collectAsStateWithLifecycle()
-
+    // Top actions moved to the bottom actions pill; only the back button stays here.
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
-        // Toolbar actions share one liquid-glass capsule; close sits in its own glass circle.
-        Row(
-            modifier = Modifier.playerLiquidGlass(
-                shape = PlayerGlassCapsule,
-                refractionHeight = 8.dp,
-                refractionAmount = 12.dp,
-            ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (onSwitchEngineClick != null && !enhancedSettings.hidePlayerEngineSwitch) {
-                PlayerAction(
-                    description = stringResource(Res.string.cd_switch_player_engine),
-                    icon = Icons.Rounded.SwapHoriz,
-                    onClick = onSwitchEngineClick,
-                )
-            }
-            if (onRandomNextEpisodeModeToggle != null && !enhancedSettings.hidePlayerShuffle) {
-                PlayerAction(
-                    description = if (randomNextEpisodeMode) {
-                        stringResource(Res.string.player_random_next_enabled)
-                    } else {
-                        stringResource(Res.string.player_random_next_disabled)
-                    },
-                    icon = Icons.Rounded.Shuffle,
-                    onClick = onRandomNextEpisodeModeToggle,
-                    tint = if (randomNextEpisodeMode) MaterialTheme.colorScheme.primary else Color.White,
-                )
-            }
-            if (onPictureInPictureClick != null && !enhancedSettings.hidePlayerPip) {
-                PlayerAction(
-                    description = stringResource(Res.string.compose_player_picture_in_picture),
-                    icon = Icons.Rounded.PictureInPictureAlt,
-                    onClick = onPictureInPictureClick,
-                )
-            }
-            if (onOrientationToggleClick != null && !enhancedSettings.hidePlayerOrientation) {
-                PlayerAction(
-                    description = stringResource(playerOrientationToggleLabel(isPortraitPlayback)),
-                    icon = playerOrientationToggleIcon(isPortraitPlayback),
-                    onClick = onOrientationToggleClick,
-                )
-            }
-            if (onPartyClick != null && !enhancedSettings.hidePlayerWatchParty) {
-                PlayerAction(
-                    description = stringResource(Res.string.party_title),
-                    icon = Icons.Rounded.Groups,
-                    onClick = onPartyClick,
-                    tint = if (partyActive) MaterialTheme.colorScheme.primary else Color.White,
-                )
-            }
-            if (onCastClick != null && !enhancedSettings.hidePlayerCast) {
-                PlayerAction(
-                    description = stringResource(Res.string.player_cast),
-                    icon = if (isCasting) Icons.Rounded.CastConnected else Icons.Rounded.Cast,
-                    onClick = onCastClick,
-                )
-            }
-            PlayerAction(
-                description = stringResource(
-                    if (isLocked) Res.string.compose_player_unlock_controls else Res.string.compose_player_lock_controls,
-                ),
-                icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
-                onClick = onLockToggle,
-            )
-        }
-        Spacer(Modifier.width(8.dp))
         NuvioBackButton(
             onClick = onBack,
             modifier = Modifier.playerLiquidGlass(CircleShape, refractionHeight = 8.dp, refractionAmount = 12.dp),
@@ -213,6 +131,14 @@ internal fun PlayerControlActions(
     onPartyClick: (() -> Unit)? = null,
     partyActive: Boolean = false,
     onPictureInPictureClick: (() -> Unit)? = null,
+    isLocked: Boolean = false,
+    onLockToggle: () -> Unit = {},
+    onCastClick: (() -> Unit)? = null,
+    isCasting: Boolean = false,
+    onOrientationToggleClick: (() -> Unit)? = null,
+    isPortraitPlayback: Boolean = false,
+    randomNextEpisodeMode: Boolean = false,
+    onRandomNextEpisodeModeToggle: (() -> Unit)? = null,
     onInteraction: () -> Unit,
 ) {
     val enhancedSettings by remember {
@@ -280,6 +206,41 @@ internal fun PlayerControlActions(
                 icon = Icons.AutoMirrored.Rounded.ListAlt,
             )
         },
+        // Moved from the top toolbar. Party and PiP are NOT added here again:
+        // they are already the first two primary actions above, so adding them
+        // again would show the same button twice at the bottom.
+        onSwitchEngineClick?.takeIf { !enhancedSettings.hidePlayerEngineSwitch }?.let {
+            PlayerControlAction(
+                stringResource(Res.string.cd_switch_player_engine), it,
+                icon = Icons.Rounded.SwapHoriz,
+            )
+        },
+        onRandomNextEpisodeModeToggle?.takeIf { !enhancedSettings.hidePlayerShuffle }?.let {
+            PlayerControlAction(
+                if (randomNextEpisodeMode) stringResource(Res.string.player_random_next_enabled)
+                else stringResource(Res.string.player_random_next_disabled), it,
+                icon = Icons.Rounded.Shuffle,
+                tint = if (randomNextEpisodeMode) MaterialTheme.colorScheme.primary else Color.White,
+            )
+        },
+        onOrientationToggleClick?.takeIf { !enhancedSettings.hidePlayerOrientation }?.let {
+            PlayerControlAction(
+                stringResource(playerOrientationToggleLabel(isPortraitPlayback)), it,
+                icon = playerOrientationToggleIcon(isPortraitPlayback),
+            )
+        },
+        onCastClick?.takeIf { !enhancedSettings.hidePlayerCast }?.let {
+            PlayerControlAction(
+                stringResource(Res.string.player_cast), it,
+                icon = if (isCasting) Icons.Rounded.CastConnected else Icons.Rounded.Cast,
+            )
+        },
+        PlayerControlAction(
+            stringResource(
+                if (isLocked) Res.string.compose_player_unlock_controls else Res.string.compose_player_lock_controls,
+            ), onLockToggle,
+            icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
+        ),
     )
     val secondaryActions = listOfNotNull(
         onSourcesClick?.let {

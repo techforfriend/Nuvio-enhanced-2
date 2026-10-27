@@ -286,19 +286,7 @@ internal fun PlayerControlsShell(
             } else {
                 if (showPlaybackControls) {
                     PlayerToolbar(
-                        isLocked = isLocked,
-                        onLockToggle = onLockToggle,
                         onBack = onBack,
-                        onCastClick = onCastClick,
-                        isCasting = isCasting,
-                        onPartyClick = onPartyClick,
-                        partyActive = partyActive,
-                        onSwitchEngineClick = onSwitchEngineClick,
-                        randomNextEpisodeMode = randomNextEpisodeMode,
-                        onRandomNextEpisodeModeToggle = onRandomNextEpisodeModeToggle,
-                        onOrientationToggleClick = onOrientationToggleClick,
-                        isPortraitPlayback = isPortraitPlayback,
-                        onPictureInPictureClick = onPictureInPictureClick,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .windowInsetsPadding(playerToolbarTopInsets(metrics))
@@ -496,6 +484,14 @@ internal fun PlayerControlsShell(
                         onPartyClick = onPartyClick,
                         partyActive = partyActive,
                         onPictureInPictureClick = onPictureInPictureClick,
+                        isLocked = isLocked,
+                        onLockToggle = onLockToggle,
+                        onCastClick = onCastClick,
+                        isCasting = isCasting,
+                        onOrientationToggleClick = onOrientationToggleClick,
+                        isPortraitPlayback = isPortraitPlayback,
+                        randomNextEpisodeMode = randomNextEpisodeMode,
+                        onRandomNextEpisodeModeToggle = onRandomNextEpisodeModeToggle,
                         onInteraction = onInteraction,
                     )
                 }
