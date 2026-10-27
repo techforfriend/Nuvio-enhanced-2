@@ -389,8 +389,6 @@ internal fun PlayerControlsShell(
                     onQualityClick = onQualityClick,
                     seekPreview = seekPreview,
                     onTimelineTouchChange = onTimelineTouchChange,
-                    onPartyClick = onPartyClick,
-                    partyActive = partyActive,
                     onPictureInPictureClick = onPictureInPictureClick,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -955,8 +953,6 @@ private fun ProgressControls(
     onQualityClick: (() -> Unit)? = null,
     seekPreview: SeekPreviewController? = null,
     onTimelineTouchChange: (Boolean) -> Unit = {},
-    onPartyClick: (() -> Unit)? = null,
-    partyActive: Boolean = false,
     onPictureInPictureClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -1049,14 +1045,6 @@ private fun ProgressControls(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (onPartyClick != null && !enhancedSettings.hidePlayerWatchParty) {
-                        PlayerActionPillButton(
-                            label = stringResource(Res.string.party_title),
-                            icon = Icons.Rounded.Groups,
-                            tint = if (partyActive) MaterialTheme.colorScheme.primary else Color.White,
-                            onClick = onPartyClick,
-                        )
-                    }
                     if (onPictureInPictureClick != null && !enhancedSettings.hidePlayerPip) {
                         PlayerActionPillButton(
                             label = stringResource(Res.string.compose_player_picture_in_picture),
