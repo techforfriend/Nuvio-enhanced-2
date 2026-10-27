@@ -99,7 +99,7 @@ internal fun PlayerToolbar(
                 description = stringResource(
                     if (isLocked) Res.string.compose_player_unlock_controls else Res.string.compose_player_lock_controls,
                 ),
-                icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
+                icon = if (isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
                 onClick = onLockToggle,
             )
         }
