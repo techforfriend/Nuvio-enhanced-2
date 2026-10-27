@@ -77,8 +77,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.material.icons.automirrored.rounded.Toc
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -205,7 +203,6 @@ internal fun PlayerControlsShell(
             onSeekForward = onSeekForward,
             onScrubChange = onScrubChange,
             onScrubFinished = onScrubFinished,
-            // Fork: these are optional on the shell, required by the fold layout.
             onSubtitleClick = onSubtitleClick ?: {},
             onAudioClick = onAudioClick ?: {},
             onSourcesClick = onSourcesClick,
@@ -971,8 +968,6 @@ private fun ProgressControls(
             showTimeRow = false,
             modifier = Modifier.offset(y = (-13).dp).padding(bottom = 8.dp),
         )
-        // Legacy bottom bar: time pills on the bar's outer edges (lined up with the seek bar's
-        // ends and the pill's top edge), actions in the middle.
         Box(modifier = Modifier.fillMaxWidth()) {
             TimePill(
                 text = formatPlaybackTime(displayedPositionMs),
@@ -1002,7 +997,6 @@ private fun ProgressControls(
                         onClick = onRuntimeClick,
                     ),
             )
-            // Legacy bottom bar: same compact pill as before, now liquid glass.
             Surface(
                 color = Color.Transparent,
                 shape = RoundedCornerShape(24.dp),

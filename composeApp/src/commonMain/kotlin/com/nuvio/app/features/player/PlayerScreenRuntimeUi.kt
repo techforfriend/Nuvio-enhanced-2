@@ -218,8 +218,6 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         }
     }
 
-    // Compose only delivers key events to the focused subtree, and overlays take focus while they
-    // are open, so focus is re-requested whenever the last one closes.
     val keyboardFocusRequester = remember { FocusRequester() }
     val keyboardShortcutsEnabled = remember {
         derivedStateOf { !isAnyOverlayVisible && !playerControlsLocked && !isMiniPresentation }
@@ -392,6 +390,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
             RenderPlayerModals()
             RenderParty(runtime = runtime)
         }
+        }
     }
 }
 
@@ -419,8 +418,6 @@ private fun PlayerScreenRuntime.currentInitialPositionRequestKey(): String? {
 }
 
 @Composable
-// Fork: displayedPositionMs is read inside the controls (not passed from the screen) so a
-// position tick does not recompose the whole player screen.
 private fun PlayerScreenRuntime.RenderPlayerControls(
     isEpisode: Boolean,
     folded: Boolean,

@@ -1915,8 +1915,6 @@ private data class Quadruple<A, B, C, D>(
 
 @Serializable
 private data class TmdbDetailsResponse(
-    @SerialName("original_title") val originalTitle: String? = null,
-    @SerialName("original_name") val originalName: String? = null,
     val title: String? = null,
     val name: String? = null,
     val overview: String? = null,
