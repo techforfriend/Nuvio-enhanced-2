@@ -1389,7 +1389,7 @@ internal fun LockedPlayerOverlay(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.LockOpen,
+                    imageVector = Icons.Rounded.Lock,
                     contentDescription = stringResource(Res.string.compose_player_unlock_controls),
                     tint = Color.White,
                     modifier = Modifier.size(34.dp),

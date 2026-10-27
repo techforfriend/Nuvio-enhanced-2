@@ -83,6 +83,11 @@ internal fun GestureFeedbackPill(
     feedback: GestureFeedbackState,
     modifier: Modifier = Modifier,
 ) {
+    // Legacy pill had no boosted-volume colour: volume above 100% showed
+    // white like normal volume, while the default side bar showed red.
+    // Match the default bar: boosted volume is red in both players.
+    val isBoostedVolume = (feedback.icon == GestureFeedbackIcon.Volume) &&
+        (feedback.level ?: 0f) > 1.001f
     val backgroundColor = if (feedback.isDanger) {
         Color(0xFF5D1F1F).copy(alpha = 0.88f)
     } else {
@@ -90,6 +95,8 @@ internal fun GestureFeedbackPill(
     }
     val iconBackgroundColor = if (feedback.isDanger) {
         Color(0xFFFF8A80).copy(alpha = 0.22f)
+    } else if (isBoostedVolume) {
+        Color(0xFFFF5252).copy(alpha = 0.22f)
     } else {
         Color.White.copy(alpha = 0.15f)
     }
@@ -101,7 +108,7 @@ internal fun GestureFeedbackPill(
         GestureFeedbackIcon.SeekForward -> Icons.Rounded.FastForward
         GestureFeedbackIcon.SeekBackward -> Icons.Rounded.FastRewind
     }
-    val iconTint = if (feedback.isDanger) Color(0xFFFFC1C1) else Color.White
+    val iconTint = if (feedback.isDanger) Color(0xFFFFC1C1) else if (isBoostedVolume) Color(0xFFFF5252) else Color.White
     val messageText = feedback.messageRes?.let { resource ->
         stringResource(resource, *feedback.messageArgs.toTypedArray())
     } ?: feedback.message.orEmpty()
@@ -140,8 +147,8 @@ internal fun GestureFeedbackPill(
         }
         Text(
             text = messageText,
-            style = MaterialTheme.nuvioTypeScale.bodyLg.copy(fontWeight = FontWeight.SemiBold),
-            color = Color.White,
+            style = MaterialTheme.nuvioTypeScale.bodyLg.copy(fontWeight = if (isBoostedVolume) FontWeight.Bold else FontWeight.SemiBold),
+            color = if (isBoostedVolume) Color(0xFFFF5252) else Color.White,
         )
         secondaryMessageText?.let { secondaryMessage ->
             Text(
