@@ -66,7 +66,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.build.TrailerPlaybackMode
-import com.nuvio.app.core.diagnostics.CrashDiagnostics
 import com.nuvio.app.features.livetv.LiveTvRepository
 import com.nuvio.app.core.sync.ProfileSettingsSync
 import com.nuvio.app.core.ui.NuvioToastController
@@ -137,9 +136,6 @@ private fun NuvioEnhancedSettingsPageContent(
         PlayerSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
     val externalFolderState by DownloadsExternalFolderPlatform.state.collectAsStateWithLifecycle()
-    val lastCrashReport by remember {
-        CrashDiagnostics.lastReport
-    }.collectAsStateWithLifecycle()
     val clipboardManager = LocalClipboardManager.current
     val uriHandler = LocalUriHandler.current
     var backupPayload by remember { mutableStateOf<String?>(null) }
@@ -172,8 +168,6 @@ private fun NuvioEnhancedSettingsPageContent(
     val backupExportFailedMessage = stringResource(Res.string.nuvio_enhanced_toast_backup_export_failed)
     val backupImportFailedMessage = stringResource(Res.string.nuvio_enhanced_toast_backup_import_failed)
     val backupCopiedMessage = stringResource(Res.string.nuvio_enhanced_toast_backup_copied)
-    val crashCopiedMessage = stringResource(Res.string.nuvio_enhanced_toast_crash_copied)
-    val diagnosticsCopiedMessage = stringResource(Res.string.nuvio_enhanced_toast_diagnostics_copied)
     val externalFolderFailedMessage = stringResource(Res.string.nuvio_enhanced_external_folder_failed)
     val homeHeroVideoPreviewSupported = AppFeaturePolicy.heroTrailerPlaybackSupported &&
         AppFeaturePolicy.trailerPlaybackMode == TrailerPlaybackMode.IN_APP
@@ -1125,46 +1119,6 @@ private fun NuvioEnhancedSettingsPageContent(
         }
 
         }
-        // Diagnostics is intentionally outside the category blocks above:
-        // it was previously only under System, so users on Core/Player/Home
-        // never saw it. It must be reachable from every category.
-        if (CrashDiagnostics.reportsSupported) {
-            SettingsSection(
-                title = stringResource(Res.string.nuvio_enhanced_section_diagnostics),
-                isTablet = isTablet,
-            ) {
-                SettingsGroup(isTablet = isTablet) {
-                    SettingsNavigationRow(
-                        title = stringResource(Res.string.nuvio_enhanced_copy_diagnostics_title),
-                        description = stringResource(Res.string.nuvio_enhanced_copy_diagnostics_desc),
-                        icon = Icons.Rounded.ContentCopy,
-                        isTablet = isTablet,
-                        onClick = {
-                            clipboardManager.setText(AnnotatedString(CrashDiagnostics.currentReport()))
-                            NuvioToastController.show(diagnosticsCopiedMessage)
-                        },
-                    )
-                    SettingsGroupDivider(isTablet = isTablet)
-                    SettingsNavigationRow(
-                        title = stringResource(Res.string.nuvio_enhanced_copy_last_crash_title),
-                        description = lastCrashReport?.let { report ->
-                            listOf(report.contextSummary, report.summary)
-                                .filter(String::isNotBlank)
-                                .joinToString("\n")
-                        } ?: stringResource(Res.string.nuvio_enhanced_copy_last_crash_empty_desc),
-                        icon = Icons.Rounded.ContentCopy,
-                        enabled = lastCrashReport != null,
-                        isTablet = isTablet,
-                        onClick = {
-                            val report = lastCrashReport ?: return@SettingsNavigationRow
-                            clipboardManager.setText(AnnotatedString(report.details))
-                            NuvioToastController.show(crashCopiedMessage)
-                        },
-                    )
-                }
-            }
-        }
-
     }
 
     backupPayload?.let { payload ->
