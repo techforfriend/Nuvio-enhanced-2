@@ -94,6 +94,7 @@ internal class SidecarSubtitleController(
         headers: Map<String, String> = emptyMap(),
         useLibass: Boolean = false,
         rawBodyLoader: (suspend () -> String)? = null,
+        onFailure: (() -> Unit)? = null,
     ): Boolean {
         if (!canAttachAddonSubtitleViaSidecar(url, useLibass)) return false
 
@@ -130,7 +131,7 @@ internal class SidecarSubtitleController(
                 if (parseResult.cues.isEmpty()) {
                     Log.w(
                         SIDECAR_TAG,
-                        "Sidecar subtitle parse empty for url=$url urlMime=$urlMimeHint sniffed=$resolvedMime (buffer preserved; no media reload)"
+                        "Sidecar subtitle parse empty for url=$url urlMime=$urlMimeHint sniffed=$resolvedMime (buffer preserved; checking fallback)"
                     )
                     activeSidecarSubtitleKey = null
                     activeSidecarGeneration = 0L
@@ -139,6 +140,7 @@ internal class SidecarSubtitleController(
                         view.setTag(R.id.player_view_sidecar_generation_tag, null)
                         view.setCues(emptyList())
                     }
+                    onFailure?.invoke()
                     return@launch
                 }
 
@@ -158,7 +160,7 @@ internal class SidecarSubtitleController(
                 if (!isCurrent()) return@launch
                 Log.w(
                     SIDECAR_TAG,
-                    "Sidecar subtitle failed url=$url: ${e.message} (buffer preserved; no media reload)"
+                    "Sidecar subtitle failed url=$url: ${e.message} (buffer preserved; checking fallback)"
                 )
                 activeSidecarSubtitleKey = null
                 activeSidecarGeneration = 0L
@@ -167,6 +169,7 @@ internal class SidecarSubtitleController(
                     view.setTag(R.id.player_view_sidecar_generation_tag, null)
                     view.setCues(emptyList())
                 }
+                onFailure?.invoke()
             }
         }
         return true

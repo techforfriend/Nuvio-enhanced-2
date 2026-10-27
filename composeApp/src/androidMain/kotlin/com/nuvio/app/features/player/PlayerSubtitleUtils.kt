@@ -25,10 +25,14 @@ internal object PlayerSubtitleUtils {
             .lowercase()
 
         return when {
-            normalizedPath.endsWith(".srt") -> MimeTypes.APPLICATION_SUBRIP
-            normalizedPath.endsWith(".vtt") || normalizedPath.endsWith(".webvtt") -> MimeTypes.TEXT_VTT
-            normalizedPath.endsWith(".ass") || normalizedPath.endsWith(".ssa") -> MimeTypes.TEXT_SSA
-            normalizedPath.endsWith(".ttml") || normalizedPath.endsWith(".dfxp") -> MimeTypes.APPLICATION_TTML
+            normalizedPath.endsWith(".srt") || normalizedPath.endsWith(".srt.gz") -> MimeTypes.APPLICATION_SUBRIP
+            normalizedPath.endsWith(".vtt") || normalizedPath.endsWith(".webvtt") ||
+                normalizedPath.endsWith(".vtt.gz") || normalizedPath.endsWith(".webvtt.gz") -> MimeTypes.TEXT_VTT
+            normalizedPath.endsWith(".ass") || normalizedPath.endsWith(".ssa") ||
+                normalizedPath.endsWith(".ass.gz") || normalizedPath.endsWith(".ssa.gz") -> MimeTypes.TEXT_SSA
+            normalizedPath.endsWith(".ttml") || normalizedPath.endsWith(".dfxp") ||
+                normalizedPath.endsWith(".ttml.gz") || normalizedPath.endsWith(".dfxp.gz") -> MimeTypes.APPLICATION_TTML
+            normalizedPath.endsWith(".gz") -> MimeTypes.APPLICATION_SUBRIP
             else -> MimeTypes.APPLICATION_SUBRIP
         }
     }

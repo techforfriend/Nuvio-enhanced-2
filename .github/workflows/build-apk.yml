@@ -55,33 +55,42 @@ jobs:
           find androidApp/build/outputs/apk/ -name "*.apk" -exec cp {} build-apks/ \;
           ls -la build-apks/
 
-      - name: Publish GitHub Testing Release
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.4-beta.5
-          name: "Nuvio Enhanced v0.6.4-beta.5"
+          tag_name: v0.6.5
+          name: "Nuvio Enhanced v0.6.5"
           body: |
-            ## What's New in v0.6.4-beta.5
-            **by RAJA JI**
+            ## What's New in v0.6.5
+            **Nuvio Enhanced Official Release**
 
-            ### 🎯 Out-of-the-Box Tracking Accounts Fix:
-            - **Trakt Sync & Scrobble:** Pre-configured with verified client credentials. Seamlessly connect via Device Code (`https://auth.trakt.tv/activate`) or browser OAuth. Watch progress, scrobble, and continue watching sync are fully operational without "Missing credentials" errors.
-            - **SIMKL Integration:** Pre-configured with verified SIMKL Client ID. Instant PIN authorization (`https://simkl.com/pin`) and complete sync for Anime, TV Shows, and Movies.
-            - **MDBList Account Sync:** Pre-configured with dedicated Device Code authorization (`https://mdblist.com/oauth/device/`) for automated watch progress and personal library lists sync.
-            - **AniList & WeTrakr:** Verified 100% operational out of the box with complete anime ID mappings and tracking.
-            - **IntroDB Skipping:** Built-in IntroDB API endpoint configured for automated anime and series intro/outro skips.
+            ### 📺 Live TV Navigation Toggle
+            - **Direct ON/OFF Toggle:** Added a direct toggle in Live TV settings to easily show or hide the Live TV tab in bottom navigation at any time, regardless of whether a playlist is configured.
 
-            ### 🧹 Complete Vega Purge & UI Cleanup:
-            - **Vega Providers Completely Removed:** Fully purged all Vega provider scrapers, models, runtime adapters, and legacy bridge files from the codebase.
-            - **Clean & Focused UI:** Removed Vega providers option box, Beta pills, and Vega catalogs from the Home screen and Settings.
-            - **Pure CloudStream (CS3) Engine:** Streamlined extension handling strictly around CloudStream providers and Stremio addons for reduced resource usage and maximum stability.
+            ### 💬 Subtitle Streaming Fixes
+            - **GZIP Stream Decompression:** Fixed issues with compressed subtitles (`.srt.gz`, `.vtt.gz`, `.gz`) by adding automatic GZIP detection and stream decompression.
+            - **Sanitized CDN Headers:** Corrected HTTP `Accept` headers to prevent CDN servers from rejecting subtitle requests.
+            - **Automated Player Fallback:** If the sidecar cue parser produces zero cues, the player automatically reloads via media item configuration so subtitles never fail silently.
 
-            ### ⚡ Performance & Playback Enhancements:
-            - Instant catalog rendering without dead extension delays.
-            - Streamlined player pipeline for smooth buffer-free streaming across all active providers.
+            ### 📖 Nuvio Read Overview & Clean Details View
+            - **Interactive Synopsis & Ratings:** Ported the "Nuvio Read" overview card from `AKRusso/NuvioMobile-Enhanced`, featuring story synopsis, quick metadata badges, and an interactive ratings sheet.
+            - **Clean Details Page:** Removed duplicate Director and Writer text sections from the details view, keeping cast and crew photos clean and uncluttered.
+            - **Nuvio Read Toggle:** Enable or disable Nuvio Read anytime from Settings → Nuvio Enhanced.
+
+            ### 🎮 Bottom-Left Player Controls
+            - **Reorganized Player Layout:** Relocated Watch Party, Picture-in-Picture (PiP), HLS Video Quality selector, and Subtitles to the bottom-left area of the player overlay for quick, one-handed access.
+
+            ### 📋 Unified What's New Section
+            - **Consolidated Overview:** Replaced fragmented changelog sections in Settings with a single, unified box featuring both custom additions and core upstream improvements by official developer Luqman.
+
+            ### ⚡ CloudStream 3 & Pure Engine
+            - **Pure CS3 Architecture:** Purged all legacy Vega provider components and dependencies for optimized memory usage and rock-solid stability.
+            - **Default Verified Tracking:** Trakt.tv, SIMKL, and MDBList pre-configured with verified credentials for instant linking without API setup.
+            - **Hardware 200% Volume Boost:** Loudness enhancement up to 200% with audio HUD indicator.
+            - **Full IPTV Suite:** Support for M3U playlists, Xtream Codes API, Stalker Portal, and XMLTV EPG guides.
           draft: false
-          prerelease: true
+          prerelease: false
           files: build-apks/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

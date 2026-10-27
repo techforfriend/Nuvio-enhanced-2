@@ -189,12 +189,17 @@ private fun readResponseBodyLimited(body: ResponseBody?, maxBytes: Int): String 
 
 private fun readResponseBody(body: ResponseBody?): String {
     if (body == null) return ""
-    val bytes = body.bytes()
+    var bytes = body.bytes()
+    if (bytes.size >= 2 && (bytes[0].toInt() and 0xFF) == 0x1F && (bytes[1].toInt() and 0xFF) == 0x8B) {
+        bytes = runCatching {
+            java.util.zip.GZIPInputStream(java.io.ByteArrayInputStream(bytes)).use { it.readBytes() }
+        }.getOrDefault(bytes)
+    }
     return runCatching {
+        com.nuvio.app.features.autosync.SubtitleCharsetDetector.decode(bytes)
+    }.getOrElse {
         val charset = body.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
         String(bytes, charset)
-    }.getOrElse {
-        String(bytes, Charsets.UTF_8)
     }
 }
 
@@ -289,12 +294,18 @@ actual suspend fun httpPostJson(url: String, body: String): String =
 actual suspend fun httpGetTextWithHeaders(
     url: String,
     headers: Map<String, String>,
-): String =
-    executeTextRequest(
+): String {
+    val effectiveHeaders = if (headers.keys.none { it.equals("Accept", ignoreCase = true) }) {
+        mapOf("Accept" to "*/*") + headers
+    } else {
+        headers
+    }
+    return executeTextRequest(
         method = "GET",
         url = url,
-        headers = mapOf("Accept" to "application/json") + headers,
+        headers = effectiveHeaders,
     )
+}
 
 actual suspend fun httpPostJsonWithHeaders(
     url: String,

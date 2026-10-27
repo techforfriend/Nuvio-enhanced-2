@@ -1,9 +1,8 @@
 package com.nuvio.app.features.whatsnew
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -11,11 +10,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Refresh
@@ -36,14 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.collapse
-import androidx.compose.ui.semantics.expand
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -52,7 +43,6 @@ import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.build.AppVersionConfig
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import com.nuvio.app.core.ui.NuvioPrimaryButton
-import com.nuvio.app.core.ui.NuvioSectionLabel
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioSurfaceCard
@@ -64,8 +54,6 @@ import com.nuvio.app.features.updater.UpdateChannel
 import com.nuvio.app.features.updater.UpdatePreferences
 import com.nuvio.app.features.updater.VersionUtils
 import nuvio.composeapp.generated.resources.Res
-import nuvio.composeapp.generated.resources.action_collapse
-import nuvio.composeapp.generated.resources.action_expand
 import nuvio.composeapp.generated.resources.compose_settings_page_whats_new
 import nuvio.composeapp.generated.resources.updates_channel_beta
 import nuvio.composeapp.generated.resources.updates_channel_stable
@@ -89,11 +77,9 @@ import nuvio.composeapp.generated.resources.whats_new_last_checked_month
 import nuvio.composeapp.generated.resources.whats_new_last_checked_months
 import nuvio.composeapp.generated.resources.whats_new_last_checked_year
 import nuvio.composeapp.generated.resources.whats_new_last_checked_years
-import nuvio.composeapp.generated.resources.whats_new_latest_release
 import nuvio.composeapp.generated.resources.whats_new_load_failed
 import nuvio.composeapp.generated.resources.whats_new_no_release_notes
 import nuvio.composeapp.generated.resources.whats_new_contributor_credit
-import nuvio.composeapp.generated.resources.whats_new_no_releases
 import nuvio.composeapp.generated.resources.whats_new_open_github
 import nuvio.composeapp.generated.resources.whats_new_refresh
 import nuvio.composeapp.generated.resources.whats_new_release_format
@@ -108,10 +94,6 @@ import nuvio.composeapp.generated.resources.whats_new_status_up_to_date
 import nuvio.composeapp.generated.resources.whats_new_status_up_to_date_all
 import nuvio.composeapp.generated.resources.whats_new_unavailable
 import nuvio.composeapp.generated.resources.whats_new_refresh_failed_cached
-import nuvio.composeapp.generated.resources.whats_new_since_one_release
-import nuvio.composeapp.generated.resources.whats_new_since_releases
-import nuvio.composeapp.generated.resources.whats_new_since_unavailable
-import nuvio.composeapp.generated.resources.whats_new_recent_releases
 import org.jetbrains.compose.resources.stringResource
 
 private const val PREVIEW_NOTE_CHAR_LIMIT = 420
@@ -225,27 +207,19 @@ fun WhatsNewSettingsScreen(onBack: () -> Unit) {
                 }
             }
 
-            LoadState.Error -> item {
-                NuvioSurfaceCard {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(NuvioTokens.Space.s10),
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.whats_new_unavailable),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.nuvio.colors.textPrimary,
-                        )
-                        Text(
-                            text = stringResource(Res.string.whats_new_load_failed),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.nuvio.colors.textMuted,
-                        )
-                        NuvioPrimaryButton(
-                            text = stringResource(Res.string.whats_new_refresh),
-                            onClick = { refreshKey++ },
-                        )
-                    }
+            LoadState.Error -> {
+                item {
+                    CurrentVersionCard(
+                        version = AppVersionConfig.VERSION_NAME,
+                        buildChannelLabel = buildChannelLabel,
+                        viewingChannelLabel = channelLabel,
+                        showViewingChannel = false,
+                        lastCheckedLabel = stringResource(Res.string.whats_new_load_failed),
+                        status = stringResource(Res.string.whats_new_unavailable),
+                    )
+                }
+                item(key = "unified-whats-new-box-error") {
+                    UnifiedWhatsNewBox()
                 }
             }
 
@@ -260,26 +234,11 @@ fun WhatsNewSettingsScreen(onBack: () -> Unit) {
                         showViewingChannel = releaseChannelsEnabled && channel != buildChannel,
                         lastCheckedLabel = lastCheckedLabel(value.content.fetchedAtMillis),
                         status = versionStatus(
-                    snapshot = snapshot,
-                    channelLabel = channelLabel.takeIf { releaseChannelsEnabled },
-                    buildChannel = buildChannel,
-                ),
+                            snapshot = snapshot,
+                            channelLabel = channelLabel.takeIf { releaseChannelsEnabled },
+                            buildChannel = buildChannel,
+                        ),
                     )
-                }
-
-                if (!snapshot.hasCompleteSinceVersion &&
-                    snapshot.releases.any {
-                        VersionUtils.isRemoteNewer(it.version, snapshot.currentVersion)
-                    }
-                ) {
-                    item {
-                        Text(
-                            text = stringResource(Res.string.whats_new_since_unavailable),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.nuvio.colors.textMuted,
-                            modifier = Modifier.padding(horizontal = NuvioTokens.Space.s4),
-                        )
-                    }
                 }
 
                 if (value.content.isStale && !isRefreshing) {
@@ -293,78 +252,10 @@ fun WhatsNewSettingsScreen(onBack: () -> Unit) {
                     }
                 }
 
-                val sinceReleases = snapshot.sinceYourVersion.takeIf {
-                    snapshot.hasCompleteSinceVersion && it.isNotEmpty()
-                }.orEmpty()
-                val sinceVersions = sinceReleases.mapTo(mutableSetOf(), WhatsNewRelease::version)
-
-                if (sinceReleases.isNotEmpty()) {
-                    item {
-                        NuvioSectionLabel(
-                            text = if (sinceReleases.size == 1) {
-                                stringResource(Res.string.whats_new_since_one_release)
-                            } else {
-                                stringResource(
-                                    Res.string.whats_new_since_releases,
-                                    sinceReleases.size,
-                                )
-                            },
-                        )
-                    }
-                    item(key = "latest:" + sinceReleases.first().version) {
-                        ReleaseCard(
-                            release = sinceReleases.first(),
-                            showLatestLabel = false,
-                        )
-                    }
-                    if (sinceReleases.size > 1) {
-                        items(
-                            items = sinceReleases.drop(1),
-                            key = { release -> "since:" + release.version },
-                        ) { release ->
-                            ReleaseHistoryRow(
-                                release = release,
-                            )
-                        }
-                    }
-                } else {
-                    snapshot.releases.firstOrNull()?.let { latest ->
-                        item(key = "latest:" + latest.version) {
-                            ReleaseCard(
-                                release = latest,
-                            )
-                        }
-                    }
-                }
-
-                val earlierReleases = snapshot.releases
-                    .drop(1)
-                    .filterNot { it.version in sinceVersions }
-
-                if (earlierReleases.isNotEmpty()) {
-                    item {
-                        NuvioSectionLabel(
-                            text = stringResource(Res.string.whats_new_recent_releases),
-                        )
-                    }
-                    items(
-                        items = earlierReleases,
-                        key = { release -> release.version },
-                    ) { release ->
-                        ReleaseHistoryRow(
-                            release = release,
-                        )
-                    }
-                }
-
-                if (snapshot.releases.isEmpty()) {
-                    item {
-                        Text(
-                            text = stringResource(Res.string.whats_new_no_releases),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.nuvio.colors.textMuted,
-                        )
-                    }
+                item(key = "unified-whats-new-box") {
+                    UnifiedWhatsNewBox(
+                        releases = snapshot.releases,
+                    )
                 }
             }
         }
@@ -565,13 +456,12 @@ private fun lastCheckedLabel(fetchedAtMillis: Long): String {
     }
 }
 @Composable
-private fun ReleaseCard(
-    release: WhatsNewRelease,
-    showLatestLabel: Boolean = true,
+private fun UnifiedWhatsNewBox(
     modifier: Modifier = Modifier,
+    releases: List<WhatsNewRelease> = emptyList(),
 ) {
-    var expanded by rememberSaveable(release.version) { mutableStateOf(false) }
-    val previewNoteCount = previewNotes(release.notes).size
+    var showGithubChangelog by rememberSaveable { mutableStateOf(false) }
+    val latestReleaseWithNotes = releases.firstOrNull { it.notes.isNotEmpty() }
 
     NuvioSurfaceCard(
         modifier = modifier.animateContentSize(
@@ -584,14 +474,11 @@ private fun ReleaseCard(
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(NuvioTokens.Space.s10),
+            verticalArrangement = Arrangement.spacedBy(NuvioTokens.Space.s12),
         ) {
-            if (showLatestLabel) {
-                NuvioSectionLabel(
-                    text = stringResource(Res.string.whats_new_latest_release),
-                )
-            }
+            // Header
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(NuvioTokens.Space.s8),
             ) {
@@ -601,127 +488,186 @@ private fun ReleaseCard(
                     modifier = Modifier.size(NuvioTokens.Icon.md),
                     tint = MaterialTheme.nuvio.colors.accent,
                 )
-                Text(
-                    text = release.version,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.nuvio.colors.textPrimary,
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "What's New in Nuvio",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.nuvio.colors.textPrimary,
+                    )
+                    Text(
+                        text = "Unified features & improvements overview",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.nuvio.colors.textMuted,
+                    )
+                }
             }
-            release.title.takeUnless { it == release.version }?.let { title ->
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.nuvio.colors.textPrimary,
-                )
-            }
-            releaseDate(release)?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.nuvio.colors.textMuted,
-                )
-            }
-            ReleaseNotes(
-                release = release,
-                expanded = expanded,
-                onToggle = { expanded = !expanded },
-                allowToggle = release.notes.size > previewNoteCount,
-                showGithub = false,
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.nuvio.colors.textMuted.copy(alpha = 0.15f)),
             )
+
+            // Section 1: Nuvio Enhanced
+            Text(
+                text = "✨ Nuvio Enhanced (Features & Fixes)",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.nuvio.colors.accent,
+            )
+
+            UnifiedFeatureItem(
+                title = "Live TV Direct Navigation Toggle",
+                description = "Direct ON/OFF toggle in settings to show or hide the Live TV tab in navigation at any time.",
+            )
+            UnifiedFeatureItem(
+                title = "Subtitle Engine Fixes",
+                description = "Resolved subtitle loading issues: added automatic GZIP decompression (.gz, .srt.gz, .vtt.gz), sanitized CDN Accept headers, and added automatic ExoPlayer reload fallback.",
+            )
+            UnifiedFeatureItem(
+                title = "Nuvio Read Overview & Ratings",
+                description = "Integrated the rich story synopsis card and interactive ratings sheet from AKRusso; removed redundant Director and Writer text sections from details page.",
+            )
+            UnifiedFeatureItem(
+                title = "Reorganized Player Controls",
+                description = "Relocated Watch Party, Picture-in-Picture (PiP), HLS Video Quality selector, and Subtitles to the bottom-left area of the player overlay for easier one-handed access.",
+            )
+            UnifiedFeatureItem(
+                title = "Unified What's New Hub",
+                description = "Replaced fragmented changelog sections with a single, consolidated overview of all custom and upstream updates.",
+            )
+            UnifiedFeatureItem(
+                title = "Pure CS3 Architecture",
+                description = "Purged all legacy Vega provider components and dependencies, delivering a lightweight, stable CloudStream 3 plugin runtime.",
+            )
+            UnifiedFeatureItem(
+                title = "Out-of-the-Box Tracker Sync",
+                description = "Trakt.tv, SIMKL, and MDBList are pre-configured with verified credentials for immediate authorization without manual API keys.",
+            )
+            UnifiedFeatureItem(
+                title = "Digital 200% Volume Boost",
+                description = "Hardware-accelerated loudness enhancement up to 200% with a dedicated amber HUD indicator for low-volume audio tracks.",
+            )
+            UnifiedFeatureItem(
+                title = "IPTV & Live TV Suite",
+                description = "Full Live TV experience with M3U/M3U8 playlists, Xtream Codes API, Stalker Portal, and XMLTV EPG program guide support.",
+            )
+            UnifiedFeatureItem(
+                title = "HSV Theme Engine & Biometrics",
+                description = "Interactive color picker with Hue/Saturation/Value spectrum and fingerprint/biometric security for profiles.",
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.nuvio.colors.textMuted.copy(alpha = 0.15f)),
+            )
+
+            // Section 2: Luqman / Upstream Core
+            Text(
+                text = "🚀 Official Core Features (by Luqman)",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.nuvio.colors.accent,
+            )
+
+            UnifiedFeatureItem(
+                title = "Stremio Addon Ecosystem",
+                description = "Integrated Stremio addon resolver supporting both official and community addons for expansive catalog browsing and streaming.",
+            )
+            UnifiedFeatureItem(
+                title = "Compose Multiplatform UI",
+                description = "Fluid, responsive native user interface engineered for high performance on Android and iOS devices.",
+            )
+            UnifiedFeatureItem(
+                title = "Dual Media Engines (ExoPlayer & MPV)",
+                description = "Hardware-accelerated video decoding with intuitive swipe gestures for volume, brightness, and seek scrubbing.",
+            )
+            UnifiedFeatureItem(
+                title = "Multi-Profile Management",
+                description = "Individual user profiles with separate watch histories, continuous playback, and personalized settings.",
+            )
+            UnifiedFeatureItem(
+                title = "Watch Party & SyncPlay",
+                description = "Host or join synchronized watch rooms to enjoy movies and TV shows together with friends in real time.",
+            )
+            UnifiedFeatureItem(
+                title = "Unified Search & Discovery",
+                description = "Global content search with genre filtering, trending feeds, popular lists, and curated recommendations.",
+            )
+            UnifiedFeatureItem(
+                title = "Automated Intro & Outro Skipping",
+                description = "IntroDB skip integration to automatically detect and skip show opening and closing themes.",
+            )
+
+            if (latestReleaseWithNotes != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(MaterialTheme.nuvio.colors.textMuted.copy(alpha = 0.15f)),
+                )
+
+                TextButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.nuvio.colors.textSecondary,
+                    ),
+                    onClick = { showGithubChangelog = !showGithubChangelog },
+                ) {
+                    Text(
+                        text = if (showGithubChangelog) "Hide GitHub Changelog" else "View GitHub Release Notes (${latestReleaseWithNotes.version})",
+                    )
+                }
+
+                if (showGithubChangelog) {
+                    ReleaseNotes(
+                        release = latestReleaseWithNotes,
+                        expanded = true,
+                        onToggle = {},
+                        allowToggle = false,
+                        showGithub = true,
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun ReleaseHistoryRow(
-    release: WhatsNewRelease,
-    modifier: Modifier = Modifier,
+private fun UnifiedFeatureItem(
+    title: String,
+    description: String,
 ) {
-    var expanded by rememberSaveable(release.version) { mutableStateOf(false) }
-    val expansionLabel = stringResource(
-        if (expanded) Res.string.action_collapse else Res.string.action_expand,
-    )
-    val chevronRotation by animateFloatAsState(
-        targetValue = if (expanded) 90f else 0f,
-        animationSpec = tween(
-            durationMillis = NuvioTokens.Motion.fastMillis,
-            easing = NuvioTokens.Motion.standard,
-        ),
-        label = "release_chevron_rotation",
-    )
-    NuvioSurfaceCard(
-        modifier = modifier.animateContentSize(
-            animationSpec = tween(
-                durationMillis = NuvioTokens.Motion.normalMillis,
-                easing = NuvioTokens.Motion.standard,
-            ),
-        ),
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(NuvioTokens.Space.s8),
     ) {
+        Text(
+            text = "•",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.nuvio.colors.accent,
+        )
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(NuvioTokens.Space.s10),
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClickLabel = expansionLabel) { expanded = !expanded }
-                    .semantics {
-                        role = Role.Button
-                        stateDescription = expansionLabel
-                        if (expanded) {
-                            collapse(label = expansionLabel) {
-                                expanded = false
-                                true
-                            }
-                        } else {
-                            expand(label = expansionLabel) {
-                                expanded = true
-                                true
-                            }
-                        }
-                    },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(NuvioTokens.Space.s12),
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = release.version,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.nuvio.colors.textPrimary,
-                    )
-                    release.title.takeUnless { it == release.version }?.let { title ->
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.nuvio.colors.textMuted,
-                        )
-                    }
-                    releaseDate(release)?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.nuvio.colors.textMuted,
-                        )
-                    }
-                }
-                Icon(
-                    imageVector = Icons.Rounded.ChevronRight,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(NuvioTokens.Icon.md)
-                        .rotate(chevronRotation),
-                    tint = MaterialTheme.nuvio.colors.textMuted,
-                )
-            }
-            if (expanded) {
-                ReleaseNotes(
-                    release = release,
-                    expanded = true,
-                    onToggle = {},
-                    allowToggle = false,
-                    showGithub = false,
-                )
-            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.nuvio.colors.textPrimary,
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.nuvio.colors.textSecondary,
+            )
         }
     }
 }
