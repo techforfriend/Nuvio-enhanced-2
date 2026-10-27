@@ -48,12 +48,14 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.i18n.localizedEpisodeTitle
 import com.nuvio.app.core.ui.accentBrush
@@ -81,6 +83,7 @@ internal fun PlayerTimelineDetails(
     metrics: PlayerLayoutMetrics,
     badges: List<StreamBadge> = emptyList(),
     qualityLabel: String? = null,
+    onHeightChanged: (Dp) -> Unit = {},
 ) {
     val typeScale = MaterialTheme.nuvioTypeScale
     // Screenshot-style title block, default player only (legacy uses
@@ -91,7 +94,9 @@ internal fun PlayerTimelineDetails(
         qualityLabel?.trim()?.takeIf { it.isNotBlank() && !it.equals("Quality", ignoreCase = true) },
     )
     Column(
-        Modifier.padding(horizontal = PlayerTimelineContentInset),
+        Modifier
+            .padding(horizontal = PlayerTimelineContentInset)
+            .onSizeChanged { size -> onHeightChanged(with(LocalDensity.current) { size.height.toDp() }) },
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
