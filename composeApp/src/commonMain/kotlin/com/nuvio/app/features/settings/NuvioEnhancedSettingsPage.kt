@@ -710,6 +710,16 @@ private fun NuvioEnhancedSettingsPageContent(
                         NuvioEnhancedSettingsRepository.setNuvioReadEnabled(it)
                     },
                 )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.nuvio_enhanced_nuvio_read_show_title_description_title),
+                    description = stringResource(Res.string.nuvio_enhanced_nuvio_read_show_title_description_desc),
+                    checked = settings.nuvioReadShowTitleDescription,
+                    isTablet = isTablet,
+                    onCheckedChange = {
+                        NuvioEnhancedSettingsRepository.setNuvioReadShowTitleDescription(it)
+                    },
+                )
             }
         }
         }

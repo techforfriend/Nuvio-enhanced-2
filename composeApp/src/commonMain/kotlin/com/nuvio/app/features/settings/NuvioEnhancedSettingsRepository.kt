@@ -21,6 +21,7 @@ internal data class NuvioEnhancedSettingsUiState(
     val streamSourcePinningEnabled: Boolean = false,
     val backgroundStreamPrefetchEnabled: Boolean = false,
     val nuvioReadEnabled: Boolean = false,
+    val nuvioReadShowTitleDescription: Boolean = true,
     val cinematicDetailHeaderEnabled: Boolean = false,
     val cinematicHeaderContentMode: CinematicHeaderContentMode = CinematicHeaderContentMode.Productions,
     val heroDisplayMode: NuvioHeroDisplayMode = NuvioHeroDisplayMode.Balanced,
@@ -181,6 +182,7 @@ private data class StoredNuvioEnhancedSettings(
     val streamSourcePinningEnabled: Boolean = false,
     val backgroundStreamPrefetchEnabled: Boolean = false,
     val nuvioReadEnabled: Boolean = false,
+    val nuvioReadShowTitleDescription: Boolean = true,
     val cinematicDetailHeaderEnabled: Boolean = false,
     val cinematicHeaderContentMode: CinematicHeaderContentMode = CinematicHeaderContentMode.Productions,
     val heroDisplayMode: NuvioHeroDisplayMode = NuvioHeroDisplayMode.Balanced,
@@ -349,6 +351,10 @@ internal object NuvioEnhancedSettingsRepository {
             nuvioReadEnabled = enabled,
             cinematicDetailHeaderEnabled = if (enabled) false else cinematicDetailHeaderEnabled,
         )
+    }
+
+    fun setNuvioReadShowTitleDescription(enabled: Boolean) = update {
+        copy(nuvioReadShowTitleDescription = enabled)
     }
 
     fun setCinematicDetailHeaderEnabled(enabled: Boolean) = update {
@@ -561,6 +567,7 @@ internal object NuvioEnhancedSettingsRepository {
             streamSourcePinningEnabled = stored.streamSourcePinningEnabled,
             backgroundStreamPrefetchEnabled = stored.backgroundStreamPrefetchEnabled,
             nuvioReadEnabled = stored.nuvioReadEnabled,
+            nuvioReadShowTitleDescription = stored.nuvioReadShowTitleDescription,
             cinematicDetailHeaderEnabled = stored.cinematicDetailHeaderEnabled,
             cinematicHeaderContentMode = stored.cinematicHeaderContentMode,
             heroDisplayMode = stored.heroDisplayMode,
