@@ -415,6 +415,7 @@ internal fun PlayerControlsShell(
                             releaseInfo = releaseInfo,
                             metrics = metrics,
                             badges = badges,
+                            qualityLabel = qualityLabel,
                         )
                     }
                     Row(
