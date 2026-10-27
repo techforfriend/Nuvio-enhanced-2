@@ -197,13 +197,30 @@ internal fun PlayerControlsShell(
 ) {
     val density = LocalDensity.current
     var timelineHeight by remember { mutableStateOf(0.dp) }
+    var titleDetailsHeight by remember { mutableStateOf(0.dp) }
     var sourceLineHeight by remember { mutableStateOf(0.dp) }
     val glassActive = isAmbientLiquidGlassActive()
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val centerControlHeight = metrics.playIconSize + maxOf(metrics.playButtonPadding, metrics.sideButtonPadding) * 2
+        // The screenshot-style title block (6f4f779) made the bottom column
+        // taller, and this lift formula grows with that height, so it pushed
+        // the center controls up from their original position. Count the
+        // title block at its original height instead, so the center controls
+        // stay where they were before, whatever the new title size is.
+        val originalTitleDetailsHeight = with(density) {
+            metrics.titleSize.toDp() * 1.16f +
+                (if (seasonNumber != null && episodeNumber != null) metrics.episodeInfoSize.toDp() * 1.3f else 0.dp) +
+                (if (badges.isNotEmpty()) 25.dp else 0.dp) +
+                (if (!releaseInfo.isNullOrBlank()) metrics.metadataSize.toDp() * 1.25f else 0.dp)
+        }
+        val effectiveTimelineHeight = if (titleDetailsHeight > 0.dp) {
+            timelineHeight - titleDetailsHeight + originalTitleDetailsHeight
+        } else {
+            timelineHeight
+        }
         val centerBottomPadding = if (useLegacyLayout) metrics.centerLift else maxOf(
             metrics.centerLift,
-            (timelineHeight - sourceLineHeight) * 2 + centerControlHeight + 16.dp - maxHeight,
+            (effectiveTimelineHeight - sourceLineHeight) * 2 + centerControlHeight + 16.dp - maxHeight,
         )
         Box(
             modifier = Modifier
@@ -416,6 +433,7 @@ internal fun PlayerControlsShell(
                             metrics = metrics,
                             badges = badges,
                             qualityLabel = qualityLabel,
+                            onHeightChanged = { titleDetailsHeight = it },
                         )
                     }
                     Row(
