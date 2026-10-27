@@ -286,6 +286,8 @@ internal fun PlayerControlsShell(
             } else {
                 if (showPlaybackControls) {
                     PlayerToolbar(
+                        isLocked = isLocked,
+                        onLockToggle = onLockToggle,
                         onBack = onBack,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -484,8 +486,6 @@ internal fun PlayerControlsShell(
                         onPartyClick = onPartyClick,
                         partyActive = partyActive,
                         onPictureInPictureClick = onPictureInPictureClick,
-                        isLocked = isLocked,
-                        onLockToggle = onLockToggle,
                         onCastClick = onCastClick,
                         isCasting = isCasting,
                         onOrientationToggleClick = onOrientationToggleClick,
