@@ -5,19 +5,23 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.horizontalScroll
+import androidx.compose.foundation.layout.rememberScrollState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -76,20 +80,64 @@ internal fun PlayerTimelineDetails(
     releaseInfo: String?,
     metrics: PlayerLayoutMetrics,
     badges: List<StreamBadge> = emptyList(),
+    qualityLabel: String? = null,
 ) {
     val typeScale = MaterialTheme.nuvioTypeScale
-    Column(Modifier.padding(horizontal = PlayerTimelineContentInset)) {
+    // Screenshot-style title block, default player only (legacy uses
+    // ProgressControls and does not call this). Order matches the
+    // screenshot: large title, badge pills, then the meta line, with
+    // the seekbar (PlayerTimeline) directly underneath in the shell.
+    val formatPills = listOfNotNull(
+        qualityLabel?.trim()?.takeIf { it.isNotBlank() && !it.equals("Quality", ignoreCase = true) },
+    )
+    Column(
+        Modifier.padding(horizontal = PlayerTimelineContentInset),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         Text(
             text = title,
             style = typeScale.titleLg.copy(
-                fontSize = metrics.titleSize,
-                lineHeight = metrics.titleSize * 1.16f,
-                fontWeight = FontWeight.SemiBold,
+                fontSize = metrics.titleSize * 1.3f,
+                lineHeight = metrics.titleSize * 1.3f * 1.12f,
+                fontWeight = FontWeight.ExtraBold,
             ),
             color = Color.White,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+        if (formatPills.isNotEmpty() || badges.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                formatPills.forEach { pill ->
+                    Box(
+                        modifier = Modifier
+                            .border(
+                                width = 1.dp,
+                                color = Color.White.copy(alpha = 0.45f),
+                                shape = RoundedCornerShape(999.dp),
+                            )
+                            .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(999.dp))
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = pill,
+                            style = typeScale.labelMd.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White,
+                            maxLines = 1,
+                        )
+                    }
+                }
+                if (badges.isNotEmpty()) {
+                    PlayerBadges(badges = badges)
+                }
+            }
+        }
         if (seasonNumber != null && episodeNumber != null) {
             val episodeCode = stringResource(Res.string.compose_player_episode_code_full, seasonNumber, episodeNumber)
             val displayEpisodeTitle = localizedEpisodeTitle(episodeTitle, episodeNumber)
@@ -101,14 +149,11 @@ internal fun PlayerTimelineDetails(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        if (badges.isNotEmpty()) {
-            PlayerBadges(badges = badges, modifier = Modifier.padding(vertical = 4.dp))
-        }
         if (!releaseInfo.isNullOrBlank()) {
             Text(
                 text = releaseInfo,
-                style = typeScale.labelSm.copy(fontSize = metrics.metadataSize),
-                color = Color.White.copy(alpha = 0.68f),
+                style = typeScale.bodyMd.copy(fontSize = metrics.metadataSize),
+                color = Color.White.copy(alpha = 0.85f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
