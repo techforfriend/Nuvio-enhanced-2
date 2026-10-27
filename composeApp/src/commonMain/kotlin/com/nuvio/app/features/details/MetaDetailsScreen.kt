@@ -2531,6 +2531,20 @@ private fun ConfiguredMetaSections(
                     showOverallRatings = settings.showOverallRatings,
                     isMdbListActive = isMdbListActive,
                     horizontalScrollPadding = horizontalScrollPadding,
+                    episodeRatingsVisibility = metaScreenSettingsUiState.episodeRatingsVisibility,
+                    isEpisodeWatched = { episode ->
+                        isEpisodeWatchedForActions(
+                            meta = meta,
+                            episode = episode,
+                            watchedKeys = watchedUiState.watchedKeys,
+                            progressByVideoId = progressByVideoId,
+                        )
+                    },
+                    onEpisodeClick = onEpisodePlayClick,
+                    onEpisodeLongPress = { video ->
+                        selectedEpisodeZoomAnchor = null
+                        selectedEpisodeForActions = video
+                    },
                 )
             }
             MetaScreenSectionKey.PRODUCTION -> {

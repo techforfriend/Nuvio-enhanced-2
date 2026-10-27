@@ -30,7 +30,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -56,7 +60,9 @@ import com.nuvio.app.core.ui.nuvioKeyboardFocusIndicator
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.settings.NuvioEnhancedSettingsRepository
+import com.nuvio.app.features.details.EpisodeRatingsVisibility
 import com.nuvio.app.features.details.MetaDetails
+import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.details.MetaExternalRating
 import com.nuvio.app.features.details.formatRuntimeForDisplay
 import com.nuvio.app.features.details.formatMetaReleaseLineForDetails
@@ -97,6 +103,10 @@ fun DetailMetaInfo(
     showNuvioRead: Boolean? = null,
     episodeImdbRatings: Map<Pair<Int, Int>, Double> = emptyMap(),
     episodeTmdbRatings: Map<Pair<Int, Int>, Double> = emptyMap(),
+    episodeRatingsVisibility: EpisodeRatingsVisibility? = null,
+    isEpisodeWatched: ((MetaVideo) -> Boolean)? = null,
+    onEpisodeClick: ((MetaVideo) -> Unit)? = null,
+    onEpisodeLongPress: ((MetaVideo) -> Unit)? = null,
 ) {
     val enhancedSettings by remember {
         NuvioEnhancedSettingsRepository.ensureLoaded()
@@ -170,9 +180,15 @@ fun DetailMetaInfo(
             !meta.description.isNullOrBlank()
         if (isNuvioReadActive && hasPremiumOverview) {
             DetailPremiumOverviewCard(
+                meta = meta,
                 pills = overviewPills,
                 ratings = meta.externalRatings,
                 description = meta.description,
+                showTitleDescription = enhancedSettings.nuvioReadShowTitleDescription,
+                episodeRatingsVisibility = episodeRatingsVisibility,
+                isEpisodeWatched = isEpisodeWatched,
+                onEpisodeClick = onEpisodeClick,
+                onEpisodeLongPress = onEpisodeLongPress,
                 onRatingsClick = { showRatings = true },
             )
         } else {
@@ -200,11 +216,26 @@ fun DetailMetaInfo(
 
 @Composable
 private fun DetailPremiumOverviewCard(
+    meta: MetaDetails,
     pills: List<String>,
     ratings: List<MetaExternalRating>,
     description: String?,
+    showTitleDescription: Boolean = true,
+    episodeRatingsVisibility: EpisodeRatingsVisibility? = null,
+    isEpisodeWatched: ((MetaVideo) -> Boolean)? = null,
+    onEpisodeClick: ((MetaVideo) -> Unit)? = null,
+    onEpisodeLongPress: ((MetaVideo) -> Unit)? = null,
     onRatingsClick: () -> Unit,
 ) {
+    var ratingMapExpanded by remember { mutableStateOf(false) }
+    // On-demand map: show the arrow row only when a map actually exists
+    // and episode ratings are not hidden. It is deliberately NOT gated by
+    // the global showRatingMap toggle, so the map stays hidden until the
+    // user taps the arrow, instead of loading on every details page.
+    val showRatingMapRow = episodeRatingsVisibility != null &&
+        episodeRatingsVisibility.showRatings &&
+        isEpisodeWatched != null && onEpisodeClick != null && onEpisodeLongPress != null &&
+        meta.hasEpisodeRatingMap()
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
@@ -224,32 +255,34 @@ private fun DetailPremiumOverviewCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(width = 4.dp, height = 42.dp)
-                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(999.dp)),
-                )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
+            if (showTitleDescription) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = stringResource(Res.string.details_premium_overview_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.SemiBold,
+                    Box(
+                        modifier = Modifier
+                            .size(width = 4.dp, height = 42.dp)
+                            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(999.dp)),
                     )
-                    Text(
-                        text = stringResource(Res.string.details_premium_overview_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = 18.sp,
-                    )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.details_premium_overview_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = stringResource(Res.string.details_premium_overview_subtitle),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = 18.sp,
+                        )
+                    }
                 }
             }
 
@@ -277,8 +310,42 @@ private fun DetailPremiumOverviewCard(
                 )
             }
 
-            description?.trim()?.takeIf { it.isNotBlank() }?.let { cleanDescription ->
-                DetailPremiumStoryBlock(description = cleanDescription)
+            if (showRatingMapRow) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { ratingMapExpanded = !ratingMapExpanded }
+                        .padding(vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(Res.string.nuvio_read_rating_map),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Icon(
+                        imageVector = if (ratingMapExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                AnimatedVisibility(visible = ratingMapExpanded) {
+                    DetailEpisodeRatingMap(
+                        meta = meta,
+                        episodeRatingsVisibility = episodeRatingsVisibility!!,
+                        isEpisodeWatched = isEpisodeWatched!!,
+                        onEpisodeClick = onEpisodeClick!!,
+                        onEpisodeLongPress = onEpisodeLongPress!!,
+                    )
+                }
+            }
+
+            if (showTitleDescription) {
+                description?.trim()?.takeIf { it.isNotBlank() }?.let { cleanDescription ->
+                    DetailPremiumStoryBlock(description = cleanDescription)
+                }
             }
         }
     }
