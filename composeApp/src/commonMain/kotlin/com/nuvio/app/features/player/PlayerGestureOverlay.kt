@@ -128,7 +128,7 @@ private fun PlayerGestureFeedback(
                         // column evenly on both sides so the bar itself never moves.
                         Text(
                             text = reading,
-                            color = if (isBoosted) Color(0xFFFFB74D) else Color.White,
+                            color = if (isBoosted) Color(0xFFFF5252) else Color.White,
                             style = MaterialTheme.nuvioTypeScale.bodySm.copy(
                                 fontWeight = if (isBoosted) FontWeight.Bold else FontWeight.SemiBold,
                                 shadow = Shadow(Color.Black.copy(alpha = 0.8f), blurRadius = 8f),
@@ -164,7 +164,7 @@ private fun PlayerGestureFeedback(
                                         .fillMaxHeight(animatedBoostLevel)
                                         .background(
                                             Brush.verticalGradient(
-                                                colors = listOf(Color(0xFFFFB74D), Color(0xFFFF9800))
+                                                colors = listOf(Color(0xFFFF5252), Color(0xFFE53935))
                                             )
                                         ),
                                 )
