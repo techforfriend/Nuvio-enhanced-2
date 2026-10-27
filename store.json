@@ -20,6 +20,16 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.6.5",
+          "buildVersion": "148",
+          "date": "2026-10-27T03:40:02Z",
+          "localizedDescription": "- feat(player): apply the Show Chapters toggle to every engine @luqmanfadlli\r\n- fix(player): resolve double padding on overlay text @luqmanfadlli\r\n- fix(player): show a zoom icon for pinch-to-zoom feedback @luqmanfadlli\r\n- fix(player): keep the new layout's text clear of the notch @luqmanfadlli\r\n- feat: customize the player buttons @luqmanfadlli\r\n- feat(settings): add an original title language toggle to TMDB @luqmanfadlli\r\n- feat(home): show original-language titles on the hero @luqmanfadlli\r\n- feat(tmdb): use original-language titles, logos, posters, and backdrops @luqmanfadlli\r\n- feat(tmdb): add a title language setting @luqmanfadlli\r\n- fix(home): apply hero catalog changes right away @luqmanfadlli\r\n- fix(home): keep pinned collections first after reset and sync @luqmanfadlli\r\n- feat(discord): keep the Rich Presence token in the iOS Keychain @luqmanfadlli\r\n- feat(discord): enable Rich Presence login on iOS @luqmanfadlli\r\n- Seekbar thumbs optimisation works way faster and more accurate frames (#265) @chrisk325\r\n- feat(i18n): translate subtitle render scale and hero ratings settings (#2402) @jhojhocraazy\r\n- fix(servers): keep title lookups working between episodes @tapframe\r\n- Updated Bulgarian translations - fixes, party file, new strings (#2397) @viiktr\r\n- fix(player): dim the duo controls more and wait longer @tapframe\r\n- feat(player): dim the half open duo controls when idle @tapframe\r\n- fix(ios): read the real system volume in the player @tapframe\r\n- feat(player): add brightness and volume to the half open duo @tapframe\r\n- feat(player): show stream badges on the half open duo @tapframe\r\n- fix(player): keep half open panels below the duo fold @tapframe\r\n- feat(player): add tile controls for the half open duo @tapframe\r\n- fix(ios): refit paused video when the player resizes @tapframe\r\n- feat(player): split video and controls at the duo fold @tapframe\r\n- fix(debrid): recognize language words in release names (#2364) @kernexshadow\r\n- i18n(vi): update latest Vietnamese strings (#2370) @blueocean2308\r\n- feat(player): remove source name from paused player @tapframe\r\n- l10n: complete missing Italian translations (#2371) @WhiteGiso\r\n- Player chapters: progress bar marks, chapter name and a chapters panel (#2174) @kernexshadow",
+          "downloadURL": "https://github.com/luqmanfadlli/NuvioMobile-Enhanced/releases/download/0.6.5-beta/nuvio-0.6.5-enhanced-release.ipa",
+          "size": 72899544,
+          "sha256": "5e90e1e0c7f3f929d0fe5b901a4fb05d2a295b438faaae06a2b89b59415d2631",
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.6.4",
           "buildVersion": "147",
           "date": "2026-10-24T05:16:57Z",
