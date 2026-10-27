@@ -240,11 +240,6 @@ data class PlayerPlaybackSnapshot(
     val castDeviceName: String? = null,
 )
 
-data class PlayerChapter(
-    val title: String,
-    val startMs: Long,
-)
-
 data class PlayerNowPlayingInfo(
     val title: String,
     val subtitle: String? = null,

@@ -58,7 +58,7 @@ internal object PlayerChapterReader {
     }
 
     private fun List<PlayerChapter>.normalized(): List<PlayerChapter> {
-        val sorted = map { it.copy(title = it.title.trim()) }
+        val sorted = map { it.copy(title = it.title?.trim()?.takeIf { title -> title.isNotEmpty() }) }
             .sortedBy { it.startMs }
             .distinctBy { it.startMs }
         if (sorted.size < 2) return emptyList()

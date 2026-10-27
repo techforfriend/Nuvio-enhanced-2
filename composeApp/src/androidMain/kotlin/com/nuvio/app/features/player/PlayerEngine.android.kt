@@ -592,6 +592,7 @@ private fun ExoPlayerSurface(
 
     LaunchedEffect(exoPlayer, playerSourceKey) {
         if (chaptersProbeDone || useYoutubeChunkedPlayback) return@LaunchedEffect
+        if (!PlayerSettingsRepository.uiState.value.androidExoChaptersEnabled) return@LaunchedEffect
         if (!isProgressivePlaybackSource(sourceUrl, sanitizedSourceResponseHeaders, normalizedStreamType)) {
             return@LaunchedEffect
         }
@@ -1028,6 +1029,10 @@ private fun ExoPlayerSurface(
                     exoPlayer.playWhenReady = true
                     exoPlayer.play()
                 }
+
+                // Fork: ExoPlayer chapters come from PlayerChapterReader (MKV + MP4) through the
+                // playback snapshot, gated by the upstream "Show Chapters" toggle; see the probe
+                // in ExoPlayerSurface. Upstream's MatroskaChapterLoader is not used.
 
                 override fun pause() {
                     InAppLogger.debug("ExoPlayer/Android", "control pause positionMs=${exoPlayer.currentPosition.coerceAtLeast(0L)}")
@@ -1869,6 +1874,24 @@ private class NuvioLibmpvView(
         }
     }
 
+    /** mpv lists the chapters of the loaded file itself. */
+    suspend fun readChapters(): List<PlayerChapter> {
+        if (released.get()) return emptyList()
+        return runCatching {
+            withContext(mpvDispatcher) {
+                if (released.get()) return@withContext emptyList()
+                val count = mpv.getPropertyInt("chapter-list/count") ?: 0
+                (0 until count).mapNotNull { i ->
+                    val seconds = mpv.getPropertyDouble("chapter-list/$i/time") ?: return@mapNotNull null
+                    PlayerChapter(
+                        startMs = (seconds * 1000.0).toLong(),
+                        title = mpv.getPropertyString("chapter-list/$i/title")?.trim()?.takeIf { it.isNotBlank() },
+                    )
+                }
+            }
+        }.getOrDefault(emptyList())
+    }
+
     suspend fun snapshot(): PlayerPlaybackSnapshot {
         if (released.get()) return latestSnapshot
         return withContext(mpvDispatcher) {
@@ -2153,6 +2176,8 @@ private class NuvioLibmpvView(
                 InAppLogger.info("MPV/Android", "control seekBy offsetMs=$offsetMs")
                 this@NuvioLibmpvView.seekByMs(offsetMs)
             }
+
+            override suspend fun getChapters(): List<PlayerChapter> = this@NuvioLibmpvView.readChapters()
 
             override fun retry() {
                 InAppLogger.info("MPV/Android", "control retry url=${InAppLogger.redactUrl(currentSourceUrl)}")

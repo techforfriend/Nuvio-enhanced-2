@@ -75,6 +75,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.material.icons.automirrored.rounded.Toc
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -156,6 +160,7 @@ internal fun PlayerControlsShell(
     userRating: Int? = null,
     onSourcesClick: (() -> Unit)? = null,
     onEpisodesClick: (() -> Unit)? = null,
+    chapters: List<PlayerChapter> = emptyList(),
     onChaptersClick: (() -> Unit)? = null,
     onLiveChannelsClick: (() -> Unit)? = null,
     qualityLabel: String? = null,
@@ -173,7 +178,55 @@ internal fun PlayerControlsShell(
     modifier: Modifier = Modifier,
     seekPreview: SeekPreviewController? = null,
     onTimelineTouchChange: (Boolean) -> Unit = {},
+    foldLayout: Boolean = false,
+    gestureController: PlayerGestureController? = null,
+    onWake: () -> Unit = {},
 ) {
+    if (foldLayout) {
+        FoldControls(
+            title = title,
+            seasonNumber = seasonNumber,
+            episodeNumber = episodeNumber,
+            episodeTitle = episodeTitle,
+            playbackSnapshot = playbackSnapshot,
+            displayedPositionMs = displayedPositionMs,
+            badges = badges,
+            resizeMode = resizeMode,
+            showRemainingTime = showRemainingTime,
+            onRuntimeClick = onRuntimeClick,
+            onInteraction = onInteraction,
+            onBack = onBack,
+            onLockToggle = onLockToggle,
+            onPartyClick = onPartyClick,
+            partyActive = partyActive,
+            onNextEpisodeClick = onNextEpisodeClick,
+            onTogglePlayback = onTogglePlayback,
+            onSeekBack = onSeekBack,
+            onSeekForward = onSeekForward,
+            onScrubChange = onScrubChange,
+            onScrubFinished = onScrubFinished,
+            // Fork: these are optional on the shell, required by the fold layout.
+            onSubtitleClick = onSubtitleClick ?: {},
+            onAudioClick = onAudioClick ?: {},
+            onSourcesClick = onSourcesClick,
+            onEpisodesClick = onEpisodesClick,
+            onChaptersClick = onChaptersClick,
+            chapters = chapters,
+            onSpeedClick = onSpeedClick ?: {},
+            onResizeModeClick = onResizeModeClick,
+            onVideoSettingsClick = onVideoSettingsClick,
+            onOpenInExternalPlayer = onOpenInExternalPlayer,
+            onStreamInfoClick = onStreamInfoClick,
+            onSubmitIntroClick = onSubmitIntroClick,
+            onSwitchEngineClick = onSwitchEngineClick,
+            gestureController = gestureController,
+            dimmed = !showPlaybackControls,
+            onWake = onWake,
+            horizontalSafePadding = horizontalSafePadding,
+            modifier = modifier,
+        )
+        return
+    }
     val density = LocalDensity.current
     var timelineHeight by remember { mutableStateOf(0.dp) }
     val glassActive = isAmbientLiquidGlassActive()
@@ -337,6 +390,7 @@ internal fun PlayerControlsShell(
                     onAudioClick = onAudioClick,
                     onSourcesClick = onSourcesClick,
                     onEpisodesClick = onEpisodesClick,
+                    chapters = chapters,
                     onChaptersClick = onChaptersClick,
                     onLiveChannelsClick = onLiveChannelsClick,
                     qualityLabel = qualityLabel,
@@ -379,7 +433,7 @@ internal fun PlayerControlsShell(
                     ) {
                         Box(modifier = Modifier.weight(1f)) {
                             PlayerChapterLabel(
-                                chapters = playbackSnapshot.chapters,
+                                chapters = chapters,
                                 positionMs = displayedPositionMs,
                                 metrics = metrics,
                                 onClick = onChaptersClick?.let { openChapters ->
@@ -408,6 +462,7 @@ internal fun PlayerControlsShell(
                         },
                         seekPreview = seekPreview,
                         onTouchChange = onTimelineTouchChange,
+                        chapters = chapters,
                     )
                     PlayerControlActions(
                         playbackSnapshot = playbackSnapshot,
@@ -868,6 +923,7 @@ private fun ProgressControls(
     onAudioClick: (() -> Unit)? = null,
     onSourcesClick: (() -> Unit)? = null,
     onEpisodesClick: (() -> Unit)? = null,
+    chapters: List<PlayerChapter> = emptyList(),
     onChaptersClick: (() -> Unit)? = null,
     onLiveChannelsClick: (() -> Unit)? = null,
     qualityLabel: String? = null,
@@ -888,7 +944,7 @@ private fun ProgressControls(
         ) {
             Box(modifier = Modifier.weight(1f)) {
                 PlayerChapterLabel(
-                    chapters = playbackSnapshot.chapters,
+                    chapters = chapters,
                     positionMs = displayedPositionMs,
                     metrics = metrics,
                     onClick = onChaptersClick,
@@ -906,7 +962,7 @@ private fun ProgressControls(
             durationMs = playbackSnapshot.durationMs,
             displayedPositionMs = displayedPositionMs,
             bufferedPositionMs = playbackSnapshot.bufferedPositionMs,
-            chapters = playbackSnapshot.chapters,
+            chapters = chapters,
             metrics = metrics,
             onScrubChange = onScrubChange,
             onScrubFinished = onScrubFinished,

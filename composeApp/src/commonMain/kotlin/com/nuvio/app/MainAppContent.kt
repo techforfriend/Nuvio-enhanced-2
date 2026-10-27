@@ -199,7 +199,6 @@ import com.nuvio.app.features.watchprogress.toContinueWatchingItem
 import com.nuvio.app.navigation.*
 import com.nuvio.app.core.ui.glass.nuvioBackdropSource
 import com.nuvio.app.core.ui.glass.rememberNuvioBackdrop
-import com.nuvio.app.features.servers.ServerMatcher
 import com.nuvio.app.features.servers.ServerRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -429,7 +428,6 @@ internal fun MainAppContent(
         if (enabledAddons.isWaitingForFirstEnabledManifest()) return@LaunchedEffect
         HomeCatalogSettingsRepository.syncCatalogs(enabledAddons)
         HomeRepository.refresh(enabledAddons)
-        ServerMatcher.warm()
     }
 
     fun activateTab(tab: AppScreenTab) {
