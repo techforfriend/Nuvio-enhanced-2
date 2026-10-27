@@ -96,8 +96,9 @@ internal fun PlayerTimelineDetails(
     Column(
         Modifier
             .padding(horizontal = PlayerTimelineContentInset)
+            .padding(bottom = 8.dp)
             .onSizeChanged { size -> onHeightChanged(with(LocalDensity.current) { size.height.toDp() }) },
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
             text = title,
@@ -107,7 +108,7 @@ internal fun PlayerTimelineDetails(
                 fontWeight = FontWeight.ExtraBold,
             ),
             color = Color.White,
-            maxLines = 2,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         if (formatPills.isNotEmpty() || badges.isNotEmpty()) {
@@ -127,7 +128,7 @@ internal fun PlayerTimelineDetails(
                                 shape = RoundedCornerShape(999.dp),
                             )
                             .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(999.dp))
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
