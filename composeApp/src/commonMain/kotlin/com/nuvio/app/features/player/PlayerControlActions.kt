@@ -78,12 +78,32 @@ internal fun playerOrientationToggleLabel(isPortraitPlayback: Boolean): StringRe
 
 @Composable
 internal fun PlayerToolbar(
+    isLocked: Boolean,
+    onLockToggle: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Top actions moved to the bottom actions pill; only the back button stays here.
+    // Top actions moved to the bottom actions pill, except lock, which is
+    // reverted to its original top position, in its glass capsule, before back.
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
+        Row(
+            modifier = Modifier.playerLiquidGlass(
+                shape = PlayerGlassCapsule,
+                refractionHeight = 8.dp,
+                refractionAmount = 12.dp,
+            ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PlayerAction(
+                description = stringResource(
+                    if (isLocked) Res.string.compose_player_unlock_controls else Res.string.compose_player_lock_controls,
+                ),
+                icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
+                onClick = onLockToggle,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
         NuvioBackButton(
             onClick = onBack,
             modifier = Modifier.playerLiquidGlass(CircleShape, refractionHeight = 8.dp, refractionAmount = 12.dp),
@@ -131,8 +151,6 @@ internal fun PlayerControlActions(
     onPartyClick: (() -> Unit)? = null,
     partyActive: Boolean = false,
     onPictureInPictureClick: (() -> Unit)? = null,
-    isLocked: Boolean = false,
-    onLockToggle: () -> Unit = {},
     onCastClick: (() -> Unit)? = null,
     isCasting: Boolean = false,
     onOrientationToggleClick: (() -> Unit)? = null,
@@ -235,12 +253,6 @@ internal fun PlayerControlActions(
                 icon = if (isCasting) Icons.Rounded.CastConnected else Icons.Rounded.Cast,
             )
         },
-        PlayerControlAction(
-            stringResource(
-                if (isLocked) Res.string.compose_player_unlock_controls else Res.string.compose_player_lock_controls,
-            ), onLockToggle,
-            icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
-        ),
     )
     val secondaryActions = listOfNotNull(
         onSourcesClick?.let {
