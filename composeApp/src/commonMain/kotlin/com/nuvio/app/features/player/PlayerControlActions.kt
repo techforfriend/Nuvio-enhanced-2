@@ -210,6 +210,9 @@ internal fun PlayerControlActions(
     onInfoClick: (() -> Unit)? = null,
     onRateClick: (() -> Unit)? = null,
     userRating: Int? = null,
+    onPartyClick: (() -> Unit)? = null,
+    partyActive: Boolean = false,
+    onPictureInPictureClick: (() -> Unit)? = null,
     onInteraction: () -> Unit,
 ) {
     val enhancedSettings by remember {
@@ -218,6 +221,33 @@ internal fun PlayerControlActions(
     }.collectAsStateWithLifecycle()
 
     val primaryActions = listOfNotNull(
+        onPartyClick?.takeIf { !enhancedSettings.hidePlayerWatchParty }?.let {
+            PlayerControlAction(
+                stringResource(Res.string.party_title), it,
+                icon = Icons.Rounded.Groups,
+                tint = if (partyActive) MaterialTheme.colorScheme.primary else Color.White,
+            )
+        },
+        onPictureInPictureClick?.takeIf { !enhancedSettings.hidePlayerPip }?.let {
+            PlayerControlAction(
+                stringResource(Res.string.compose_player_picture_in_picture), it,
+                icon = Icons.Rounded.PictureInPictureAlt,
+            )
+        },
+        onQualityClick?.let {
+            PlayerControlAction(
+                qualityLabel?.takeIf { label -> label.isNotBlank() } ?: "Quality", it,
+                icon = Icons.Rounded.HighQuality,
+            )
+        },
+        PlayerControlAction(
+            stringResource(Res.string.compose_player_subtitles), onSubtitleClick,
+            painter = appIconPainter(AppIconResource.PlayerSubtitles),
+        ),
+        PlayerControlAction(
+            stringResource(Res.string.compose_player_audio), onAudioClick,
+            painter = appIconPainter(AppIconResource.PlayerAudioFilled),
+        ),
         onNextEpisodeClick?.let {
             PlayerControlAction(
                 stringResource(Res.string.player_next_episode), it,
@@ -244,10 +274,6 @@ internal fun PlayerControlActions(
                 painter = appIconPainter(AppIconResource.PlayerAspectRatio),
             )
         } else null,
-        PlayerControlAction(
-            stringResource(Res.string.compose_player_subtitles), onSubtitleClick,
-            painter = appIconPainter(AppIconResource.PlayerSubtitles),
-        ),
         onChaptersClick?.let {
             PlayerControlAction(
                 stringResource(Res.string.player_chapters), it,
@@ -256,16 +282,6 @@ internal fun PlayerControlActions(
         },
     )
     val secondaryActions = listOfNotNull(
-        PlayerControlAction(
-            stringResource(Res.string.compose_player_audio), onAudioClick,
-            painter = appIconPainter(AppIconResource.PlayerAudioFilled),
-        ),
-        onQualityClick?.let {
-            PlayerControlAction(
-                qualityLabel?.takeIf { label -> label.isNotBlank() } ?: "Quality", it,
-                icon = Icons.Rounded.HighQuality,
-            )
-        },
         onSourcesClick?.let {
             PlayerControlAction(
                 stringResource(Res.string.compose_player_sources), it,
@@ -351,6 +367,7 @@ internal fun PlayerControlActions(
                                 icon = action.icon,
                                 painter = action.painter,
                                 iconSize = action.iconSize,
+                                tint = action.tint,
                             )
                             action.popup?.invoke()
                         }
@@ -429,4 +446,5 @@ private data class PlayerControlAction(
     val painter: Painter? = null,
     val iconSize: Dp = 24.dp,
     val popup: (@Composable () -> Unit)? = null,
+    val tint: Color = Color.White,
 )

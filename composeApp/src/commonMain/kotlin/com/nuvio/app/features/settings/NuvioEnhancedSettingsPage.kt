@@ -697,7 +697,19 @@ private fun NuvioEnhancedSettingsPageContent(
                             MetaScreenSettingsRepository.setHeroTrailerPlayback(it)
                         },
                     )
+                    SettingsGroupDivider(isTablet = isTablet)
                 }
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.nuvio_enhanced_nuvio_read_title),
+                    description = stringResource(Res.string.nuvio_enhanced_nuvio_read_desc),
+                    checked = settings.nuvioReadEnabled,
+                    isTablet = isTablet,
+                    highlighted = isNew(NuvioEnhancedFeature.NuvioRead),
+                    onCheckedChange = {
+                        markSeen(NuvioEnhancedFeature.NuvioRead)
+                        NuvioEnhancedSettingsRepository.setNuvioReadEnabled(it)
+                    },
+                )
             }
         }
         }

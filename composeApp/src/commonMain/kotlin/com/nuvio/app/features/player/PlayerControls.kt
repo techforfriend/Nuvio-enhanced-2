@@ -398,6 +398,9 @@ internal fun PlayerControlsShell(
                     onQualityClick = onQualityClick,
                     seekPreview = seekPreview,
                     onTimelineTouchChange = onTimelineTouchChange,
+                    onPartyClick = onPartyClick,
+                    partyActive = partyActive,
+                    onPictureInPictureClick = onPictureInPictureClick,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
@@ -489,6 +492,9 @@ internal fun PlayerControlsShell(
                         onInfoClick = onInfoClick,
                         onRateClick = onRateClick,
                         userRating = userRating,
+                        onPartyClick = onPartyClick,
+                        partyActive = partyActive,
+                        onPictureInPictureClick = onPictureInPictureClick,
                         onInteraction = onInteraction,
                     )
                 }
@@ -952,6 +958,9 @@ private fun ProgressControls(
     onQualityClick: (() -> Unit)? = null,
     seekPreview: SeekPreviewController? = null,
     onTimelineTouchChange: (Boolean) -> Unit = {},
+    onPartyClick: (() -> Unit)? = null,
+    partyActive: Boolean = false,
+    onPictureInPictureClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val aspectRatioPainter = appIconPainter(AppIconResource.PlayerAspectRatio)
@@ -1043,6 +1052,42 @@ private fun ProgressControls(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    if (onPartyClick != null && !enhancedSettings.hidePlayerWatchParty) {
+                        PlayerActionPillButton(
+                            label = stringResource(Res.string.party_title),
+                            icon = Icons.Rounded.Groups,
+                            tint = if (partyActive) MaterialTheme.colorScheme.primary else Color.White,
+                            onClick = onPartyClick,
+                        )
+                    }
+                    if (onPictureInPictureClick != null && !enhancedSettings.hidePlayerPip) {
+                        PlayerActionPillButton(
+                            label = stringResource(Res.string.compose_player_picture_in_picture),
+                            icon = Icons.Rounded.PictureInPictureAlt,
+                            onClick = onPictureInPictureClick,
+                        )
+                    }
+                    if (onQualityClick != null) {
+                        PlayerActionPillButton(
+                            label = qualityLabel?.takeIf { it.isNotBlank() } ?: "Quality",
+                            icon = Icons.Rounded.HighQuality,
+                            onClick = onQualityClick,
+                        )
+                    }
+                    if (onSubtitleClick != null) {
+                        PlayerActionPillButton(
+                            label = stringResource(Res.string.compose_player_subs),
+                            painter = subtitlesPainter,
+                            onClick = onSubtitleClick,
+                        )
+                    }
+                    if (onAudioClick != null) {
+                        PlayerActionPillButton(
+                            label = stringResource(Res.string.compose_player_audio),
+                            painter = audioPainter,
+                            onClick = onAudioClick,
+                        )
+                    }
                     if (!enhancedSettings.hidePlayerResizeMode) {
                         PlayerActionPillButton(
                             label = stringResource(resizeMode.labelRes),
@@ -1064,20 +1109,6 @@ private fun ProgressControls(
                                 onDismiss = onSpeedPickerDismiss,
                             )
                         }
-                    }
-                    if (onSubtitleClick != null) {
-                        PlayerActionPillButton(
-                            label = stringResource(Res.string.compose_player_subs),
-                            painter = subtitlesPainter,
-                            onClick = onSubtitleClick,
-                        )
-                    }
-                    if (onAudioClick != null) {
-                        PlayerActionPillButton(
-                            label = stringResource(Res.string.compose_player_audio),
-                            painter = audioPainter,
-                            onClick = onAudioClick,
-                        )
                     }
                     if (onSourcesClick != null) {
                         PlayerActionPillButton(
@@ -1105,12 +1136,6 @@ private fun ProgressControls(
                             label = stringResource(Res.string.compose_player_channels),
                             icon = Icons.Rounded.Tv,
                             onClick = onLiveChannelsClick,
-                        )
-                    }
-                    if (onQualityClick != null) {
-                        PlayerActionPillButton(
-                            label = qualityLabel?.takeIf { it.isNotBlank() } ?: "Quality",
-                            onClick = onQualityClick,
                         )
                     }
                 }
@@ -1511,6 +1536,7 @@ private fun PlayerActionPillButton(
     onClick: () -> Unit,
     icon: ImageVector? = null,
     painter: Painter? = null,
+    tint: Color = Color.White,
 ) {
     Row(
         modifier = Modifier
@@ -1524,21 +1550,21 @@ private fun PlayerActionPillButton(
             painter != null -> Icon(
                 painter = painter,
                 contentDescription = label,
-                tint = Color.White,
+                tint = tint,
                 modifier = Modifier.size(18.dp),
             )
 
             icon != null -> Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = Color.White,
+                tint = tint,
                 modifier = Modifier.size(18.dp),
             )
         }
         Text(
             text = label,
             style = MaterialTheme.nuvioTypeScale.labelSm,
-            color = Color.White,
+            color = tint,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             softWrap = false,

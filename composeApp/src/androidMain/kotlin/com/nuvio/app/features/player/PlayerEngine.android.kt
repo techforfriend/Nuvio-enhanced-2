@@ -1227,6 +1227,50 @@ private fun ExoPlayerSurface(
                         }
                         return
                     }
+                    val attachViaMediaItem: (String) -> Unit = { targetUrl ->
+                        subtitleSelectionJob = coroutineScope.launch {
+                            val currentPosition = exoPlayer.currentPosition
+                            val wasPlaying = exoPlayer.isPlaying
+                            val currentMediaItem = exoPlayer.currentMediaItem ?: run {
+                                Log.e(TAG, "setSubtitleUri: currentMediaItem is null, aborting")
+                                InAppLogger.warn("ExoPlayer/Android", "set external subtitle aborted: currentMediaItem is null")
+                                return@launch
+                            }
+                            preserveAudioSelectionForReload("setSubtitleUri")
+                            val resolvedMime = PlayerSubtitleUtils.mimeTypeFromUrl(targetUrl)
+                            selectedExternalSubtitleMimeType = resolvedMime
+                            InAppLogger.info(
+                                "ExoPlayer/Android",
+                                "external subtitle resolved mime=$resolvedMime positionMs=$currentPosition wasPlaying=$wasPlaying",
+                            )
+                            Log.d(TAG, "setSubtitleUri: currentPosition=$currentPosition, wasPlaying=$wasPlaying")
+                            val subtitleConfig = MediaItem.SubtitleConfiguration.Builder(Uri.parse(targetUrl))
+                                .setMimeType(resolvedMime)
+                                .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+                                .setRoleFlags(C.ROLE_FLAG_SUBTITLE)
+                                .build()
+                            Log.d(
+                                TAG,
+                                "setSubtitleUri: subtitleConfig built, uri=${subtitleConfig.uri}, mime=${subtitleConfig.mimeType}, selectionFlags=${subtitleConfig.selectionFlags}"
+                            )
+                            val newMediaItem = currentMediaItem.buildUpon()
+                                .setSubtitleConfigurations(listOf(subtitleConfig))
+                                .build()
+                            Log.d(TAG, "setSubtitleUri: newMediaItem subtitleConfigs count=${newMediaItem.localConfiguration?.subtitleConfigurations?.size}")
+                            exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+                                .buildUpon()
+                                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                                .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                                .setPreferredTextRoleFlags(C.ROLE_FLAG_SUBTITLE)
+                                .build()
+                            Log.d(TAG, "setSubtitleUri: track params set before prepare, textDisabled=${exoPlayer.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)}")
+                            exoPlayer.setPlaybackMediaItem(newMediaItem, currentPosition)
+                            exoPlayer.prepare()
+                            exoPlayer.playWhenReady = wasPlaying
+                            Log.d(TAG, "setSubtitleUri: prepare() called, waiting for STATE_READY")
+                        }
+                    }
+
                     if (sidecarController.canAttachAddonSubtitleViaSidecar(url, useLibass)) {
                         Log.d(TAG, "setSubtitleUri: using buffer-preserving sidecar for url=${url.redactedForLogs()}")
                         val headers = externalSubtitles.firstOrNull { it.url == url }?.headers.orEmpty()
@@ -1234,6 +1278,10 @@ private fun ExoPlayerSurface(
                             url = url,
                             headers = headers,
                             useLibass = useLibass,
+                            onFailure = {
+                                Log.w(TAG, "Sidecar subtitle failed; falling back to ExoPlayer media reload for url=${url.redactedForLogs()}")
+                                attachViaMediaItem(url)
+                            },
                         )
                         if (attached) {
                             exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
@@ -1243,47 +1291,7 @@ private fun ExoPlayerSurface(
                             return
                         }
                     }
-                    subtitleSelectionJob = coroutineScope.launch {
-                        val currentPosition = exoPlayer.currentPosition
-                        val wasPlaying = exoPlayer.isPlaying
-                        val currentMediaItem = exoPlayer.currentMediaItem ?: run {
-                            Log.e(TAG, "setSubtitleUri: currentMediaItem is null, aborting")
-                            InAppLogger.warn("ExoPlayer/Android", "set external subtitle aborted: currentMediaItem is null")
-                            return@launch
-                        }
-                        preserveAudioSelectionForReload("setSubtitleUri")
-                        val resolvedMime = PlayerSubtitleUtils.mimeTypeFromUrl(url)
-                        selectedExternalSubtitleMimeType = resolvedMime
-                        InAppLogger.info(
-                            "ExoPlayer/Android",
-                            "external subtitle resolved mime=$resolvedMime positionMs=$currentPosition wasPlaying=$wasPlaying",
-                        )
-                        Log.d(TAG, "setSubtitleUri: currentPosition=$currentPosition, wasPlaying=$wasPlaying")
-                        val subtitleConfig = MediaItem.SubtitleConfiguration.Builder(Uri.parse(url))
-                            .setMimeType(resolvedMime)
-                            .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
-                            .setRoleFlags(C.ROLE_FLAG_SUBTITLE)
-                            .build()
-                        Log.d(
-                            TAG,
-                            "setSubtitleUri: subtitleConfig built, uri=${subtitleConfig.uri}, mime=${subtitleConfig.mimeType}, selectionFlags=${subtitleConfig.selectionFlags}"
-                        )
-                        val newMediaItem = currentMediaItem.buildUpon()
-                            .setSubtitleConfigurations(listOf(subtitleConfig))
-                            .build()
-                        Log.d(TAG, "setSubtitleUri: newMediaItem subtitleConfigs count=${newMediaItem.localConfiguration?.subtitleConfigurations?.size}")
-                        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
-                            .buildUpon()
-                            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                            .clearOverridesOfType(C.TRACK_TYPE_TEXT)
-                            .setPreferredTextRoleFlags(C.ROLE_FLAG_SUBTITLE)
-                            .build()
-                        Log.d(TAG, "setSubtitleUri: track params set before prepare, textDisabled=${exoPlayer.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)}")
-                        exoPlayer.setPlaybackMediaItem(newMediaItem, currentPosition)
-                        exoPlayer.prepare()
-                        exoPlayer.playWhenReady = wasPlaying
-                        Log.d(TAG, "setSubtitleUri: prepare() called, waiting for STATE_READY")
-                    }
+                    attachViaMediaItem(url)
                 }
 
                 override fun clearExternalSubtitle() {
