@@ -42,6 +42,7 @@ import androidx.compose.material.icons.rounded.AccessTime
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.HighQuality
 import androidx.compose.material.icons.rounded.Forward10
 import androidx.compose.material.icons.rounded.Forward30
 import androidx.compose.material.icons.rounded.Forward5
