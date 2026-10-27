@@ -108,6 +108,7 @@ import com.nuvio.app.core.ui.glass.LocalLiquidGlassBackdrop
 import com.nuvio.app.core.ui.glass.nuvioBackdropSource
 import com.nuvio.app.core.ui.glass.rememberNuvioBackdrop
 import com.nuvio.app.features.downloads.DownloadsSettingsRepository
+import com.nuvio.app.features.settings.NuvioEnhancedSettingsRepository
 import com.nuvio.app.features.details.components.DetailActions
 import com.nuvio.app.features.details.components.DetailSecondaryAction
 import nuvio.composeapp.generated.resources.streams_download_file
@@ -226,6 +227,10 @@ fun MetaDetailsScreen(
     val metaScreenSettingsUiState by remember {
         MetaScreenSettingsRepository.ensureLoaded()
         MetaScreenSettingsRepository.uiState
+    }.collectAsStateWithLifecycle()
+    val enhancedSettingsUiState by remember {
+        NuvioEnhancedSettingsRepository.ensureLoaded()
+        NuvioEnhancedSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
     val mdbListSettings by remember {
         MdbListSettingsRepository.ensureLoaded()
@@ -1445,6 +1450,7 @@ fun MetaDetailsScreen(
                                     )
 
                                     if (
+                                        !enhancedSettingsUiState.nuvioReadEnabled &&
                                         metaScreenSettingsUiState.showRatingMap &&
                                         metaScreenSettingsUiState.episodeRatingsVisibility.showRatings &&
                                         hasEpisodes &&
