@@ -1,9 +1,11 @@
 package com.nuvio.app.features.player
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
@@ -32,6 +34,7 @@ class PlayerSurfaceGesturesTest {
 
     private val playbackReady = mutableStateOf(false)
     private var taps = 0
+    private var unlocks = 0
     private var doubleTaps = 0
     private var speedBoosts = 0
     private var seekPreviews = 0
@@ -50,9 +53,9 @@ class PlayerSurfaceGesturesTest {
         }
     }
 
-    private fun setContent() {
+    private fun setContent(locked: Boolean = false, showUnlockTarget: Boolean = false) {
         compose.setContent {
-            val unlocked = rememberUpdatedState(false)
+            val controlsLocked = rememberUpdatedState(locked)
             val noop = rememberUpdatedState<() -> Unit>({})
             Box(
                 Modifier.size(320.dp, 180.dp)
@@ -60,7 +63,7 @@ class PlayerSurfaceGesturesTest {
                     .playerSurfaceTapGestures(
                         layoutSize = IntSize(320, 180),
                         playbackGesturesEnabled = playbackReady.value,
-                        playerControlsLockedState = unlocked,
+                        playerControlsLockedState = controlsLocked,
                         onSurfaceTap = rememberUpdatedState { _: Offset -> taps++ },
                         onSurfaceDoubleTap = rememberUpdatedState { _: Offset -> doubleTaps++ },
                         activateHoldToSpeedState = rememberUpdatedState { speedBoosts++ },
@@ -72,9 +75,9 @@ class PlayerSurfaceGesturesTest {
                         layoutSize = IntSize(320, 180),
                         playbackGesturesEnabled = playbackReady.value,
                         sideGestureSystemEdgeExclusionPx = 0f,
-                        playerControlsLockedState = unlocked,
+                        playerControlsLockedState = controlsLocked,
                         touchGesturesEnabledState = rememberUpdatedState(true),
-                        isHoldToSpeedGestureActiveState = unlocked,
+                        isHoldToSpeedGestureActiveState = rememberUpdatedState(false),
                         currentPositionMsState = rememberUpdatedState(30_000L),
                         currentDurationMsState = rememberUpdatedState(120_000L),
                         deactivateHoldToSpeedState = noop,
@@ -85,7 +88,16 @@ class PlayerSurfaceGesturesTest {
                         revealLockedOverlayState = noop,
                         commitHorizontalSeekState = rememberUpdatedState { _: Long -> seekCommits++ },
                     ),
-            )
+            ) {
+                if (showUnlockTarget) {
+                    Box(
+                        Modifier.align(Alignment.Center)
+                            .size(72.dp)
+                            .clickable { unlocks++ }
+                            .testTag("unlock"),
+                    )
+                }
+            }
         }
     }
 
@@ -125,6 +137,34 @@ class PlayerSurfaceGesturesTest {
             assertEquals(1, seekCommits)
             assertTrue(sideAdjustments > 0)
         }
+    }
+
+    @Test
+    fun lockedSurfaceTapSurvivesSmallFingerDrift() {
+        playbackReady.value = true
+        setContent(locked = true)
+
+        compose.onNodeWithTag("surface").performTouchInput {
+            down(center)
+            moveBy(Offset(1f, 0f))
+            up()
+        }
+
+        compose.runOnIdle { assertEquals(1, taps) }
+    }
+
+    @Test
+    fun lockedStateDoesNotCancelTheUnlockButtonTap() {
+        playbackReady.value = true
+        setContent(locked = true, showUnlockTarget = true)
+
+        compose.onNodeWithTag("unlock").performTouchInput {
+            down(center)
+            moveBy(Offset(1f, 0f))
+            up()
+        }
+
+        compose.runOnIdle { assertEquals(1, unlocks) }
     }
 
     @Test
