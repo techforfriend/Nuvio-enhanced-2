@@ -34,11 +34,8 @@ val hasDefaultKeystore = defaultKeystore.exists()
 
 val releaseStoreFile = envOrLocalProperty("NUVIO_RELEASE_STORE_FILE")
 val releaseStorePassword = envOrLocalProperty("NUVIO_RELEASE_STORE_PASSWORD")
-    ?: if (hasDefaultKeystore) "***REMOVED***" else null
 val releaseKeyAlias = envOrLocalProperty("NUVIO_RELEASE_KEY_ALIAS")
-    ?: if (hasDefaultKeystore) "***REMOVED***" else null
 val releaseKeyPassword = envOrLocalProperty("NUVIO_RELEASE_KEY_PASSWORD")
-    ?: if (hasDefaultKeystore) "***REMOVED***" else null
 val releaseKeystore = releaseStoreFile?.let(rootProject::file)
     ?: if (hasDefaultKeystore) defaultKeystore else null
 
