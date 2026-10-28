@@ -1,6 +1,7 @@
 package com.nuvio.app.features.downloads
 
 import com.nuvio.app.features.player.addonSubtitleRequests
+import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.features.streams.StreamItem
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -135,6 +136,15 @@ object DownloadsRepository {
             return DownloadEnqueueResult.UnsupportedFormat
         }
 
+        // Mobile-data gate: OFF = Wi-Fi only, ON = mobile data allowed too.
+        // This setting and DownloadNetworkGuard existed for a long time but
+        // were never read here, so downloads ran on mobile data regardless.
+        // Checked before any mutation, so a blocked enqueue never replaces
+        // or deletes an existing download.
+        if (!isDownloadNetworkAllowed()) {
+            return DownloadEnqueueResult.RequiresWifi
+        }
+
         val now = DownloadsClock.nowEpochMs()
         val logicalKey = buildLogicalKey(
             parentMetaId = parentMetaId,
@@ -236,6 +246,10 @@ object DownloadsRepository {
         ensureLoaded()
         val item = _uiState.value.items.firstOrNull { it.id == downloadId } ?: return
         if (item.status != DownloadStatus.Paused && item.status != DownloadStatus.Failed) return
+        if (!isDownloadNetworkAllowed()) {
+            NuvioToastController.show(DownloadEnqueueResult.RequiresWifi.toastMessage())
+            return
+        }
 
         val reset = item.copy(
             status = DownloadStatus.Downloading,
@@ -258,6 +272,17 @@ object DownloadsRepository {
         val item = _uiState.value.items.firstOrNull { it.id == downloadId } ?: return
         activeHandles.remove(downloadId)?.cancel()
         val restored = DownloadsPlatformDownloader.restoreItem(item)
+        if (restored.status == DownloadStatus.Downloading && !isDownloadNetworkAllowed()) {
+            // Leave it paused instead of restarting it on mobile data when
+            // the user only allowed Wi-Fi downloads.
+            val paused = restored.copy(
+                status = DownloadStatus.Paused,
+                updatedAtEpochMs = DownloadsClock.nowEpochMs(),
+            )
+            replaceItem(paused)
+            persist()
+            return
+        }
         replaceItem(restored)
         persist()
         if (restored.status == DownloadStatus.Downloading) startDownload(restored)
@@ -302,8 +327,39 @@ object DownloadsRepository {
         if (shouldPersistNormalized) {
             persist()
         }
-        normalized.filter { it.status == DownloadStatus.Downloading && it.id !in activeHandles }
-            .forEach(::startDownload)
+        // App restart also restarts in-progress downloads; gate it too, or
+        // a restart on mobile data would bypass the Wi-Fi-only rule.
+        if (!isDownloadNetworkAllowed()) {
+            val paused = normalized.map { item ->
+                if (item.status == DownloadStatus.Downloading && item.id !in activeHandles) {
+                    item.copy(
+                        status = DownloadStatus.Paused,
+                        updatedAtEpochMs = DownloadsClock.nowEpochMs(),
+                    )
+                } else {
+                    item
+                }
+            }
+            _uiState.value = DownloadsUiState(paused)
+            notifyLiveStatusPlatform()
+            persist()
+        } else {
+            normalized.filter { it.status == DownloadStatus.Downloading && it.id !in activeHandles }
+                .forEach(::startDownload)
+        }
+    }
+
+    /**
+     * OFF = Wi-Fi only: allowed when mobile data is opted in, or when the
+     * current network is not cellular. DownloadNetworkGuard treats an
+     * unknown network as Wi-Fi (its own fallback), so this is a
+     * start/resume gate, not live monitoring of a network switch
+     * mid-download.
+     */
+    private fun isDownloadNetworkAllowed(): Boolean {
+        DownloadsSettingsRepository.ensureLoaded()
+        return DownloadsSettingsRepository.allowMobileDataDownloads.value ||
+            DownloadNetworkGuard.isOnWifi()
     }
 
     private fun startDownload(item: DownloadItem) {
