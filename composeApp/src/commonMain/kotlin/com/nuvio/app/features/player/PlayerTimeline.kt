@@ -97,15 +97,15 @@ internal fun PlayerTimelineDetails(
     Column(
         Modifier
             .padding(horizontal = PlayerTimelineContentInset)
-            .padding(bottom = 8.dp)
+            .padding(bottom = 4.dp)
             .onSizeChanged { size -> onHeightChanged(with(density) { size.height.toDp() }) },
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
             text = title,
             style = typeScale.titleLg.copy(
-                fontSize = metrics.titleSize * 1.3f,
-                lineHeight = metrics.titleSize * 1.3f * 1.12f,
+                fontSize = metrics.titleSize,
+                lineHeight = metrics.titleSize * 1.16f,
                 fontWeight = FontWeight.ExtraBold,
             ),
             color = Color.White,
@@ -117,7 +117,7 @@ internal fun PlayerTimelineDetails(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 formatPills.forEach { pill ->
@@ -129,7 +129,7 @@ internal fun PlayerTimelineDetails(
                                 shape = RoundedCornerShape(999.dp),
                             )
                             .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(999.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
