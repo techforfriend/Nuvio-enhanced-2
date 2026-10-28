@@ -233,7 +233,7 @@ final class PlayerPictureInPictureController: NSObject,
                 guard let self, self.handoffGeneration == generation,
                       self.isBackground, self.isStarting, !self.isActive else { return }
                 self.isStarting = false
-                self.owner?.pausePlayback()
+                self.owner?.beginBackgroundGracePeriod()
             }
         }
         return keepsPlaybackAlive

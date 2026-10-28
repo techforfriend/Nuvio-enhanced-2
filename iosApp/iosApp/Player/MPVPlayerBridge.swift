@@ -803,7 +803,32 @@ final class MPVPlayerViewController: UIViewController {
             self.hwdecBeforeBackground = self.getString("hwdec-current")
         }
         if pictureInPictureController?.enteredBackground() == true { return }
-        pauseBackgroundPlayback()
+        beginBackgroundGracePeriod()
+    }
+
+    private static let backgroundGraceInterval: TimeInterval = 10
+    private var backgroundGraceWorkItem: DispatchWorkItem?
+
+    func beginBackgroundGracePeriod() {
+        cancelBackgroundGracePeriod()
+        setStringProperty("vid", "no")
+        guard isPlayerPlaying else { return }
+        let item = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.backgroundGraceWorkItem = nil
+            guard self.mpv != nil,
+                  UIApplication.shared.applicationState == .background,
+                  self.pictureInPictureController?.keepsPlaybackAlive != true else { return }
+            InAppLogBridge.shared.info(tag: "MPV/iOS", message: "Background grace period ended; pausing playback")
+            self.pausePlayback()
+        }
+        backgroundGraceWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.backgroundGraceInterval, execute: item)
+    }
+
+    private func cancelBackgroundGracePeriod() {
+        backgroundGraceWorkItem?.cancel()
+        backgroundGraceWorkItem = nil
     }
 
     func pauseBackgroundPlayback() {
@@ -816,6 +841,7 @@ final class MPVPlayerViewController: UIViewController {
     }
 
     @objc private func enterForeground() {
+        cancelBackgroundGracePeriod()
         resumeRenderingAfterDeviceLossIfPossible(reason: "enter-foreground")
         guard mpv != nil else { return }
         let wasInPictureInPicture = pictureInPictureController?.enteredForeground() == true
