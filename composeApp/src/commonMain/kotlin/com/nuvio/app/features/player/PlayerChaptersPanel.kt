@@ -1,20 +1,33 @@
 package com.nuvio.app.features.player
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -26,12 +39,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.nuvio.app.core.ui.PlatformBackHandler
 import com.nuvio.app.core.ui.nuvio
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -57,47 +72,92 @@ internal fun PlayerChaptersPanel(
         if (visible) listState.scrollToItem((currentIndex - 1).coerceAtLeast(0))
     }
 
-    PlayerSidePanel(
+    val tokens = MaterialTheme.nuvio
+    val backgroundInteraction = remember { MutableInteractionSource() }
+    val panelInteraction = remember { MutableInteractionSource() }
+
+    PlatformBackHandler(enabled = visible, onBack = onDismiss)
+
+    AnimatedVisibility(
         visible = visible,
-        onDismiss = onDismiss,
+        enter = fadeIn(tween(200)),
+        exit = fadeOut(tween(160)),
         modifier = modifier,
     ) {
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-        ) {
-            PlayerPanelHeader(
-                title = stringResource(Res.string.compose_player_panel_chapters, chapters.size),
-            ) {
-                PlayerDialogButton(
-                    label = stringResource(Res.string.action_close),
+                .background(Color.Black.copy(alpha = 0.34f))
+                .clickable(
+                    interactionSource = backgroundInteraction,
+                    indication = null,
                     onClick = onDismiss,
-                )
-            }
+                ),
+        ) {
+            val panelWidth = maxWidth * 0.38f
+            val panelHeight = maxHeight * 0.68f
+            val shape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp)
 
-            Spacer(Modifier.height(16.dp))
-
-            LazyColumn(
-                state = listState,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxHeight(),
+            AnimatedVisibility(
+                visible = visible,
+                enter = slideInHorizontally(tween(250)) { it },
+                exit = slideOutHorizontally(tween(200)) { it },
+                modifier = Modifier.align(Alignment.CenterEnd),
             ) {
-                itemsIndexed(chapters, key = { _, chapter -> chapter.startMs }) { index, chapter ->
-                    val endMs = chapters.getOrNull(index + 1)?.startMs ?: durationMs
-                    val isCurrent = index == currentIndex
-                    ChapterRow(
-                        number = index + 1,
-                        chapter = chapter,
-                        isCurrent = isCurrent,
-                        progress = if (isCurrent && endMs > chapter.startMs) {
-                            ((positionMs - chapter.startMs).toFloat() / (endMs - chapter.startMs)).coerceIn(0f, 1f)
-                        } else {
-                            null
-                        },
-                        remainingMs = if (isCurrent) (endMs - positionMs).coerceAtLeast(0L) else null,
-                        onClick = { onChapterSelected(index) },
-                    )
+                Column(
+                    modifier = Modifier
+                        .width(panelWidth)
+                        .height(panelHeight)
+                        .playerLiquidGlass(
+                            shape = shape,
+                            blurRadius = 24.dp,
+                            refractionHeight = 10.dp,
+                            refractionAmount = 18.dp,
+                            tint = PlayerGlassTint,
+                            fallback = tokens.colors.surfaceElevated,
+                            backdropOpacity = 1f,
+                        )
+                        .clickable(
+                            interactionSource = panelInteraction,
+                            indication = null,
+                            onClick = {},
+                        )
+                        .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.End))
+                        .padding(16.dp),
+                ) {
+                    PlayerPanelHeader(
+                        title = stringResource(Res.string.compose_player_panel_chapters, chapters.size),
+                    ) {
+                        PlayerDialogButton(
+                            label = stringResource(Res.string.action_close),
+                            onClick = onDismiss,
+                        )
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    LazyColumn(
+                        state = listState,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxHeight(),
+                    ) {
+                        itemsIndexed(chapters, key = { _, chapter -> chapter.startMs }) { index, chapter ->
+                            val endMs = chapters.getOrNull(index + 1)?.startMs ?: durationMs
+                            val isCurrent = index == currentIndex
+                            ChapterRow(
+                                number = index + 1,
+                                chapter = chapter,
+                                isCurrent = isCurrent,
+                                progress = if (isCurrent && endMs > chapter.startMs) {
+                                    ((positionMs - chapter.startMs).toFloat() / (endMs - chapter.startMs)).coerceIn(0f, 1f)
+                                } else {
+                                    null
+                                },
+                                remainingMs = if (isCurrent) (endMs - positionMs).coerceAtLeast(0L) else null,
+                                onClick = { onChapterSelected(index) },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -120,7 +180,7 @@ private fun ChapterRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(tokens.colors.surfaceCard)
+            .background(Color.White.copy(alpha = 0.08f))
             .then(if (isCurrent) Modifier.border(2.dp, tokens.colors.focusRing, shape) else Modifier)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
