@@ -1493,7 +1493,21 @@ final class MPVPlayerViewController: UIViewController {
 
     func addSubtitleUrl(_ url: String) {
         guard mpv != nil else { return }
-        command("sub-add", args: [url, "select"])
+        let coreGeneration = mpvGeneration
+        let headers = activeRequestHeaders
+        // Hebrew SRTs are often authored with sentence-final punctuation at the start
+        // of the line (for legacy LTR renderers). mpv lays Hebrew out RTL, so that
+        // punctuation shows at the start of the sentence. Fix the file off the main
+        // thread before handing it to mpv; fall back to the original URL otherwise.
+        MPVSubtitleRtlFix.prepare(url: url, headers: headers) { [weak self] localPath, title in
+            guard let self, self.mpvGeneration == coreGeneration else { return }
+            if let localPath {
+                InAppLogBridge.shared.info(tag: "MPV/SubRtl", message: "using RTL-fixed subtitle copy")
+                self.command("sub-add", args: [localPath, "select", title])
+            } else {
+                self.command("sub-add", args: [url, "select"])
+            }
+        }
     }
 
     private func addSubtitle(_ subtitle: PluginSubtitle, mode: String) {
