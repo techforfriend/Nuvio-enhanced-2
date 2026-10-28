@@ -139,6 +139,24 @@ if [[ -n "${PROTECTED_SKIPPED}" ]]; then
   echo "${PROTECTED_SKIPPED}"
 fi
 
+# BLOCKED WORKFLOWS: never let upstream workflows into this fork again.
+# After every sync merge, delete any workflow in .github/workflows/
+# except build-apk.yml and sync-luqman-upstream.yml, so a future sync
+# cannot re-add the extra Luqman workflows that were just deleted.
+for wf_file in .github/workflows/*.yml; do
+  case "${wf_file}" in
+    .github/workflows/build-apk.yml|.github/workflows/sync-luqman-upstream.yml)
+      ;;
+    *)
+      if [[ -f "${wf_file}" ]]; then
+        echo "Blocked workflow, removing from sync: ${wf_file}"
+        git rm --cached -- "${wf_file}" 2>/dev/null || true
+        rm -f -- "${wf_file}" 2>/dev/null || true
+      fi
+      ;;
+  esac
+done
+
 # Update tracking SHA in the same commit as the merge (or as its own
 # commit when there was no merge). Never use --amend here: amending
 # rewrites the previous main commit and is why earlier sync PRs
