@@ -1143,10 +1143,12 @@ private fun NuvioEnhancedSettingsPageContent(
         }
 
         }
-        // Diagnostics is intentionally outside the category blocks above:
-        // it was previously only under System, so users on Core/Player/Home
-        // never saw it. It must be reachable from every category.
-        if (CrashDiagnostics.reportsSupported) {
+        // Diagnostics shows only in the System section (and in All, which
+        // aggregates the System sections) - not in Core/Player/Home/New.
+        if ((selectedCategory == EnhancedSettingsCategory.All ||
+            selectedCategory == EnhancedSettingsCategory.System) &&
+            CrashDiagnostics.reportsSupported
+        ) {
             SettingsSection(
                 title = stringResource(Res.string.nuvio_enhanced_section_diagnostics),
                 isTablet = isTablet,
