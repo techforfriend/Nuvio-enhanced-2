@@ -754,17 +754,19 @@ private fun PlayerHeader(
                             onClick = onVideoSettingsClick,
                         )
                     }
-                    PlayerHeaderIconButton(
-                        icon = if (isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
-                        contentDescription = if (isLocked) {
-                            stringResource(Res.string.compose_player_unlock_controls)
-                        } else {
-                            stringResource(Res.string.compose_player_lock_controls)
-                        },
-                        buttonSize = metrics.headerIconSize + 16.dp,
-                        iconSize = metrics.headerIconSize,
-                        onClick = onLockToggle,
-                    )
+                    if (!enhancedSettings.hidePlayerLock) {
+                        PlayerHeaderIconButton(
+                            icon = if (isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                            contentDescription = if (isLocked) {
+                                stringResource(Res.string.compose_player_unlock_controls)
+                            } else {
+                                stringResource(Res.string.compose_player_lock_controls)
+                            },
+                            buttonSize = metrics.headerIconSize + 16.dp,
+                            iconSize = metrics.headerIconSize,
+                            onClick = onLockToggle,
+                        )
+                    }
                     NuvioBackButton(
                         onClick = onBack,
                         modifier = Modifier.playerLiquidGlass(CircleShape, refractionHeight = 6.dp, refractionAmount = 8.dp),

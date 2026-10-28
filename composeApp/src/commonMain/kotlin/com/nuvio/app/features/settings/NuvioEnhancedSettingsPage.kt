@@ -939,6 +939,14 @@ private fun NuvioEnhancedSettingsPageContent(
                         isTablet = isTablet,
                         onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerSpeed,
                     )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.nuvio_enhanced_hide_player_lock),
+                        description = stringResource(Res.string.nuvio_enhanced_hide_player_lock_desc),
+                        checked = settings.hidePlayerLock,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setHidePlayerLock,
+                    )
                 }
             }
         }
