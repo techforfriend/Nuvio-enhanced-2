@@ -1,0 +1,36 @@
+<resources>
+    <string name="tracking_source_publicmetadb">PublicMetaDB</string>
+    <string name="settings_publicmetadb_library_description">Your PublicMetaDB watchlist and custom lists.</string>
+    <string name="settings_publicmetadb_progress_description">Continue Watching and Up Next from your PublicMetaDB resume points and watch history.</string>
+    <string name="library_publicmetadb_title">PublicMetaDB Library</string>
+    <string name="library_publicmetadb_load_failed">Could not load your PublicMetaDB library</string>
+    <string name="library_publicmetadb_empty_title">Your PublicMetaDB library is empty</string>
+    <string name="library_publicmetadb_empty_message">Add movies and shows to your PublicMetaDB lists to see them here.</string>
+    <string name="settings_publicmetadb_connect">Connect PublicMetaDB</string>
+    <string name="settings_publicmetadb_connected_as">Connected with key ending %1$s</string>
+    <string name="settings_publicmetadb_connected_description">Sync your lists, watch history, ratings, scrobbles and Continue Watching with PublicMetaDB.</string>
+    <string name="settings_publicmetadb_sign_in_description">Connect PublicMetaDB with an API key to sync your lists, watch history, ratings, scrobbles and Continue Watching.</string>
+    <string name="settings_publicmetadb_finish_sign_in">Finish connecting</string>
+    <string name="settings_publicmetadb_approval_description">Enter your PublicMetaDB API key to finish connecting.</string>
+    <string name="settings_publicmetadb_open_login">Enter API key</string>
+    <string name="settings_publicmetadb_disconnect">Disconnect PublicMetaDB</string>
+    <string name="settings_publicmetadb_missing_credentials">PublicMetaDB connection is unavailable in this build.</string>
+    <string name="settings_publicmetadb_sync_now">Sync now</string>
+    <string name="settings_publicmetadb_visit">Visit PublicMetaDB</string>
+    <string name="settings_publicmetadb_disconnect_description">Stop sending watch updates from this profile and forget the API key. Your PublicMetaDB lists and history are kept.</string>
+    <string name="settings_publicmetadb_account_fallback">your API key</string>
+    <string name="settings_publicmetadb_syncing">Syncing your PublicMetaDB lists…</string>
+    <string name="settings_publicmetadb_last_synced">Last synced %1$s</string>
+    <string name="settings_publicmetadb_api_key_title">Connect PublicMetaDB</string>
+    <string name="settings_publicmetadb_api_key_description">Create an API key on PublicMetaDB under Settings → API, then paste it here. Keys usually start with pm-.</string>
+    <string name="settings_publicmetadb_api_key_label">API key</string>
+    <string name="settings_publicmetadb_get_api_key">Get an API key</string>
+    <string name="settings_publicmetadb_connect_action">Connect</string>
+    <string name="settings_publicmetadb_missing_key">Enter your PublicMetaDB API key.</string>
+    <string name="settings_publicmetadb_invalid_key">PublicMetaDB did not accept this API key. Check it and try again.</string>
+    <string name="settings_publicmetadb_request_failed">Could not reach PublicMetaDB. Please try again.</string>
+    <string name="settings_publicmetadb_rate_limited">PublicMetaDB’s request limit has been reached. Try again shortly.</string>
+    <string name="settings_publicmetadb_blocked">PublicMetaDB blocked this request. Please try again later.</string>
+    <string name="settings_publicmetadb_auth_revoked">Your PublicMetaDB API key is no longer valid. Connect again with a new key.</string>
+    <string name="settings_publicmetadb_unavailable">Could not sync with PublicMetaDB. Please try again.</string>
+</resources>
