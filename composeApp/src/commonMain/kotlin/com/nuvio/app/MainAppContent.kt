@@ -1347,6 +1347,7 @@ internal fun MainAppContent(
                                     LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_title)
             LibrarySourceMode.ANILIST -> stringResource(Res.string.library_anilist_title)
             LibrarySourceMode.WETRAKR -> stringResource(Res.string.library_wetrakr_title)
+            LibrarySourceMode.PUBLICMETADB -> stringResource(Res.string.library_publicmetadb_title)
         }
 
         val openLibraryItem: (LibraryItem) -> Unit = { item ->

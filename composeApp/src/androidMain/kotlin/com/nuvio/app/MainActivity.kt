@@ -79,6 +79,8 @@ import com.nuvio.app.features.anilist.PlatformAniListAuthPersistence
 import com.nuvio.app.features.anilist.PlatformAniListSyncStorage
 import com.nuvio.app.features.wetrakr.PlatformWeTrakrAuthPersistence
 import com.nuvio.app.features.wetrakr.PlatformWeTrakrSyncStorage
+import com.nuvio.app.features.publicmetadb.PlatformPublicMetaDbAuthPersistence
+import com.nuvio.app.features.publicmetadb.PlatformPublicMetaDbSyncStorage
 import com.nuvio.app.features.simkl.SimklAuthStorage
 import com.nuvio.app.features.simkl.SimklSyncStorage
 import com.nuvio.app.features.tmdb.TmdbSettingsStorage
@@ -164,6 +166,8 @@ open class MainActivity : AppCompatActivity() {
         PlatformAniListSyncStorage.initialize(applicationContext)
         PlatformWeTrakrAuthPersistence.initialize(applicationContext)
         PlatformWeTrakrSyncStorage.initialize(applicationContext)
+        PlatformPublicMetaDbAuthPersistence.initialize(applicationContext)
+        PlatformPublicMetaDbSyncStorage.initialize(applicationContext)
         DiscordRpcStorage.initialize(applicationContext)
         SimklAuthStorage.initialize(applicationContext)
         SimklSyncStorage.initialize(applicationContext)
