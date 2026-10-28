@@ -617,7 +617,7 @@ actual object PluginRepository {
             ?: emptyList()
         return LoadedPluginState(
             state = PluginsUiState(
-                pluginsEnabled = stored?.pluginsEnabled ?: true,
+                pluginsEnabled = stored?.pluginsEnabled ?: false,
                 groupStreamsByRepository = stored?.groupStreamsByRepository ?: false,
                 repositories = stored?.repositories
                     ?.map {

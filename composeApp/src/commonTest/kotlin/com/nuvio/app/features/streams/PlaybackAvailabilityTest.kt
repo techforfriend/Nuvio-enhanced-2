@@ -34,7 +34,7 @@ class PlaybackAvailabilityTest {
 
     @Test
     fun `an enabled compatible plugin enables playback without addons`() {
-        val plugins = PluginsUiState(scrapers = listOf(scraper()))
+        val plugins = PluginsUiState(pluginsEnabled = true, scrapers = listOf(scraper()))
         assertTrue(available(plugins = plugins))
         assertTrue(available(plugins = plugins, type = "series"))
         assertFalse(available(plugins = plugins, type = "channel"))
@@ -46,7 +46,7 @@ class PlaybackAvailabilityTest {
     fun `either source can enable playback independently`() {
         assertTrue(available(
             addons = listOf(addon(resource = "catalog")),
-            plugins = PluginsUiState(scrapers = listOf(scraper())),
+            plugins = PluginsUiState(pluginsEnabled = true, scrapers = listOf(scraper())),
         ))
         assertTrue(available(
             addons = listOf(addon()),
