@@ -355,6 +355,7 @@ private fun PlaybackSettingsSection(
     }
     val subtitleFonts by SubtitleFontRepository.fonts.collectAsState()
     var showExternalPlayerDialog by remember { mutableStateOf(false) }
+    var showToolbarLayoutDialog by remember { mutableStateOf(false) }
     var showExternalPlayerAppDialog by remember { mutableStateOf(false) }
     var showReuseCacheDurationDialog by remember { mutableStateOf(false) }
     var showPlaybackEngineDialog by remember { mutableStateOf(false) }
@@ -415,6 +416,15 @@ private fun PlaybackSettingsSection(
                     isTablet = isTablet,
                     onCheckedChange = PlayerSettingsRepository::setUseLegacyPlayerLayout,
                 )
+                if (!autoPlayPlayerSettings.useLegacyPlayerLayout) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.settings_playback_toolbar_layout),
+                        description = stringResource(Res.string.settings_playback_toolbar_layout_description),
+                        isTablet = isTablet,
+                        onClick = { showToolbarLayoutDialog = true },
+                    )
+                }
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(
                     title = stringResource(Res.string.settings_playback_show_loading_overlay),
@@ -1818,6 +1828,14 @@ private fun PlaybackSettingsSection(
                 showReuseCacheDurationDialog = false
             },
             onDismiss = { showReuseCacheDurationDialog = false },
+        )
+    }
+
+    if (showToolbarLayoutDialog) {
+        PlayerToolbarSettingsDialog(
+            layout = autoPlayPlayerSettings.toolbarLayout,
+            onLayoutChange = PlayerSettingsRepository::setToolbarLayout,
+            onDismiss = { showToolbarLayoutDialog = false },
         )
     }
 
