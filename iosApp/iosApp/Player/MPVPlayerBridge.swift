@@ -777,6 +777,19 @@ final class MPVPlayerViewController: UIViewController {
                                                name: UIApplication.willEnterForegroundNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(didBecomeActive),
                                                name: UIApplication.didBecomeActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(willResignActive),
+                                               name: UIApplication.willResignActiveNotification, object: nil)
+    }
+
+    @objc private func willResignActive() {
+        guard mpv != nil else { return }
+        let coreGeneration = mpvGeneration
+        mpvQueue.async { [weak self] in
+            guard let self, self.mpvGeneration == coreGeneration, self.mpv != nil else { return }
+            if self.hwdecBeforeBackground == nil {
+                self.hwdecBeforeBackground = self.getString("hwdec-current")
+            }
+        }
     }
 
     private var hwdecBeforeBackground: String?
@@ -820,16 +833,20 @@ final class MPVPlayerViewController: UIViewController {
         guard mpv != nil else { return }
         let configured = lastVideoOutputSettings?.hardwareDecoder ?? "videotoolbox"
         guard configured != "no" else { return }
+        if pictureInPictureController?.isPictureInPictureActive == true {
+            mpvQueue.async { [weak self] in self?.hwdecBeforeBackground = nil }
+            return
+        }
         let coreGeneration = mpvGeneration
         mpvQueue.async { [weak self] in
             guard let self, self.mpvGeneration == coreGeneration, self.mpv != nil else { return }
             let before = self.hwdecBeforeBackground ?? ""
             self.hwdecBeforeBackground = nil
+            guard !before.isEmpty, before != "no" else { return }
             let current = self.getString("hwdec-current") ?? ""
-            guard !before.isEmpty, before != "no", current.isEmpty || current == "no" else { return }
             InAppLogBridge.shared.warn(
                 tag: "MPV/iOS",
-                message: "Hardware decoding lost in background (was \(before)); reinitialising hwdec=\(configured)"
+                message: "Reinitialising hwdec=\(configured) after interruption (was \(before), now \(current.isEmpty ? "none" : current))"
             )
             self.setStringProperty("hwdec", "no")
             self.setStringProperty("hwdec", configured)
