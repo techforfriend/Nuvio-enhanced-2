@@ -85,25 +85,34 @@ internal fun PlayerToolbar(
 ) {
     // Top actions moved to the bottom actions pill, except lock, which is
     // reverted to its original top position, in its glass capsule, before back.
+    // hidePlayerLock hides only this capsule; back stays, and the centre
+    // locked overlay still unlocks, so hiding it can never trap the player
+    // in a locked state.
+    val enhancedSettings by remember {
+        NuvioEnhancedSettingsRepository.ensureLoaded()
+        NuvioEnhancedSettingsRepository.uiState
+    }.collectAsStateWithLifecycle()
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
-        Row(
-            modifier = Modifier.playerLiquidGlass(
-                shape = PlayerGlassCapsule,
-                refractionHeight = 8.dp,
-                refractionAmount = 12.dp,
-            ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            PlayerAction(
-                description = stringResource(
-                    if (isLocked) Res.string.compose_player_unlock_controls else Res.string.compose_player_lock_controls,
+        if (!enhancedSettings.hidePlayerLock) {
+            Row(
+                modifier = Modifier.playerLiquidGlass(
+                    shape = PlayerGlassCapsule,
+                    refractionHeight = 8.dp,
+                    refractionAmount = 12.dp,
                 ),
-                icon = if (isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
-                onClick = onLockToggle,
-            )
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PlayerAction(
+                    description = stringResource(
+                        if (isLocked) Res.string.compose_player_unlock_controls else Res.string.compose_player_lock_controls,
+                    ),
+                    icon = if (isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                    onClick = onLockToggle,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
         }
-        Spacer(Modifier.width(8.dp))
         NuvioBackButton(
             onClick = onBack,
             modifier = Modifier.playerLiquidGlass(CircleShape, refractionHeight = 8.dp, refractionAmount = 12.dp),
