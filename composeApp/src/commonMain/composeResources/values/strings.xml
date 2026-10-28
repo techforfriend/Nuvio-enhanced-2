@@ -2935,4 +2935,13 @@
     <string name="settings_playback_toolbar_note">Buttons that do not apply to the current video, such as Next Episode on a movie, are skipped.</string>
     <string name="player_toolbar_button_resize">Resize</string>
     <string name="player_toolbar_button_quality">Quality</string>
+    <string name="settings_playback_legacy_bottom_buttons">Bottom bar buttons</string>
+    <string name="settings_playback_legacy_bottom_buttons_description">Choose which buttons appear in the bottom bar and their order.</string>
+    <string name="settings_playback_legacy_top_buttons">Top bar buttons</string>
+    <string name="settings_playback_legacy_top_buttons_description">Choose which buttons appear in the top bar and their order. Close always stays.</string>
+    <string name="settings_playback_legacy_buttons_shown">Shown</string>
+    <string name="settings_playback_legacy_buttons_hidden">Hidden</string>
+    <string name="settings_playback_legacy_buttons_hide">Hide</string>
+    <string name="settings_playback_legacy_buttons_show">Show</string>
+    <string name="player_toolbar_button_orientation">Rotate</string>
 </resources>

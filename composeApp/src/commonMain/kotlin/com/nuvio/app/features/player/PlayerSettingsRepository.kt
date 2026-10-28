@@ -44,6 +44,8 @@ data class PlayerSettingsUiState(
     val skipBackwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
     val skipForwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
     val toolbarLayout: PlayerToolbarLayout = PlayerToolbarLayout.Default,
+    val legacyBottomButtons: LegacyBottomButtonLayout = LegacyPlayerButtonLayouts.DefaultBottom,
+    val legacyTopButtons: LegacyTopButtonLayout = LegacyPlayerButtonLayouts.DefaultTop,
     val touchGesturesEnabled: Boolean = true,
     val swipeToSeekEnabled: Boolean = true,
     val seekPreviewEnabled: Boolean = true,
@@ -140,6 +142,8 @@ object PlayerSettingsRepository {
     private var skipBackwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
     private var skipForwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
     private var toolbarLayout = PlayerToolbarLayout.Default
+    private var legacyBottomButtons = LegacyPlayerButtonLayouts.DefaultBottom
+    private var legacyTopButtons = LegacyPlayerButtonLayouts.DefaultTop
     private var touchGesturesEnabled = true
     private var swipeToSeekEnabled = true
     private var seekPreviewEnabled = true
@@ -241,6 +245,8 @@ object PlayerSettingsRepository {
         skipBackwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
         skipForwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
         toolbarLayout = PlayerToolbarLayout.Default
+        legacyBottomButtons = LegacyPlayerButtonLayouts.DefaultBottom
+        legacyTopButtons = LegacyPlayerButtonLayouts.DefaultTop
         touchGesturesEnabled = true
         swipeToSeekEnabled = true
         seekPreviewEnabled = true
@@ -337,6 +343,8 @@ object PlayerSettingsRepository {
         skipBackwardSeconds = normalizePlayerSkipSeconds(PlayerSettingsStorage.loadSkipBackwardSeconds())
         skipForwardSeconds = normalizePlayerSkipSeconds(PlayerSettingsStorage.loadSkipForwardSeconds())
         toolbarLayout = PlayerToolbarLayout.decode(PlayerSettingsStorage.loadToolbarLayout())
+        legacyBottomButtons = LegacyPlayerButtonLayouts.decodeBottom(PlayerSettingsStorage.loadLegacyBottomButtons())
+        legacyTopButtons = LegacyPlayerButtonLayouts.decodeTop(PlayerSettingsStorage.loadLegacyTopButtons())
         touchGesturesEnabled = PlayerSettingsStorage.loadTouchGesturesEnabled() ?: true
         swipeToSeekEnabled = PlayerSettingsStorage.loadSwipeToSeekEnabled() ?: true
         seekPreviewEnabled = PlayerSettingsStorage.loadSeekPreviewEnabled() ?: true
@@ -585,6 +593,22 @@ object PlayerSettingsRepository {
         toolbarLayout = layout
         publish()
         PlayerSettingsStorage.saveToolbarLayout(layout.encode())
+    }
+
+    fun setLegacyBottomButtons(layout: LegacyBottomButtonLayout) {
+        ensureLoaded()
+        if (legacyBottomButtons == layout) return
+        legacyBottomButtons = layout
+        publish()
+        PlayerSettingsStorage.saveLegacyBottomButtons(LegacyPlayerButtonLayouts.encodeBottom(layout))
+    }
+
+    fun setLegacyTopButtons(layout: LegacyTopButtonLayout) {
+        ensureLoaded()
+        if (legacyTopButtons == layout) return
+        legacyTopButtons = layout
+        publish()
+        PlayerSettingsStorage.saveLegacyTopButtons(LegacyPlayerButtonLayouts.encodeTop(layout))
     }
 
     fun setTouchGesturesEnabled(enabled: Boolean) {
@@ -1302,6 +1326,8 @@ object PlayerSettingsRepository {
             skipBackwardSeconds = skipBackwardSeconds,
             skipForwardSeconds = skipForwardSeconds,
             toolbarLayout = toolbarLayout,
+            legacyBottomButtons = legacyBottomButtons,
+            legacyTopButtons = legacyTopButtons,
             touchGesturesEnabled = touchGesturesEnabled,
             swipeToSeekEnabled = swipeToSeekEnabled,
             seekPreviewEnabled = seekPreviewEnabled,
