@@ -231,11 +231,11 @@ fun WhatsNewSettingsScreen(onBack: () -> Unit) {
                         version = snapshot.currentVersion,
                         buildChannelLabel = buildChannelLabel,
                         viewingChannelLabel = channelLabel,
-                        showViewingChannel = releaseChannelsEnabled && channel != buildChannel,
+                        showViewingChannel = false,
                         lastCheckedLabel = lastCheckedLabel(value.content.fetchedAtMillis),
                         status = versionStatus(
                             snapshot = snapshot,
-                            channelLabel = channelLabel.takeIf { releaseChannelsEnabled },
+                            channelLabel = null,
                             buildChannel = buildChannel,
                         ),
                     )

@@ -5,7 +5,7 @@ import kotlin.test.Test
 
 class ReleaseSelectorTest {
     @Test
-    fun `stable channel excludes GitHub and tag prereleases`() {
+    fun `top release wins regardless of beta or stable`() {
         val releases = listOf(
             release("1.1.0-beta.2", prerelease = true),
             release("1.1.0-beta.1"),
@@ -15,7 +15,10 @@ class ReleaseSelectorTest {
 
         val selected = ReleaseSelector.eligibleReleases(releases, UpdateChannel.STABLE)
 
-        assertEquals(listOf("1.0.1", "1.0.0"), selected.map { it.tagName })
+        assertEquals(
+            listOf("1.1.0-beta.2", "1.1.0-beta.1", "1.0.1", "1.0.0"),
+            selected.map { it.tagName }
+        )
     }
 
     @Test
@@ -35,7 +38,7 @@ class ReleaseSelectorTest {
     }
 
     @Test
-    fun `legacy release title marks beta without tag suffix`() {
+    fun `legacy beta title no longer filters a release out`() {
         val releases = listOf(
             release(tag = "0.7.18", name = "Beta 0.7.18 Hotfix"),
             release(tag = "0.7.17")
@@ -43,7 +46,7 @@ class ReleaseSelectorTest {
 
         val selected = ReleaseSelector.eligibleReleases(releases, UpdateChannel.STABLE)
 
-        assertEquals(listOf("0.7.17"), selected.map { it.tagName })
+        assertEquals(listOf("0.7.18", "0.7.17"), selected.map { it.tagName })
     }
 
     @Test

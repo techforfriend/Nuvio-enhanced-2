@@ -269,10 +269,6 @@ internal fun LazyListScope.settingsRootContent(
                         isTablet = isTablet,
                         onClick = onLicensesAttributionsClick,
                     )
-                    if (com.nuvio.app.features.updater.AppUpdaterPlatform.isSupported) {
-                        SettingsGroupDivider(isTablet = isTablet)
-                        UpdateChannelSettingsRow(isTablet = isTablet)
-                    }
                     if (onTestUpdateBannerClick != null) {
                         SettingsGroupDivider(isTablet = isTablet)
                         SettingsNavigationRow(
