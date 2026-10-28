@@ -173,42 +173,52 @@ internal fun PlayerControlActions(
         NuvioEnhancedSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
 
-    val primaryActions = listOfNotNull(
+    val playerSettings by remember {
+        PlayerSettingsRepository.ensureLoaded()
+        PlayerSettingsRepository.uiState
+    }.collectAsStateWithLifecycle()
+
+    // Keyed by toolbar button so the user's "Player buttons" layout (Settings
+    // -> Playback -> Player, default player only) decides the bar order, which
+    // buttons stay on the bar, and which sit behind the arrow. Enhanced
+    // "Hide player buttons" toggles still filter first: a toggled-off button
+    // never appears, whatever the layout says.
+    val availableActions = listOfNotNull(
         onPartyClick?.takeIf { !enhancedSettings.hidePlayerWatchParty }?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.WATCH_PARTY to PlayerControlAction(
                 stringResource(Res.string.party_title), it,
                 icon = Icons.Rounded.Groups,
                 tint = if (partyActive) MaterialTheme.colorScheme.primary else Color.White,
             )
         },
         onPictureInPictureClick?.takeIf { !enhancedSettings.hidePlayerPip }?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.PICTURE_IN_PICTURE to PlayerControlAction(
                 stringResource(Res.string.compose_player_picture_in_picture), it,
                 icon = Icons.Rounded.PictureInPictureAlt,
             )
         },
         onQualityClick?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.QUALITY to PlayerControlAction(
                 qualityLabel?.takeIf { label -> label.isNotBlank() } ?: "Quality", it,
                 icon = Icons.Rounded.HighQuality,
             )
         },
-        PlayerControlAction(
+        PlayerToolbarButton.SUBTITLES to PlayerControlAction(
             stringResource(Res.string.compose_player_subtitles), onSubtitleClick,
             painter = appIconPainter(AppIconResource.PlayerSubtitles),
         ),
-        PlayerControlAction(
+        PlayerToolbarButton.AUDIO to PlayerControlAction(
             stringResource(Res.string.compose_player_audio), onAudioClick,
             painter = appIconPainter(AppIconResource.PlayerAudioFilled),
         ),
         onNextEpisodeClick?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.NEXT_EPISODE to PlayerControlAction(
                 stringResource(Res.string.player_next_episode), it,
                 icon = Icons.Rounded.SkipNext, iconSize = 40.dp,
             )
         },
         if (!enhancedSettings.hidePlayerSpeed) {
-            PlayerControlAction(
+            PlayerToolbarButton.SPEED to PlayerControlAction(
                 "${stringResource(Res.string.compose_player_speed)} ${formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed)}",
                 onSpeedClick, icon = Icons.Rounded.Speed,
                 popup = {
@@ -222,28 +232,25 @@ internal fun PlayerControlActions(
             )
         } else null,
         if (!enhancedSettings.hidePlayerResizeMode) {
-            PlayerControlAction(
+            PlayerToolbarButton.RESIZE to PlayerControlAction(
                 stringResource(resizeMode.labelRes), onResizeModeClick,
                 painter = appIconPainter(AppIconResource.PlayerAspectRatio),
             )
         } else null,
         onChaptersClick?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.CHAPTERS to PlayerControlAction(
                 stringResource(Res.string.player_chapters), it,
                 icon = Icons.AutoMirrored.Rounded.ListAlt,
             )
         },
-        // Moved from the top toolbar. Party and PiP are NOT added here again:
-        // they are already the first two primary actions above, so adding them
-        // again would show the same button twice at the bottom.
         onSwitchEngineClick?.takeIf { !enhancedSettings.hidePlayerEngineSwitch }?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.SWITCH_ENGINE to PlayerControlAction(
                 stringResource(Res.string.cd_switch_player_engine), it,
                 icon = Icons.Rounded.SwapHoriz,
             )
         },
         onRandomNextEpisodeModeToggle?.takeIf { !enhancedSettings.hidePlayerShuffle }?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.SHUFFLE to PlayerControlAction(
                 if (randomNextEpisodeMode) stringResource(Res.string.player_random_next_enabled)
                 else stringResource(Res.string.player_random_next_disabled), it,
                 icon = Icons.Rounded.Shuffle,
@@ -251,33 +258,31 @@ internal fun PlayerControlActions(
             )
         },
         onOrientationToggleClick?.takeIf { !enhancedSettings.hidePlayerOrientation }?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.ORIENTATION to PlayerControlAction(
                 stringResource(playerOrientationToggleLabel(isPortraitPlayback)), it,
                 icon = playerOrientationToggleIcon(isPortraitPlayback),
             )
         },
         onCastClick?.takeIf { !enhancedSettings.hidePlayerCast }?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.CAST to PlayerControlAction(
                 stringResource(Res.string.player_cast), it,
                 icon = if (isCasting) Icons.Rounded.CastConnected else Icons.Rounded.Cast,
             )
         },
-    )
-    val secondaryActions = listOfNotNull(
         onSourcesClick?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.SOURCES to PlayerControlAction(
                 stringResource(Res.string.compose_player_sources), it,
                 painter = appIconPainter(AppIconResource.PlayerSource),
             )
         },
         onEpisodesClick?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.EPISODES to PlayerControlAction(
                 stringResource(Res.string.compose_player_episodes), it,
                 painter = appIconPainter(AppIconResource.PlayerEpisodes),
             )
         },
         onRateClick?.takeIf { !enhancedSettings.hidePlayerRating }?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.RATE to PlayerControlAction(
                 userRating?.let { rating -> stringResource(Res.string.user_rating_action_rated, rating) }
                     ?: stringResource(Res.string.user_rating_action_rate),
                 it,
@@ -285,43 +290,38 @@ internal fun PlayerControlActions(
             )
         },
         onOpenInExternalPlayer?.takeIf { !enhancedSettings.hidePlayerExternalPlayer }?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.EXTERNAL_PLAYER to PlayerControlAction(
                 stringResource(Res.string.streams_open_external_player), it,
                 icon = Icons.AutoMirrored.Rounded.OpenInNew,
             )
         },
         onInfoClick?.takeIf { !enhancedSettings.hidePlayerInfo }?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.PLAYBACK_INFO to PlayerControlAction(
                 stringResource(Res.string.compose_player_playback_info), it,
                 icon = Icons.Rounded.Info,
             )
         },
-        onStreamInfoClick.takeIf { ShowUpstreamStreamInfoAction }?.let {
-            PlayerControlAction(
-                stringResource(Res.string.cd_stream_info), onStreamInfoClick,
-                icon = Icons.Rounded.Info,
-            )
-        },
         onVideoSettingsClick?.takeIf { !enhancedSettings.hidePlayerVideoSettings }?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.VIDEO_SETTINGS to PlayerControlAction(
                 stringResource(Res.string.player_action_video_settings), it,
                 icon = Icons.Rounded.Build,
             )
         },
         onSubmitIntroClick?.takeIf { !enhancedSettings.hidePlayerSubmitIntro }?.let {
-            PlayerControlAction(
+            PlayerToolbarButton.SUBMIT_INTRO to PlayerControlAction(
                 stringResource(Res.string.submit_intro_action), it,
                 icon = Icons.Rounded.Flag,
             )
         },
-    )
-    // Default player bottom-left pill: show only the first 4 actions up front.
-    // Everything else (remaining primary actions + all secondary actions) stays
-    // hidden inside, and appears only after tapping the expand (>) button.
-    // The first 4 follow the existing priority order, skipping any action that
-    // is unavailable or hidden by Enhanced settings.
-    val visibleActions = primaryActions.take(4)
-    val hiddenActions = primaryActions.drop(4) + secondaryActions
+    ).toMap()
+    val toolbarLayout = playerSettings.toolbarLayout
+    val primaryActions = toolbarLayout.visibleButtons.mapNotNull { availableActions[it] }
+    val secondaryActions = toolbarLayout.hiddenButtons.mapNotNull { availableActions[it] }
+    // The old first-4 cap is gone: the layout itself decides what stays on
+    // the bar (primary) and what sits behind the arrow (secondary). The bar
+    // scrolls horizontally, so a long primary list still fits.
+    val visibleActions = primaryActions
+    val hiddenActions = secondaryActions
     val hasOverflow = hiddenActions.isNotEmpty()
     var expanded by remember(hasOverflow) { mutableStateOf(false) }
     val scrollState = rememberScrollState()

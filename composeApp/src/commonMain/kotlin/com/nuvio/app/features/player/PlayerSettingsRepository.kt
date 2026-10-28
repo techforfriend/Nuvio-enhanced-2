@@ -34,6 +34,7 @@ fun snapToAllowedTimeout(value: Int): Int {
 
 data class PlayerSettingsUiState(
     val useLegacyPlayerLayout: Boolean = false,
+    val toolbarLayout: PlayerToolbarLayout = PlayerToolbarLayout.Default,
     val showLoadingOverlay: Boolean = true,
     val showPlayerLoadingStatus: Boolean = true,
     val pauseOverlayEnabled: Boolean = true,
@@ -128,6 +129,7 @@ object PlayerSettingsRepository {
 
     private var hasLoaded = false
     private var useLegacyPlayerLayout = false
+    private var toolbarLayout = PlayerToolbarLayout.Default
     private var showLoadingOverlay = true
     private var showPlayerLoadingStatus = true
     private var pauseOverlayEnabled = true
@@ -227,6 +229,7 @@ object PlayerSettingsRepository {
     fun clearLocalState() {
         hasLoaded = false
         useLegacyPlayerLayout = false
+        toolbarLayout = PlayerToolbarLayout.Default
         showLoadingOverlay = true
         showPlayerLoadingStatus = true
         pauseOverlayEnabled = true
@@ -319,6 +322,7 @@ object PlayerSettingsRepository {
     private fun loadFromDisk() {
         hasLoaded = true
         useLegacyPlayerLayout = PlayerSettingsStorage.loadUseLegacyPlayerLayout() ?: false
+        toolbarLayout = PlayerToolbarLayout.decode(PlayerSettingsStorage.loadToolbarLayout())
         showLoadingOverlay = PlayerSettingsStorage.loadShowLoadingOverlay() ?: true
         showPlayerLoadingStatus = PlayerSettingsStorage.loadShowPlayerLoadingStatus() ?: true
         pauseOverlayEnabled = PlayerSettingsStorage.loadPauseOverlayEnabled() ?: true
@@ -486,6 +490,14 @@ object PlayerSettingsRepository {
         iosSaturation = PlayerSettingsStorage.loadIosSaturation() ?: 0
         iosGamma = PlayerSettingsStorage.loadIosGamma() ?: 0
         publish()
+    }
+
+    fun setToolbarLayout(layout: PlayerToolbarLayout) {
+        ensureLoaded()
+        if (toolbarLayout == layout) return
+        toolbarLayout = layout
+        publish()
+        PlayerSettingsStorage.saveToolbarLayout(layout.encode())
     }
 
     fun setUseLegacyPlayerLayout(enabled: Boolean) {
@@ -1268,6 +1280,7 @@ object PlayerSettingsRepository {
     private fun publish() {
         _uiState.value = PlayerSettingsUiState(
             useLegacyPlayerLayout = useLegacyPlayerLayout,
+            toolbarLayout = toolbarLayout,
             showLoadingOverlay = showLoadingOverlay,
             showPlayerLoadingStatus = showPlayerLoadingStatus,
             pauseOverlayEnabled = pauseOverlayEnabled,
