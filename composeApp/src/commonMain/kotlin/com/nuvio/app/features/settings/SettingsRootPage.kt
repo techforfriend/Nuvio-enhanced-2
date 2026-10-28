@@ -324,7 +324,7 @@ internal fun LazyListScope.settingsRootContent(
                 text = "by RAJA JI",
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                 ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
