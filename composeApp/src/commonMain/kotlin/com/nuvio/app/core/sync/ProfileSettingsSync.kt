@@ -25,6 +25,7 @@ import com.nuvio.app.core.poster.CustomPosterUrlStorage
 import com.nuvio.app.core.ui.PosterCardStyleStorage
 import com.nuvio.app.features.settings.ThemeSettingsStorage
 import com.nuvio.app.features.settings.ThemeSettingsRepository
+import com.nuvio.app.features.settings.NuvioEnhancedSettingsRepository
 import com.nuvio.app.features.streams.PinnedStreamSourcesRepository
 import com.nuvio.app.features.streams.StreamBadgeSettingsRepository
 import com.nuvio.app.features.streams.StreamBadgeSettingsStorage
@@ -57,6 +58,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
@@ -187,6 +189,20 @@ object ProfileSettingsSync {
 
     fun importBackupJson(payload: String): Result<Unit> =
         runCatching {
+            // A backup must be a MobileProfileSettingsBlob: {"version": N, "features": {...}}.
+            // Without this check any JSON (e.g. the Advanced settings backup, which
+            // uses a different format) decoded to all-default fields and
+            // applyRemoteBlob() silently overwrote every setting with empty values.
+            val root = json.parseToJsonElement(payload.trim()) as? JsonObject
+                ?: error("Invalid backup: not a JSON object.")
+            val version = (root["version"] as? kotlinx.serialization.json.JsonPrimitive)?.intOrNull
+                ?: error("Invalid backup: missing version.")
+            if (version > MobileProfileSettingsBlob.CURRENT_VERSION) {
+                error("Backup is from a newer app version ($version) and cannot be imported.")
+            }
+            if (root["features"] !is JsonObject) {
+                error("Invalid backup: missing settings.")
+            }
             val blob = json.decodeFromString<MobileProfileSettingsBlob>(payload.trim())
             ensureRepositoriesLoaded()
             isApplyingRemoteBlob = true
@@ -288,6 +304,10 @@ object ProfileSettingsSync {
                 notificationsSettings = NotificationsSettingsPayload(
                     episodeReleaseAlertsEnabled = EpisodeReleaseNotificationsRepository.uiState.value.isEnabled,
                 ),
+                // Nuvio Enhanced toggles (Nuvio Read, hide player buttons,
+                // volume boost, ...) live in their own repository and were
+                // never part of the backup, so a restore reset them all.
+                nuvioEnhancedSettingsPayload = NuvioEnhancedSettingsRepository.exportPayload(),
             ),
         )
     }
@@ -371,6 +391,12 @@ object ProfileSettingsSync {
         TraktCommentsSettings.onProfileChanged()
 
         EpisodeReleaseNotificationsRepository.applyFromSyncEnabled(blob.features.notificationsSettings.episodeReleaseAlertsEnabled)
+
+        // Blank means "this backup predates Enhanced settings in the blob":
+        // leave the local Enhanced settings untouched instead of wiping them.
+        blob.features.nuvioEnhancedSettingsPayload
+            .takeIf { it.isNotBlank() }
+            ?.let(NuvioEnhancedSettingsRepository::replacePayload)
     }
 
     private fun ensureRepositoriesLoaded() {
@@ -389,6 +415,7 @@ object ProfileSettingsSync {
         TrackingSettingsRepository.ensureLoaded()
         TraktCommentsSettings.ensureLoaded()
         EpisodeReleaseNotificationsRepository.ensureLoaded()
+        NuvioEnhancedSettingsRepository.ensureLoaded()
     }
 
     private fun buildSignature(blob: MobileProfileSettingsBlob): String =
@@ -400,9 +427,13 @@ object ProfileSettingsSync {
 
 @Serializable
 private data class MobileProfileSettingsBlob(
-    val version: Int = 4,
+    val version: Int = CURRENT_VERSION,
     val features: MobileProfileSettingsFeatures = MobileProfileSettingsFeatures(),
-)
+) {
+    companion object {
+        const val CURRENT_VERSION = 4
+    }
+}
 
 @Serializable
 private data class MobileProfileSettingsFeatures(
@@ -422,6 +453,7 @@ private data class MobileProfileSettingsFeatures(
     @SerialName("trakt_settings_payload") val traktSettingsPayload: String = "",
     @SerialName("trakt_comments_settings") val traktCommentsSettings: JsonObject = JsonObject(emptyMap()),
     @SerialName("notifications_settings") val notificationsSettings: NotificationsSettingsPayload = NotificationsSettingsPayload(),
+    @SerialName("nuvio_enhanced_settings_payload") val nuvioEnhancedSettingsPayload: String = "",
 )
 
 @Serializable
