@@ -16,6 +16,7 @@ actual object TmdbSettingsStorage {
     private const val enabledKey = "tmdb_enabled"
     private const val apiKeyKey = "tmdb_api_key"
     private const val languageKey = "tmdb_language"
+    private const val titleLanguageKey = "tmdb_title_language"
     private const val useTrailersKey = "tmdb_use_trailers"
     private const val useArtworkKey = "tmdb_use_artwork"
     private const val useBasicInfoKey = "tmdb_use_basic_info"
@@ -163,6 +164,16 @@ actual object TmdbSettingsStorage {
         preferences
             ?.edit()
             ?.putBoolean(ProfileScopedKey.of(key), enabled)
+            ?.apply()
+    }
+
+    actual fun loadTitleLanguage(): String? =
+        preferences?.getString(ProfileScopedKey.of(titleLanguageKey), null)
+
+    actual fun saveTitleLanguage(value: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(titleLanguageKey), value)
             ?.apply()
     }
 

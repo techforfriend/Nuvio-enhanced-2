@@ -14,6 +14,7 @@ actual object TmdbSettingsStorage {
     private const val enabledKey = "tmdb_enabled"
     private const val apiKeyKey = "tmdb_api_key"
     private const val languageKey = "tmdb_language"
+    private const val titleLanguageKey = "tmdb_title_language"
     private const val useTrailersKey = "tmdb_use_trailers"
     private const val useArtworkKey = "tmdb_use_artwork"
     private const val useBasicInfoKey = "tmdb_use_basic_info"
@@ -147,6 +148,13 @@ actual object TmdbSettingsStorage {
 
     private fun saveBoolean(key: String, enabled: Boolean) {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(key))
+    }
+
+    actual fun loadTitleLanguage(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(titleLanguageKey))
+
+    actual fun saveTitleLanguage(value: String) {
+        NSUserDefaults.standardUserDefaults.setObject(value, forKey = ProfileScopedKey.of(titleLanguageKey))
     }
 
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {

@@ -33,6 +33,8 @@ internal expect object TmdbSettingsStorage {
     fun saveUseMoreLikeThis(enabled: Boolean)
     fun loadUseCollections(): Boolean?
     fun saveUseCollections(enabled: Boolean)
+    fun loadTitleLanguage(): String?
+    fun saveTitleLanguage(value: String)
     fun exportToSyncPayload(): JsonObject
     fun replaceFromSyncPayload(payload: JsonObject)
 }
