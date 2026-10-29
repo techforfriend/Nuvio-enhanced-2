@@ -23,8 +23,10 @@ NEW_COMMITS="$(git log ${LAST_SYNC_SHA}..${LATEST_LUQMAN_SHA} --oneline 2>/dev/n
 echo "Found new commits:"
 echo "${NEW_COMMITS}"
 
-BRANCH_NAME="sync/luqman-upstream"
-git checkout -B "${BRANCH_NAME}"
+# Sync directly into main: no separate branch, no PR. The workflow checks
+# out main; make sure we are on the latest origin/main first.
+git fetch origin main
+git checkout -B main origin/main
 
 # Merge upstream, skipping conflicted files instead of committing
 # conflict markers, and never amending the previous commit.
@@ -32,13 +34,13 @@ git checkout -B "${BRANCH_NAME}"
 # Rules, in order:
 #  1. Files merged cleanly (including brand-new upstream files) are kept.
 #  2. Files with a merge conflict are SKIPPED: our version is kept as-is.
-#  3. Skipped files are listed in the PR body, so they can be ported later
+#  3. Skipped files are listed in the run log, so they can be ported later
 #     by hand instead of silently disappearing.
 #  4. The tracking SHA is updated in the same merge commit, not by amend.
 #  5. PROTECTED paths below are never tampered with by a sync, even when
 #     upstream changed them cleanly (no conflict). After the merge, every
 #     protected path that the merge changed is restored to OUR version
-#     and listed in the PR body as protected-skipped. Files that only
+#     and listed in the run log as protected-skipped. Files that only
 #     exist in this repo are already untouched by a merge; this rule is
 #     for the shared files where this repo has its own custom work.
 MERGE_STATUS="Clean merge (No conflicts)"
@@ -132,7 +134,7 @@ while IFS= read -r changed_file; do
     git add -- "${changed_file}" 2>/dev/null || true
   fi
 done <<< "${CHANGED_FILES}"
-# Trim trailing newline handling: PROTECTED_SKIPPED is used verbatim in PR body.
+# Trim trailing newline handling: PROTECTED_SKIPPED is printed in the run log.
 if [[ -n "${PROTECTED_SKIPPED}" ]]; then
   MERGE_STATUS="Partial merge - protected files kept as ours"
   echo "Protected files skipped:"
@@ -171,63 +173,22 @@ else
   git commit -m "chore(sync): update Luqman tracking SHA to ${LATEST_LUQMAN_SHA:0:7}" || true
 fi
 
-git push origin "${BRANCH_NAME}" --force
+git push origin main
+# Remove the old sync branch if it still exists remotely; future
+# syncs never recreate it.
+git push origin --delete sync/luqman-upstream 2>/dev/null || true
 
-# Check if PR already exists
-EXISTING_PR="$(gh pr list --head "${BRANCH_NAME}" --state open --json number --jq '.[0].number' 2>/dev/null || true)"
-
-PR_TITLE="Upstream Sync: New updates from Luqman (${LATEST_LUQMAN_SHA:0:7})"
-
-if [[ -n "${PROTECTED_SKIPPED}" ]]; then
-  PROTECTED_SECTION="### Protected files (NOT tampered with by sync - our version kept):
-\`\`\`text
-${PROTECTED_SKIPPED}
-\`\`\`
-"
-else
-  PROTECTED_SECTION="### Protected files:
-None changed by this sync.
-"
-fi
-
+echo "Sync pushed directly to main."
+echo "Merge status: ${MERGE_STATUS}"
 if [[ -n "${SKIPPED_FILES}" ]]; then
-  SKIPPED_SECTION="### Skipped files (conflict - our version kept, port by hand if needed):
-\`\`\`text
-${SKIPPED_FILES}
-\`\`\`
-"
+  echo "Skipped files (conflict - our version kept, port by hand if needed):"
+  echo "${SKIPPED_FILES}"
 else
-  SKIPPED_SECTION="### Skipped files:
-None. All upstream changes merged cleanly.
-"
+  echo "Skipped files: None. All upstream changes merged cleanly."
 fi
-
-cat << EOF > /tmp/pr_body.md
-## New Commits from Luqman Repository
-
-\`\`\`text
-${NEW_COMMITS}
-\`\`\`
-
----
-
-${SKIPPED_SECTION}
-${PROTECTED_SECTION}
-### Pre-Merge Checklist:
-- [ ] Check **Files changed** in this PR - a merged badge alone does not prove upstream code arrived.
-- [ ] Ensure **200% Digital Volume Boost** is intact.
-- [ ] Ensure **CS3 (CloudStream 3) Overhaul & Bug Fixes** are intact.
-- [ ] Ensure **HSV Custom Color Theme Picker** is intact.
-- [ ] Ensure **14 Player Button Hide Toggles** are intact.
-- [ ] Run the APK build and check it succeeds before merging.
-
-> **Status:** ${MERGE_STATUS}
-EOF
-
-if [[ -n "${EXISTING_PR}" ]]; then
-  echo "Updating existing PR #${EXISTING_PR}..."
-  gh pr edit "${EXISTING_PR}" --title "${PR_TITLE}" --body-file /tmp/pr_body.md
+if [[ -n "${PROTECTED_SKIPPED}" ]]; then
+  echo "Protected files (NOT tampered with by sync - our version kept):"
+  echo "${PROTECTED_SKIPPED}"
 else
-  echo "Opening new Pull Request..."
-  gh pr create --base main --head "${BRANCH_NAME}" --title "${PR_TITLE}" --body-file /tmp/pr_body.md
+  echo "Protected files: None changed by this sync."
 fi
