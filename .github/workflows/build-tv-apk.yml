@@ -1,0 +1,96 @@
+name: Build Nuvio Enhanced TV APK
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: build-tv-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Android TV APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: wrapper
+
+      - name: Prepare build environment
+        run: |
+          touch local.properties
+          mkdir -p ~/.gradle
+          echo "org.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=1536m" >> ~/.gradle/gradle.properties
+          echo "org.gradle.configuration-cache=false" >> ~/.gradle/gradle.properties
+
+      - name: Set up Rust
+        run: |
+          rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+          cargo install cargo-ndk --locked
+
+      - name: Restore release keystore from secrets
+        env:
+          NUVIO_RELEASE_KEYSTORE_BASE64: ${{ secrets.NUVIO_RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          # NOTE: secrets cannot be referenced in a step `if:` expression
+          # (GitHub rejects the workflow at parse time), so the
+          # empty-secret check lives here in shell instead.
+          if [ -n "$NUVIO_RELEASE_KEYSTORE_BASE64" ]; then
+            mkdir -p keystore
+            printf '%s' "$NUVIO_RELEASE_KEYSTORE_BASE64" | base64 -d > keystore/nuvio-enhanced.jks
+          else
+            echo "No release keystore secret set, skipping restore."
+          fi
+
+      - name: Build Android TV Release APK
+        env:
+          NUVIO_RELEASE_STORE_PASSWORD: ${{ secrets.NUVIO_RELEASE_STORE_PASSWORD }}
+          NUVIO_RELEASE_KEY_ALIAS: ${{ secrets.NUVIO_RELEASE_KEY_ALIAS }}
+          NUVIO_RELEASE_KEY_PASSWORD: ${{ secrets.NUVIO_RELEASE_KEY_PASSWORD }}
+        run: ./gradlew :androidApp:assembleFullRelease -Pnuvio.apk.abis=arm64-v8a,armeabi-v7a --stacktrace
+
+      - name: Locate and Collect APKs
+        id: collect-apks
+        run: |
+          mkdir -p build-apks
+          find androidApp/build/outputs/apk/ -name "*.apk" -exec cp {} build-apks/ \;
+          ls -la build-apks/
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: success()
+        with:
+          tag_name: v0.6.5-tv
+          name: "Nuvio Enhanced TV v0.6.5-tv"
+          body: |
+            ## Nuvio Enhanced TV v0.6.5-tv
+
+            **TV build — phone users, please use the v0.6.5 release instead, not this one.**
+
+            - Same app and package (`com.nuvio.enhanced`), same signing key as the phone release.
+            - TV launcher label: "Nuvio Enhanced TV" (LEANBACK_LAUNCHER). Phone launcher stays "Nuvio Enhanced".
+            - Two APKs, one per ARM architecture: `arm64-v8a` and `armeabi-v7a`. Install the one matching your TV/box.
+            - Phase 1 TV shell: D-pad focus shell with placeholder buttons. TV Home rails, TV player and TV Details/Search/Settings arrive in later phases.
+            - Marked as a prerelease so the phone app's in-app updater (latest-release lookup) skips this post.
+          draft: false
+          prerelease: true
+          files: build-apks/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

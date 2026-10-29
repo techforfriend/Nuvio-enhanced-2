@@ -147,7 +147,7 @@ fi
 # cannot re-add the extra Luqman workflows that were just deleted.
 for wf_file in .github/workflows/*.yml; do
   case "${wf_file}" in
-    .github/workflows/build-apk.yml|.github/workflows/sync-luqman-upstream.yml)
+    .github/workflows/build-apk.yml|.github/workflows/build-tv-apk.yml|.github/workflows/sync-luqman-upstream.yml)
       ;;
     *)
       if [[ -f "${wf_file}" ]]; then

@@ -127,7 +127,12 @@ android {
         abi {
             isEnable = buildsReleaseApks
             reset()
-            include("arm64-v8a")
+            // TV builds pass -Pnuvio.apk.abis=arm64-v8a,armeabi-v7a;
+            // default (phone workflow, no property) stays arm64-v8a only.
+            val apkAbis = providers.gradleProperty("nuvio.apk.abis").orNull
+                ?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+                ?: listOf("arm64-v8a")
+            apkAbis.forEach { include(it) }
             isUniversalApk = false
         }
     }
