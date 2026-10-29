@@ -71,7 +71,7 @@ fun TvDownloadsScreen(
         if (downloadsState.items.isEmpty()) {
             item {
                 Text(
-                    text = "Koi download nahi hai. Details me kisi direct stream par Download dabao.",
+                    text = "No downloads yet. Press Download on a direct stream in Details.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White.copy(alpha = 0.7f),
                     modifier = Modifier.padding(horizontal = 48.dp),

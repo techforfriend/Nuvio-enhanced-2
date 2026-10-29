@@ -174,7 +174,7 @@ fun TvDetailsScreen(
                 ) {
                     Spacer(Modifier.height(48.dp))
                     Text(
-                        text = detailsState.errorMessage ?: "Kuch galat hua.",
+                        text = detailsState.errorMessage ?: "Something went wrong.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White,
                     )
@@ -202,7 +202,7 @@ fun TvDetailsScreen(
                     if (showP2pOffNotice) {
                         item {
                             Text(
-                                text = "P2P off hai — TV Settings me P2P on karo, phir dobara stream chuno.",
+                                text = "P2P is off — turn P2P on in TV Settings, then pick the stream again.",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = Color.White,
                                 modifier = Modifier.padding(start = 48.dp, end = 48.dp, bottom = 16.dp),
@@ -222,7 +222,7 @@ fun TvDetailsScreen(
                     if (resolvingDebrid) {
                         item {
                             Text(
-                                text = "Debrid link resolve ho raha hai…",
+                                text = "Resolving debrid link…",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = Color.White.copy(alpha = 0.7f),
                                 modifier = Modifier.padding(start = 48.dp, end = 48.dp, bottom = 16.dp),
@@ -306,11 +306,11 @@ fun TvDetailsScreen(
                                                             if (url != null) {
                                                                 onPlay(requestFor(url, false))
                                                             } else {
-                                                                pickerNotice = "Debrid link nahi mila."
+                                                                pickerNotice = "No debrid link found."
                                                             }
                                                         }
                                                         DirectDebridPlayableResult.MissingApiKey -> {
-                                                            pickerNotice = "Debrid key nahi set hai — phone Settings me debrid key daalo, phir dobara chuno."
+                                                            pickerNotice = "No debrid key set — add a debrid key in phone Settings, then pick again."
                                                         }
                                                         else -> {
                                                             if (choice.torrentInfoHash != null &&
@@ -320,10 +320,10 @@ fun TvDetailsScreen(
                                                             } else {
                                                                 pickerNotice = when (resolved) {
                                                                     DirectDebridPlayableResult.NotCached ->
-                                                                        "Ye stream debrid par cached nahi hai."
+                                                                        "This stream is not cached on debrid."
                                                                     DirectDebridPlayableResult.Stale ->
-                                                                        "Ye debrid link expire ho gaya hai."
-                                                                    else -> "Debrid resolve fail ho gaya."
+                                                                        "This debrid link has expired."
+                                                                    else -> "Debrid resolve failed."
                                                                 }
                                                             }
                                                         }
@@ -366,15 +366,15 @@ fun TvDetailsScreen(
                                             )
                                             pickerNotice = when (result) {
                                                 DownloadEnqueueResult.Started ->
-                                                    "Download shuru ho gaya — Downloads me dekho."
+                                                    "Download started — see Downloads."
                                                 DownloadEnqueueResult.Replaced ->
-                                                    "Pehla download replace karke naya shuru ho gaya."
+                                                    "Previous download replaced with a new one."
                                                 DownloadEnqueueResult.MissingUrl ->
-                                                    "Is stream ka download link nahi mila."
+                                                    "No download link found for this stream."
                                                 DownloadEnqueueResult.UnsupportedFormat ->
-                                                    "Ye format download nahi ho sakta."
+                                                    "This format cannot be downloaded."
                                                 DownloadEnqueueResult.RequiresWifi ->
-                                                    "Download ke liye Wi-Fi chahiye."
+                                                    "Downloads need Wi-Fi."
                                             }
                                         },
                                         modifier = Modifier.padding(end = 48.dp),

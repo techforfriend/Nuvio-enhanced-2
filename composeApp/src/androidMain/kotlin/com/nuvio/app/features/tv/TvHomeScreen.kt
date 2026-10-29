@@ -90,7 +90,7 @@ fun TvHomeScreen(
                 ) {
                     Spacer(Modifier.height(48.dp))
                     Text(
-                        text = homeState.errorMessage ?: "Kuch galat hua.",
+                        text = homeState.errorMessage ?: "Something went wrong.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White,
                     )
@@ -106,7 +106,7 @@ fun TvHomeScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Kuch nahi mila — addons ya catalog settings check karo.",
+                        text = "Nothing found — check addons or catalog settings.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White.copy(alpha = 0.7f),
                     )

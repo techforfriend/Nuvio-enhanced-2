@@ -131,7 +131,7 @@ fun TvSettingsScreen(
                 }
                 item {
                     Text(
-                        text = "P2P on karne par torrent download ke saath upload bhi ho sakta hai.",
+                        text = "Turning P2P on may also upload while a torrent downloads.",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.6f),
                         modifier = Modifier.padding(horizontal = 48.dp, vertical = 4.dp),

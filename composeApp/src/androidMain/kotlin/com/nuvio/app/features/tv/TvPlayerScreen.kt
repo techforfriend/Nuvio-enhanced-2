@@ -146,7 +146,7 @@ fun TvPlayerScreen(
         val infoHash = request.torrentInfoHash ?: return@LaunchedEffect
         if (!P2pSettingsRepository.isVisible || !p2pSettings.p2pEnabled) {
             resolvingTorrent = false
-            errorMessage = "P2P off hai — TV Settings me P2P on karo, phir dobara play karo."
+            errorMessage = "P2P is off — turn P2P on in TV Settings, then play again."
             return@LaunchedEffect
         }
         resolvingTorrent = true
@@ -164,7 +164,7 @@ fun TvPlayerScreen(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            errorMessage = "Torrent start nahi hua: ${error.message ?: "unknown error"}"
+            errorMessage = "Torrent failed to start: ${error.message ?: "unknown error"}"
         }
         resolvingTorrent = false
     }
@@ -383,7 +383,7 @@ fun TvPlayerScreen(
                 CircularProgressIndicator(color = Color.White)
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = "Torrent se connect ho raha hai…",
+                    text = "Connecting to torrent…",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White,
                 )
@@ -480,7 +480,7 @@ fun TvPlayerScreen(
                     if (panel == TvTrackPanel.Audio) {
                         if (audioTracks.isEmpty()) {
                             Text(
-                                text = "Koi audio track nahi mila.",
+                                text = "No audio tracks found.",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = Color.White.copy(alpha = 0.7f),
                             )

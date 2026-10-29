@@ -69,7 +69,7 @@ fun TvPartyScreen(
         if (!partyAvailable) {
             item {
                 Text(
-                    text = "Watch Party ke liye server setup chahiye — phone par server connect karo, phir dobara aao.",
+                    text = "Watch Party needs a server setup — connect a server on the phone, then come back.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White,
                     modifier = Modifier.padding(horizontal = 48.dp),
@@ -95,7 +95,7 @@ fun TvPartyScreen(
                         text = if (memberNames.isNotBlank()) {
                             "Members (${party.members.size}): $memberNames"
                         } else {
-                            "Members: sirf tum"
+                            "Members: only you"
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.7f),
@@ -129,7 +129,7 @@ fun TvPartyScreen(
                     }
                     if (party.isHost) {
                         Text(
-                            text = "Tum host ho — Back dabakar player par jao, tumhara stream members ko auto-share ho jayega.",
+                            text = "You are the host — press Back to return to the player, your stream will be shared with members automatically.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(alpha = 0.7f),
                         )
@@ -211,7 +211,7 @@ fun TvPartyScreen(
                                     val error = PartyRepository.create(media)
                                     if (error == null) {
                                         PartyRepository.setSharing(true)
-                                        createMessage = "Party ban gayi — Back dabakar player par jao."
+                                        createMessage = "Party created — press Back to return to the player."
                                     } else {
                                         createMessage = partyErrorText(error)
                                     }
@@ -221,7 +221,7 @@ fun TvPartyScreen(
                         )
                     } else {
                         Text(
-                            text = "Party banane ke liye pehle Details se koi video play karo, phir player me Party dabao.",
+                            text = "To create a party, first play a video from Details, then press Party in the player.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(alpha = 0.7f),
                         )
@@ -243,12 +243,12 @@ fun TvPartyScreen(
 }
 
 private fun partyErrorText(error: PartyError): String = when (error) {
-    PartyError.NotFound -> "Party nahi mili — code dobara check karo."
-    PartyError.Full -> "Party full hai."
-    PartyError.Removed -> "Party se nikaal diya gaya."
-    PartyError.Ended -> "Party khatam ho gayi hai."
-    PartyError.RateLimited -> "Thodi der baad dobara try karo."
-    PartyError.SignInRequired -> "Watch Party ke liye sign-in chahiye."
-    PartyError.Unavailable -> "Watch Party abhi available nahi hai."
-    PartyError.Network -> "Network error — dobara try karo."
+    PartyError.NotFound -> "Party not found — check the code and try again."
+    PartyError.Full -> "Party is full."
+    PartyError.Removed -> "You were removed from the party."
+    PartyError.Ended -> "Party has ended."
+    PartyError.RateLimited -> "Try again in a little while."
+    PartyError.SignInRequired -> "Watch Party needs sign-in."
+    PartyError.Unavailable -> "Watch Party is not available right now."
+    PartyError.Network -> "Network error — try again."
 }
