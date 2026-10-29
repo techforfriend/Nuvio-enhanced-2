@@ -46,12 +46,18 @@ jobs:
           cargo install cargo-ndk --locked
 
       - name: Restore release keystore from secrets
-        if: ${{ secrets.NUVIO_RELEASE_KEYSTORE_BASE64 != '' }}
         env:
           NUVIO_RELEASE_KEYSTORE_BASE64: ${{ secrets.NUVIO_RELEASE_KEYSTORE_BASE64 }}
         run: |
-          mkdir -p keystore
-          printf '%s' "$NUVIO_RELEASE_KEYSTORE_BASE64" | base64 -d > keystore/nuvio-enhanced.jks
+          # NOTE: secrets cannot be referenced in a step `if:` expression
+          # (GitHub rejects the workflow at parse time), so the
+          # empty-secret check lives here in shell instead.
+          if [ -n "$NUVIO_RELEASE_KEYSTORE_BASE64" ]; then
+            mkdir -p keystore
+            printf '%s' "$NUVIO_RELEASE_KEYSTORE_BASE64" | base64 -d > keystore/nuvio-enhanced.jks
+          else
+            echo "No release keystore secret set, skipping restore."
+          fi
 
       - name: Build Android Release APK
         env:
