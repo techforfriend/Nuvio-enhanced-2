@@ -8,22 +8,27 @@ import androidx.compose.runtime.setValue
 import com.nuvio.app.features.home.MetaPreview
 
 /**
- * Phase 2 TV navigation: only Home exists so far. Details (Phase 4) and
- * Player (Phase 3) join this sealed screen list when they land; card clicks
- * are accepted by [TvHomeScreen] already and currently do nothing.
+ * Phase 2 TV navigation, extended in Phase 3 with the player. Details
+ * (Phase 4) will add its own screen and wire Home card clicks to it, and
+ * Details will hand a resolved [TvPlayRequest] to [TvScreen.Player].
  */
 sealed interface TvScreen {
     data object Home : TvScreen
+    data class Player(val request: TvPlayRequest) : TvScreen
 }
 
 @Composable
 fun TvNavHost() {
     var currentScreen by remember { mutableStateOf<TvScreen>(TvScreen.Home) }
-    when (currentScreen) {
+    when (val screen = currentScreen) {
         TvScreen.Home -> TvHomeScreen(
             onItemClick = { _: MetaPreview ->
                 // Phase 4 wires this to TvDetailsScreen.
             },
+        )
+        is TvScreen.Player -> TvPlayerScreen(
+            request = screen.request,
+            onBack = { currentScreen = TvScreen.Home },
         )
     }
 }
