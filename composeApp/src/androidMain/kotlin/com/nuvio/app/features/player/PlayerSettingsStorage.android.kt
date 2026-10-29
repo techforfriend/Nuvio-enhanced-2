@@ -32,6 +32,7 @@ actual object PlayerSettingsStorage {
     private const val holdToSpeedValueKey = "hold_to_speed_value"
     private const val skipBackwardSecondsKey = "skip_backward_seconds"
     private const val skipForwardSecondsKey = "skip_forward_seconds"
+    private const val skipIntroOffsetSecondsKey = "skip_intro_offset_seconds"
     private const val touchGesturesEnabledKey = "touch_gestures_enabled"
     private const val swipeToSeekEnabledKey = "swipe_to_seek_enabled"
     private const val seekPreviewEnabledKey = "seek_preview_enabled"
@@ -373,6 +374,10 @@ actual object PlayerSettingsStorage {
     actual fun loadSkipForwardSeconds(): Int? = loadLocalInt(skipForwardSecondsKey)
 
     actual fun saveSkipForwardSeconds(seconds: Int) = saveLocalInt(skipForwardSecondsKey, seconds)
+
+    actual fun loadSkipIntroOffsetSeconds(): Int? = loadLocalInt(skipIntroOffsetSecondsKey)
+
+    actual fun saveSkipIntroOffsetSeconds(seconds: Int) = saveLocalInt(skipIntroOffsetSecondsKey, seconds)
 
     actual fun loadTouchGesturesEnabled(): Boolean? =
         preferences?.let { sharedPreferences ->

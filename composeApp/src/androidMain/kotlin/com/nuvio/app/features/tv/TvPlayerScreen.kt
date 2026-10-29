@@ -295,6 +295,15 @@ fun TvPlayerScreen(
         showControls()
     }
 
+    fun requestSeekPreviewFor(targetMs: Long) {
+        if (!playerSettings.seekPreviewEnabled) return
+        val duration = snapshot.durationMs
+        val target = targetMs.coerceIn(0L, if (duration > 0L) duration else Long.MAX_VALUE)
+        controller?.requestSeekPreviewFrame(target) { preview ->
+            seekPreview = preview
+        }
+    }
+
     fun seekBack() {
         controller?.seekBy(-10_000L)
         requestSeekPreviewFor(snapshot.positionMs - 10_000L)
@@ -307,15 +316,6 @@ fun TvPlayerScreen(
         requestSeekPreviewFor(snapshot.positionMs + 10_000L)
         publishPartyPlayback()
         showControls()
-    }
-
-    fun requestSeekPreviewFor(targetMs: Long) {
-        if (!playerSettings.seekPreviewEnabled) return
-        val duration = snapshot.durationMs
-        val target = targetMs.coerceIn(0L, if (duration > 0L) duration else Long.MAX_VALUE)
-        controller?.requestSeekPreviewFrame(target) { preview ->
-            seekPreview = preview
-        }
     }
 
     fun openAudioTracks() {

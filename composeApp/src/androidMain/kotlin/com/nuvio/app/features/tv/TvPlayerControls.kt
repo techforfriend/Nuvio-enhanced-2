@@ -165,6 +165,9 @@ fun TvPlayerControls(
                     .weight(1f)
                     .padding(horizontal = 12.dp),
             ) {
+                // Captured here: inside the inner Box below, the receiver is
+                // BoxScope, which has no maxWidth of its own.
+                val barWidth = maxWidth
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -184,7 +187,7 @@ fun TvPlayerControls(
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.CenterStart)
-                                    .offset(x = fraction * maxWidth - 1.dp)
+                                    .offset(x = fraction * barWidth - 1.dp)
                                     .width(2.dp)
                                     .height(12.dp)
                                     .background(Color.White, RoundedCornerShape(1.dp)),
