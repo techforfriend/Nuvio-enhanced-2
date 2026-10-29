@@ -1,5 +1,6 @@
 package com.nuvio.app.features.tv
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusable
+import androidx.compose.foundation.focusable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -157,6 +158,14 @@ fun TvPlayerScreen(
         interactionTick++
     }
 
+    BackHandler {
+        if (controlsVisible) {
+            controlsVisible = false
+        } else {
+            onBack()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -165,7 +174,7 @@ fun TvPlayerScreen(
             .focusable()
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                when (mapTvPlayerKey(event.key.nativeKeyCode, controlsVisible)) {
+                when (mapTvPlayerKey(event.key)) {
                     TvPlayerKeyAction.TogglePlayPause -> {
                         if (snapshot.isEnded) {
                             controller?.seekTo(0L)
@@ -190,14 +199,6 @@ fun TvPlayerScreen(
                     }
                     TvPlayerKeyAction.ShowControls -> {
                         showControls()
-                        true
-                    }
-                    TvPlayerKeyAction.HideControlsThenBack -> {
-                        controlsVisible = false
-                        true
-                    }
-                    TvPlayerKeyAction.Back -> {
-                        onBack()
                         true
                     }
                     null -> false

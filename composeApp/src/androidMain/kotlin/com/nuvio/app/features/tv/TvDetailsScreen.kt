@@ -1,6 +1,6 @@
 package com.nuvio.app.features.tv
 
-import android.view.KeyEvent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,17 +28,13 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.foundation.lazy.list.item
-import androidx.tv.foundation.lazy.list.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.item
+import androidx.compose.foundation.lazy.items
 import coil3.compose.AsyncImage
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaVideo
@@ -46,9 +42,6 @@ import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.features.streams.StreamSubtitle
 import com.nuvio.app.features.streams.StreamsRepository
-import com.nuvio.app.features.streams.p2pFileIdx
-import com.nuvio.app.features.streams.p2pInfoHash
-import com.nuvio.app.features.streams.p2pTrackers
 
 /**
  * Phase 4 TV Details: hero + Play + episodes + More like this, all from
@@ -136,23 +129,18 @@ fun TvDetailsScreen(
         }
     }
 
+    BackHandler {
+        if (showStreams) {
+            showStreams = false
+        } else {
+            onBack()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF020404))
-            .onKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                if (event.key.nativeKeyCode == KeyEvent.KEYCODE_BACK) {
-                    if (showStreams) {
-                        showStreams = false
-                    } else {
-                        onBack()
-                    }
-                    true
-                } else {
-                    false
-                }
-            },
+            .background(Color(0xFF020404)),
     ) {
         when {
             detailsState.isLoading && meta == null -> {
@@ -188,7 +176,7 @@ fun TvDetailsScreen(
                 }
             }
             showStreams -> {
-                TvLazyColumn(
+                LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     item {
@@ -283,7 +271,7 @@ fun TvDetailsScreen(
                 }
             }
             meta != null -> {
-                TvLazyColumn(
+                LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     item {

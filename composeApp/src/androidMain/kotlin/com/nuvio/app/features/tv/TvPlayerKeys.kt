@@ -1,10 +1,12 @@
 package com.nuvio.app.features.tv
 
-import android.view.KeyEvent
+import androidx.compose.ui.input.key.Key
 
 /**
  * Phase 3 remote-key mapping for the TV player. Pure mapping only — the
  * screen applies the returned action — so key behaviour stays in one place.
+ * BACK is not mapped here: the screen handles it with BackHandler, which
+ * hides visible controls first and exits only when they are hidden.
  *
  * Notes on focus: when controls are visible and a control button is focused,
  * the button consumes center/arrows itself (click / focus move) before the
@@ -16,30 +18,23 @@ enum class TvPlayerKeyAction {
     SeekBack,
     SeekForward,
     ShowControls,
-    HideControlsThenBack,
-    Back,
 }
 
-fun mapTvPlayerKey(keyCode: Int, controlsVisible: Boolean): TvPlayerKeyAction? =
-    when (keyCode) {
-        KeyEvent.KEYCODE_DPAD_CENTER,
-        KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
-        KeyEvent.KEYCODE_MEDIA_PLAY,
-        KeyEvent.KEYCODE_MEDIA_PAUSE,
+fun mapTvPlayerKey(key: Key): TvPlayerKeyAction? =
+    when (key) {
+        Key.DirectionCenter,
+        Key.MediaPlayPause,
+        Key.MediaPlay,
+        Key.MediaPause,
         -> TvPlayerKeyAction.TogglePlayPause
-        KeyEvent.KEYCODE_DPAD_LEFT,
-        KeyEvent.KEYCODE_MEDIA_REWIND,
+        Key.DirectionLeft,
+        Key.MediaRewind,
         -> TvPlayerKeyAction.SeekBack
-        KeyEvent.KEYCODE_DPAD_RIGHT,
-        KeyEvent.KEYCODE_MEDIA_FAST_FORWARD,
+        Key.DirectionRight,
+        Key.MediaFastForward,
         -> TvPlayerKeyAction.SeekForward
-        KeyEvent.KEYCODE_DPAD_UP,
-        KeyEvent.KEYCODE_DPAD_DOWN,
+        Key.DirectionUp,
+        Key.DirectionDown,
         -> TvPlayerKeyAction.ShowControls
-        KeyEvent.KEYCODE_BACK -> if (controlsVisible) {
-            TvPlayerKeyAction.HideControlsThenBack
-        } else {
-            TvPlayerKeyAction.Back
-        }
         else -> null
     }

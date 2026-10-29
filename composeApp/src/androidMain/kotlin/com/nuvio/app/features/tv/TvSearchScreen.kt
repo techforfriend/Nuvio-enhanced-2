@@ -1,6 +1,6 @@
 package com.nuvio.app.features.tv
 
-import android.view.KeyEvent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -25,16 +25,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.foundation.lazy.list.item
-import androidx.tv.foundation.lazy.list.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.item
+import androidx.compose.foundation.lazy.items
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.search.SearchRepository
@@ -66,21 +62,16 @@ fun TvSearchScreen(
         }
     }
 
+    BackHandler {
+        onBack()
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF020404))
-            .onKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                if (event.key.nativeKeyCode == KeyEvent.KEYCODE_BACK) {
-                    onBack()
-                    true
-                } else {
-                    false
-                }
-            },
+            .background(Color(0xFF020404)),
     ) {
-        TvLazyColumn(
+        LazyColumn(
             modifier = Modifier.fillMaxSize(),
         ) {
             item {

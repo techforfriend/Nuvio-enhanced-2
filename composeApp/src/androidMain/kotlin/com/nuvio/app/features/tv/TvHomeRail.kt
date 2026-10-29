@@ -12,14 +12,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.tv.foundation.lazy.list.TvLazyRow
-import androidx.tv.foundation.lazy.list.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.stableKey
 
 /**
  * Phase 2: one Home rail = a title plus a horizontally scrolling row of
- * [TvCard]s. TvLazyRow handles D-pad scrolling to the focused card.
+ * [TvCard]s. LazyRow handles D-pad scrolling to the focused card.
  * [firstCardFocusRequester] is only passed for the first rail's first card,
  * so the Home screen opens with focus in a known place.
  */
@@ -47,7 +47,7 @@ fun TvHomeRail(
                 modifier = Modifier.padding(horizontal = 48.dp),
             )
         }
-        TvLazyRow(
+        LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp, bottom = 16.dp),
