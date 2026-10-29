@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
     <application
         android:name="com.nuvio.app.NuvioApplication"
         android:allowBackup="false"
@@ -32,6 +35,19 @@
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:supportsPictureInPicture="true"
             android:theme="@style/Theme.Nuvio.Splash" />
+
+        <activity
+            android:exported="true"
+            android:name="com.nuvio.app.TvMainActivity"
+            android:banner="@drawable/tv_banner"
+            android:label="@string/tv_app_name"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.Nuvio.Splash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name="com.nuvio.app.LinkActivity"

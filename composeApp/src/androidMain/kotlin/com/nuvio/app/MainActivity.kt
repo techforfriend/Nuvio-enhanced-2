@@ -104,7 +104,7 @@ import kotlinx.coroutines.launch
 
 open class MainActivity : AppCompatActivity() {
     private val startupScope = MainScope()
-    private var contentReady = false
+    protected var contentReady = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen().setKeepOnScreenCondition { !contentReady }
@@ -219,7 +219,7 @@ open class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showContent() {
+    protected open fun showContent() {
         handleIncomingAppIntent(intent)
         setContent {
             val sheetBackdropSource = rememberNuvioBackdrop()
