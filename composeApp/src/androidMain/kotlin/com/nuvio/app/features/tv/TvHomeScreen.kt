@@ -4,10 +4,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,6 +45,8 @@ import com.nuvio.app.features.home.MetaPreview
 @Composable
 fun TvHomeScreen(
     onItemClick: (MetaPreview) -> Unit,
+    onOpenSearch: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     val homeState by HomeRepository.uiState.collectAsStateWithLifecycle()
     val addonsState by AddonRepository.uiState.collectAsStateWithLifecycle()
@@ -112,12 +117,22 @@ fun TvHomeScreen(
                     contentPadding = PaddingValues(bottom = 32.dp),
                 ) {
                     item {
-                        Text(
-                            text = "Nuvio Enhanced TV",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color.White,
-                            modifier = Modifier.padding(start = 48.dp, end = 48.dp, top = 32.dp, bottom = 24.dp),
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 48.dp, end = 48.dp, top = 32.dp, bottom = 24.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "Nuvio Enhanced TV",
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = Color.White,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TvControlButton(label = "Search", onClick = onOpenSearch)
+                            Spacer(Modifier.width(12.dp))
+                            TvControlButton(label = "Settings", onClick = onOpenSettings)
+                        }
                     }
                     val hasHero = homeState.heroItems.isNotEmpty()
                     if (hasHero) {

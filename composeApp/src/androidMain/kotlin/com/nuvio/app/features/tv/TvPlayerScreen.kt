@@ -44,6 +44,7 @@ data class TvPlayRequest(
     val sourceAudioUrl: String? = null,
     val sourceHeaders: Map<String, String> = emptyMap(),
     val streamType: String? = null,
+    val externalSubtitles: List<com.nuvio.app.features.streams.StreamSubtitle> = emptyList(),
     val initialPositionMs: Long = 0L,
 )
 
@@ -143,7 +144,7 @@ fun TvPlayerScreen(
             sourceAudioUrl = request.sourceAudioUrl,
             sourceHeaders = request.sourceHeaders,
             sourceResponseHeaders = emptyMap(),
-            externalSubtitles = emptyList(),
+            externalSubtitles = request.externalSubtitles,
             streamType = request.streamType,
             useYoutubeChunkedPlayback = false,
             modifier = Modifier.fillMaxSize(),
