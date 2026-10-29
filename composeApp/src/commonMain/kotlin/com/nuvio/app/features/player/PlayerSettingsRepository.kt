@@ -87,6 +87,7 @@ data class PlayerSettingsUiState(
     val streamAutoPlayRegex: String = "",
     val streamAutoPlayTimeoutSeconds: Int = 3,
     val skipIntroEnabled: Boolean = true,
+    val skipIntroOffsetSeconds: Int = 0,
     val autoSkipSegmentTypes: Set<AutoSkipSegmentType> = emptySet(),
     val animeSkipEnabled: Boolean = false,
     val animeSkipClientId: String = "",
@@ -183,6 +184,7 @@ object PlayerSettingsRepository {
     private var streamAutoPlayRegex = ""
     private var streamAutoPlayTimeoutSeconds = 3
     private var skipIntroEnabled = true
+    private var skipIntroOffsetSeconds = 0
     private var autoSkipSegmentTypes: Set<AutoSkipSegmentType> = emptySet()
     private var animeSkipEnabled = false
     private var animeSkipClientId = ""
@@ -283,6 +285,7 @@ object PlayerSettingsRepository {
         streamAutoPlayRegex = ""
         streamAutoPlayTimeoutSeconds = 3
         skipIntroEnabled = true
+        skipIntroOffsetSeconds = 0
         autoSkipSegmentTypes = emptySet()
         animeSkipEnabled = false
         animeSkipClientId = ""
@@ -441,6 +444,7 @@ object PlayerSettingsRepository {
             PlayerSettingsStorage.saveStreamAutoPlayTimeoutSeconds(streamAutoPlayTimeoutSeconds)
         }
         skipIntroEnabled = PlayerSettingsStorage.loadSkipIntroEnabled() ?: true
+        skipIntroOffsetSeconds = normalizeSkipIntroOffsetSeconds(PlayerSettingsStorage.loadSkipIntroOffsetSeconds())
         autoSkipSegmentTypes = PlayerSettingsStorage.loadAutoSkipSegmentTypes()
             ?.mapNotNull(AutoSkipSegmentType::fromStoredValue)?.toSet() ?: buildSet {
                 if (PlayerSettingsStorage.loadAutoSkipMovieCredits() == true) add(AutoSkipSegmentType.MOVIE_CREDITS)
@@ -952,6 +956,15 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveStreamAutoPlayTimeoutSeconds(seconds)
     }
 
+    fun setSkipIntroOffsetSeconds(seconds: Int) {
+        ensureLoaded()
+        val normalized = normalizeSkipIntroOffsetSeconds(seconds)
+        if (skipIntroOffsetSeconds == normalized) return
+        skipIntroOffsetSeconds = normalized
+        publish()
+        PlayerSettingsStorage.saveSkipIntroOffsetSeconds(normalized)
+    }
+
     fun setSkipIntroEnabled(enabled: Boolean) {
         ensureLoaded()
         if (skipIntroEnabled == enabled) return
@@ -1334,6 +1347,7 @@ object PlayerSettingsRepository {
             streamAutoPlayRegex = streamAutoPlayRegex,
             streamAutoPlayTimeoutSeconds = streamAutoPlayTimeoutSeconds,
             skipIntroEnabled = skipIntroEnabled,
+            skipIntroOffsetSeconds = skipIntroOffsetSeconds,
             autoSkipSegmentTypes = autoSkipSegmentTypes,
             animeSkipEnabled = animeSkipEnabled,
             animeSkipClientId = animeSkipClientId,
@@ -1382,6 +1396,12 @@ object PlayerSettingsRepository {
 
 val PlayerSkipSecondsOptions = listOf(5, 10, 15, 30)
 const val PLAYER_SKIP_SECONDS_DEFAULT = 10
+
+const val SKIP_INTRO_OFFSET_SLIDER_SECONDS = 30
+const val SKIP_INTRO_OFFSET_MAX_SECONDS = 60
+
+internal fun normalizeSkipIntroOffsetSeconds(seconds: Int?): Int =
+    (seconds ?: 0).coerceIn(-SKIP_INTRO_OFFSET_MAX_SECONDS, SKIP_INTRO_OFFSET_MAX_SECONDS)
 
 internal fun normalizePlayerSkipSeconds(seconds: Int?): Int =
     seconds?.takeIf { it in PlayerSkipSecondsOptions } ?: PLAYER_SKIP_SECONDS_DEFAULT

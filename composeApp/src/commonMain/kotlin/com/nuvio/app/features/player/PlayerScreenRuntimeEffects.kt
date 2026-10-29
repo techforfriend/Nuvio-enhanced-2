@@ -276,11 +276,7 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
     ) {
         val controller = playerController ?: return@LaunchedEffect
         val controllerSourceUrl = playerControllerSourceUrl ?: return@LaunchedEffect
-        val controllerMatchesActivePlayback =
-            controllerSourceUrl == activeSourceUrl ||
-                controllerSourceUrl == activePlaybackSourceUrl ||
-                controllerSourceUrl == p2pResolvedSourceUrl
-        if (!controllerMatchesActivePlayback) return@LaunchedEffect
+        if (!isControllerOnActivePlayback(controllerSourceUrl)) return@LaunchedEffect
         controller.updateNowPlayingMetadata(buildNowPlayingInfo())
     }
 
@@ -295,8 +291,11 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
         fetchAddonSubtitlesForActiveItem()
     }
 
-    LaunchedEffect(playerController, playerControllerSourceUrl, activeSourceUrl, preferredAudioLanguageTargets) {
-        if (playerControllerSourceUrl == activeSourceUrl) {
+    LaunchedEffect(
+        playerController, playerControllerSourceUrl, activeSourceUrl, activePlaybackSourceUrl, p2pResolvedSourceUrl,
+        preferredAudioLanguageTargets,
+    ) {
+        if (isControllerOnActivePlayback()) {
             applyPreferredAudioTrack(preferredAudioLanguageTargets)
         }
     }
@@ -351,11 +350,7 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
     ) {
         val controller = playerController ?: return@LaunchedEffect
         val controllerSourceUrl = playerControllerSourceUrl ?: return@LaunchedEffect
-        val controllerMatchesActivePlayback =
-            controllerSourceUrl == activeSourceUrl ||
-                controllerSourceUrl == activePlaybackSourceUrl ||
-                controllerSourceUrl == p2pResolvedSourceUrl
-        if (!controllerMatchesActivePlayback) return@LaunchedEffect
+        if (!isControllerOnActivePlayback(controllerSourceUrl)) return@LaunchedEffect
         if (initialSeekApplied || playbackSnapshot.isLoading) return@LaunchedEffect
         if (isPartySynced && PartyRepository.playback.value != null) {
             initialSeekApplied = true
@@ -610,30 +605,40 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         lastManualSkipSeekPositions?.let { (fromMs, toMs) ->
             autoSkippedIntervals += skipIntervals.intervalsAtSeekPositions(fromMs, toMs)
         }
-        val current = skipIntervals.firstOrNull { interval ->
-            // Fork: intro-like segments show the button a few seconds early (pre-roll).
-            interval.isEligibleForSkipButton(positionSec) &&
-                interval.internalSkipAction(skipIntervals, playbackSnapshot.durationMs) != null
+        val offsetSeconds = playerSettingsUiState.skipIntroOffsetSeconds
+        val durationMs = playbackSnapshot.durationMs
+        val eligible = skipIntervals.mapNotNull { interval ->
+            if (!interval.isEligibleForSkipButton(positionSec, offsetSeconds)) return@mapNotNull null
+            val action = interval.internalSkipAction(skipIntervals, durationMs) ?: return@mapNotNull null
+            interval to action
         }
+        val current = (eligible.filter { (interval, _) -> positionSec >= interval.startTime }.ifEmpty { eligible })
+            .maxByOrNull { (_, action) -> action.targetMs }
+            ?.first
         if (current != activeSkipInterval) {
             activeSkipInterval = current
             if (current != null) skipIntervalDismissed = false
         }
         val controller = playerController
-        if (current != null && controller != null &&
-            playerControllerSourceUrl == activeSourceUrl &&
+        val autoSkip = if (controller != null &&
+            isControllerOnActivePlayback() &&
             playerSettingsUiState.skipIntroEnabled && playbackSnapshot.isPlaying &&
-            !isScrubbingTimeline && initialSeekApplied && !isPartyControlLocked &&
-            // The pre-roll only reveals the button; auto-skip waits for the segment itself.
-            positionSec >= current.startTime &&
-            current.shouldAutoSkip(playerSettingsUiState.autoSkipSegmentTypes) &&
-            current !in autoSkippedIntervals
+            !isScrubbingTimeline && initialSeekApplied && !isPartyControlLocked
         ) {
-            val durationMs = playbackSnapshot.durationMs
-            val rawMs = current.internalSkipAction(skipIntervals, durationMs)?.targetMs ?: return@LaunchedEffect
+            eligible.filter { (interval, _) ->
+                positionSec >= maxOf(interval.startTime, interval.skipButtonStartTime(offsetSeconds)) &&
+                    interval.shouldAutoSkip(playerSettingsUiState.autoSkipSegmentTypes) &&
+                    interval !in autoSkippedIntervals
+            }.maxByOrNull { (_, action) -> action.targetMs }
+        } else {
+            null
+        }
+        if (controller != null && autoSkip != null) {
+            val (interval, action) = autoSkip
+            val rawMs = action.targetMs
             val seekPositionMs = if (durationMs > 0L) rawMs.coerceAtMost(durationMs - 1) else rawMs
-            val notification = current.autoSkipNotificationMessage(seekPositionMs)
-            autoSkippedIntervals.add(current)
+            val notification = interval.autoSkipNotificationMessage(seekPositionMs)
+            autoSkippedIntervals.add(interval)
             controller.seekTo(seekPositionMs)
             scheduleProgressSyncAfterSeek()
             publishPartyPlayback(positionMs = seekPositionMs)
@@ -989,14 +994,24 @@ private fun findCredentialRefreshCandidate(
         .maxByOrNull { (score, _) -> score }
         ?.second
 
-private fun SkipInterval.isEligibleForSkipButton(positionSec: Double): Boolean {
-    val effectiveStartTime = if (isIntroLikeSkipInterval()) {
-        (startTime - SKIP_INTRO_PRE_ROLL_SECONDS).coerceAtLeast(0.0)
+internal fun PlayerScreenRuntime.isControllerOnActivePlayback(
+    controllerSourceUrl: String? = playerControllerSourceUrl,
+): Boolean =
+    controllerSourceUrl != null && (
+        controllerSourceUrl == activeSourceUrl ||
+            controllerSourceUrl == activePlaybackSourceUrl ||
+            controllerSourceUrl == p2pResolvedSourceUrl
+        )
+
+private fun SkipInterval.isEligibleForSkipButton(positionSec: Double, offsetSeconds: Int): Boolean =
+    positionSec >= skipButtonStartTime(offsetSeconds) && positionSec < endTime
+
+private fun SkipInterval.skipButtonStartTime(offsetSeconds: Int): Double =
+    if (isIntroLikeSkipInterval() && offsetSeconds != 0) {
+        (startTime + offsetSeconds).coerceIn(0.0, maxOf(startTime, endTime - 1.0))
     } else {
         startTime
     }
-    return positionSec >= effectiveStartTime && positionSec < endTime
-}
 
 private fun SkipInterval.isIntroLikeSkipInterval(): Boolean =
     when (type.lowercase()) {
@@ -1004,6 +1019,5 @@ private fun SkipInterval.isIntroLikeSkipInterval(): Boolean =
         else -> false
     }
 
-private const val SKIP_INTRO_PRE_ROLL_SECONDS = 10.0
 private const val CREDENTIAL_REFRESH_POLL_COUNT = 30
 private const val CREDENTIAL_REFRESH_POLL_INTERVAL_MS = 500L

@@ -8,7 +8,7 @@ internal suspend fun PlayerScreenRuntime.loadChaptersIfNeeded() {
     if (!playerSettingsUiState.androidExoChaptersEnabled) return
     val controller = playerController ?: return
     val sourceUrl = activeSourceUrl
-    if (playerControllerSourceUrl != sourceUrl || chaptersLoadedForSourceUrl == sourceUrl) return
+    if (!isControllerOnActivePlayback() || chaptersLoadedForSourceUrl == sourceUrl) return
     val loaded = PlayerChapters.normalize(controller.getChapters())
     if (activeSourceUrl != sourceUrl || playerController !== controller) return
     chaptersLoadedForSourceUrl = sourceUrl
