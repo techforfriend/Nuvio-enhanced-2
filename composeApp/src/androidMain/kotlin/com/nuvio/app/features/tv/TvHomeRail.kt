@@ -31,6 +31,7 @@ fun TvHomeRail(
     onItemClick: (MetaPreview) -> Unit,
     modifier: Modifier = Modifier,
     firstCardFocusRequester: FocusRequester? = null,
+    onItemFocused: ((MetaPreview) -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
@@ -59,6 +60,7 @@ fun TvHomeRail(
                     item = item,
                     onClick = { onItemClick(item) },
                     focusRequester = if (item == items.firstOrNull()) firstCardFocusRequester else null,
+                    onFocused = onItemFocused?.let { callback -> { callback(item) } },
                 )
             }
         }

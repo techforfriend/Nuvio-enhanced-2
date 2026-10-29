@@ -5,20 +5,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -40,7 +40,9 @@ import com.nuvio.app.features.home.MetaPreview
 /**
  * TV-style Home hero: a full-width backdrop banner (the phone Home's
  * small "Featured" rail is not a TV hero), with the title, release info
- * and a Details button the D-pad lands on first.
+ * and a Details button the D-pad lands on first. Reshaped-style, the
+ * billboard follows the focused card: focusing any rail card swaps the
+ * banner to that title with its details expanded underneath.
  */
 @Composable
 private fun TvHomeHero(
@@ -86,13 +88,28 @@ private fun TvHomeHero(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (!item.releaseInfo.isNullOrBlank()) {
+            val infoLine = listOfNotNull(
+                item.releaseInfo,
+                item.genres.takeIf { it.isNotEmpty() }?.joinToString(", "),
+                item.imdbRating?.let { "IMDb $it" },
+            ).joinToString(" • ")
+            if (infoLine.isNotBlank()) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = item.releaseInfo ?: "",
+                    text = infoLine,
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White.copy(alpha = 0.85f),
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (!item.description.isNullOrBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = item.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.85f),
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -125,6 +142,9 @@ fun TvHomeScreen(
     val addonsState by AddonRepository.uiState.collectAsStateWithLifecycle()
     val enabledAddons = addonsState.addons.enabledAddons()
     val firstCardFocusRequester = remember { FocusRequester() }
+    // Reshaped-style Netflix billboard: follows the focused rail card.
+    // Null means "first hero item" until a card takes focus.
+    var billboardItem by remember { mutableStateOf<MetaPreview?>(null) }
 
     LaunchedEffect(addonsState.addons) {
         if (enabledAddons.isWaitingForFirstEnabledManifest()) return@LaunchedEffect
@@ -190,30 +210,23 @@ fun TvHomeScreen(
                     contentPadding = PaddingValues(bottom = 32.dp),
                 ) {
                     item {
-                        Row(
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(start = 48.dp, end = 48.dp, top = 32.dp, bottom = 24.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                                .padding(top = 24.dp, bottom = 8.dp),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Text(
-                                text = "Nuvio Enhanced TV",
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = Color.White,
-                                modifier = Modifier.weight(1f),
+                            TvPillMenu(
+                                onOpenSearch = onOpenSearch,
+                                onOpenDownloads = onOpenDownloads,
+                                onOpenParty = onOpenParty,
+                                onOpenSettings = onOpenSettings,
                             )
-                            TvControlButton(label = "Search", onClick = onOpenSearch)
-                            Spacer(Modifier.width(12.dp))
-                            TvControlButton(label = "Downloads", onClick = onOpenDownloads)
-                            Spacer(Modifier.width(12.dp))
-                            TvControlButton(label = "Watch Party", onClick = onOpenParty)
-                            Spacer(Modifier.width(12.dp))
-                            TvControlButton(label = "Settings", onClick = onOpenSettings)
                         }
                     }
                     val hasHero = homeState.heroItems.isNotEmpty()
                     if (hasHero) {
-                        val hero = homeState.heroItems.first()
+                        val hero = billboardItem ?: homeState.heroItems.first()
                         item {
                             TvHomeHero(
                                 item = hero,
@@ -221,16 +234,14 @@ fun TvHomeScreen(
                                 detailsFocusRequester = firstCardFocusRequester,
                             )
                         }
-                        val rest = homeState.heroItems.drop(1)
-                        if (rest.isNotEmpty()) {
-                            item {
-                                TvHomeRail(
-                                    title = "Featured",
-                                    subtitle = "",
-                                    items = rest,
-                                    onItemClick = onItemClick,
-                                )
-                            }
+                        item {
+                            TvHomeRail(
+                                title = "Featured",
+                                subtitle = "",
+                                items = homeState.heroItems,
+                                onItemClick = onItemClick,
+                                onItemFocused = { billboardItem = it },
+                            )
                         }
                     }
                     items(homeState.sections, key = { it.key }) { section ->
@@ -241,6 +252,7 @@ fun TvHomeScreen(
                             onItemClick = onItemClick,
                             firstCardFocusRequester =
                                 if (!hasHero && section == homeState.sections.firstOrNull()) firstCardFocusRequester else null,
+                            onItemFocused = { billboardItem = it },
                         )
                     }
                 }

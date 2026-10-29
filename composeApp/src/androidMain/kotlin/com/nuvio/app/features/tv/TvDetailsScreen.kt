@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -266,6 +268,11 @@ fun TvDetailsScreen(
                                             if (isTorrentOnly) "Torrent" else null,
                                             if (isDebrid) "Debrid" else null,
                                         ).joinToString(" • ").takeIf { it.isNotBlank() },
+                                        badges = choice.stream.badges
+                                            .map { it.name }
+                                            .filter { it.isNotBlank() }
+                                            .distinct()
+                                            .take(5),
                                         onClick = {
                                             val video = selectedVideo
                                             fun requestFor(url: String, torrent: Boolean): TvPlayRequest {
@@ -529,7 +536,7 @@ private fun TvEpisodeRow(
             .fillMaxWidth()
             .padding(horizontal = 48.dp, vertical = 4.dp)
             .background(
-                if (selected) Color(0xFF222222) else Color.Transparent,
+                if (selected) Color(0xFF2A2A2A) else Color(0xFF1A1A1A),
                 RoundedCornerShape(8.dp),
             )
             .border(
@@ -540,6 +547,7 @@ private fun TvEpisodeRow(
             .onFocusChanged { focused = it.isFocused }
             .clickable { onClick() }
             .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = seasonEpisode + video.title,
@@ -547,10 +555,27 @@ private fun TvEpisodeRow(
             color = if (focused || selected) Color.White else Color.White.copy(alpha = 0.85f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
         )
+        // Reshaped-style episode status at the top-right of the card.
+        val status = if (!video.available) {
+            "Unavailable"
+        } else {
+            video.released?.takeIf { it.isNotBlank() }
+        }
+        if (status != null) {
+            Text(
+                text = status,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.6f),
+                maxLines = 1,
+                modifier = Modifier.padding(start = 12.dp),
+            )
+        }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TvStreamRow(
     addonName: String,
@@ -558,6 +583,7 @@ private fun TvStreamRow(
     subtitle: String?,
     onClick: () -> Unit,
     focusRequester: FocusRequester?,
+    badges: List<String> = emptyList(),
 ) {
     var focused by remember { mutableStateOf(false) }
     Column(
@@ -589,6 +615,32 @@ private fun TvStreamRow(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+        // Reshaped-style stream badges (quality/source tags from the addon).
+        if (badges.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                badges.forEach { badge ->
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                Color.White.copy(alpha = 0.12f),
+                                RoundedCornerShape(8.dp),
+                            )
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) {
+                        Text(
+                            text = badge,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.9f),
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
         }
     }
 }
