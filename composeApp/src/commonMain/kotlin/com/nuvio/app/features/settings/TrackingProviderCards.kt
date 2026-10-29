@@ -832,11 +832,11 @@ internal fun TrackingBrandGlyph(
             modifier = modifier,
             contentScale = ContentScale.Fit,
         )
-        TrackingBrand.PUBLICMETADB -> Image(
-            painter = painterResource(Res.drawable.publicmetadb_logo),
+        TrackingBrand.PUBLICMETADB -> Icon(
+            imageVector = Icons.Rounded.Sync,
             contentDescription = contentDescription,
             modifier = modifier,
-            contentScale = ContentScale.Fit,
+            tint = MaterialTheme.nuvio.colors.accent,
         )
         TrackingBrand.NUVIO -> Icon(
             imageVector = Icons.Rounded.Sync,
@@ -858,9 +858,9 @@ private fun TrackingBrandWordmark(
         TrackingBrand.MDBLIST -> integrationLogoPainter(IntegrationLogo.MdbList)
         TrackingBrand.ANILIST -> painterResource(Res.drawable.anilist_logo)
         TrackingBrand.WETRAKR -> painterResource(Res.drawable.wetrakr_logo)
-        TrackingBrand.PUBLICMETADB -> painterResource(Res.drawable.publicmetadb_logo)
         TrackingBrand.NUVIO,
         TrackingBrand.TMDB,
+        TrackingBrand.PUBLICMETADB,
         -> return
     }
     if (brand == TrackingBrand.MDBLIST || brand == TrackingBrand.ANILIST || brand == TrackingBrand.WETRAKR || brand == TrackingBrand.PUBLICMETADB) {
