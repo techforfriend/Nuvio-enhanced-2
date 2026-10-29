@@ -33,7 +33,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.item
 import androidx.compose.foundation.lazy.items
 import coil3.compose.AsyncImage
 import com.nuvio.app.features.details.MetaDetailsRepository
@@ -193,7 +192,7 @@ fun TvDetailsScreen(
                                 text = "P2P off hai — TV Settings me P2P on karo, phir dobara stream chuno.",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = Color.White,
-                                modifier = Modifier.padding(horizontal = 48.dp, bottom = 16.dp),
+                                modifier = Modifier.padding(start = 48.dp, end = 48.dp, bottom = 16.dp),
                             )
                         }
                     }
