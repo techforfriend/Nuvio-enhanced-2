@@ -121,6 +121,7 @@ data class PlayerSettingsUiState(
     val iosContrast: Int = 0,
     val iosSaturation: Int = 0,
     val iosGamma: Int = 0,
+    val androidExoChaptersEnabled: Boolean = false,
 )
 
 object PlayerSettingsRepository {

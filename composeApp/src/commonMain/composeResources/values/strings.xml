@@ -3636,4 +3636,8 @@
     <string name="settings_playback_legacy_buttons_show">Show</string>
     <string name="settings_tmdb_original_title_language">Original language</string>
     <string name="settings_tmdb_original_title_language_description">Show titles, title logos, posters, and backdrops in their original language. Falls back to the language above when unavailable.</string>
+    <string name="compose_player_chapters">Chapters</string>
+    <string name="compose_player_panel_chapters">Chapters (%1$d)</string>
+    <string name="compose_player_chapter_number">Chapter %1$d</string>
+    <string name="compose_player_chapter_remaining">%1$s left</string>
 </resources>

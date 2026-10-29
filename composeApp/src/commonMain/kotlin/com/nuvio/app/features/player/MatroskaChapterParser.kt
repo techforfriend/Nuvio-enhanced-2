@@ -118,7 +118,7 @@ internal object MatroskaChapterParser {
                     ?.let { display -> children(chapters, display).firstOrNull { it.id == ID_CHAP_STRING } }
                     ?.let { readUtf8(chapters, it) }
                     ?.takeIf { it.isNotBlank() }
-                PlayerChapter(startMs = startNs / 1_000_000L, title = title)
+                PlayerChapter(startMs = startNs / 1_000_000L, title = title.orEmpty())
             }
     }
 
