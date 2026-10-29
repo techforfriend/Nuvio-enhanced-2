@@ -43,7 +43,12 @@ import coil3.compose.AsyncImage
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.home.MetaPreview
+import com.nuvio.app.features.p2p.P2pSettingsRepository
+import com.nuvio.app.features.streams.StreamSubtitle
 import com.nuvio.app.features.streams.StreamsRepository
+import com.nuvio.app.features.streams.p2pFileIdx
+import com.nuvio.app.features.streams.p2pInfoHash
+import com.nuvio.app.features.streams.p2pTrackers
 
 /**
  * Phase 4 TV Details: hero + Play + episodes + More like this, all from
@@ -61,18 +66,42 @@ fun TvDetailsScreen(
 ) {
     val detailsState by MetaDetailsRepository.uiState.collectAsStateWithLifecycle()
     val streamsState by StreamsRepository.uiState.collectAsStateWithLifecycle()
+    val p2pSettings by P2pSettingsRepository.uiState.collectAsStateWithLifecycle()
     val meta = detailsState.meta
     var selectedVideo by remember(item) { mutableStateOf<MetaVideo?>(null) }
     var showStreams by remember(item) { mutableStateOf(false) }
+    var showP2pOffNotice by remember(item) { mutableStateOf(false) }
     val playFocusRequester = remember { FocusRequester() }
     val firstStreamFocusRequester = remember { FocusRequester() }
 
-    val playableStreams = remember(streamsState.groups) {
+    val streamChoices = remember(streamsState.groups) {
         streamsState.groups.flatMap { group ->
             group.streams.mapNotNull { stream ->
-                stream.playableDirectUrl?.let { url -> Triple(group.addonName, stream, url) }
+                val directUrl = stream.playableDirectUrl
+                val infoHash = stream.p2pInfoHash
+                if (directUrl == null && infoHash == null) {
+                    null
+                } else {
+                    TvStreamChoice(
+                        addonName = group.addonName,
+                        title = stream.streamLabel,
+                        subtitle = stream.streamSubtitle,
+                        directUrl = directUrl,
+                        torrentInfoHash = infoHash,
+                        torrentFileIdx = stream.p2pFileIdx,
+                        torrentFilename = stream.behaviorHints.filename,
+                        torrentTrackers = stream.p2pTrackers,
+                        streamType = stream.streamType,
+                        externalSubtitles = stream.externalSubtitles,
+                        key = "${stream.addonId}:${stream.url ?: infoHash}",
+                    )
+                }
             }
         }
+    }
+
+    LaunchedEffect(Unit) {
+        P2pSettingsRepository.ensureLoaded()
     }
 
     LaunchedEffect(item) {
@@ -100,8 +129,8 @@ fun TvDetailsScreen(
         if (meta != null && !showStreams) playFocusRequester.requestFocus()
     }
     var streamFocusRequested by remember(item) { mutableStateOf(false) }
-    LaunchedEffect(showStreams, playableStreams.isNotEmpty()) {
-        if (showStreams && playableStreams.isNotEmpty() && !streamFocusRequested) {
+    LaunchedEffect(showStreams, streamChoices.isNotEmpty()) {
+        if (showStreams && streamChoices.isNotEmpty() && !streamFocusRequested) {
             streamFocusRequested = true
             firstStreamFocusRequester.requestFocus()
         }
@@ -170,7 +199,17 @@ fun TvDetailsScreen(
                             modifier = Modifier.padding(start = 48.dp, end = 48.dp, top = 32.dp, bottom = 24.dp),
                         )
                     }
-                    if (streamsState.isAnyLoading && playableStreams.isEmpty()) {
+                    if (showP2pOffNotice) {
+                        item {
+                            Text(
+                                text = "P2P off hai — TV Settings me P2P on karo, phir dobara stream chuno.",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 48.dp, bottom = 16.dp),
+                            )
+                        }
+                    }
+                    if (streamsState.isAnyLoading && streamChoices.isEmpty()) {
                         item {
                             Text(
                                 text = "Loading streams…",
@@ -179,37 +218,61 @@ fun TvDetailsScreen(
                                 modifier = Modifier.padding(horizontal = 48.dp),
                             )
                         }
-                    } else if (playableStreams.isEmpty()) {
+                    } else if (streamChoices.isEmpty()) {
                         item {
                             Text(
-                                text = "No playable streams found. Torrent-only streams TV par nahi chalte.",
+                                text = "No playable streams found.",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = Color.White.copy(alpha = 0.7f),
                                 modifier = Modifier.padding(horizontal = 48.dp),
                             )
                         }
                     } else {
-                        items(playableStreams, key = { (_, stream, _) -> "${stream.addonId}:${stream.url}" }) { (addonName, stream, url) ->
+                        items(streamChoices, key = { it.key }) { choice ->
+                            val isTorrentOnly = choice.directUrl == null
                             TvStreamRow(
-                                addonName = addonName,
-                                title = stream.streamLabel,
-                                subtitle = stream.streamSubtitle,
+                                addonName = choice.addonName,
+                                title = choice.title,
+                                subtitle = listOfNotNull(
+                                    choice.subtitle,
+                                    if (isTorrentOnly) "Torrent" else null,
+                                ).joinToString(" • ").takeIf { it.isNotBlank() },
                                 onClick = {
                                     val video = selectedVideo
-                                    onPlay(
-                                        TvPlayRequest(
-                                            title = if (video != null && meta?.type == "series") {
-                                                "${meta.name} — ${video.title}"
-                                            } else {
-                                                meta?.name ?: item.name
-                                            },
-                                            sourceUrl = url,
-                                            streamType = stream.streamType,
-                                            externalSubtitles = stream.externalSubtitles,
-                                        ),
-                                    )
+                                    val playTitle = if (video != null && meta?.type == "series") {
+                                        "${meta.name} — ${video.title}"
+                                    } else {
+                                        meta?.name ?: item.name
+                                    }
+                                    if (choice.directUrl != null) {
+                                        onPlay(
+                                            TvPlayRequest(
+                                                title = playTitle,
+                                                sourceUrl = choice.directUrl,
+                                                streamType = choice.streamType,
+                                                externalSubtitles = choice.externalSubtitles,
+                                            ),
+                                        )
+                                    } else if (choice.torrentInfoHash != null) {
+                                        if (!P2pSettingsRepository.isVisible || !p2pSettings.p2pEnabled) {
+                                            showP2pOffNotice = true
+                                        } else {
+                                            onPlay(
+                                                TvPlayRequest(
+                                                    title = playTitle,
+                                                    sourceUrl = "",
+                                                    streamType = choice.streamType,
+                                                    externalSubtitles = choice.externalSubtitles,
+                                                    torrentInfoHash = choice.torrentInfoHash,
+                                                    torrentFileIdx = choice.torrentFileIdx,
+                                                    torrentFilename = choice.torrentFilename,
+                                                    torrentTrackers = choice.torrentTrackers,
+                                                ),
+                                            )
+                                        }
+                                    }
                                 },
-                                focusRequester = if (stream == playableStreams.firstOrNull()?.second) {
+                                focusRequester = if (choice == streamChoices.firstOrNull()) {
                                     firstStreamFocusRequester
                                 } else {
                                     null
@@ -418,3 +481,22 @@ private fun TvStreamRow(
         }
     }
 }
+
+/**
+ * One row of the TV stream picker. Either [directUrl] plays immediately,
+ * or [torrentInfoHash] resolves through the P2P engine in the player.
+ * Rows with neither are dropped before they reach the picker.
+ */
+private data class TvStreamChoice(
+    val addonName: String,
+    val title: String,
+    val subtitle: String?,
+    val directUrl: String?,
+    val torrentInfoHash: String?,
+    val torrentFileIdx: Int?,
+    val torrentFilename: String?,
+    val torrentTrackers: List<String>,
+    val streamType: String?,
+    val externalSubtitles: List<StreamSubtitle>,
+    val key: String,
+)

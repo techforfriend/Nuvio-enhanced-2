@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.item
+import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.features.player.AndroidPlaybackEngine
 import com.nuvio.app.features.player.AudioLanguageOption
 import com.nuvio.app.features.player.PlayerSettingsRepository
@@ -49,10 +50,12 @@ fun TvSettingsScreen(
 ) {
     val playerSettings by PlayerSettingsRepository.uiState.collectAsStateWithLifecycle()
     val tmdbSettings by TmdbSettingsRepository.uiState.collectAsStateWithLifecycle()
+    val p2pSettings by P2pSettingsRepository.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         PlayerSettingsRepository.ensureLoaded()
         TmdbSettingsRepository.ensureLoaded()
+        P2pSettingsRepository.ensureLoaded()
     }
 
     Box(
@@ -124,6 +127,25 @@ fun TvSettingsScreen(
                         PlayerSettingsRepository.setPreferredAudioLanguage(next)
                     },
                 )
+            }
+            if (P2pSettingsRepository.isVisible) {
+                item {
+                    TvSettingsRow(
+                        label = "P2P (torrent)",
+                        value = if (p2pSettings.p2pEnabled) "On" else "Off",
+                        onClick = {
+                            P2pSettingsRepository.setP2pEnabled(!p2pSettings.p2pEnabled)
+                        },
+                    )
+                }
+                item {
+                    Text(
+                        text = "P2P on karne par torrent download ke saath upload bhi ho sakta hai.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(horizontal = 48.dp, vertical = 4.dp),
+                    )
+                }
             }
             item {
                 TvSettingsRow(

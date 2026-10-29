@@ -11,6 +11,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,10 +28,16 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.features.p2p.P2pSettingsRepository
+import com.nuvio.app.features.p2p.P2pStreamRequest
+import com.nuvio.app.features.p2p.P2pStreamingEngine
+import com.nuvio.app.features.p2p.P2pStreamingState
 import com.nuvio.app.features.player.PlatformPlayerSurface
 import com.nuvio.app.features.player.PlayerEngineController
 import com.nuvio.app.features.player.PlayerPlaybackSnapshot
 import com.nuvio.app.features.player.PlayerResizeMode
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
 /**
@@ -46,6 +53,15 @@ data class TvPlayRequest(
     val streamType: String? = null,
     val externalSubtitles: List<com.nuvio.app.features.streams.StreamSubtitle> = emptyList(),
     val initialPositionMs: Long = 0L,
+    /**
+     * Torrent playback: when [torrentInfoHash] is set, [sourceUrl] is ignored
+     * and the player resolves a local URL via the P2P streaming engine,
+     * exactly like the phone runtime does. Direct streams leave these null/empty.
+     */
+    val torrentInfoHash: String? = null,
+    val torrentFileIdx: Int? = null,
+    val torrentFilename: String? = null,
+    val torrentTrackers: List<String> = emptyList(),
 )
 
 /**
@@ -72,6 +88,55 @@ fun TvPlayerScreen(
     val rootFocusRequester = remember { FocusRequester() }
     val playButtonFocusRequester = remember { FocusRequester() }
     val retryButtonFocusRequester = remember { FocusRequester() }
+
+    // Torrent resolution mirrors the phone runtime: the P2P engine turns an
+    // info hash into a local HTTP URL that the surface can play. The engine
+    // is already initialized by MainActivity, which TvMainActivity extends.
+    val p2pSettings by P2pSettingsRepository.uiState.collectAsStateWithLifecycle()
+    val p2pState by P2pStreamingEngine.state.collectAsStateWithLifecycle()
+    var resolvedTorrentUrl by remember(request) { mutableStateOf<String?>(null) }
+    var resolvingTorrent by remember(request) { mutableStateOf(request.torrentInfoHash != null) }
+    val effectiveSourceUrl = if (request.torrentInfoHash != null) resolvedTorrentUrl else request.sourceUrl
+
+    LaunchedEffect(request) {
+        P2pSettingsRepository.ensureLoaded()
+    }
+    LaunchedEffect(request.torrentInfoHash, p2pSettings.p2pEnabled) {
+        val infoHash = request.torrentInfoHash ?: return@LaunchedEffect
+        if (!P2pSettingsRepository.isVisible || !p2pSettings.p2pEnabled) {
+            resolvingTorrent = false
+            errorMessage = "P2P off hai — TV Settings me P2P on karo, phir dobara play karo."
+            return@LaunchedEffect
+        }
+        resolvingTorrent = true
+        errorMessage = null
+        try {
+            val localUrl = P2pStreamingEngine.startStream(
+                P2pStreamRequest(
+                    infoHash = infoHash,
+                    fileIdx = request.torrentFileIdx,
+                    filename = request.torrentFilename,
+                    trackers = request.torrentTrackers,
+                ),
+            )
+            resolvedTorrentUrl = localUrl
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            errorMessage = "Torrent start nahi hua: ${error.message ?: "unknown error"}"
+        }
+        resolvingTorrent = false
+    }
+    LaunchedEffect(p2pState) {
+        if (request.torrentInfoHash != null && p2pState is P2pStreamingState.Error) {
+            errorMessage = "Torrent error: ${(p2pState as P2pStreamingState.Error).message}"
+        }
+    }
+    DisposableEffect(request) {
+        onDispose {
+            if (request.torrentInfoHash != null) P2pStreamingEngine.stopStream()
+        }
+    }
 
     LaunchedEffect(controlsVisible, snapshot.isPlaying, interactionTick) {
         if (controlsVisible && snapshot.isPlaying && errorMessage == null) {
@@ -139,8 +204,9 @@ fun TvPlayerScreen(
                 }
             },
     ) {
-        PlatformPlayerSurface(
-            sourceUrl = request.sourceUrl,
+        if (effectiveSourceUrl != null) {
+            PlatformPlayerSurface(
+                sourceUrl = effectiveSourceUrl,
             sourceAudioUrl = request.sourceAudioUrl,
             sourceHeaders = request.sourceHeaders,
             sourceResponseHeaders = emptyMap(),
@@ -160,9 +226,33 @@ fun TvPlayerScreen(
             onError = { message ->
                 if (message != null) errorMessage = message
             },
-        )
+            )
+        }
 
-        if (snapshot.isLoading && errorMessage == null) {
+        if (resolvingTorrent && errorMessage == null) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(Modifier.height(48.dp))
+                CircularProgressIndicator(color = Color.White)
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = "Torrent se connect ho raha hai…",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White,
+                )
+                val connecting = p2pState as? P2pStreamingState.Connecting
+                if (connecting != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Peers: ${connecting.peers} • Seeds: ${connecting.seeds}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.7f),
+                    )
+                }
+            }
+        } else if (snapshot.isLoading && errorMessage == null) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
