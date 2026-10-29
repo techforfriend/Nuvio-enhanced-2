@@ -1,14 +1,20 @@
 package com.nuvio.app.features.tv
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
@@ -25,9 +31,12 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.nuvio.app.features.player.PlayerChapter
 import com.nuvio.app.features.player.PlayerPlaybackSnapshot
+import com.nuvio.app.features.player.PlayerSeekPreview
 
 /**
  * Phase 3 TV player controls: bottom overlay with play/pause, -10s/+10s
@@ -81,6 +90,9 @@ fun TvPlayerControls(
     onOpenParty: () -> Unit,
     partyCode: String?,
     modifier: Modifier = Modifier,
+    chapters: List<PlayerChapter> = emptyList(),
+    onOpenChapters: (() -> Unit)? = null,
+    seekPreview: PlayerSeekPreview? = null,
 ) {
     val duration = snapshot.durationMs
     val progress = if (duration > 0L) {
@@ -117,6 +129,29 @@ fun TvPlayerControls(
             )
         }
         Spacer(Modifier.height(12.dp))
+        // Reshaped-style seek preview: the frame the on-device extractor
+        // captured for the seek target, shown while controls are visible.
+        if (seekPreview != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Image(
+                    bitmap = seekPreview.image,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .width(160.dp)
+                        .height(90.dp),
+                    contentScale = ContentScale.Crop,
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = formatTvTime(seekPreview.positionMs),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.9f),
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+        }
         Row(
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -125,12 +160,39 @@ fun TvPlayerControls(
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.8f),
             )
-            LinearProgressIndicator(
-                progress = { progress },
+            BoxWithConstraints(
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 12.dp),
-            )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(12.dp),
+                ) {
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.Center),
+                    )
+                    // Chapter marks on the progress bar, Reshaped-style.
+                    if (duration > 0L) {
+                        chapters.forEach { chapter ->
+                            val fraction = (chapter.startMs.toFloat() / duration.toFloat())
+                                .coerceIn(0f, 1f)
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.CenterStart)
+                                    .offset(x = fraction * maxWidth - 1.dp)
+                                    .width(2.dp)
+                                    .height(12.dp)
+                                    .background(Color.White, RoundedCornerShape(1.dp)),
+                            )
+                        }
+                    }
+                }
+            }
             Text(
                 text = formatTvTime(duration),
                 style = MaterialTheme.typography.bodySmall,
@@ -155,6 +217,9 @@ fun TvPlayerControls(
         ) {
             TvControlButton(label = "Audio", onClick = onOpenAudioTracks)
             TvControlButton(label = "Subtitles", onClick = onOpenSubtitleTracks)
+            if (chapters.isNotEmpty() && onOpenChapters != null) {
+                TvControlButton(label = "Chapters", onClick = onOpenChapters)
+            }
             if (castAvailable && onCast != null) {
                 TvControlButton(label = "Cast", onClick = onCast)
             }

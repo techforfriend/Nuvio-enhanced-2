@@ -33,6 +33,7 @@ fun TvPillMenu(
     onOpenDownloads: () -> Unit,
     onOpenParty: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenLiveTv: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -48,6 +49,7 @@ fun TvPillMenu(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TvPillMenuItem(label = "Home", selected = true, onClick = {})
+        TvPillMenuItem(label = "Live TV", onClick = onOpenLiveTv)
         TvPillMenuItem(label = "Search", onClick = onOpenSearch)
         TvPillMenuItem(label = "Downloads", onClick = onOpenDownloads)
         TvPillMenuItem(label = "Watch Party", onClick = onOpenParty)

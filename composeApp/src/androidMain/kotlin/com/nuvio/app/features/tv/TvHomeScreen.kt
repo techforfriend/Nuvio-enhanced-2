@@ -137,6 +137,7 @@ fun TvHomeScreen(
     onOpenSettings: () -> Unit,
     onOpenDownloads: () -> Unit,
     onOpenParty: () -> Unit,
+    onOpenLiveTv: () -> Unit,
 ) {
     val homeState by HomeRepository.uiState.collectAsStateWithLifecycle()
     val addonsState by AddonRepository.uiState.collectAsStateWithLifecycle()
@@ -221,6 +222,7 @@ fun TvHomeScreen(
                                 onOpenDownloads = onOpenDownloads,
                                 onOpenParty = onOpenParty,
                                 onOpenSettings = onOpenSettings,
+                                onOpenLiveTv = onOpenLiveTv,
                             )
                         }
                     }

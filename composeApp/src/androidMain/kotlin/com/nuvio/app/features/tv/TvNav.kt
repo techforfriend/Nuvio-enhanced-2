@@ -21,6 +21,7 @@ sealed interface TvScreen {
     data object Settings : TvScreen
     data object Downloads : TvScreen
     data class Party(val media: PartyMedia?) : TvScreen
+    data object LiveTv : TvScreen
 }
 
 @Composable
@@ -40,6 +41,7 @@ fun TvNavHost() {
             onOpenSettings = { navigate(TvScreen.Settings) },
             onOpenDownloads = { navigate(TvScreen.Downloads) },
             onOpenParty = { navigate(TvScreen.Party(null)) },
+            onOpenLiveTv = { navigate(TvScreen.LiveTv) },
         )
         is TvScreen.Details -> TvDetailsScreen(
             item = screen.item,
@@ -81,6 +83,10 @@ fun TvNavHost() {
         )
         is TvScreen.Party -> TvPartyScreen(
             media = screen.media,
+            onBack = { goBack() },
+            onPlay = { navigate(TvScreen.Player(it)) },
+        )
+        TvScreen.LiveTv -> TvLiveScreen(
             onBack = { goBack() },
             onPlay = { navigate(TvScreen.Player(it)) },
         )

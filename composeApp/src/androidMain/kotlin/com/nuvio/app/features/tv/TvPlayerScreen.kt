@@ -53,6 +53,8 @@ import com.nuvio.app.features.player.PlatformPlayerSurface
 import com.nuvio.app.features.player.PlayerEngineController
 import com.nuvio.app.features.player.PlayerPlaybackSnapshot
 import com.nuvio.app.features.player.PlayerResizeMode
+import com.nuvio.app.features.player.PlayerSeekPreview
+import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.player.SubtitleTrack
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -118,12 +120,22 @@ fun TvPlayerScreen(
     val playButtonFocusRequester = remember { FocusRequester() }
     val retryButtonFocusRequester = remember { FocusRequester() }
     val firstTrackFocusRequester = remember { FocusRequester() }
+    val firstChapterFocusRequester = remember { FocusRequester() }
 
     // Track selection panels: the surface's controller already exposes the
     // phone engine's track lists, so TV only needs a D-pad list on top.
     var trackPanel by remember { mutableStateOf<TvTrackPanel?>(null) }
     var audioTracks by remember { mutableStateOf<List<AudioTrack>>(emptyList()) }
     var subtitleTracks by remember { mutableStateOf<List<SubtitleTrack>>(emptyList()) }
+
+    // Chapters come from the snapshot itself (the engine fills them); the
+    // panel only needs a D-pad list and seekTo, like the track panels.
+    var chaptersPanel by remember { mutableStateOf(false) }
+
+    // Seek preview: the on-device frame for the seek target, requested
+    // from the controller after every seek step. Resets per request.
+    var seekPreview by remember(request) { mutableStateOf<PlayerSeekPreview?>(null) }
+    val playerSettings by PlayerSettingsRepository.uiState.collectAsStateWithLifecycle()
 
     // Watch Party: publish local play/pause/seek, follow the host when a
     // member, and share the host stream while the party is sharing.
@@ -141,6 +153,7 @@ fun TvPlayerScreen(
 
     LaunchedEffect(request) {
         P2pSettingsRepository.ensureLoaded()
+        PlayerSettingsRepository.ensureLoaded()
     }
     LaunchedEffect(request.torrentInfoHash, p2pSettings.p2pEnabled) {
         val infoHash = request.torrentInfoHash ?: return@LaunchedEffect
@@ -244,8 +257,8 @@ fun TvPlayerScreen(
         }
     }
 
-    LaunchedEffect(controlsVisible, snapshot.isPlaying, interactionTick, trackPanel) {
-        if (controlsVisible && snapshot.isPlaying && errorMessage == null && trackPanel == null) {
+    LaunchedEffect(controlsVisible, snapshot.isPlaying, interactionTick, trackPanel, chaptersPanel) {
+        if (controlsVisible && snapshot.isPlaying && errorMessage == null && trackPanel == null && !chaptersPanel) {
             delay(4000L)
             controlsVisible = false
         }
@@ -259,6 +272,9 @@ fun TvPlayerScreen(
     }
     LaunchedEffect(trackPanel) {
         if (trackPanel != null) firstTrackFocusRequester.requestFocus()
+    }
+    LaunchedEffect(chaptersPanel) {
+        if (chaptersPanel) firstChapterFocusRequester.requestFocus()
     }
 
     fun showControls() {
@@ -281,14 +297,25 @@ fun TvPlayerScreen(
 
     fun seekBack() {
         controller?.seekBy(-10_000L)
+        requestSeekPreviewFor(snapshot.positionMs - 10_000L)
         publishPartyPlayback()
         showControls()
     }
 
     fun seekForward() {
         controller?.seekBy(10_000L)
+        requestSeekPreviewFor(snapshot.positionMs + 10_000L)
         publishPartyPlayback()
         showControls()
+    }
+
+    fun requestSeekPreviewFor(targetMs: Long) {
+        if (!playerSettings.seekPreviewEnabled) return
+        val duration = snapshot.durationMs
+        val target = targetMs.coerceIn(0L, if (duration > 0L) duration else Long.MAX_VALUE)
+        controller?.requestSeekPreviewFrame(target) { preview ->
+            seekPreview = preview
+        }
     }
 
     fun openAudioTracks() {
@@ -306,6 +333,15 @@ fun TvPlayerScreen(
         playButtonFocusRequester.requestFocus()
     }
 
+    fun openChapters() {
+        chaptersPanel = true
+    }
+
+    fun closeChaptersPanel() {
+        chaptersPanel = false
+        playButtonFocusRequester.requestFocus()
+    }
+
     BackHandler {
         if (controlsVisible) {
             controlsVisible = false
@@ -319,6 +355,10 @@ fun TvPlayerScreen(
         closeTrackPanel()
     }
 
+    BackHandler(enabled = chaptersPanel) {
+        closeChaptersPanel()
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -326,7 +366,7 @@ fun TvPlayerScreen(
             .focusRequester(rootFocusRequester)
             .focusable()
             .onKeyEvent { event ->
-                if (trackPanel != null) return@onKeyEvent false
+                if (trackPanel != null || chaptersPanel) return@onKeyEvent false
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 when (mapTvPlayerKey(event.key)) {
                     TvPlayerKeyAction.TogglePlayPause -> {
@@ -456,6 +496,9 @@ fun TvPlayerScreen(
                     castAvailable = snapshot.castAvailable,
                     onOpenParty = onOpenParty,
                     partyCode = partyState.party?.code,
+                    chapters = snapshot.chapters,
+                    onOpenChapters = { openChapters() },
+                    seekPreview = seekPreview,
                 )
             }
         }
@@ -532,6 +575,58 @@ fun TvPlayerScreen(
                                         closeTrackPanel()
                                     },
                                     focusRequester = null,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (chaptersPanel) {
+            val chapters = snapshot.chapters
+            val currentChapter = chapters
+                .filter { it.startMs <= snapshot.positionMs }
+                .maxByOrNull { it.startMs }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.85f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(0.7f),
+                ) {
+                    Text(
+                        text = "Chapters",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    if (chapters.isEmpty()) {
+                        Text(
+                            text = "No chapters found for this video.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.White.copy(alpha = 0.7f),
+                        )
+                    } else {
+                        LazyColumn {
+                            items(chapters) { chapter ->
+                                TvTrackRow(
+                                    label = "${formatTvTime(chapter.startMs)} — ${chapter.title}",
+                                    selected = chapter == currentChapter,
+                                    onClick = {
+                                        controller?.seekTo(chapter.startMs)
+                                        publishPartyPlayback()
+                                        chaptersPanel = false
+                                        showControls()
+                                        playButtonFocusRequester.requestFocus()
+                                    },
+                                    focusRequester = if (chapter == chapters.firstOrNull()) {
+                                        firstChapterFocusRequester
+                                    } else {
+                                        null
+                                    },
                                 )
                             }
                         }

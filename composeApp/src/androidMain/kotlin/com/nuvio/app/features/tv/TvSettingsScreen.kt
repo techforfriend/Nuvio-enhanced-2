@@ -7,8 +7,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -27,10 +29,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.features.player.AndroidPlaybackEngine
 import com.nuvio.app.features.player.AudioLanguageOption
 import com.nuvio.app.features.player.PlayerSettingsRepository
+import com.nuvio.app.features.player.SubtitleFontRepository
 import com.nuvio.app.features.player.SubtitleLanguageOption
 import com.nuvio.app.features.tmdb.TmdbSettingsRepository
 
@@ -47,15 +51,23 @@ fun TvSettingsScreen(
     val playerSettings by PlayerSettingsRepository.uiState.collectAsStateWithLifecycle()
     val tmdbSettings by TmdbSettingsRepository.uiState.collectAsStateWithLifecycle()
     val p2pSettings by P2pSettingsRepository.uiState.collectAsStateWithLifecycle()
+    val subtitleFonts by SubtitleFontRepository.fonts.collectAsStateWithLifecycle()
+    var showFontPanel by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         PlayerSettingsRepository.ensureLoaded()
         TmdbSettingsRepository.ensureLoaded()
         P2pSettingsRepository.ensureLoaded()
+        SubtitleFontRepository.ensureLoaded()
     }
 
     BackHandler {
         onBack()
+    }
+
+    // Declared after the main BackHandler so it wins while the panel is open.
+    BackHandler(enabled = showFontPanel) {
+        showFontPanel = false
     }
 
     Box(
@@ -119,6 +131,32 @@ fun TvSettingsScreen(
                     },
                 )
             }
+            item {
+                TvSettingsRow(
+                    label = "Seek previews",
+                    value = if (playerSettings.seekPreviewEnabled) "On" else "Off",
+                    onClick = {
+                        PlayerSettingsRepository.setSeekPreviewEnabled(!playerSettings.seekPreviewEnabled)
+                    },
+                )
+            }
+            item {
+                TvSettingsRow(
+                    label = "Subtitle font",
+                    value = subtitleFonts
+                        .find { it.fileName == playerSettings.subtitleStyle.customFontFile }
+                        ?.familyName ?: "Default",
+                    onClick = { showFontPanel = true },
+                )
+            }
+            item {
+                Text(
+                    text = "New fonts are added from the phone; here you only pick one.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(horizontal = 48.dp, vertical = 4.dp),
+                )
+            }
             if (P2pSettingsRepository.isVisible) {
                 item {
                     TvSettingsRow(
@@ -153,6 +191,60 @@ fun TvSettingsScreen(
                     value = tmdbSettings.language,
                     onClick = { },
                 )
+            }
+        }
+
+        if (showFontPanel) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.85f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(0.7f),
+                ) {
+                    Text(
+                        text = "Subtitle font",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    LazyColumn {
+                        item {
+                            TvSettingsRow(
+                                label = "Default",
+                                value = if (playerSettings.subtitleStyle.customFontFile == null) "✓" else "",
+                                onClick = {
+                                    PlayerSettingsRepository.setSubtitleStyle(
+                                        playerSettings.subtitleStyle.copy(customFontFile = null),
+                                    )
+                                    showFontPanel = false
+                                },
+                            )
+                        }
+                        items(subtitleFonts) { font ->
+                            TvSettingsRow(
+                                label = font.familyName,
+                                value = if (playerSettings.subtitleStyle.customFontFile == font.fileName) "✓" else "",
+                                onClick = {
+                                    PlayerSettingsRepository.setSubtitleStyle(
+                                        playerSettings.subtitleStyle.copy(customFontFile = font.fileName),
+                                    )
+                                    showFontPanel = false
+                                },
+                            )
+                        }
+                    }
+                    if (subtitleFonts.isEmpty()) {
+                        Text(
+                            text = "No custom fonts on this device yet.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(horizontal = 48.dp, vertical = 8.dp),
+                        )
+                    }
+                }
             }
         }
     }
