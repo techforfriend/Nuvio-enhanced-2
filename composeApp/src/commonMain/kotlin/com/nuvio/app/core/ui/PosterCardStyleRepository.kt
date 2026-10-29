@@ -101,6 +101,13 @@ object PosterCardStyleRepository {
         com.nuvio.app.features.home.HomeRepository.applyCurrentSettings()
     }
 
+    fun setAlwaysShowLandscapeClearlogo(enabled: Boolean) {
+        ensureLoaded()
+        if (_uiState.value.alwaysShowLandscapeClearlogo == enabled) return
+        _uiState.value = _uiState.value.copy(alwaysShowLandscapeClearlogo = enabled)
+        persist()
+    }
+
     fun resetToDefaults() {
         ensureLoaded()
         if (_uiState.value == PosterCardStyleUiState()) return
