@@ -65,6 +65,12 @@ fun TvPlayerControls(
     onSeekBack: () -> Unit,
     onSeekForward: () -> Unit,
     playButtonFocusRequester: FocusRequester,
+    onOpenAudioTracks: () -> Unit,
+    onOpenSubtitleTracks: () -> Unit,
+    onCast: (() -> Unit)?,
+    castAvailable: Boolean,
+    onOpenParty: () -> Unit,
+    partyCode: String?,
     modifier: Modifier = Modifier,
 ) {
     val duration = snapshot.durationMs
@@ -85,6 +91,22 @@ fun TvPlayerControls(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        if (partyCode != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Party: $partyCode",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.8f),
+            )
+        }
+        if (snapshot.castDeviceName != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Casting to ${snapshot.castDeviceName}",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.8f),
+            )
+        }
         Spacer(Modifier.height(12.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -117,6 +139,17 @@ fun TvPlayerControls(
                 focusRequester = playButtonFocusRequester,
             )
             TvControlButton(label = "+10s", onClick = onSeekForward)
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            TvControlButton(label = "Audio", onClick = onOpenAudioTracks)
+            TvControlButton(label = "Subtitles", onClick = onOpenSubtitleTracks)
+            if (castAvailable && onCast != null) {
+                TvControlButton(label = "Cast", onClick = onCast)
+            }
+            TvControlButton(label = "Party", onClick = onOpenParty)
         }
     }
 }

@@ -46,6 +46,8 @@ fun TvHomeScreen(
     onItemClick: (MetaPreview) -> Unit,
     onOpenSearch: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenDownloads: () -> Unit,
+    onOpenParty: () -> Unit,
 ) {
     val homeState by HomeRepository.uiState.collectAsStateWithLifecycle()
     val addonsState by AddonRepository.uiState.collectAsStateWithLifecycle()
@@ -129,6 +131,10 @@ fun TvHomeScreen(
                                 modifier = Modifier.weight(1f),
                             )
                             TvControlButton(label = "Search", onClick = onOpenSearch)
+                            Spacer(Modifier.width(12.dp))
+                            TvControlButton(label = "Downloads", onClick = onOpenDownloads)
+                            Spacer(Modifier.width(12.dp))
+                            TvControlButton(label = "Watch Party", onClick = onOpenParty)
                             Spacer(Modifier.width(12.dp))
                             TvControlButton(label = "Settings", onClick = onOpenSettings)
                         }

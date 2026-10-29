@@ -21,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,19 +36,27 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import coil3.compose.AsyncImage
+import com.nuvio.app.features.debrid.DirectDebridPlaybackResolver
+import com.nuvio.app.features.debrid.DirectDebridPlayableResult
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaVideo
+import com.nuvio.app.features.downloads.DownloadEnqueueResult
+import com.nuvio.app.features.downloads.DownloadsRepository
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.p2p.P2pSettingsRepository
+import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.features.streams.StreamSubtitle
 import com.nuvio.app.features.streams.StreamsRepository
+import kotlinx.coroutines.launch
 
 /**
  * Phase 4 TV Details: hero + Play + episodes + More like this, all from
- * [MetaDetailsRepository]. Play opens a TV stream picker (directly playable
- * streams only — torrent/magnet streams are filtered out, they need the
- * phone torrent flow); picking one hands a resolved [TvPlayRequest] to the
- * player. BACK closes the stream picker first, then exits.
+ * [MetaDetailsRepository]. Play opens a TV stream picker; picking one hands
+ * a resolved [TvPlayRequest] to the player. Direct streams play as-is,
+ * debrid candidates resolve through the debrid resolver first (P2P fallback
+ * for torrents when resolve fails), and torrents resolve through the P2P
+ * engine in the player. Direct streams also offer a Download button.
+ * BACK closes the stream picker first, then exits.
  */
 @Composable
 fun TvDetailsScreen(
@@ -63,6 +72,9 @@ fun TvDetailsScreen(
     var selectedVideo by remember(item) { mutableStateOf<MetaVideo?>(null) }
     var showStreams by remember(item) { mutableStateOf(false) }
     var showP2pOffNotice by remember(item) { mutableStateOf(false) }
+    var pickerNotice by remember(item) { mutableStateOf<String?>(null) }
+    var resolvingDebrid by remember(item) { mutableStateOf(false) }
+    val pickerScope = rememberCoroutineScope()
     val playFocusRequester = remember { FocusRequester() }
     val firstStreamFocusRequester = remember { FocusRequester() }
 
@@ -85,6 +97,7 @@ fun TvDetailsScreen(
                         torrentTrackers = stream.p2pTrackers,
                         streamType = stream.streamType,
                         externalSubtitles = stream.externalSubtitles,
+                        stream = stream,
                         key = "${stream.addonId}:${stream.url ?: infoHash}",
                     )
                 }
@@ -196,6 +209,26 @@ fun TvDetailsScreen(
                             )
                         }
                     }
+                    if (pickerNotice != null) {
+                        item {
+                            Text(
+                                text = pickerNotice ?: "",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.White,
+                                modifier = Modifier.padding(start = 48.dp, end = 48.dp, bottom = 16.dp),
+                            )
+                        }
+                    }
+                    if (resolvingDebrid) {
+                        item {
+                            Text(
+                                text = "Debrid link resolve ho raha hai…",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.White.copy(alpha = 0.7f),
+                                modifier = Modifier.padding(start = 48.dp, end = 48.dp, bottom = 16.dp),
+                            )
+                        }
+                    }
                     if (streamsState.isAnyLoading && streamChoices.isEmpty()) {
                         item {
                             Text(
@@ -217,54 +250,137 @@ fun TvDetailsScreen(
                     } else {
                         items(streamChoices, key = { it.key }) { choice ->
                             val isTorrentOnly = choice.directUrl == null
-                            TvStreamRow(
-                                addonName = choice.addonName,
-                                title = choice.title,
-                                subtitle = listOfNotNull(
-                                    choice.subtitle,
-                                    if (isTorrentOnly) "Torrent" else null,
-                                ).joinToString(" • ").takeIf { it.isNotBlank() },
-                                onClick = {
-                                    val video = selectedVideo
-                                    val playTitle = if (video != null && meta?.type == "series") {
-                                        "${meta.name} — ${video.title}"
-                                    } else {
-                                        meta?.name ?: item.name
-                                    }
-                                    if (choice.directUrl != null) {
-                                        onPlay(
-                                            TvPlayRequest(
-                                                title = playTitle,
-                                                sourceUrl = choice.directUrl,
-                                                streamType = choice.streamType,
-                                                externalSubtitles = choice.externalSubtitles,
-                                            ),
-                                        )
-                                    } else if (choice.torrentInfoHash != null) {
-                                        if (!P2pSettingsRepository.isVisible || !p2pSettings.p2pEnabled) {
-                                            showP2pOffNotice = true
-                                        } else {
-                                            onPlay(
-                                                TvPlayRequest(
-                                                    title = playTitle,
-                                                    sourceUrl = "",
+                            val isDebrid = choice.stream.isDirectDebridStream ||
+                                choice.stream.needsLocalDebridResolve
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    TvStreamRow(
+                                        addonName = choice.addonName,
+                                        title = choice.title,
+                                        subtitle = listOfNotNull(
+                                            choice.subtitle,
+                                            if (isTorrentOnly) "Torrent" else null,
+                                            if (isDebrid) "Debrid" else null,
+                                        ).joinToString(" • ").takeIf { it.isNotBlank() },
+                                        onClick = {
+                                            val video = selectedVideo
+                                            fun requestFor(url: String, torrent: Boolean): TvPlayRequest {
+                                                return TvPlayRequest(
+                                                    title = if (video != null && meta?.type == "series") {
+                                                        "${meta.name} — ${video.title}"
+                                                    } else {
+                                                        meta?.name ?: item.name
+                                                    },
+                                                    sourceUrl = if (torrent) "" else url,
                                                     streamType = choice.streamType,
                                                     externalSubtitles = choice.externalSubtitles,
-                                                    torrentInfoHash = choice.torrentInfoHash,
-                                                    torrentFileIdx = choice.torrentFileIdx,
-                                                    torrentFilename = choice.torrentFilename,
-                                                    torrentTrackers = choice.torrentTrackers,
-                                                ),
+                                                    torrentInfoHash = if (torrent) choice.torrentInfoHash else null,
+                                                    torrentFileIdx = if (torrent) choice.torrentFileIdx else null,
+                                                    torrentFilename = if (torrent) choice.torrentFilename else null,
+                                                    torrentTrackers = if (torrent) choice.torrentTrackers else emptyList(),
+                                                    metaType = meta?.type ?: item.type,
+                                                    metaId = meta?.id ?: item.id,
+                                                    videoId = video?.id,
+                                                    season = video?.season,
+                                                    episode = video?.episode,
+                                                )
+                                            }
+                                            pickerNotice = null
+                                            if (choice.directUrl != null) {
+                                                onPlay(requestFor(choice.directUrl, false))
+                                            } else if (DirectDebridPlaybackResolver.shouldResolveToPlayableStream(choice.stream)) {
+                                                resolvingDebrid = true
+                                                pickerScope.launch {
+                                                    val resolved = DirectDebridPlaybackResolver.resolveToPlayableStream(
+                                                        choice.stream,
+                                                        video?.season,
+                                                        video?.episode,
+                                                    )
+                                                    resolvingDebrid = false
+                                                    when (resolved) {
+                                                        is DirectDebridPlayableResult.Success -> {
+                                                            val url = resolved.stream.playableDirectUrl
+                                                            if (url != null) {
+                                                                onPlay(requestFor(url, false))
+                                                            } else {
+                                                                pickerNotice = "Debrid link nahi mila."
+                                                            }
+                                                        }
+                                                        DirectDebridPlayableResult.MissingApiKey -> {
+                                                            pickerNotice = "Debrid key nahi set hai — phone Settings me debrid key daalo, phir dobara chuno."
+                                                        }
+                                                        else -> {
+                                                            if (choice.torrentInfoHash != null &&
+                                                                P2pSettingsRepository.isVisible && p2pSettings.p2pEnabled
+                                                            ) {
+                                                                onPlay(requestFor("", true))
+                                                            } else {
+                                                                pickerNotice = when (resolved) {
+                                                                    DirectDebridPlayableResult.NotCached ->
+                                                                        "Ye stream debrid par cached nahi hai."
+                                                                    DirectDebridPlayableResult.Stale ->
+                                                                        "Ye debrid link expire ho gaya hai."
+                                                                    else -> "Debrid resolve fail ho gaya."
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            } else if (choice.torrentInfoHash != null) {
+                                                if (!P2pSettingsRepository.isVisible || !p2pSettings.p2pEnabled) {
+                                                    showP2pOffNotice = true
+                                                } else {
+                                                    onPlay(requestFor("", true))
+                                                }
+                                            }
+                                        },
+                                        focusRequester = if (choice == streamChoices.firstOrNull()) {
+                                            firstStreamFocusRequester
+                                        } else {
+                                            null
+                                        },
+                                    )
+                                }
+                                if (choice.directUrl != null) {
+                                    TvControlButton(
+                                        label = "Download",
+                                        onClick = {
+                                            val video = selectedVideo
+                                            val result = DownloadsRepository.enqueueFromStream(
+                                                contentType = item.type,
+                                                videoId = video?.id ?: item.id,
+                                                parentMetaId = item.id,
+                                                parentMetaType = item.type,
+                                                title = meta?.name ?: item.name,
+                                                logo = meta?.logo ?: item.logo,
+                                                poster = meta?.poster ?: item.poster,
+                                                background = meta?.background ?: item.banner,
+                                                seasonNumber = video?.season,
+                                                episodeNumber = video?.episode,
+                                                episodeTitle = video?.title,
+                                                episodeThumbnail = video?.thumbnail,
+                                                stream = choice.stream,
                                             )
-                                        }
-                                    }
-                                },
-                                focusRequester = if (choice == streamChoices.firstOrNull()) {
-                                    firstStreamFocusRequester
-                                } else {
-                                    null
-                                },
-                            )
+                                            pickerNotice = when (result) {
+                                                DownloadEnqueueResult.Started ->
+                                                    "Download shuru ho gaya — Downloads me dekho."
+                                                DownloadEnqueueResult.Replaced ->
+                                                    "Pehla download replace karke naya shuru ho gaya."
+                                                DownloadEnqueueResult.MissingUrl ->
+                                                    "Is stream ka download link nahi mila."
+                                                DownloadEnqueueResult.UnsupportedFormat ->
+                                                    "Ye format download nahi ho sakta."
+                                                DownloadEnqueueResult.RequiresWifi ->
+                                                    "Download ke liye Wi-Fi chahiye."
+                                            }
+                                        },
+                                        modifier = Modifier.padding(end = 48.dp),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -471,8 +587,11 @@ private fun TvStreamRow(
 
 /**
  * One row of the TV stream picker. Either [directUrl] plays immediately,
- * or [torrentInfoHash] resolves through the P2P engine in the player.
- * Rows with neither are dropped before they reach the picker.
+ * a debrid candidate resolves through the debrid resolver first, or
+ * [torrentInfoHash] resolves through the P2P engine in the player.
+ * Rows with neither a direct URL nor an info hash are dropped before
+ * they reach the picker. [stream] is the full addon stream, kept for
+ * debrid resolve and download enqueue.
  */
 private data class TvStreamChoice(
     val addonName: String,
@@ -485,5 +604,6 @@ private data class TvStreamChoice(
     val torrentTrackers: List<String>,
     val streamType: String?,
     val externalSubtitles: List<StreamSubtitle>,
+    val stream: StreamItem,
     val key: String,
 )
