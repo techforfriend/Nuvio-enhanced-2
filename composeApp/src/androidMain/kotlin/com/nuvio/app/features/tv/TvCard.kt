@@ -33,8 +33,9 @@ import coil3.compose.AsyncImage
 import com.nuvio.app.features.home.MetaPreview
 
 /**
- * Phase 2 TV poster card: focus is the whole interaction on TV, so a focused
- * card scales up and gets a white border, and D-pad center clicks it.
+ * Phase 2 TV poster card, TV-sized: large posters (not phone-sized),
+ * a stronger focus zoom and a thick white focus border, so rows read
+ * as TV rows from the couch. D-pad center clicks the card.
  * The poster URL comes from [MetaPreview] as published by HomeRepository
  * (custom-poster URLs already applied there), so plain Coil loading is enough.
  */
@@ -46,11 +47,11 @@ fun TvCard(
     focusRequester: FocusRequester? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.12f else 1f, label = "tvCardScale")
+    val scale by animateFloatAsState(if (focused) 1.15f else 1f, label = "tvCardScale")
     val imageUrl = item.poster ?: item.rawPosterUrl
     Column(
         modifier = modifier
-            .width(140.dp)
+            .width(180.dp)
             .zIndex(if (focused) 1f else 0f)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
@@ -59,11 +60,11 @@ fun TvCard(
     ) {
         Box(
             modifier = Modifier
-                .width(140.dp)
-                .height(200.dp)
+                .width(180.dp)
+                .height(260.dp)
                 .background(Color(0xFF1A1A1A), RoundedCornerShape(8.dp))
                 .border(
-                    width = 2.dp,
+                    width = 3.dp,
                     color = if (focused) Color.White else Color.Transparent,
                     shape = RoundedCornerShape(8.dp),
                 ),
@@ -91,9 +92,9 @@ fun TvCard(
         Text(
             text = item.name,
             modifier = Modifier
-                .width(140.dp)
+                .width(180.dp)
                 .padding(top = 6.dp),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = if (focused) Color.White else Color.White.copy(alpha = 0.8f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

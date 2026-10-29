@@ -1,6 +1,7 @@
 package com.nuvio.app.features.tv
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,10 +23,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import coil3.compose.AsyncImage
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.addons.enabledAddons
 import com.nuvio.app.features.addons.isWaitingForFirstEnabledManifest
@@ -33,6 +37,74 @@ import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.home.HomeRepository
 import com.nuvio.app.features.home.MetaPreview
 
+/**
+ * TV-style Home hero: a full-width backdrop banner (the phone Home's
+ * small "Featured" rail is not a TV hero), with the title, release info
+ * and a Details button the D-pad lands on first.
+ */
+@Composable
+private fun TvHomeHero(
+    item: MetaPreview,
+    onDetails: () -> Unit,
+    detailsFocusRequester: FocusRequester?,
+) {
+    val backdrop = item.banner ?: item.poster
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(400.dp),
+    ) {
+        if (backdrop != null) {
+            AsyncImage(
+                model = backdrop,
+                contentDescription = item.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF1A1A1A)),
+            )
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.55f)),
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 48.dp, end = 48.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.Bottom,
+        ) {
+            Text(
+                text = item.name,
+                style = MaterialTheme.typography.headlineLarge,
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (!item.releaseInfo.isNullOrBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = item.releaseInfo ?: "",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = 0.85f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            TvControlButton(
+                label = "Details",
+                onClick = onDetails,
+                focusRequester = detailsFocusRequester,
+            )
+        }
+    }
+}
 /**
  * Phase 2 TV Home: rails of real catalog data from [HomeRepository].
  *
@@ -141,14 +213,24 @@ fun TvHomeScreen(
                     }
                     val hasHero = homeState.heroItems.isNotEmpty()
                     if (hasHero) {
+                        val hero = homeState.heroItems.first()
                         item {
-                            TvHomeRail(
-                                title = "Featured",
-                                subtitle = "",
-                                items = homeState.heroItems,
-                                onItemClick = onItemClick,
-                                firstCardFocusRequester = firstCardFocusRequester,
+                            TvHomeHero(
+                                item = hero,
+                                onDetails = { onItemClick(hero) },
+                                detailsFocusRequester = firstCardFocusRequester,
                             )
+                        }
+                        val rest = homeState.heroItems.drop(1)
+                        if (rest.isNotEmpty()) {
+                            item {
+                                TvHomeRail(
+                                    title = "Featured",
+                                    subtitle = "",
+                                    items = rest,
+                                    onItemClick = onItemClick,
+                                )
+                            }
                         }
                     }
                     items(homeState.sections, key = { it.key }) { section ->

@@ -3,6 +3,7 @@ package com.nuvio.app.features.tv
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +33,10 @@ import com.nuvio.app.features.player.PlayerPlaybackSnapshot
  * Phase 3 TV player controls: bottom overlay with play/pause, -10s/+10s
  * seek buttons and a progress bar. No gestures here — everything is
  * focus + D-pad center, unlike the phone player.
+ *
+ * [TvControlButton] is the shared TV button: deliberately large (big
+ * padding, large text, thick focus border) so it reads from the couch.
+ * It is used by every TV screen, not just the player.
  */
 @Composable
 fun TvControlButton(
@@ -47,12 +52,16 @@ fun TvControlButton(
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged { focused = it.isFocused }
             .border(
-                width = 2.dp,
+                width = 3.dp,
                 color = if (focused) Color.White else Color.Transparent,
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(12.dp),
             ),
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
     ) {
-        Text(label)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+        )
     }
 }
 

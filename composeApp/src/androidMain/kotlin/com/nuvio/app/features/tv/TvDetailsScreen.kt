@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -390,35 +391,43 @@ fun TvDetailsScreen(
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     item {
-                        Row(
-                            modifier = Modifier.padding(start = 48.dp, end = 48.dp, top = 32.dp),
+                        val backdropUrl = meta.background ?: meta.poster ?: item.poster
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(360.dp),
                         ) {
-                            val posterUrl = meta.poster ?: item.poster
+                            if (backdropUrl != null) {
+                                AsyncImage(
+                                    model = backdropUrl,
+                                    contentDescription = meta.name,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop,
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color(0xFF1A1A1A)),
+                                )
+                            }
                             Box(
                                 modifier = Modifier
-                                    .width(140.dp)
-                                    .height(200.dp)
-                                    .background(Color(0xFF1A1A1A), RoundedCornerShape(8.dp)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (posterUrl != null) {
-                                    AsyncImage(
-                                        model = posterUrl,
-                                        contentDescription = meta.name,
-                                        modifier = Modifier.matchParentSize(),
-                                        contentScale = ContentScale.Crop,
-                                    )
-                                }
-                            }
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.55f)),
+                            )
                             Column(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .padding(start = 16.dp),
+                                    .fillMaxSize()
+                                    .padding(start = 48.dp, end = 48.dp, bottom = 28.dp),
+                                verticalArrangement = Arrangement.Bottom,
                             ) {
                                 Text(
                                     text = meta.name,
-                                    style = MaterialTheme.typography.headlineMedium,
+                                    style = MaterialTheme.typography.headlineLarge,
                                     color = Color.White,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                                 Spacer(Modifier.height(8.dp))
                                 val infoLine = listOfNotNull(
@@ -430,8 +439,10 @@ fun TvDetailsScreen(
                                 if (infoLine.isNotBlank()) {
                                     Text(
                                         text = infoLine,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = Color.White.copy(alpha = 0.7f),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = Color.White.copy(alpha = 0.85f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
                                     Spacer(Modifier.height(8.dp))
                                 }
@@ -440,34 +451,31 @@ fun TvDetailsScreen(
                                         text = meta.description,
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = Color.White.copy(alpha = 0.85f),
-                                        maxLines = 6,
+                                        maxLines = 3,
                                         overflow = TextOverflow.Ellipsis,
                                     )
+                                    Spacer(Modifier.height(16.dp))
                                 }
-                            }
-                        }
-                    }
-                    item {
-                        Row(
-                            modifier = Modifier.padding(start = 48.dp, top = 24.dp),
-                        ) {
-                            TvControlButton(
-                                label = "Play",
-                                onClick = { showStreams = true },
-                                focusRequester = playFocusRequester,
-                            )
-                            val video = selectedVideo
-                            if (video != null && meta.type == "series") {
-                                Text(
-                                    text = "S${video.season ?: "?"} E${video.episode ?: "?"} — ${video.title}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    modifier = Modifier
-                                        .padding(start = 16.dp)
-                                        .align(Alignment.CenterVertically),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    TvControlButton(
+                                        label = "Play",
+                                        onClick = { showStreams = true },
+                                        focusRequester = playFocusRequester,
+                                    )
+                                    val video = selectedVideo
+                                    if (video != null && meta.type == "series") {
+                                        Text(
+                                            text = "S${video.season ?: "?"} E${video.episode ?: "?"} — ${video.title}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = Color.White.copy(alpha = 0.7f),
+                                            modifier = Modifier.padding(start = 16.dp),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

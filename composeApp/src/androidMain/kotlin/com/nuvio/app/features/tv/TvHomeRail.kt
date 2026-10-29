@@ -35,7 +35,7 @@ fun TvHomeRail(
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleLarge,
             color = Color.White,
             modifier = Modifier.padding(horizontal = 48.dp),
         )
@@ -50,9 +50,9 @@ fun TvHomeRail(
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp, bottom = 16.dp),
+                .padding(top = 12.dp, bottom = 20.dp),
             contentPadding = PaddingValues(horizontal = 48.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             items(items, key = { it.stableKey() }) { item ->
                 TvCard(
