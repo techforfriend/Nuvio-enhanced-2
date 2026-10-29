@@ -816,16 +816,6 @@ private fun BoxScope.RenderPlaybackOverlays(
     }
 }
 
-private fun PlayerScreenRuntime.openChaptersPanel() {
-    showChaptersPanel = true
-    showSourcesPanel = false
-    showQualityPanel = false
-    showSpeedPanel = false
-    showEpisodesPanel = false
-    showLiveChannelsPanel = false
-    controlsVisible = false
-}
-
 private fun PlayerScreenRuntime.openQualityPanel() {
     InAppLogger.info(
         "Player/Quality",

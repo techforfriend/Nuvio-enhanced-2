@@ -3630,4 +3630,10 @@
     <string name="nuvio_enhanced_hide_player_resize_desc">Hide the aspect ratio / resize button from bottom action bar.</string>
     <string name="nuvio_enhanced_hide_player_speed">Hide playback speed button</string>
     <string name="nuvio_enhanced_hide_player_speed_desc">Hide the speed adjustment pill from bottom action bar.</string>
+    <string name="settings_playback_legacy_buttons_shown">Shown</string>
+    <string name="settings_playback_legacy_buttons_hidden">Hidden</string>
+    <string name="settings_playback_legacy_buttons_hide">Hide</string>
+    <string name="settings_playback_legacy_buttons_show">Show</string>
+    <string name="settings_tmdb_original_title_language">Original language</string>
+    <string name="settings_tmdb_original_title_language_description">Show titles, title logos, posters, and backdrops in their original language. Falls back to the language above when unavailable.</string>
 </resources>

@@ -35,6 +35,10 @@ object TmdbMetadataService {
     private val json = Json { ignoreUnknownKeys = true }
 
     private val enrichmentCache = mutableMapOf<String, TmdbEnrichment>()
+
+    internal fun clearEnrichmentCache() {
+        enrichmentCache.clear()
+    }
     private val episodeCache = mutableMapOf<String, Map<Pair<Int, Int>, TmdbEpisodeEnrichment>>()
     private val moreLikeThisCache = mutableMapOf<String, MoreLikeThisPage>()
     private val collectionCache = mutableMapOf<String, Pair<String?, List<MetaPreview>>>()
