@@ -1658,6 +1658,9 @@ private fun LibmpvPlayerSurface(
         }
         val logObserver = object : MPV.LogObserver {
             override fun logMessage(prefix: String, level: Int, text: String) {
+                if (prefix == "af" || prefix == "lavfi" || prefix.startsWith("af/") || text.contains("acompressor")) {
+                    InAppLogger.warn("Player/NightMode", "mpv $prefix: ${text.trim()}")
+                }
                 Log.w(
                     PLAYER_DIAGNOSTIC_TAG,
                     "mpv_log level=$level prefix=${diagnosticPlayerMessage(prefix)} " +
@@ -1716,6 +1719,14 @@ private fun LibmpvPlayerSurface(
 
     LaunchedEffect(playerViewRef, resizeMode) {
         playerViewRef?.applyResizeMode(resizeMode)
+    }
+
+    LaunchedEffect(playerViewRef) {
+        val view = playerViewRef ?: return@LaunchedEffect
+        PlayerSettingsRepository.uiState
+            .map { it.nightModeActive }
+            .distinctUntilChanged()
+            .collect { view.applyNightMode(it) }
     }
 
     LaunchedEffect(playerViewRef, sourceUrl, sourceAudioUrl, sanitizedSourceHeaders, externalSubtitles) {
@@ -2165,6 +2176,20 @@ private class NuvioLibmpvView(
                         append(mpv.getPropertyNode("audio-params")?.toMpvNodeSummary() ?: "unknown")
                     }
                 }.getOrDefault("unavailable")
+            }
+        }
+    }
+
+    fun applyNightMode(enabled: Boolean) {
+        executeMpv {
+            runCatching { mpv.command("af", "remove", PlayerNightMode.MPV_FILTER_LABEL) }
+            if (enabled) {
+                mpv.command("af", "add", PlayerNightMode.MPV_FILTER)
+            }
+            val chain = runCatching { mpv.getPropertyString("af") }.getOrNull()
+            InAppLogger.info("Player/NightMode", "libmpv night mode ${if (enabled) "on" else "off"} af=$chain")
+            if (enabled && chain?.contains(PlayerNightMode.MPV_FILTER_LABEL) != true) {
+                InAppLogger.warn("Player/NightMode", "libmpv did not keep the night mode filter; acompressor may be missing from its FFmpeg build")
             }
         }
     }

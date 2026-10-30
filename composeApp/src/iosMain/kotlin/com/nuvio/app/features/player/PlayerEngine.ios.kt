@@ -438,6 +438,15 @@ actual fun PlatformPlayerSurface(
         bridge.applyIosVideoOutputSettings(playerSettings)
     }
 
+    val nightModeActive = playerSettings.nightModeActive
+    LaunchedEffect(bridge, nightModeActive) {
+        bridge.setNightMode(
+            enabled = nightModeActive,
+            filter = PlayerNightMode.MPV_FILTER,
+            label = PlayerNightMode.MPV_FILTER_LABEL,
+        )
+    }
+
     // Polling for snapshots
     LaunchedEffect(bridge) {
         var lastReportedError: String? = null

@@ -634,6 +634,15 @@ private fun PlaybackSettingsSection(
                     onClick = { showSecondaryAudioDialog = true },
                 )
                 SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_night_mode_button),
+                    description = stringResource(Res.string.settings_playback_night_mode_button_description),
+                    checked = autoPlayPlayerSettings.nightModeButtonEnabled,
+                    enabled = !autoPlayPlayerSettings.externalPlayerEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = PlayerSettingsRepository::setNightModeButtonEnabled,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_preferred_subtitle_language),
                     description = when (preferredSubtitleLanguage) {

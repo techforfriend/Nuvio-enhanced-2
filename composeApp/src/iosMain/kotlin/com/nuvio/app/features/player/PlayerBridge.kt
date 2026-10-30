@@ -48,6 +48,7 @@ interface NuvioPlayerBridge {
         gamma: Int,
     )
     fun configureAudioOutput(audioOutput: String)
+    fun setNightMode(enabled: Boolean, filter: String, label: String)
     fun setPlaybackSpeed(speed: Float)
     fun getVolume(): Float
     fun setVolume(volume: Float)
