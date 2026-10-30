@@ -95,6 +95,9 @@ actual fun PlatformPlayerSurface(
             override val keepsPlaybackInBackground: Boolean
                 get() = bridge.getKeepsPlaybackInBackground()
 
+            override val supportsNightMode: Boolean
+                get() = bridge.isNightModeSupported()
+
             override fun setSystemControlHandler(handler: PlayerSystemControlHandler?) {
                 bridge.setSystemControlHandler(handler)
             }
