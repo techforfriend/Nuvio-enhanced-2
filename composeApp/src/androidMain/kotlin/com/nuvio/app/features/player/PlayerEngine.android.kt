@@ -111,6 +111,9 @@ import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -325,9 +328,6 @@ private fun ExoPlayerSurface(
         useYoutubeChunkedPlayback,
         initialPositionRequestKey.orEmpty(),
     )
-    // Tracks whether an ASS track was actively selected and video effects need activation.
-    // When this flips to true, the player remember key changes and player rebuilds with effects.
-    var videoEffectsNeeded by remember(playerSourceKey) { mutableStateOf(false) }
     val playbackDiagnostics = remember(playerSourceKey) { PlaybackDiagnostics() }
     var subtitleDelayMs by remember(playerSourceKey) { mutableStateOf(0) }
     var selectedExternalSubtitleMimeType by remember(playerSourceKey) { mutableStateOf<String?>(null) }
@@ -459,7 +459,6 @@ private fun ExoPlayerSurface(
         useYoutubeChunkedPlayback,
         effectiveDecoderPriority,
         initialPositionRequestKey,
-        videoEffectsNeeded,
     ) {
         aiostreamsAss?.reset(
             PlatformPlaybackDataSourceFactory.create(
@@ -551,22 +550,7 @@ private fun ExoPlayerSurface(
                 dataSourceFactory = dataSourceFactory,
                 extractorsFactory = extractorsFactory,
                 renderersFactory = renderersFactory
-            ).also { builtPlayer ->
-                // Apply video effects only when ASS track was detected as selected.
-                // On first init videoEffectsNeeded is false. When onTracksChanged
-                // detects a selected ASS track, it flips to true which triggers a
-                // player rebuild via the remember key.
-                if (videoEffectsNeeded) {
-                    val effectiveMode = if (playerSettings.tunnelingEnabled) "OVERLAY" else playerSettings.libassRenderMode
-                    if (effectiveMode != "OVERLAY") {
-                        builtPlayer.getAssHandlerCompat()?.let { handler ->
-                            builtPlayer.setVideoEffects(
-                                listOf(com.nuvio.tv.libass.media.effect.AssVideoEffectAsync(handler))
-                            )
-                        }
-                    }
-                }
-            }
+            )
         } else {
             val mediaSourceFactory = DefaultMediaSourceFactory(
                 dataSourceFactory,
@@ -916,44 +900,6 @@ private fun ExoPlayerSurface(
                         .build()
                     if (idx >= 0) {
                         exoPlayer.selectTrackByIndex(C.TRACK_TYPE_TEXT, idx)
-                    }
-                }
-                // Trigger player rebuild with video effects when ASS track becomes selected
-                // and render mode is VIDEO_EFFECT.
-                if (!videoEffectsNeeded && useLibass && libassRenderMode != "OVERLAY") {
-                    val hasSelectedAss = tracks.groups.any { group ->
-                        group.isSelected && group.type == C.TRACK_TYPE_TEXT &&
-                            (0 until group.length).any { i ->
-                                group.isTrackSelected(i) &&
-                                    group.getTrackFormat(i).sampleMimeType == MimeTypes.TEXT_SSA
-                            }
-                    }
-                    val hasDvVideo = tracks.groups.any { group ->
-                        group.isSelected && group.type == C.TRACK_TYPE_VIDEO &&
-                            (0 until group.length).any { i ->
-                                group.getTrackFormat(i).sampleMimeType == MimeTypes.VIDEO_DOLBY_VISION
-                            }
-                    }
-                    if (hasSelectedAss && !hasDvVideo) {
-                        Log.d(TAG, "onTracksChanged: ASS track selected, triggering video effect rebuild")
-                        // Save current subtitle selection to restore after rebuild.
-                        // Find the selected text track index in the current tracks.
-                        var selectedSubIdx = -1
-                        var textIdx = 0
-                        for (group in tracks.groups) {
-                            if (group.type != C.TRACK_TYPE_TEXT) continue
-                            for (i in 0 until group.length) {
-                                if (group.isTrackSelected(i)) {
-                                    selectedSubIdx = textIdx
-                                }
-                                textIdx++
-                            }
-                        }
-                        if (selectedSubIdx >= 0) {
-                            pendingSubtitleTrackIndex.clear()
-                            pendingSubtitleTrackIndex.add(selectedSubIdx)
-                        }
-                        videoEffectsNeeded = true
                     }
                 }
                 dispatchExoPlayerSnapshot()
@@ -1437,9 +1383,6 @@ private fun ExoPlayerSurface(
                     val targetMs = delayMs.coerceIn(SUBTITLE_DELAY_MIN_MS, SUBTITLE_DELAY_MAX_MS)
                     InAppLogger.info("ExoPlayer/Android", "set subtitle delay ms=$targetMs")
                     subtitleDelayMs = targetMs
-                    exoPlayer.getAssHandlerCompat()?.let {
-                        it.subtitleDelayUs = subtitleDelayMs.toLong() * 1000L
-                    }
                 }
             }),
         )

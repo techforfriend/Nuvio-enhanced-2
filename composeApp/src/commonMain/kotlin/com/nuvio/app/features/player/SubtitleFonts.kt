@@ -4,6 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.text.font.FontFamily
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -44,6 +47,28 @@ internal object SubtitleFonts {
     fun remove(id: String) {
         SubtitleFontStorage.write("fonts.json", Json.encodeToString(installed().filterNot { it.id == id }).encodeToByteArray())
         SubtitleFontStorage.remove(id)
+    }
+}
+
+internal object SubtitleFontRepository {
+    private val _fonts = MutableStateFlow<List<SubtitleFont>>(emptyList())
+    val fonts: StateFlow<List<SubtitleFont>> = _fonts.asStateFlow()
+
+    private var loaded = false
+
+    fun ensureLoaded() {
+        if (loaded) return
+        loaded = true
+        refresh()
+    }
+
+    fun refresh() {
+        _fonts.value = SubtitleFonts.installed()
+    }
+
+    fun find(fileName: String?): SubtitleFont? {
+        if (fileName.isNullOrBlank()) return null
+        return _fonts.value.firstOrNull { it.id == fileName }
     }
 }
 

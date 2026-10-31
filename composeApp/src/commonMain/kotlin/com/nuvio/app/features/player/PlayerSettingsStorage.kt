@@ -216,6 +216,16 @@ internal expect object PlayerSettingsStorage {
     fun saveIosSaturation(value: Int)
     fun loadIosGamma(): Int?
     fun saveIosGamma(value: Int)
+    fun loadLegacyBottomButtons(): String?
+    fun saveLegacyBottomButtons(layout: String)
+    fun loadLegacyTopButtons(): String?
+    fun saveLegacyTopButtons(layout: String)
+    fun loadAndroidExoChaptersEnabled(): Boolean?
+    fun saveAndroidExoChaptersEnabled(enabled: Boolean)
+    fun loadNightModeButtonEnabled(): Boolean?
+    fun saveNightModeButtonEnabled(enabled: Boolean)
+    fun loadNightModeEnabled(): Boolean?
+    fun saveNightModeEnabled(enabled: Boolean)
     fun exportToSyncPayload(): JsonObject
     fun replaceFromSyncPayload(payload: JsonObject)
 }

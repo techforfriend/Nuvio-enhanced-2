@@ -125,6 +125,10 @@ data class PlayerSettingsUiState(
     val iosSaturation: Int = 0,
     val iosGamma: Int = 0,
     val androidExoChaptersEnabled: Boolean = false,
+    val legacyBottomButtons: LegacyBottomButtonLayout = LegacyPlayerButtonLayouts.DefaultBottom,
+    val legacyTopButtons: LegacyTopButtonLayout = LegacyPlayerButtonLayouts.DefaultTop,
+    val nightModeButtonEnabled: Boolean = true,
+    val nightModeEnabled: Boolean = false,
 )
 
 object PlayerSettingsRepository {
@@ -134,6 +138,8 @@ object PlayerSettingsRepository {
     private var hasLoaded = false
     private var useLegacyPlayerLayout = false
     private var toolbarLayout = PlayerToolbarLayout.Default
+    private var legacyBottomButtons = LegacyPlayerButtonLayouts.DefaultBottom
+    private var legacyTopButtons = LegacyPlayerButtonLayouts.DefaultTop
     private var showLoadingOverlay = true
     private var showPlayerLoadingStatus = true
     private var pauseOverlayEnabled = true
@@ -208,6 +214,9 @@ object PlayerSettingsRepository {
     private var libassRenderType = "OVERLAY_OPEN_GL"
     private var libassRenderScale = "FULL"
     private var libassRenderMode = "OVERLAY"
+    private var androidExoChaptersEnabled = false
+    private var nightModeButtonEnabled = true
+    private var nightModeEnabled = false
     private var iosVideoOutputPreset = IosVideoOutputPreset.NativeEdr
     private var iosToneMappingMode = IosToneMappingMode.Auto
     private var iosTargetPrimaries = IosTargetPrimaries.Auto
@@ -237,6 +246,8 @@ object PlayerSettingsRepository {
         hasLoaded = false
         useLegacyPlayerLayout = false
         toolbarLayout = PlayerToolbarLayout.Default
+        legacyBottomButtons = LegacyPlayerButtonLayouts.DefaultBottom
+        legacyTopButtons = LegacyPlayerButtonLayouts.DefaultTop
         showLoadingOverlay = true
         showPlayerLoadingStatus = true
         pauseOverlayEnabled = true
@@ -311,6 +322,9 @@ object PlayerSettingsRepository {
         libassRenderType = "OVERLAY_OPEN_GL"
         libassRenderScale = "FULL"
         libassRenderMode = "OVERLAY"
+        androidExoChaptersEnabled = false
+        nightModeButtonEnabled = true
+        nightModeEnabled = false
         iosVideoOutputPreset = IosVideoOutputPreset.NativeEdr
         iosToneMappingMode = IosToneMappingMode.Auto
         iosTargetPrimaries = IosTargetPrimaries.Auto
@@ -333,6 +347,8 @@ object PlayerSettingsRepository {
         hasLoaded = true
         useLegacyPlayerLayout = PlayerSettingsStorage.loadUseLegacyPlayerLayout() ?: false
         toolbarLayout = PlayerToolbarLayout.decode(PlayerSettingsStorage.loadToolbarLayout())
+        legacyBottomButtons = LegacyPlayerButtonLayouts.decodeBottom(PlayerSettingsStorage.loadLegacyBottomButtons())
+        legacyTopButtons = LegacyPlayerButtonLayouts.decodeTop(PlayerSettingsStorage.loadLegacyTopButtons())
         showLoadingOverlay = PlayerSettingsStorage.loadShowLoadingOverlay() ?: true
         showPlayerLoadingStatus = PlayerSettingsStorage.loadShowPlayerLoadingStatus() ?: true
         pauseOverlayEnabled = PlayerSettingsStorage.loadPauseOverlayEnabled() ?: true
@@ -472,6 +488,9 @@ object PlayerSettingsRepository {
         libassRenderType = PlayerSettingsStorage.loadLibassRenderType() ?: "CUES"
         libassRenderScale = PlayerSettingsStorage.loadLibassRenderScale() ?: "FULL"
         libassRenderMode = PlayerSettingsStorage.loadLibassRenderMode() ?: "OVERLAY"
+        androidExoChaptersEnabled = PlayerSettingsStorage.loadAndroidExoChaptersEnabled() ?: false
+        nightModeButtonEnabled = PlayerSettingsStorage.loadNightModeButtonEnabled() ?: true
+        nightModeEnabled = PlayerSettingsStorage.loadNightModeEnabled() ?: false
         iosVideoOutputPreset = PlayerSettingsStorage.loadIosVideoOutputPreset()
             ?.let { runCatching { IosVideoOutputPreset.valueOf(it) }.getOrNull() }
             ?: IosVideoOutputPreset.NativeEdr
@@ -834,6 +853,46 @@ object PlayerSettingsRepository {
         exoNativeMemoryEnabled = value
         publish()
         PlayerSettingsStorage.saveExoNativeMemoryEnabled(value)
+    }
+
+    fun setLegacyBottomButtons(layout: LegacyBottomButtonLayout) {
+        ensureLoaded()
+        if (legacyBottomButtons == layout) return
+        legacyBottomButtons = layout
+        publish()
+        PlayerSettingsStorage.saveLegacyBottomButtons(LegacyPlayerButtonLayouts.encodeBottom(layout))
+    }
+
+    fun setLegacyTopButtons(layout: LegacyTopButtonLayout) {
+        ensureLoaded()
+        if (legacyTopButtons == layout) return
+        legacyTopButtons = layout
+        publish()
+        PlayerSettingsStorage.saveLegacyTopButtons(LegacyPlayerButtonLayouts.encodeTop(layout))
+    }
+
+    fun setAndroidExoChaptersEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (androidExoChaptersEnabled == enabled) return
+        androidExoChaptersEnabled = enabled
+        publish()
+        PlayerSettingsStorage.saveAndroidExoChaptersEnabled(enabled)
+    }
+
+    fun setNightModeButtonEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (nightModeButtonEnabled == enabled) return
+        nightModeButtonEnabled = enabled
+        publish()
+        PlayerSettingsStorage.saveNightModeButtonEnabled(enabled)
+    }
+
+    fun setNightModeEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (nightModeEnabled == enabled) return
+        nightModeEnabled = enabled
+        publish()
+        PlayerSettingsStorage.saveNightModeEnabled(enabled)
     }
 
     fun setCustomPlaybackBuffersEnabled(value: Boolean) {
@@ -1313,6 +1372,8 @@ object PlayerSettingsRepository {
         _uiState.value = PlayerSettingsUiState(
             useLegacyPlayerLayout = useLegacyPlayerLayout,
             toolbarLayout = toolbarLayout,
+            legacyBottomButtons = legacyBottomButtons,
+            legacyTopButtons = legacyTopButtons,
             showLoadingOverlay = showLoadingOverlay,
             showPlayerLoadingStatus = showPlayerLoadingStatus,
             pauseOverlayEnabled = pauseOverlayEnabled,
@@ -1340,6 +1401,9 @@ object PlayerSettingsRepository {
             streamReuseLastLinkEnabled = streamReuseLastLinkEnabled,
             streamReuseLastLinkCacheHours = streamReuseLastLinkCacheHours,
             androidPlaybackEngine = androidPlaybackEngine,
+            androidExoChaptersEnabled = androidExoChaptersEnabled,
+            nightModeButtonEnabled = nightModeButtonEnabled,
+            nightModeEnabled = nightModeEnabled,
             autoSwitchPlaybackEngineOnError = autoSwitchPlaybackEngineOnError,
             androidLibmpvVideoOutput = androidLibmpvVideoOutput,
             androidLibmpvHardwareDecodingEnabled = androidLibmpvHardwareDecodingEnabled,

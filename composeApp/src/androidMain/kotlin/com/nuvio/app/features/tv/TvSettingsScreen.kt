@@ -143,9 +143,8 @@ fun TvSettingsScreen(
             item {
                 TvSettingsRow(
                     label = "Subtitle font",
-                    value = subtitleFonts
-                        .find { it.fileName == playerSettings.subtitleStyle.customFontFile }
-                        ?.familyName ?: "Default",
+                    value = if (playerSettings.subtitleStyle.appearance.fontId == "default") "Default"
+                        else subtitleFonts.find { it.id == playerSettings.subtitleStyle.appearance.fontId }?.name ?: "Default",
                     onClick = { showFontPanel = true },
                 )
             }
@@ -214,10 +213,12 @@ fun TvSettingsScreen(
                         item {
                             TvSettingsRow(
                                 label = "Default",
-                                value = if (playerSettings.subtitleStyle.customFontFile == null) "✓" else "",
+                                value = if (playerSettings.subtitleStyle.appearance.fontId == "default") "✓" else "",
                                 onClick = {
                                     PlayerSettingsRepository.setSubtitleStyle(
-                                        playerSettings.subtitleStyle.copy(customFontFile = null),
+                                        playerSettings.subtitleStyle.copy(
+                                            appearance = playerSettings.subtitleStyle.appearance.copy(fontId = "default"),
+                                        ),
                                     )
                                     showFontPanel = false
                                 },
@@ -225,11 +226,13 @@ fun TvSettingsScreen(
                         }
                         items(subtitleFonts) { font ->
                             TvSettingsRow(
-                                label = font.familyName,
-                                value = if (playerSettings.subtitleStyle.customFontFile == font.fileName) "✓" else "",
+                                label = font.name,
+                                value = if (playerSettings.subtitleStyle.appearance.fontId == font.id) "✓" else "",
                                 onClick = {
                                     PlayerSettingsRepository.setSubtitleStyle(
-                                        playerSettings.subtitleStyle.copy(customFontFile = font.fileName),
+                                        playerSettings.subtitleStyle.copy(
+                                            appearance = playerSettings.subtitleStyle.appearance.copy(fontId = font.id),
+                                        ),
                                     )
                                     showFontPanel = false
                                 },

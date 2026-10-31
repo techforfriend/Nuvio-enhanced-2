@@ -276,7 +276,7 @@ private fun libassRenderScaleLabel(scale: String): String = when (scale) {
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun LibassRenderScaleDialog(
+internal fun LibassRenderScaleDialog(
     selectedScale: String,
     onScaleSelected: (String) -> Unit,
     onDismiss: () -> Unit,

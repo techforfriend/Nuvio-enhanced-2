@@ -53,9 +53,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.addons.enabledAddons
-import com.nuvio.app.features.player.SUBTITLE_SHADOW_STRENGTH_MAX
-import com.nuvio.app.features.player.SUBTITLE_SHADOW_STRENGTH_MIN
 import com.nuvio.app.features.player.SubtitleFontRepository
+import com.nuvio.app.features.player.SubtitleFontPicker
+import com.nuvio.app.features.player.subtitleFontLabel
 import com.nuvio.app.features.player.AndroidLibmpvVideoOutput
 import com.nuvio.app.features.player.PlayerSkipSecondsOptions
 import com.nuvio.app.features.player.AndroidPlaybackEngine
@@ -188,132 +188,6 @@ private fun formatP2pCacheBytes(bytes: Long): String {
         "${kotlin.math.round(bytes / gibibyte * 10.0) / 10.0} GB"
     } else {
         "${kotlin.math.round(bytes / mebibyte * 10.0) / 10.0} MB"
-    }
-}
-
-fun snapToStep(value: Float, step: Float): Float {
-    return (value / step).roundToInt() * step
-}
-
-fun calculateSteps(
-    min: Float,
-    max: Float,
-    stepSize: Float
-): Int {
-    val totalSteps = ((max - min) / stepSize).roundToInt()
-    return (totalSteps - 1).coerceAtLeast(0)
-}
-
-@Composable
-fun ValueBox(
-    text: String,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.CenterEnd
-    ) {
-        Text(
-            text = text,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
-}
-
-@Composable
-internal fun SettingsSliderRow(
-    title: String,
-    value: Int,
-    valueText: String? = null,
-    valueRange: IntRange,
-    step: Int,
-    isTablet: Boolean,
-    enabled: Boolean = true,
-    description: String? = null,
-    formatValue: (@Composable (Int) -> String)? = null,
-    onValueChange: (Int) -> Unit,
-) {
-    val horizontalPadding = if (isTablet) 20.dp else 16.dp
-    var sliderValue by remember(value) { mutableFloatStateOf(value.toFloat()) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = horizontalPadding, vertical = 10.dp)
-            .alpha(if (enabled) 1f else 0.55f),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.weight(1f),
-            )
-            val liveValue = sliderValue.roundToInt().coerceIn(valueRange.first, valueRange.last)
-            ValueBox(
-                text = formatValue?.invoke(liveValue) ?: valueText ?: liveValue.toString(),
-                modifier = Modifier.wrapContentWidth(),
-            )
-        }
-        if (description != null) {
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Slider(
-            value = sliderValue.coerceIn(valueRange.first.toFloat(), valueRange.last.toFloat()),
-            onValueChange = { if (enabled) sliderValue = snapToStep(it, step.toFloat()) },
-            onValueChangeFinished = {
-                if (enabled) onValueChange(sliderValue.roundToInt().coerceIn(valueRange.first, valueRange.last))
-            },
-            enabled = enabled,
-            valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
-            steps = calculateSteps(valueRange.first.toFloat(), valueRange.last.toFloat(), step.toFloat()),
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-            ),
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
-}
-
-@Composable
-private fun PlaybackSettingsNote(
-    text: String,
-    color: Color,
-    isTablet: Boolean,
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = color,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                horizontal = if (isTablet) 20.dp else 16.dp,
-                vertical = 8.dp,
-            ),
-    )
-}
-
-@Composable
-private fun subtitleColorLabel(color: Color): String {
-    return if (color.alpha == 0f) {
-        stringResource(Res.string.settings_playback_subtitle_color_transparent)
-    } else {
-        color.toStorageHexString()
     }
 }
 
@@ -777,8 +651,7 @@ private fun PlaybackSettingsSection(
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_subtitle_font),
-                    description = subtitleFonts.firstOrNull { it.fileName == subtitleStyle.customFontFile }?.familyName
-                        ?: stringResource(Res.string.settings_playback_subtitle_font_default),
+                    description = subtitleFontLabel(subtitleStyle.appearance.fontId, subtitleFonts),
                     enabled = subtitleRenderingEnabled,
                     isTablet = isTablet,
                     onClick = { showSubtitleFontDialog = true },
@@ -824,25 +697,33 @@ private fun PlaybackSettingsSection(
                 SettingsSwitchRow(
                     title = stringResource(Res.string.settings_playback_subtitle_shadow),
                     description = stringResource(Res.string.settings_playback_subtitle_shadow_description),
-                    checked = subtitleStyle.shadowEnabled,
+                    checked = subtitleStyle.appearance.shadowEnabled,
                     enabled = subtitleRenderingEnabled,
                     isTablet = isTablet,
                     onCheckedChange = { enabled ->
-                        PlayerSettingsRepository.setSubtitleStyle(subtitleStyle.copy(shadowEnabled = enabled))
+                        PlayerSettingsRepository.setSubtitleStyle(
+                            subtitleStyle.copy(
+                                appearance = subtitleStyle.appearance.copy(shadowEnabled = enabled),
+                            ),
+                        )
                     },
                 )
-                if (subtitleStyle.shadowEnabled) {
+                if (subtitleStyle.appearance.shadowEnabled) {
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsSliderRow(
                         title = stringResource(Res.string.settings_playback_subtitle_shadow_strength),
-                        value = subtitleStyle.shadowStrength,
+                        value = subtitleStyle.appearance.shadowSize,
                         formatValue = { it.toString() },
-                        valueRange = SUBTITLE_SHADOW_STRENGTH_MIN..SUBTITLE_SHADOW_STRENGTH_MAX,
+                        valueRange = 1..8,
                         step = 1,
                         isTablet = isTablet,
                         enabled = subtitleRenderingEnabled,
                         onValueChange = { value ->
-                            PlayerSettingsRepository.setSubtitleStyle(subtitleStyle.copy(shadowStrength = value))
+                            PlayerSettingsRepository.setSubtitleStyle(
+                                subtitleStyle.copy(
+                                    appearance = subtitleStyle.appearance.copy(shadowSize = value),
+                                ),
+                            )
                         },
                     )
                 }
@@ -1805,11 +1686,13 @@ private fun PlaybackSettingsSection(
     }
 
     if (showSubtitleFontDialog) {
-        SubtitleFontDialog(
-            selectedFontFile = autoPlayPlayerSettings.subtitleStyle.customFontFile,
-            onFontSelected = { fileName ->
+        SubtitleFontPicker(
+            selectedId = autoPlayPlayerSettings.subtitleStyle.appearance.fontId,
+            onSelect = { fontId ->
                 PlayerSettingsRepository.setSubtitleStyle(
-                    PlayerSettingsRepository.uiState.value.subtitleStyle.copy(customFontFile = fileName),
+                    PlayerSettingsRepository.uiState.value.subtitleStyle.copy(
+                        appearance = PlayerSettingsRepository.uiState.value.subtitleStyle.appearance.copy(fontId = fontId),
+                    ),
                 )
             },
             onDismiss = { showSubtitleFontDialog = false },
@@ -2434,98 +2317,8 @@ private fun HoldToSpeedValueDialog(
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun LibassRenderScaleDialog(
-    selectedScale: String,
-    onScaleSelected: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val options = listOf(
-        "FULL" to "1:1",
-        "THREE_QUARTER" to "\u00BE",
-        "HALF" to "\u00BD",
-        "THIRD" to "\u2153",
-        "QUARTER" to "\u00BC",
-    )
-
-    DialogSurface(
-        onDismissRequest = onDismiss,
-        title = stringResource(Res.string.settings_playback_render_scale),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            options.forEach { (value, label) ->
-                val isSelected = value == selectedScale
-                DialogOption(
-                    text = label,
-                    selected = isSelected,
-                    onClick = { onScaleSelected(value) },
-                )
-            }
-        }
-
-        DialogButtons {
-            DialogButton(
-                text = stringResource(Res.string.action_done),
-                onClick = onDismiss,
-            )
-        }
-    }
-}
-
-
-
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun SubtitleColorDialog(
-    title: String,
-    colors: List<Color>,
-    selectedColor: Color,
-    onColorSelected: (Color) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    DialogSurface(
-        onDismissRequest = onDismiss,
-        title = title,
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            colors.forEach { color ->
-                DialogOption(
-                    text = subtitleColorLabel(color),
-                    selected = selectedColor.toStorageHexString() == color.toStorageHexString(),
-                    onClick = { onColorSelected(color) },
-                    leading = {
-                        Surface(
-                            modifier = Modifier.size(28.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (color.alpha == 0f) {
-                                MaterialTheme.colorScheme.surface
-                            } else {
-                                color
-                            },
-                            border = BorderStroke(
-                                1.dp,
-                                MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
-                            ),
-                        ) {}
-                    },
-                )
-            }
-        }
-
-        DialogButtons {
-            DialogButton(
-                text = stringResource(Res.string.action_done),
-                onClick = onDismiss,
-            )
-        }
-    }
-}
-
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 private fun SubtitleBackgroundColorDialog(

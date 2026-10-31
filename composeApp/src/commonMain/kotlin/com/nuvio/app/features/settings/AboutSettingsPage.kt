@@ -6,8 +6,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material.icons.rounded.Policy
+import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
@@ -56,7 +59,7 @@ internal fun LazyListScope.aboutSettingsContent(
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_supporters_contributors),
                         description = stringResource(Res.string.about_supporters_contributors_subtitle),
-                        icon = SettingsPage.SupportersContributors.icon,
+                        icon = Icons.Default.Favorite,
                         isTablet = isTablet,
                         onClick = onSupportersContributorsClick,
                     )
@@ -83,7 +86,7 @@ internal fun LazyListScope.aboutSettingsContent(
                 SettingsNavigationRow(
                     title = stringResource(Res.string.compose_settings_page_licenses_attributions),
                     description = stringResource(Res.string.about_licenses_attributions_subtitle),
-                    icon = SettingsPage.LicensesAttributions.icon,
+                    icon = Icons.Default.Info,
                     isTablet = isTablet,
                     onClick = onLicensesAttributionsClick,
                 )
@@ -94,7 +97,7 @@ internal fun LazyListScope.aboutSettingsContent(
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_root_check_updates_title),
                         description = stringResource(Res.string.compose_settings_root_check_updates_description),
-                        icon = SettingsSearchTarget.CheckForUpdates.icon,
+                        icon = Icons.Rounded.SystemUpdate,
                         isTablet = isTablet,
                         onClick = onCheckForUpdatesClick,
                     )

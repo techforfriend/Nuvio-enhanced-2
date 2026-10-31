@@ -98,6 +98,56 @@ internal enum class SettingsPage(
         category = SettingsCategory.General,
         parentPage = Root,
     ),
+    PlaybackPlayer(
+        titleRes = Res.string.settings_playback_page_player,
+        category = SettingsCategory.General,
+        parentPage = Playback,
+    ),
+    PlaybackStreamSelection(
+        titleRes = Res.string.settings_playback_page_stream_selection,
+        category = SettingsCategory.General,
+        parentPage = Playback,
+    ),
+    PlaybackUpNext(
+        titleRes = Res.string.settings_playback_page_up_next,
+        category = SettingsCategory.General,
+        parentPage = Playback,
+    ),
+    PlaybackSkipSegments(
+        titleRes = Res.string.settings_playback_page_skip,
+        category = SettingsCategory.General,
+        parentPage = Playback,
+    ),
+    PlaybackInterface(
+        titleRes = Res.string.settings_playback_page_interface,
+        category = SettingsCategory.General,
+        parentPage = Playback,
+    ),
+    PlaybackAudio(
+        titleRes = Res.string.settings_playback_page_audio,
+        category = SettingsCategory.General,
+        parentPage = Playback,
+    ),
+    PlaybackSubtitles(
+        titleRes = Res.string.settings_playback_page_subtitles,
+        category = SettingsCategory.General,
+        parentPage = Playback,
+    ),
+    PlaybackVideo(
+        titleRes = Res.string.settings_playback_page_video,
+        category = SettingsCategory.General,
+        parentPage = Playback,
+    ),
+    PlaybackBuffer(
+        titleRes = Res.string.settings_playback_page_buffer,
+        category = SettingsCategory.General,
+        parentPage = Playback,
+    ),
+    PlaybackP2p(
+        titleRes = Res.string.settings_playback_page_p2p,
+        category = SettingsCategory.General,
+        parentPage = Playback,
+    ),
     Appearance(
         titleRes = Res.string.compose_settings_page_appearance,
         category = SettingsCategory.General,

@@ -49,12 +49,10 @@ actual object PlayerSettingsStorage {
     private const val secondaryPreferredSubtitleLanguageKey = "secondary_preferred_subtitle_language"
     private const val subtitleTextColorKey = "subtitle_text_color"
     private const val subtitleBackgroundColorKey = "subtitle_background_color"
+    private const val subtitleAppearanceKey = "subtitle_appearance"
     private const val subtitleOutlineColorKey = "subtitle_outline_color"
     private const val subtitleOutlineEnabledKey = "subtitle_outline_enabled"
     private const val subtitleOutlineWidthKey = "subtitle_outline_width"
-    private const val subtitleShadowEnabledKey = "subtitle_shadow_enabled"
-    private const val subtitleShadowStrengthKey = "subtitle_shadow_strength"
-    private const val subtitleCustomFontKey = "subtitle_custom_font"
     private const val subtitleBoldKey = "subtitle_bold"
     private const val subtitleFontSizeSpKey = "subtitle_font_size_sp"
     private const val subtitleBottomOffsetKey = "subtitle_bottom_offset"
@@ -64,6 +62,13 @@ actual object PlayerSettingsStorage {
     private const val streamReuseLastLinkEnabledKey = "stream_reuse_last_link_enabled"
     private const val streamReuseLastLinkCacheHoursKey = "stream_reuse_last_link_cache_hours"
     private const val androidPlaybackEngineKey = "android_playback_engine"
+    private const val autoSwitchPlaybackEngineOnErrorKey = "auto_switch_playback_engine_on_error"
+    private const val androidExoChaptersEnabledKey = "android_exo_chapters_enabled"
+    private const val nightModeButtonEnabledKey = "night_mode_button_enabled"
+    private const val nightModeEnabledKey = "night_mode_enabled"
+    private const val legacyBottomButtonsKey = "legacy_player_bottom_buttons"
+    private const val legacyTopButtonsKey = "legacy_player_top_buttons"
+    private const val libassRenderModeKey = "libass_render_mode"
     private const val androidLibmpvVideoOutputKey = "android_libmpv_video_output"
     private const val androidLibmpvHardwareDecodingEnabledKey = "android_libmpv_hardware_decoding_enabled"
     private const val androidLibmpvYuv420pEnabledKey = "android_libmpv_yuv420p_enabled"
@@ -204,10 +209,14 @@ actual object PlayerSettingsStorage {
     )
 
     private var preferences: SharedPreferences? = null
+    private var appContext: Context? = null
 
     fun initialize(context: Context) {
+        appContext = context.applicationContext
         preferences = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
     }
+
+    internal fun applicationContext(): Context? = appContext
 
     actual fun loadPendingExternalPlayback(): String? = preferences?.getString(pendingExternalPlaybackKey, null)
 
@@ -276,6 +285,26 @@ actual object PlayerSettingsStorage {
         preferences
             ?.edit()
             ?.putString(ProfileScopedKey.of(toolbarLayoutKey), layout)
+            ?.apply()
+    }
+
+    actual fun loadLegacyBottomButtons(): String? =
+        preferences?.getString(ProfileScopedKey.of(legacyBottomButtonsKey), null)
+
+    actual fun saveLegacyBottomButtons(layout: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(legacyBottomButtonsKey), layout)
+            ?.apply()
+    }
+
+    actual fun loadLegacyTopButtons(): String? =
+        preferences?.getString(ProfileScopedKey.of(legacyTopButtonsKey), null)
+
+    actual fun saveLegacyTopButtons(layout: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(legacyTopButtonsKey), layout)
             ?.apply()
     }
 
@@ -623,6 +652,16 @@ actual object PlayerSettingsStorage {
             ?.apply()
     }
 
+    actual fun loadSubtitleAppearance(): String? =
+        preferences?.getString(ProfileScopedKey.of(subtitleAppearanceKey), null)
+
+    actual fun saveSubtitleAppearance(value: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(subtitleAppearanceKey), value)
+            ?.apply()
+    }
+
     actual fun loadSubtitleOutlineColor(): String? =
         preferences?.getString(ProfileScopedKey.of(subtitleOutlineColorKey), null)
 
@@ -665,50 +704,6 @@ actual object PlayerSettingsStorage {
             ?.edit()
             ?.putInt(ProfileScopedKey.of(subtitleOutlineWidthKey), width)
             ?.apply()
-    }
-
-    actual fun loadSubtitleShadowEnabled(): Boolean? =
-        preferences?.let { sharedPreferences ->
-            val key = ProfileScopedKey.of(subtitleShadowEnabledKey)
-            if (sharedPreferences.contains(key)) {
-                sharedPreferences.getBoolean(key, SubtitleStyleState.DEFAULT.shadowEnabled)
-            } else {
-                null
-            }
-        }
-
-    actual fun saveSubtitleShadowEnabled(enabled: Boolean) {
-        preferences
-            ?.edit()
-            ?.putBoolean(ProfileScopedKey.of(subtitleShadowEnabledKey), enabled)
-            ?.apply()
-    }
-
-    actual fun loadSubtitleShadowStrength(): Int? =
-        preferences?.let { sharedPreferences ->
-            val key = ProfileScopedKey.of(subtitleShadowStrengthKey)
-            if (sharedPreferences.contains(key)) {
-                sharedPreferences.getInt(key, SubtitleStyleState.DEFAULT.shadowStrength)
-            } else {
-                null
-            }
-        }
-
-    actual fun saveSubtitleShadowStrength(strength: Int) {
-        preferences
-            ?.edit()
-            ?.putInt(ProfileScopedKey.of(subtitleShadowStrengthKey), strength)
-            ?.apply()
-    }
-
-    actual fun loadSubtitleCustomFont(): String? =
-        preferences?.getString(ProfileScopedKey.of(subtitleCustomFontKey), null)
-
-    actual fun saveSubtitleCustomFont(fileName: String?) {
-        preferences?.edit()?.apply {
-            val key = ProfileScopedKey.of(subtitleCustomFontKey)
-            if (fileName.isNullOrBlank()) remove(key) else putString(key, fileName)
-        }?.apply()
     }
 
     actual fun loadSubtitleBold(): Boolean? =
@@ -864,6 +859,74 @@ actual object PlayerSettingsStorage {
         preferences
             ?.edit()
             ?.putString(ProfileScopedKey.of(androidPlaybackEngineKey), engine)
+            ?.apply()
+    }
+
+    actual fun loadAutoSwitchPlaybackEngineOnError(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(autoSwitchPlaybackEngineOnErrorKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, true)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveAutoSwitchPlaybackEngineOnError(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(autoSwitchPlaybackEngineOnErrorKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadAndroidExoChaptersEnabled(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(androidExoChaptersEnabledKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, false)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveAndroidExoChaptersEnabled(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(androidExoChaptersEnabledKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadNightModeButtonEnabled(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(nightModeButtonEnabledKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, true)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveNightModeButtonEnabled(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(nightModeButtonEnabledKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadNightModeEnabled(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(nightModeEnabledKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, false)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveNightModeEnabled(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(nightModeEnabledKey), enabled)
             ?.apply()
     }
 
@@ -1530,6 +1593,16 @@ actual object PlayerSettingsStorage {
         preferences
             ?.edit()
             ?.putString(ProfileScopedKey.of(libassRenderTypeKey), renderType)
+            ?.apply()
+    }
+
+    actual fun loadLibassRenderMode(): String? =
+        preferences?.getString(ProfileScopedKey.of(libassRenderModeKey), null)
+
+    actual fun saveLibassRenderMode(mode: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(libassRenderModeKey), mode)
             ?.apply()
     }
 
