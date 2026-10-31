@@ -459,8 +459,6 @@ kotlin {
 
             dependencies {
                 implementation(libs.compose.uiToolingPreview)
-                implementation(libs.androidx.tv.foundation)
-                implementation(libs.androidx.tv.material)
                 implementation(libs.androidx.appcompat)
                 implementation(libs.androidx.documentfile)
                 implementation(libs.androidx.activity.compose)
