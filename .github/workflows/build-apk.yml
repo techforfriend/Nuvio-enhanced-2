@@ -83,30 +83,18 @@ jobs:
             ## What's New in v0.6.6
             **Nuvio Enhanced Official Release — version 0.6.6 (version code 149)**
 
-            ### 🆕 Official upstream 0.6.6 (Luqman)
-            - Compose Multiplatform rewrite (cmp-rewrite) — the underlying app rewrite from upstream
-            - Subtitle overhaul: new subtitle appearance system (fonts, shadow, background), subtitle size in 1sp steps, and subtitle customisation
+            ### 🆕 New in this version
+            - Compose Multiplatform rewrite (cmp-rewrite) from upstream — the underlying app rewrite
+            - Subtitle overhaul: new subtitle appearance (font, shadow, background) and subtitle size in 1sp steps
             - Chapter skip intervals — skip intros, recaps and credits with merged skip regions
             - Skip Intro: timing setting and auto-skip on resolved streams
-            - MPV night mode (audio compressor) with a night mode button on every engine
-            - Offline playback fixes and translation (i18n) updates
+            - Night mode for libmpv (audio compressor) with a night mode button
+            - Offline playback fixes and translation updates
 
             ### 🔧 Player settings — repaired in this build
-            - Chapters toggle (Exo chapters), legacy player top/bottom button layouts, and night mode button + night mode settings are now wired to storage and applied — these were missing after the upstream sync and are fixed in this build
+            - Chapters toggle (Exo chapters), legacy player top/bottom button layouts, and night mode settings are now wired to storage and applied — these were missing after the upstream sync and are fixed in this build
             - Subtitle appearance settings (font, shadow, size) moved to the new subtitle system
             - Auto-switch playback engine on error and libass render mode settings added
-            - Playback settings reorganised into: Player, Stream selection, Up next, Skip, Interface, Audio, Subtitles, Video, Buffer, P2P
-
-            ### 📺 TV version (same APK, "Nuvio Enhanced TV" icon)
-            - Reshaped-style layout: floating pill menu and a Netflix-style billboard that follows the focused card
-            - Chapters panel with chapter marks on the progress bar, and seek previews
-            - Live TV screen, Downloads, Watch Party, Cast, PiP, and audio/subtitle track selection
-            - Debrid resolve and torrent playback on TV, with TV text now in English
-            - Note: the TV release post (v0.6.5-tv) is separate; this post is the phone release
-
-            ### ⚡ Still included from before
-            - CloudStream 3 pure engine, Trakt / SIMKL / MDBList tracking, 200% volume boost, full IPTV suite, Nuvio Read, and bottom-left player controls
-            - Single arm64 APK for phones; installs in place over v0.6.5
           draft: false
           prerelease: false
           files: build-apks/*.apk
