@@ -77,10 +77,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.5
-          name: "Nuvio Enhanced v0.6.5"
+          tag_name: v0.6.6
+          name: "Nuvio Enhanced v0.6.6"
           body: |
-            ## What's New in v0.6.5
+            ## What's New in v0.6.6
             **Nuvio Enhanced Official Release**
 
             ### 📺 Live TV Navigation Toggle
