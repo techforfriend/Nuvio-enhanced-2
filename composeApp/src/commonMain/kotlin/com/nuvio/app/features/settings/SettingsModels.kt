@@ -45,6 +45,16 @@ import nuvio.composeapp.generated.resources.compose_settings_root_downloads_titl
 import nuvio.composeapp.generated.resources.settings_account
 import nuvio.composeapp.generated.resources.settings_nuvio_enhanced_category
 import nuvio.composeapp.generated.resources.settings_nuvio_enhanced_title
+import nuvio.composeapp.generated.resources.settings_playback_page_audio
+import nuvio.composeapp.generated.resources.settings_playback_page_buffer
+import nuvio.composeapp.generated.resources.settings_playback_page_interface
+import nuvio.composeapp.generated.resources.settings_playback_page_p2p
+import nuvio.composeapp.generated.resources.settings_playback_page_player
+import nuvio.composeapp.generated.resources.settings_playback_page_skip
+import nuvio.composeapp.generated.resources.settings_playback_page_stream_selection
+import nuvio.composeapp.generated.resources.settings_playback_page_subtitles
+import nuvio.composeapp.generated.resources.settings_playback_page_up_next
+import nuvio.composeapp.generated.resources.settings_playback_page_video
 import org.jetbrains.compose.resources.StringResource
 
 internal enum class SettingsCategory(
