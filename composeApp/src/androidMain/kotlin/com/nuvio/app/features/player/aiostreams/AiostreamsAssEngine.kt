@@ -398,15 +398,15 @@ internal class AiostreamsAssEngine(
                 backColor = assColor(
                     when {
                         box -> style.backgroundColor.toArgb()
-                        style.shadowEnabled -> ASS_SHADOW_ARGB
+                        style.appearance.shadowEnabled -> ASS_SHADOW_ARGB
                         else -> style.outlineColor.toArgb()
                     },
                 ),
                 outlineSize = if (style.outlineEnabled) style.outlineWidth.toDouble() else 0.0,
                 borderStyle = if (box) 4 else 1,
                 bold = style.bold,
-                shadowSize = if (style.shadowEnabled) style.shadowStrength.toDouble() else 0.0,
-                fontFile = com.nuvio.app.features.player.SubtitleFontRepository.pathOf(style.customFontFile),
+                shadowSize = if (style.appearance.shadowEnabled) style.appearance.shadowSize.toDouble() else 0.0,
+                fontFile = customSubtitleFontPath(style.appearance.fontId),
             )
         }
 
@@ -416,4 +416,11 @@ internal class AiostreamsAssEngine(
                 (android.graphics.Color.blue(argb) shl 8) or
                 (255 - android.graphics.Color.alpha(argb))
     }
+}
+
+/** Path of an imported subtitle font (SubtitleFontStorage keeps them in filesDir/subtitle-fonts). */
+private fun customSubtitleFontPath(fontId: String): String? {
+    if (!fontId.startsWith("custom-")) return null
+    val context = com.nuvio.app.features.player.PlayerSettingsStorage.applicationContext() ?: return null
+    return java.io.File(context.filesDir, "subtitle-fonts").resolve(fontId).takeIf { it.isFile }?.path
 }

@@ -202,28 +202,31 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
     func clearExternalSubtitle() { playerVC?.removeExternalSubtitles() }
     func clearExternalSubtitleAndSelect(trackId: Int32) { playerVC?.removeExternalSubtitlesAndSelect(Int(trackId)) }
     func setSubtitleDelayMs(delayMs: Int32) { playerVC?.setSubtitleDelayMs(Int(delayMs)) }
-    func setSubtitleFontPath(path: String) { playerVC?.setSubtitleFontPath(path) }
+    func setSubtitleTextHandler(handler: SubtitleTextHandler?) {
+        ensurePlayerViewController().subtitleTextHandler = handler
+    }
+
     func applySubtitleStyle(
         textColor: String,
         backgroundColor: String,
         outlineColor: String,
         outlineSize: Float,
-        shadowOffset: Float,
         bold: Bool,
         fontSize: Float,
         subPos: Int32,
-        stripSdh: Bool
+        stripSdh: Bool,
+        styledOverlay: Bool
     ) {
         playerVC?.applySubtitleStyle(
             textColor: textColor,
             backgroundColor: backgroundColor,
             outlineColor: outlineColor,
             outlineSize: outlineSize,
-            shadowOffset: shadowOffset,
             bold: bold,
             fontSize: fontSize,
             subPos: Int(subPos),
-            stripSdh: stripSdh
+            stripSdh: stripSdh,
+            styledOverlay: styledOverlay
         )
     }
 
@@ -307,6 +310,10 @@ final class MPVPlayerViewController: UIViewController {
 
     private let errorStateLock = NSLock()
     let metalLayer = MetalLayer()
+    var subtitleTextHandler: SubtitleTextHandler?
+    private var usesStyledSubtitles = false
+    private var styledSubtitleVisible = false
+    private var lastSubtitleText = ""
     private var pictureInPictureController: PlayerPictureInPictureController?
     var systemControlHandler: PlayerSystemControlHandler?
     var keepsPlaybackInBackground: Bool { pictureInPictureController?.keepsPlaybackAlive == true }
@@ -314,6 +321,7 @@ final class MPVPlayerViewController: UIViewController {
     private var externallyManagedViewSize: CGSize?
     private var pendingSurfaceLayoutWorkItems: [DispatchWorkItem] = []
     private var pendingLoadRequest: PendingLoadRequest?
+    private var startupSubtitles: [PluginSubtitle] = []
     private var pendingLoadRetryWorkItem: DispatchWorkItem?
     var mpv: OpaquePointer?
     private var cachedNowPlayingMetadata: CachedNowPlayingMetadata?
@@ -409,11 +417,11 @@ final class MPVPlayerViewController: UIViewController {
         let backgroundColor: String
         let outlineColor: String
         let outlineSize: Float
-        let shadowOffset: Float
         let bold: Bool
         let fontSize: Float
         let subPos: Int
         let stripSdh: Bool
+        let styledOverlay: Bool
     }
 
     private var lastLoadRequest: PendingLoadRequest?
@@ -691,8 +699,6 @@ final class MPVPlayerViewController: UIViewController {
         CATransaction.commit()
     }
 
-    private lazy var subtitleFonts = MPVSubtitleFontController(player: self)
-
     // MARK: - MPV Setup
 
     private func setupMpv() {
@@ -729,7 +735,7 @@ final class MPVPlayerViewController: UIViewController {
         setSetupOption("video-rotate", "no")
         setSetupOption("subs-match-os-language", "yes")
         setSetupOption("subs-fallback", "yes")
-        subtitleFonts.applySetupOptions(setSetupOption)
+        configureBundledSubtitleFont()
         setSetupOption("keep-open", "yes")
         setSetupOption("target-colorspace-hint", "yes")
         setSetupOption("tone-mapping", "auto")
@@ -748,7 +754,6 @@ final class MPVPlayerViewController: UIViewController {
         mpv_observe_property(mpv, 0, "seeking", MPV_FORMAT_FLAG)
         mpv_observe_property(mpv, 0, "track-list/count", MPV_FORMAT_INT64)
         mpv_observe_property(mpv, 0, "current-tracks/sub/id", MPV_FORMAT_INT64)
-        mpv_observe_property(mpv, 0, "current-tracks/sub/lang", MPV_FORMAT_STRING)
         mpv_observe_property(mpv, 0, "sub-text", MPV_FORMAT_STRING)
 
         mpv_set_wakeup_callback(mpv, { ctx in
@@ -771,6 +776,25 @@ final class MPVPlayerViewController: UIViewController {
                 message: "Ignoring mpv option \(name)=\(value): \(reason)"
             )
         }
+    }
+
+    private func configureBundledSubtitleFont() {
+        guard let fontURL = Bundle.main.url(
+            forResource: "NotoSans-Regular",
+            withExtension: "ttf"
+        ) else {
+            print("[MPV] Bundled subtitle font is missing")
+            return
+        }
+
+        let fontDirectory = fontURL.deletingLastPathComponent().path
+        checkError(mpv_set_option_string(mpv, "config", "yes"))
+        fontDirectory.withCString { path in
+            checkError(mpv_set_option_string(mpv, "config-dir", path))
+            checkError(mpv_set_option_string(mpv, "sub-fonts-dir", path))
+        }
+        checkError(mpv_set_option_string(mpv, "sub-font", "Noto Sans"))
+        print("[MPV] Using bundled subtitle font: \(fontURL.lastPathComponent)")
     }
 
     private func setupNotifications() {
@@ -977,16 +1001,11 @@ final class MPVPlayerViewController: UIViewController {
         isPlayerEnded = false
         playbackStateGeneration &+= 1
         invalidateMediaInfoCache()
+        startupSubtitles = request.subtitles
         command("loadfile", args: [request.urlString, "replace"])
         if let audioUrl = request.audioUrl, !audioUrl.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
                 self?.command("audio-add", args: [audioUrl, "select"], checkForErrors: false)
-            }
-        }
-
-        for subtitle in request.subtitles {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                self?.addSubtitle(subtitle, mode: "auto")
             }
         }
     }
@@ -1351,11 +1370,11 @@ final class MPVPlayerViewController: UIViewController {
                 backgroundColor: style.backgroundColor,
                 outlineColor: style.outlineColor,
                 outlineSize: style.outlineSize,
-                shadowOffset: style.shadowOffset,
                 bold: style.bold,
                 fontSize: style.fontSize,
                 subPos: style.subPos,
-                stripSdh: style.stripSdh
+                stripSdh: style.stripSdh,
+                styledOverlay: style.styledOverlay
             )
         }
         setSpeed(currentSpeed)
@@ -1630,10 +1649,6 @@ final class MPVPlayerViewController: UIViewController {
         }
     }
 
-    func setSubtitleFontPath(_ path: String) {
-        subtitleFonts.setCustomFontPath(path.isEmpty ? nil : path)
-    }
-
     func setSubtitleDelayMs(_ delayMs: Int) {
         lastSubtitleDelayMs = delayMs
         guard mpv != nil else { return }
@@ -1645,48 +1660,60 @@ final class MPVPlayerViewController: UIViewController {
         backgroundColor: String,
         outlineColor: String,
         outlineSize: Float,
-        shadowOffset: Float,
         bold: Bool,
         fontSize: Float,
         subPos: Int,
-        stripSdh: Bool
+        stripSdh: Bool,
+        styledOverlay: Bool
     ) {
         lastSubtitleStyle = SubtitleStyleSettings(
             textColor: textColor,
             backgroundColor: backgroundColor,
             outlineColor: outlineColor,
             outlineSize: outlineSize,
-            shadowOffset: shadowOffset,
             bold: bold,
             fontSize: fontSize,
             subPos: subPos,
-            stripSdh: stripSdh
+            stripSdh: stripSdh,
+            styledOverlay: styledOverlay
         )
         guard mpv != nil else { return }
 
         let hasBackground = !backgroundColor.hasPrefix("#00")
 
         let effectiveOutlineColor = hasBackground ? backgroundColor : outlineColor
-        let hasShadow = shadowOffset > 0
-        let shadowColor = "#B3000000"
-        let effectiveBackColor = (hasShadow && !hasBackground) ? shadowColor : backgroundColor
         let effectiveOutlineSize = hasBackground
             ? max(Double(outlineSize), 1.0)
             : Double(outlineSize)
 
-        subtitleFonts.reapplyFont()
         setStringProperty("sub-ass-override", "no")
         setStringProperty("sub-color", textColor)
-        setStringProperty("sub-back-color", effectiveBackColor)
+        setStringProperty("sub-back-color", backgroundColor)
         setStringProperty("sub-outline-color", effectiveOutlineColor)
         setStringProperty("sub-border-style", hasBackground ? "opaque-box" : "outline-and-shadow")
-        setDoubleProperty("sub-shadow-offset", hasBackground ? 0 : Double(shadowOffset))
         setStringProperty("sub-bold", bold ? "yes" : "no")
         setDoubleProperty("sub-outline-size", effectiveOutlineSize)
         setDoubleProperty("sub-font-size", Double(fontSize))
         setIntProperty("sub-pos", Int64(subPos))
         setStringProperty("sub-filter-sdh", stripSdh ? "yes" : "no")
         setStringProperty("sub-filter-sdh-harder", stripSdh ? "yes" : "no")
+        usesStyledSubtitles = styledOverlay
+        updateStyledSubtitle()
+    }
+
+    private func updateStyledSubtitle() {
+        guard mpv != nil else { return }
+        let codec = getString("current-tracks/sub/codec") ?? ""
+        let styled = usesStyledSubtitles && SubtitleRendering.shared.supportsTextOverlay(codec: codec)
+        if styled != styledSubtitleVisible {
+            setStringProperty("sub-visibility", styled ? "no" : "yes")
+            styledSubtitleVisible = styled
+        }
+        let text = styled ? (getString("sub-text") ?? "") : ""
+        if text != lastSubtitleText {
+            lastSubtitleText = text
+            subtitleTextHandler?.onTextChanged(text: text)
+        }
     }
 
     func destroyPlayer() {
@@ -1708,6 +1735,7 @@ final class MPVPlayerViewController: UIViewController {
         pendingSurfaceLayoutWorkItems.forEach { $0.cancel() }
         pendingSurfaceLayoutWorkItems.removeAll(keepingCapacity: false)
         pendingLoadRequest = nil
+        startupSubtitles = []
         if !isEmbeddedPreviewMode {
             nowPlayingController.invalidate()
         }
@@ -2014,6 +2042,7 @@ final class MPVPlayerViewController: UIViewController {
     func updateState() {
         refreshPlaybackState()
         refreshTracks()
+        updateStyledSubtitle()
     }
 
     private func refreshTracks() {
@@ -2351,14 +2380,22 @@ final class MPVPlayerViewController: UIViewController {
 
                 switch eventPtr.pointee.event_id {
                 case MPV_EVENT_PROPERTY_CHANGE:
-                    self.subtitleFonts.handlePropertyChange(eventPtr)
-                    DispatchQueue.main.async { self.updateState() }
+                    let property = eventPtr.pointee.data?.assumingMemoryBound(to: mpv_event_property.self)
+                    let name = property?.pointee.name.map { String(cString: $0) }
+                    if name == "sub-text" {
+                        DispatchQueue.main.async { self.updateStyledSubtitle() }
+                    } else {
+                        DispatchQueue.main.async { self.updateState() }
+                    }
                 case MPV_EVENT_FILE_LOADED:
                     DispatchQueue.main.async {
                         self.clearPlaybackError()
                         self.isPlayerLoading = false
                         self.playbackStateGeneration &+= 1
                         self.invalidateMediaInfoCache()
+                        let subtitles = self.startupSubtitles
+                        self.startupSubtitles = []
+                        subtitles.forEach { self.addSubtitle($0, mode: "auto") }
                         self.updateState()
                         if !self.isEmbeddedPreviewMode {
                             self.publishNowPlayingForPlaybackSession()

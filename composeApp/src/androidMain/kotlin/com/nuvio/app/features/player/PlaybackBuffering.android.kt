@@ -36,10 +36,22 @@ internal fun isProgressivePlaybackSource(
     playbackMediaItemFromUrl(url, responseHeaders, streamType).localConfiguration?.mimeType,
 ) == C.CONTENT_TYPE_OTHER
 
-internal fun PlayerSettingsUiState.buildPlaybackLoadControl(): DefaultLoadControl {
+internal fun PlayerSettingsUiState.buildPlaybackLoadControl(localFileSource: Boolean = false): DefaultLoadControl {
     val heapLimitBytes = PlaybackMemoryInfo.javaHeapBufferLimitMb() * MB
     val builder = DefaultLoadControl.Builder()
     when {
+        // Downloaded files are read from disk, so a long buffer only wastes memory: keep it small
+        // and let the byte cap win over the time thresholds (upstream offline playback fix).
+        localFileSource && !customPlaybackBuffersEnabled -> builder
+            .setBackBuffer(0, false)
+            .setBufferDurationsMs(
+                LOCAL_FILE_MIN_BUFFER_MS,
+                LOCAL_FILE_MAX_BUFFER_MS,
+                DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+                DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+            )
+            .setTargetBufferBytes(minOf(LOCAL_FILE_TARGET_BUFFER_MB * MB, heapLimitBytes).toInt())
+            .setPrioritizeTimeOverSizeThresholds(false)
         customPlaybackBuffersEnabled -> {
             val startMs = playbackStartBufferSeconds * 1000
             val rebufferMs = playbackRebufferSeconds * 1000
@@ -381,3 +393,7 @@ private class NativeReadAheadDataSource(
         const val READER_CLOSE_WAIT_MS = 500L
     }
 }
+
+private const val LOCAL_FILE_MIN_BUFFER_MS = 5_000
+private const val LOCAL_FILE_MAX_BUFFER_MS = 15_000
+private const val LOCAL_FILE_TARGET_BUFFER_MB = 48

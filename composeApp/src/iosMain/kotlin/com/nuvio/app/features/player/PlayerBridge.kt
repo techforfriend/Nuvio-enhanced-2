@@ -76,17 +76,17 @@ interface NuvioPlayerBridge {
     fun clearExternalSubtitle()
     fun clearExternalSubtitleAndSelect(trackId: Int)
     fun setSubtitleDelayMs(delayMs: Int)
-    fun setSubtitleFontPath(path: String)
+    fun setSubtitleTextHandler(handler: SubtitleTextHandler?)
     fun applySubtitleStyle(
         textColor: String,
         backgroundColor: String,
         outlineColor: String,
         outlineSize: Float,
-        shadowOffset: Float,
         bold: Boolean,
         fontSize: Float,
         subPos: Int,
         stripSdh: Boolean,
+        styledOverlay: Boolean,
     )
     fun getIsLoading(): Boolean
     fun getIsPlaying(): Boolean
@@ -103,6 +103,10 @@ interface NuvioPlayerBridge {
     fun setKeyboardShortcutHandler(handler: ((String) -> Unit)?)
     fun getProperty(name: String): String
     fun destroy()
+}
+
+fun interface SubtitleTextHandler {
+    fun onTextChanged(text: String)
 }
 
 /**

@@ -716,8 +716,7 @@ internal object SettingsConfigTransfer {
         PlayerSettingsStorage.loadSubtitleOutlineColor()?.let { put("subtitle_outline_color", encodeSyncString(it)) }
         PlayerSettingsStorage.loadSubtitleOutlineEnabled()?.let { put("subtitle_outline_enabled", encodeSyncBoolean(it)) }
         PlayerSettingsStorage.loadSubtitleOutlineWidth()?.let { put("subtitle_outline_width", encodeSyncInt(it)) }
-        PlayerSettingsStorage.loadSubtitleShadowEnabled()?.let { put("subtitle_shadow_enabled", encodeSyncBoolean(it)) }
-        PlayerSettingsStorage.loadSubtitleShadowStrength()?.let { put("subtitle_shadow_strength", encodeSyncInt(it)) }
+        PlayerSettingsStorage.loadSubtitleAppearance()?.let { put("subtitle_appearance", encodeSyncString(it)) }
         PlayerSettingsStorage.loadSubtitleBold()?.let { put("subtitle_bold", encodeSyncBoolean(it)) }
         PlayerSettingsStorage.loadSubtitleFontSizeSp()?.let { put("subtitle_font_size_sp", encodeSyncInt(it)) }
         PlayerSettingsStorage.loadSubtitleBottomOffset()?.let { put("subtitle_bottom_offset", encodeSyncInt(it)) }
@@ -819,8 +818,7 @@ internal object SettingsConfigTransfer {
         payload.decodeSyncString("subtitle_outline_color")?.let { PlayerSettingsStorage.saveSubtitleOutlineColor(it) }
         payload.decodeSyncBoolean("subtitle_outline_enabled")?.let { PlayerSettingsStorage.saveSubtitleOutlineEnabled(it) }
         payload.decodeSyncInt("subtitle_outline_width")?.let { PlayerSettingsStorage.saveSubtitleOutlineWidth(it) }
-        payload.decodeSyncBoolean("subtitle_shadow_enabled")?.let { PlayerSettingsStorage.saveSubtitleShadowEnabled(it) }
-        payload.decodeSyncInt("subtitle_shadow_strength")?.let { PlayerSettingsStorage.saveSubtitleShadowStrength(it) }
+        payload.decodeSyncString("subtitle_appearance")?.let { PlayerSettingsStorage.saveSubtitleAppearance(it) }
         payload.decodeSyncBoolean("subtitle_bold")?.let { PlayerSettingsStorage.saveSubtitleBold(it) }
         payload.decodeSyncInt("subtitle_font_size_sp")?.let { PlayerSettingsStorage.saveSubtitleFontSizeSp(it) }
         payload.decodeSyncInt("subtitle_bottom_offset")?.let { PlayerSettingsStorage.saveSubtitleBottomOffset(it) }

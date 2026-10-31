@@ -13,6 +13,8 @@ internal expect object PlayerSettingsStorage {
     fun saveToolbarLayout(layout: String)
     fun loadShowLoadingOverlay(): Boolean?
     fun saveShowLoadingOverlay(enabled: Boolean)
+    fun loadAutoSwitchPlaybackEngineOnError(): Boolean?
+    fun saveAutoSwitchPlaybackEngineOnError(enabled: Boolean)
     fun loadShowPlayerLoadingStatus(): Boolean?
     fun saveShowPlayerLoadingStatus(enabled: Boolean)
     fun loadPauseOverlayEnabled(): Boolean?
@@ -63,18 +65,14 @@ internal expect object PlayerSettingsStorage {
     fun saveSubtitleTextColor(colorHex: String)
     fun loadSubtitleBackgroundColor(): String?
     fun saveSubtitleBackgroundColor(colorHex: String)
-    fun loadSubtitleCustomFont(): String?
-    fun saveSubtitleCustomFont(fileName: String?)
+    fun loadSubtitleAppearance(): String?
+    fun saveSubtitleAppearance(value: String)
     fun loadSubtitleOutlineColor(): String?
     fun saveSubtitleOutlineColor(colorHex: String)
     fun loadSubtitleOutlineEnabled(): Boolean?
     fun saveSubtitleOutlineEnabled(enabled: Boolean)
     fun loadSubtitleOutlineWidth(): Int?
     fun saveSubtitleOutlineWidth(width: Int)
-    fun loadSubtitleShadowEnabled(): Boolean?
-    fun saveSubtitleShadowEnabled(enabled: Boolean)
-    fun loadSubtitleShadowStrength(): Int?
-    fun saveSubtitleShadowStrength(strength: Int)
     fun loadSubtitleBold(): Boolean?
     fun saveSubtitleBold(enabled: Boolean)
     fun loadSubtitleFontSizeSp(): Int?
@@ -186,6 +184,8 @@ internal expect object PlayerSettingsStorage {
     fun saveUseLibmpvAss(enabled: Boolean)
     fun loadLibassRenderScale(): String?
     fun saveLibassRenderScale(scale: String)
+    fun loadLibassRenderMode(): String?
+    fun saveLibassRenderMode(mode: String)
     fun loadIosVideoOutputPreset(): String?
     fun saveIosVideoOutputPreset(preset: String)
     fun loadIosToneMappingMode(): String?

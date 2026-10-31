@@ -84,6 +84,25 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
     val miniPresentation = LocalPlayerMiniPresentation.current
     runtime.isMiniPresentation = miniPresentation == true
 
+    // The engine publishes a playback snapshot every 250ms. Reading the raw snapshot from this
+    // scope would recompose the whole player subtree four times per second, so the values
+    // below are exposed through derived states that only change when the values do.
+    val isPlaying by remember(runtime) {
+        derivedStateOf { runtime.playbackSnapshot.isPlaying }
+    }
+    val videoSize by remember(runtime) {
+        derivedStateOf {
+            IntSize(runtime.playbackSnapshot.videoWidth, runtime.playbackSnapshot.videoHeight)
+        }
+    }
+    val keepScreenAwake by remember(runtime) {
+        derivedStateOf {
+            runtime.errorMessage == null &&
+                (runtime.playbackSnapshot.isPlaying ||
+                    (runtime.shouldPlay && runtime.playbackSnapshot.isLoading))
+        }
+    }
+
     BoxWithConstraints(
         modifier = args.modifier
             .fillMaxSize()
@@ -156,29 +175,11 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
         }
         runtime.resetIdentityStateIfNeeded()
 
-        val keepScreenAwake by remember(runtime) {
-            derivedStateOf {
-                runtime.errorMessage == null &&
-                    (runtime.playbackSnapshot.isPlaying ||
-                        (runtime.shouldPlay && runtime.playbackSnapshot.isLoading))
-            }
-        }
-        val pipIsPlaying by remember(runtime) {
-            derivedStateOf { runtime.playbackSnapshot.isPlaying }
-        }
-        val pipVideoSize by remember(runtime) {
-            derivedStateOf {
-                IntSize(
-                    runtime.playbackSnapshot.videoWidth,
-                    runtime.playbackSnapshot.videoHeight,
-                )
-            }
-        }
         if (!runtime.isMiniPresentation) {
             EnterImmersivePlayerMode(keepScreenAwake = keepScreenAwake)
             ManagePlayerPictureInPicture(
-                isPlaying = pipIsPlaying,
-                videoSize = pipVideoSize,
+                isPlaying = isPlaying,
+                videoSize = videoSize,
             )
         }
         runtime.BindMiniPlayerEffects(miniPresentation)
