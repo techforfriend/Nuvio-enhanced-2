@@ -184,7 +184,6 @@ fun DetailMetaInfo(
                 pills = overviewPills,
                 ratings = meta.externalRatings,
                 description = meta.description,
-                showTitleDescription = enhancedSettings.nuvioReadShowTitleDescription,
                 episodeRatingsVisibility = episodeRatingsVisibility,
                 isEpisodeWatched = isEpisodeWatched,
                 onEpisodeClick = onEpisodeClick,
@@ -220,7 +219,6 @@ private fun DetailPremiumOverviewCard(
     pills: List<String>,
     ratings: List<MetaExternalRating>,
     description: String?,
-    showTitleDescription: Boolean = true,
     episodeRatingsVisibility: EpisodeRatingsVisibility? = null,
     isEpisodeWatched: ((MetaVideo) -> Boolean)? = null,
     onEpisodeClick: ((MetaVideo) -> Unit)? = null,
@@ -255,37 +253,6 @@ private fun DetailPremiumOverviewCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            if (showTitleDescription) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(width = 4.dp, height = 42.dp)
-                            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(999.dp)),
-                    )
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(3.dp),
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.details_premium_overview_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            text = stringResource(Res.string.details_premium_overview_subtitle),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            lineHeight = 18.sp,
-                        )
-                    }
-                }
-            }
-
             if (pills.isNotEmpty()) {
                 Row(
                     modifier = Modifier
@@ -342,10 +309,8 @@ private fun DetailPremiumOverviewCard(
                 }
             }
 
-            if (showTitleDescription) {
-                description?.trim()?.takeIf { it.isNotBlank() }?.let { cleanDescription ->
-                    DetailPremiumStoryBlock(description = cleanDescription)
-                }
+            description?.trim()?.takeIf { it.isNotBlank() }?.let { cleanDescription ->
+                DetailPremiumStoryBlock(description = cleanDescription)
             }
         }
     }

@@ -2899,13 +2899,9 @@
     <string name="settings_appearance_theme_supporter">Nuvio Enhanced Supporter</string>
     <string name="nuvio_enhanced_supporter">Nuvio Enhanced Supporter</string>
     <string name="profile_choose_background_description">Choose a Premium background. Automatic uses the default Nuvio background; selecting a preset or URL keeps it independent.</string>
-    <string name="details_premium_overview_title">Nuvio Read</string>
-    <string name="details_premium_overview_subtitle">Key facts, ratings, and story context grouped for a faster decision.</string>
     <string name="details_premium_story_label">Story</string>
     <string name="nuvio_enhanced_nuvio_read_title">Nuvio Read</string>
     <string name="nuvio_enhanced_nuvio_read_desc">Group key facts, ratings, and the story into the enhanced overview card on detail pages.</string>
-    <string name="nuvio_enhanced_nuvio_read_show_title_description_title">Show Nuvio Read title and description</string>
-    <string name="nuvio_enhanced_nuvio_read_show_title_description_desc">Show the “Nuvio Read” header and the story description in the enhanced overview card. Turn it off to keep only the key facts and ratings.</string>
     <string name="nuvio_read_rating_map">Rating Map</string>
     <string name="nuvio_enhanced_cinematic_detail_header_title">Cinematic detail header</string>
     <string name="nuvio_enhanced_cinematic_detail_header_desc">Use a horizontal backdrop, production branding, title, and tailored metadata above the existing actions.</string>
