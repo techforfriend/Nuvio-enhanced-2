@@ -1183,7 +1183,11 @@ fun HomeScreen(
                                     modifier = Modifier,
                                     viewportHeight = maxHeight,
                                     mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
-                                    heroStyle = homeSettingsUiState.heroStyle,
+                                    heroStyle = if (enhancedSettings.originalNuvioHeroBannerEnabled) {
+                                        HomeHeroStyle.FULL_BLEED
+                                    } else {
+                                        homeSettingsUiState.heroStyle
+                                    },
                                 )
 
                                 homeUiState.heroItems.isNotEmpty() -> HomeHeroSection(
@@ -1201,24 +1205,61 @@ fun HomeScreen(
                                     // animateCollectionGifs doubles as "Home is the visible route" — it already
                                     // turns false whenever a screen (like Details) is pushed on top of it, which
                                     // is also exactly when hero trailer playback must stop, not just pause.
-                                    trailerPlaybackEnabled = (homeSettingsUiState.heroTrailerPlaybackEnabled ||
-                                        (enhancedSettings.streamingShowcaseHeroEnabled && enhancedSettings.streamingShowcaseVideoPreviewEnabled)) &&
+                                    // Original Nuvio hero (screenshot): full-bleed backdrop, Balanced
+                                    // display, non-compact metadata, ratings below the meta line, no
+                                    // overview and no Details pill, home-settings trailer only.
+                                    // These override the saved Enhanced values only while the
+                                    // Original toggle is ON; turning it OFF restores them untouched.
+                                    trailerPlaybackEnabled = (if (enhancedSettings.originalNuvioHeroBannerEnabled) {
+                                        homeSettingsUiState.heroTrailerPlaybackEnabled
+                                    } else {
+                                        homeSettingsUiState.heroTrailerPlaybackEnabled ||
+                                            (enhancedSettings.streamingShowcaseHeroEnabled && enhancedSettings.streamingShowcaseVideoPreviewEnabled)
+                                    }) &&
                                         animateCollectionGifs,
                                     trailerStartDelaySeconds = homeSettingsUiState.heroTrailerStartDelaySeconds,
-                                    trailerStartUnmuted = enhancedSettings.streamingShowcaseVideoPreviewSoundEnabled || homeSettingsUiState.heroTrailerStartUnmuted,
-                                    showImdbRating = homeHeroState.showImdbRating && enhancedSettings.showHeroRatings,
-                                    showMdbListRatings = homeHeroState.showMdbListRatings && enhancedSettings.showHeroRatings,
-                                    preferredArtworkSource = if (enhancedSettings.posterArtHeroEnabled && !enhancedSettings.originalNuvioHeroBannerEnabled) {
+                                    trailerStartUnmuted = if (enhancedSettings.originalNuvioHeroBannerEnabled) {
+                                        homeSettingsUiState.heroTrailerStartUnmuted
+                                    } else {
+                                        enhancedSettings.streamingShowcaseVideoPreviewSoundEnabled || homeSettingsUiState.heroTrailerStartUnmuted
+                                    },
+                                    showImdbRating = homeHeroState.showImdbRating &&
+                                        (enhancedSettings.originalNuvioHeroBannerEnabled || enhancedSettings.showHeroRatings),
+                                    showMdbListRatings = homeHeroState.showMdbListRatings &&
+                                        (enhancedSettings.originalNuvioHeroBannerEnabled || enhancedSettings.showHeroRatings),
+                                    preferredArtworkSource = if (enhancedSettings.originalNuvioHeroBannerEnabled) {
+                                        NuvioHeroArtworkSource.Backdrop
+                                    } else if (enhancedSettings.posterArtHeroEnabled) {
                                         NuvioHeroArtworkSource.Poster
                                     } else {
                                         enhancedSettings.heroArtworkSource
                                     },
-                                    showHeroOverview = enhancedSettings.showHeroOverview,
-                                    showHeroDetailsButton = enhancedSettings.showHeroDetailsButton,
+                                    showHeroOverview = if (enhancedSettings.originalNuvioHeroBannerEnabled) {
+                                        false
+                                    } else {
+                                        enhancedSettings.showHeroOverview
+                                    },
+                                    showHeroDetailsButton = if (enhancedSettings.originalNuvioHeroBannerEnabled) {
+                                        false
+                                    } else {
+                                        enhancedSettings.showHeroDetailsButton
+                                    },
                                     heroRefreshHapticsEnabled = enhancedSettings.heroRefreshHapticsEnabled,
-                                    heroDisplayMode = enhancedSettings.heroDisplayMode,
-                                    compactHeroMetadata = enhancedSettings.compactHeroMetadata,
-                                    ratingsAboveMetadata = enhancedSettings.ratingsAboveMetadata,
+                                    heroDisplayMode = if (enhancedSettings.originalNuvioHeroBannerEnabled) {
+                                        com.nuvio.app.features.settings.NuvioHeroDisplayMode.Balanced
+                                    } else {
+                                        enhancedSettings.heroDisplayMode
+                                    },
+                                    compactHeroMetadata = if (enhancedSettings.originalNuvioHeroBannerEnabled) {
+                                        false
+                                    } else {
+                                        enhancedSettings.compactHeroMetadata
+                                    },
+                                    ratingsAboveMetadata = if (enhancedSettings.originalNuvioHeroBannerEnabled) {
+                                        false
+                                    } else {
+                                        enhancedSettings.ratingsAboveMetadata
+                                    },
                                     onItemClick = onPosterClick,
                                     onActiveArtworkChange = onActiveHeroArtworkChange,
                                 )
@@ -1227,7 +1268,11 @@ fun HomeScreen(
                                     modifier = Modifier,
                                     viewportHeight = maxHeight,
                                     mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
-                                    heroStyle = homeSettingsUiState.heroStyle,
+                                    heroStyle = if (enhancedSettings.originalNuvioHeroBannerEnabled) {
+                                        HomeHeroStyle.FULL_BLEED
+                                    } else {
+                                        homeSettingsUiState.heroStyle
+                                    },
                                 )
                             }
                         }
