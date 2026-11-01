@@ -7,8 +7,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import com.nuvio.app.features.player.iospower.NuvioIOPowerSourceBatteryCharging
-import com.nuvio.app.features.player.iospower.NuvioIOPowerSourceBatteryPercent
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.delay
 import platform.Foundation.NSDate
@@ -128,7 +126,9 @@ private fun readPlayerDeviceStatus(fallbackBatteryPercent: Int?): PlayerDeviceSt
     if (!device.batteryMonitoringEnabled) {
         device.batteryMonitoringEnabled = true
     }
-    val ioPowerSourcePercent = NuvioIOPowerSourceBatteryPercent().validBatteryPercent()
+    // The NuvioIOPowerSource helpers do not exist anywhere in this repo, so
+    // battery state comes from UIDevice directly (the same fallback the old
+    // code used when the helper returned anything other than 0 or 1).
     val uidDevicePercent = device.batteryLevel
         .takeIf { level -> level >= 0f }
         ?.let { level -> (level * 100f).roundToInt().coerceIn(0, 100) }
@@ -137,17 +137,11 @@ private fun readPlayerDeviceStatus(fallbackBatteryPercent: Int?): PlayerDeviceSt
     return PlayerDeviceStatus(
         timeLabel = PlayerDeviceDateFormatter.formatter.stringFromDate(NSDate()),
         currentTimeMillis = (NSDate().timeIntervalSince1970 * 1_000.0).toLong(),
-        batteryPercent = ioPowerSourcePercent ?: uidDevicePercent ?: fallbackBatteryPercent,
-        batteryCharging = when (NuvioIOPowerSourceBatteryCharging()) {
-            0 -> false
-            1 -> true
-            else -> isIosBatteryCharging(batteryState)
-        },
+        batteryPercent = uidDevicePercent ?: fallbackBatteryPercent,
+        batteryCharging = isIosBatteryCharging(batteryState),
         networkType = PlayerDeviceNetworkType.Unknown,
     )
 }
-
-private fun Int.validBatteryPercent(): Int? = takeIf { percent -> percent in 0..100 }
 
 private fun isIosBatteryCharging(state: String): Boolean =
     state == IosBatteryStateChargingValue ||

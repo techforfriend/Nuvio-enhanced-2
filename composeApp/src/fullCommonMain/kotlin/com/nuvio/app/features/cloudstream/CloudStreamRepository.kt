@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.coroutineScope
-import java.util.LinkedHashMap
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
@@ -42,15 +41,21 @@ actual object CloudStreamRepository {
     private var initialized = false
     private var currentProfileId = 1
     private val refreshJobs = mutableMapOf<String, Job>()
-    private val mainPageRequestMutex = Any()
+    // Mutex, not synchronized(): the JVM synchronized() function does not
+    // exist on Kotlin/Native. Suspend call sites use withLock(); the
+    // non-suspend cleanup paths use tryLock(), matching the cache clears.
+    private val mainPageRequestMutex = Mutex()
     private val mainPageRequests =
         mutableMapOf<String, Deferred<Result<List<Pair<String, List<CloudStreamSearchItem>>>>>>()
     private val loadLinksRequestMutex = Mutex()
     private val loadLinksRequests =
         mutableMapOf<String, Deferred<Result<List<CloudStreamPlaybackSource>>>>()
-    private val loadLinksCache = LinkedHashMap<String, CachedCloudStreamLinks>(16, 0.75f, true)
+    // Plain insertion-ordered map: java.util.LinkedHashMap with access order
+    // does not exist on Kotlin/Native. LRU order is kept by moving a hit
+    // entry to the end on every cache read (see load()/loadLinks()).
+    private val loadLinksCache = linkedMapOf<String, CachedCloudStreamLinks>()
     private val loadLinksCacheMutex = Mutex()
-    private val loadResultCache = LinkedHashMap<String, CachedCloudStreamLoadItem>(16, 0.75f, true)
+    private val loadResultCache = linkedMapOf<String, CachedCloudStreamLoadItem>()
     private val loadResultCacheMutex = Mutex()
     private const val LOAD_LINKS_CACHE_MAX_ENTRIES = 16
     private const val LOAD_LINKS_CACHE_TTL_MS = 120_000L
@@ -184,7 +189,8 @@ actual object CloudStreamRepository {
             val manifests = coroutineScope {
                 val gate = Semaphore(REPOSITORY_DISCOVERY_CONCURRENCY)
                 repositoryUrls.map { url ->
-                    async(Dispatchers.IO) {
+                    // Dispatchers.IO is not accessible on Kotlin/Native.
+                    async(Dispatchers.Default) {
                         gate.withPermit {
                             runCatching {
                                 CloudStreamRepositoryParser.parseRepository(url, httpGetText(url))
@@ -465,16 +471,22 @@ actual object CloudStreamRepository {
         val requestKey = providerId + ":" + normalizedPage
         RuntimeDiagnostics.recordLog("cs-mainpage-start id=$providerId page=$normalizedPage")
 
-        val request = synchronized(mainPageRequestMutex) {
+        val request = mainPageRequestMutex.withLock {
             mainPageRequests[requestKey]?.takeIf { it.isActive && !it.isCancelled }
                 ?: scope.async(start = CoroutineStart.DEFAULT) {
                     providerResult(providerId) { getMainPage(normalizedPage) }
                 }.also { deferred ->
                     mainPageRequests[requestKey] = deferred
                     deferred.invokeOnCompletion {
-                        synchronized(mainPageRequestMutex) {
-                            if (mainPageRequests[requestKey] === deferred) {
-                                mainPageRequests.remove(requestKey)
+                        // Non-suspend cleanup: best-effort, a missed removal
+                        // is harmless (the next request overwrites the entry).
+                        if (mainPageRequestMutex.tryLock()) {
+                            try {
+                                if (mainPageRequests[requestKey] === deferred) {
+                                    mainPageRequests.remove(requestKey)
+                                }
+                            } finally {
+                                mainPageRequestMutex.unlock()
                             }
                         }
                     }
@@ -494,8 +506,11 @@ actual object CloudStreamRepository {
             }
     }
     private fun cancelInFlightMainPageRequests() {
-        val requests = synchronized(mainPageRequestMutex) {
+        if (!mainPageRequestMutex.tryLock()) return
+        val requests = try {
             mainPageRequests.values.toList().also { mainPageRequests.clear() }
+        } finally {
+            mainPageRequestMutex.unlock()
         }
         requests.forEach { it.cancel() }
     }
@@ -530,7 +545,16 @@ actual object CloudStreamRepository {
         val cacheKey = "$providerId\\u0000$data"
         val now = currentEpochMillis()
         loadResultCacheMutex.withLock {
-            loadResultCache[cacheKey]?.takeIf { it.expiresAtEpochMs > now }?.item
+            val entry = loadResultCache[cacheKey]
+            if (entry != null && entry.expiresAtEpochMs > now) {
+                // Refresh recency: linkedMapOf is insertion-ordered, so a
+                // cache hit must move the entry to the end to keep LRU order.
+                loadResultCache.remove(cacheKey)
+                loadResultCache[cacheKey] = entry
+                entry.item
+            } else {
+                null
+            }
         }?.let { cached ->
             RuntimeDiagnostics.recordLog("cs-load-cache-hit id=$providerId dataLength=${data.length}")
             return Result.success(cached)
@@ -578,9 +602,15 @@ actual object CloudStreamRepository {
         val requestKey = "$providerId\\u0000$data"
         val now = currentEpochMillis()
         loadLinksCacheMutex.withLock {
-            loadLinksCache[requestKey]
-                ?.takeIf { it.expiresAtEpochMs > now }
-                ?.sources
+            val entry = loadLinksCache[requestKey]
+            if (entry != null && entry.expiresAtEpochMs > now) {
+                // Refresh recency for LRU order (see load() cache read).
+                loadLinksCache.remove(requestKey)
+                loadLinksCache[requestKey] = entry
+                entry.sources
+            } else {
+                null
+            }
         }?.let { cached ->
             RuntimeDiagnostics.recordLog("cs-load-links-cache-hit provider=$providerId links=${cached.size}")
             return Result.success(cached)

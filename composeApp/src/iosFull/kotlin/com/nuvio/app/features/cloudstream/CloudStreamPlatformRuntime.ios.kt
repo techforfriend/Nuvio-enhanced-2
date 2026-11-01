@@ -5,7 +5,8 @@ internal actual object CloudStreamPlatformRuntime {
 
     actual fun initialize(context: Any?) = Unit
     actual suspend fun provider(plugin: CloudStreamPluginItem): CloudStreamProvider? = null
-    actual suspend fun syncDynamicRepositories(plugin: CloudStreamPluginItem) = Unit
+    // No syncDynamicRepositories: the expect object declares no such member
+    // and nothing calls it; the stale actual broke the iOS build.
     actual suspend fun registerNativeRepository(url: String, name: String, iconUrl: String?) = Unit
     actual suspend fun removeNativeRepository(url: String) = Unit
     actual fun unload(pluginId: String) = Unit

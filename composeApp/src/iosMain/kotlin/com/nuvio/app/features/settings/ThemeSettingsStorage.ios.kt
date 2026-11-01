@@ -15,8 +15,11 @@ import platform.UIKit.UIUserInterfaceIdiomPad
 actual object ThemeSettingsStorage {
     private const val selectedThemeKey = "selected_theme"
     private const val customThemeColorsKey = "custom_theme_colors"
+    private const val customThemeFirstColorKey = "custom_theme_first_color"
+    private const val customThemeSecondColorKey = "custom_theme_second_color"
     private const val amoledEnabledKey = "amoled_enabled"
     private const val liquidGlassNativeTabBarEnabledKey = "liquid_glass_native_tab_bar_enabled"
+    private const val liquidGlassAutoHideOnScrollEnabledKey = "liquid_glass_auto_hide_on_scroll_enabled"
     private const val dynamicArtworkBackgroundEnabledKey = "dynamic_artwork_background_enabled"
     private const val showCatalogAccentEnabledKey = "show_catalog_accent_enabled"
     private const val tabBarBehaviorKey = "tab_bar_behavior"
@@ -57,6 +60,20 @@ actual object ThemeSettingsStorage {
 
     actual fun saveCustomThemeColors(colors: String) {
         NSUserDefaults.standardUserDefaults.setObject(colors, forKey = ProfileScopedKey.of(customThemeColorsKey))
+    }
+
+    actual fun loadCustomThemeFirstColor(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(customThemeFirstColorKey))
+
+    actual fun saveCustomThemeFirstColor(colorName: String) {
+        NSUserDefaults.standardUserDefaults.setObject(colorName, forKey = ProfileScopedKey.of(customThemeFirstColorKey))
+    }
+
+    actual fun loadCustomThemeSecondColor(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(customThemeSecondColorKey))
+
+    actual fun saveCustomThemeSecondColor(colorName: String) {
+        NSUserDefaults.standardUserDefaults.setObject(colorName, forKey = ProfileScopedKey.of(customThemeSecondColorKey))
     }
 
     actual fun loadAmoledEnabled(): Boolean? {
@@ -138,6 +155,23 @@ actual object ThemeSettingsStorage {
         NSUserDefaults.standardUserDefaults.setBool(
             enabled,
             forKey = ProfileScopedKey.of(liquidGlassNativeTabBarEnabledKey),
+        )
+    }
+
+    actual fun loadLiquidGlassAutoHideOnScrollEnabled(): Boolean? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(liquidGlassAutoHideOnScrollEnabledKey)
+        return if (defaults.objectForKey(key) != null) {
+            defaults.boolForKey(key)
+        } else {
+            null
+        }
+    }
+
+    actual fun saveLiquidGlassAutoHideOnScrollEnabled(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(
+            enabled,
+            forKey = ProfileScopedKey.of(liquidGlassAutoHideOnScrollEnabledKey),
         )
     }
 
