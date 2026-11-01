@@ -254,6 +254,7 @@ private fun PlaybackSettingsSection(
     var p2pCacheClearFailed by remember { mutableStateOf(false) }
     val pluginsEnabled = AppFeaturePolicy.pluginsEnabled
     val autoPlayPlayerSettings by PlayerSettingsRepository.uiState.collectAsStateWithLifecycle()
+    val enhancedSettings by NuvioEnhancedSettingsRepository.uiState.collectAsStateWithLifecycle()
     val p2pSettings by remember {
         P2pSettingsRepository.ensureLoaded()
         P2pSettingsRepository.uiState
@@ -1096,6 +1097,15 @@ private fun PlaybackSettingsSection(
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         isTablet = isTablet,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_playback_android_memory_safe_buffer),
+                        description = stringResource(Res.string.settings_playback_android_memory_safe_buffer_description),
+                        checked = enhancedSettings.androidMemorySafeBufferEnabled,
+                        enabled = exoOptionsEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = NuvioEnhancedSettingsRepository::setAndroidMemorySafeBufferEnabled,
                     )
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsSwitchRow(

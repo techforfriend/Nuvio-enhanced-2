@@ -94,6 +94,7 @@ import com.nuvio.app.features.player.swdecoder.SoftwareVideoRenderer
 import com.nuvio.app.features.autosync.rememberLibmpvAutoSyncCoordinator
 import com.nuvio.app.R
 import com.nuvio.app.core.logging.InAppLogger
+import com.nuvio.app.features.settings.NuvioEnhancedSettingsRepository
 import com.nuvio.app.features.streams.normalizeStreamType
 import `is`.xyz.mpv.BaseMPVView
 import `is`.xyz.mpv.MPV
@@ -302,6 +303,14 @@ private fun ExoPlayerSurface(
     val playerSettings = remember {
         PlayerSettingsRepository.ensureLoaded()
         PlayerSettingsRepository.uiState.value
+    }
+
+    // Memory-safe buffer is an Enhanced setting, read once like playerSettings.
+    // The LoadControl is fixed when ExoPlayer is created, so toggling it
+    // takes effect the next time playback starts, not mid-playback.
+    val memorySafeBufferEnabled = remember {
+        NuvioEnhancedSettingsRepository.ensureLoaded()
+        NuvioEnhancedSettingsRepository.uiState.value.androidMemorySafeBufferEnabled
     }
 
     val sanitizedSourceHeaders = remember(sourceHeaders) {
@@ -521,7 +530,10 @@ private fun ExoPlayerSurface(
             setParameters(parameters)
         }
 
-        val loadControl = playerSettings.buildPlaybackLoadControl(localFileSource = isLocalFileSource)
+        val loadControl = playerSettings.buildPlaybackLoadControl(
+            localFileSource = isLocalFileSource,
+            memorySafeBufferEnabled = memorySafeBufferEnabled,
+        )
 
         InAppLogger.info(
             "ExoPlayer/Android",

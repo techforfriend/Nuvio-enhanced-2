@@ -36,7 +36,10 @@ internal fun isProgressivePlaybackSource(
     playbackMediaItemFromUrl(url, responseHeaders, streamType).localConfiguration?.mimeType,
 ) == C.CONTENT_TYPE_OTHER
 
-internal fun PlayerSettingsUiState.buildPlaybackLoadControl(localFileSource: Boolean = false): DefaultLoadControl {
+internal fun PlayerSettingsUiState.buildPlaybackLoadControl(
+    localFileSource: Boolean = false,
+    memorySafeBufferEnabled: Boolean = false,
+): DefaultLoadControl {
     val heapLimitBytes = PlaybackMemoryInfo.javaHeapBufferLimitMb() * MB
     val builder = DefaultLoadControl.Builder()
     when {
@@ -51,6 +54,20 @@ internal fun PlayerSettingsUiState.buildPlaybackLoadControl(localFileSource: Boo
                 DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
             )
             .setTargetBufferBytes(minOf(LOCAL_FILE_TARGET_BUFFER_MB * MB, heapLimitBytes).toInt())
+            .setPrioritizeTimeOverSizeThresholds(false)
+        // Memory-safe mode: short buffers plus a byte cap, so peak buffer
+        // memory stays low on crash/memory-pressure devices. It beats the
+        // native-memory and default branches, but explicit custom buffer
+        // values still win when custom buffers are on.
+        memorySafeBufferEnabled && !customPlaybackBuffersEnabled -> builder
+            .setBackBuffer(0, false)
+            .setBufferDurationsMs(
+                MEMORY_SAFE_MIN_BUFFER_MS,
+                MEMORY_SAFE_MAX_BUFFER_MS,
+                DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+                DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS,
+            )
+            .setTargetBufferBytes(minOf(MEMORY_SAFE_TARGET_BUFFER_MB * MB, heapLimitBytes).toInt())
             .setPrioritizeTimeOverSizeThresholds(false)
         customPlaybackBuffersEnabled -> {
             val startMs = playbackStartBufferSeconds * 1000
@@ -397,3 +414,6 @@ private class NativeReadAheadDataSource(
 private const val LOCAL_FILE_MIN_BUFFER_MS = 5_000
 private const val LOCAL_FILE_MAX_BUFFER_MS = 15_000
 private const val LOCAL_FILE_TARGET_BUFFER_MB = 48
+private const val MEMORY_SAFE_MIN_BUFFER_MS = 15_000
+private const val MEMORY_SAFE_MAX_BUFFER_MS = 30_000
+private const val MEMORY_SAFE_TARGET_BUFFER_MB = 32
