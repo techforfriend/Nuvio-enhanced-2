@@ -1,0 +1,103 @@
+name: Build iOS IPA
+
+# Separate from build-apk.yml on purpose: Android and iOS each have their
+# own workflow and their own release step. This one builds an UNSIGNED
+# Release IPA (sideload distribution via AltStore/SideStore, same model
+# as upstream) and attaches it to the v0.6.6 GitHub release without
+# touching the release body. It must stay in the sync script's workflow
+# allowlist or the next auto-sync will delete it.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build unsigned Release IPA
+    runs-on: macos-26
+    timeout-minutes: 180
+    env:
+      GRADLE_OPTS: -Dfile.encoding=UTF-8
+      IOS_CONFIGURATION: Release
+      KOTLIN_DAEMON_JVMARGS: -Xmx1024M
+      NUVIO_GRADLE_JVMARGS: -Xmx2048M -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=768M -XX:+UseG1GC
+      NUVIO_KOTLIN_NATIVE_JVMARGS: -Xmx9216M -XX:+UseG1GC
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Select newest installed Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Cache Kotlin Native
+        uses: actions/cache@v5
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Constrain Gradle memory for the hosted runner
+        run: |
+          gradle_user_home="${GRADLE_USER_HOME:-${HOME}/.gradle}"
+          mkdir -p "${gradle_user_home}"
+          {
+            echo "org.gradle.jvmargs=${NUVIO_GRADLE_JVMARGS}"
+            echo "kotlin.daemon.jvmargs=${KOTLIN_DAEMON_JVMARGS}"
+            echo "kotlin.native.jvmArgs=${NUVIO_KOTLIN_NATIVE_JVMARGS}"
+            echo "org.gradle.parallel=false"
+            echo "org.gradle.workers.max=1"
+            echo "kotlin.native.disableCompilerDaemon=true"
+          } >> "${gradle_user_home}/gradle.properties"
+          cat "${gradle_user_home}/gradle.properties"
+
+      - name: Prepare iOS dependencies
+        run: ./scripts/prepare-ios-dependencies.sh
+
+      - name: Build unsigned Release IPA
+        run: ./scripts/build-ios-ipa.sh
+
+      - name: Summarize IPA
+        run: |
+          ipa_path="$(find build/ios-ipa -maxdepth 1 -type f -name '*-release.ipa' -print -quit)"
+          if [[ -z "${ipa_path}" ]]; then
+            echo "No IPA was produced." >&2
+            exit 1
+          fi
+
+          {
+            echo "## iOS Release IPA"
+            echo
+            echo "- File: $(basename "${ipa_path}")"
+            echo "- Size: $(du -h "${ipa_path}" | cut -f1)"
+            echo "- SHA-256: $(shasum -a 256 "${ipa_path}" | awk '{print $1}')"
+            echo "- Distribution: full"
+            echo "- Configuration: Release"
+            echo "- Signing: unsigned (AltStore/SideStore sideload)"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Attach IPA to the v0.6.6 release
+        # gh release upload only adds/replaces the asset; it never
+        # rewrites the release body, so the corrected v0.6.6 notes stay intact.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload v0.6.6 build/ios-ipa/*.ipa --clobber

@@ -143,11 +143,12 @@ fi
 
 # BLOCKED WORKFLOWS: never let upstream workflows into this fork again.
 # After every sync merge, delete any workflow in .github/workflows/
-# except build-apk.yml and sync-luqman-upstream.yml, so a future sync
-# cannot re-add the extra Luqman workflows that were just deleted.
+# except build-apk.yml, build-ios-ipa.yml and sync-luqman-upstream.yml,
+# so a future sync cannot re-add the extra Luqman workflows that were
+# just deleted (and cannot delete our own iOS workflow either).
 for wf_file in .github/workflows/*.yml; do
   case "${wf_file}" in
-    .github/workflows/build-apk.yml|.github/workflows/sync-luqman-upstream.yml)
+    .github/workflows/build-apk.yml|.github/workflows/build-ios-ipa.yml|.github/workflows/sync-luqman-upstream.yml)
       ;;
     *)
       if [[ -f "${wf_file}" ]]; then
