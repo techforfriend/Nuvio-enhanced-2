@@ -70,7 +70,9 @@ internal fun PlayerClockEndTimeOverlay(playbackSnapshot: PlayerPlaybackSnapshot,
         )
         Text(
             text = stringResource(Res.string.player_clock_ends_at, clock.endTime),
-            color = animatedTheme?.accent ?: tokens.colors.accent,
+            // Always white like the clock time above it, instead of the
+            // theme accent (red on the current theme).
+            color = Color.White,
             fontSize = if (useTvLayout) 26.sp else 11.sp,
             fontWeight = FontWeight.SemiBold,
         )
