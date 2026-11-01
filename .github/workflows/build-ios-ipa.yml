@@ -73,6 +73,15 @@ jobs:
       - name: Prepare iOS dependencies
         run: ./scripts/prepare-ios-dependencies.sh
 
+      - name: Ensure local.properties exists
+        # Same fix as build-apk.yml: generateRuntimeConfigs declares
+        # local.properties as a task input, so Gradle validation fails
+        # when the file is absent even though the task tolerates it.
+        # This repo has no NUVIO_LOCAL_PROPERTIES_BASE64 secret, so an
+        # empty file is the correct CI value; Supabase/TMDB values fall
+        # back to their public defaults in build.gradle.kts.
+        run: touch local.properties
+
       - name: Build unsigned Release IPA
         run: ./scripts/build-ios-ipa.sh
 
