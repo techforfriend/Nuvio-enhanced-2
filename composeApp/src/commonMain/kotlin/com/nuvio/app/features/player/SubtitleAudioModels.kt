@@ -50,7 +50,9 @@ data class SubtitleStyleState(
     val outlineWidth: Int = 2,
     val bold: Boolean = false,
     val fontSizeSp: Int = 18,
-    val bottomOffset: Int = 20,
+    // One slider step (5) lower than before: higher bottomOffset lifts
+    // subtitles, so 15 sits them slightly closer to the bottom edge.
+    val bottomOffset: Int = 15,
     val stripSdh: Boolean = false,
     val useForcedSubtitles: Boolean = false,
     val showOnlyPreferredLanguages: Boolean = false,
