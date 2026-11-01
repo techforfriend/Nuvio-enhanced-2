@@ -237,6 +237,11 @@ object ProfileSettingsSync {
             TrackingSettingsRepository.uiState.map { "trakt_settings" },
             TraktCommentsSettings.enabled.map { "trakt_comments" },
             EpisodeReleaseNotificationsRepository.uiState.map { "episode_release_alerts" },
+            // Enhanced settings live in the synced blob too, but were missing
+            // here, so toggling one alone never pushed to the server and the
+            // next pull on profile select overwrote it with the stale server
+            // copy (e.g. Nuvio Read turning itself off on every restart).
+            NuvioEnhancedSettingsRepository.uiState.map { "nuvio_enhanced" },
         )
 
         observeJob = scope.launch {
