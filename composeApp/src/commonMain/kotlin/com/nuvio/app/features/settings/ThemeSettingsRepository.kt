@@ -115,6 +115,7 @@ object ThemeSettingsRepository {
 
     fun onProfileChanged() {
         loadFromDisk()
+        com.nuvio.app.core.ui.background.AppBackgroundRepository.reload()
     }
 
     fun clearLocalState() {
