@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -56,8 +57,13 @@ import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
+internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi(
+    partyPanelWidth: Dp,
+    partyPanelInset: Dp,
+    dockPartyPanel: Boolean,
+) {
     val runtime = this
+    val isInPip = rememberIsInPictureInPicture()
     val isEpisode = activeSeasonNumber != null && activeEpisodeNumber != null
     val currentGestureFeedback = liveGestureFeedback ?: gestureFeedback
     val isP2pPlaybackActive = activeTorrentInfoHash != null
@@ -410,7 +416,12 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
                 .padding(top = 16.dp, start = horizontalSafePadding, end = horizontalSafePadding),
         )
         RenderPlayerModals()
-        RenderParty(runtime = runtime)
+        RenderParty(
+            runtime = runtime,
+            panelWidth = partyPanelWidth,
+            modal = !dockPartyPanel,
+            panelVisible = showPartyPanel && !isInPip,
+        )
         }
     }
 }
@@ -988,8 +999,15 @@ private fun PlayerScreenRuntime.RenderPlayerModals() {
         sourceStreamsState = sourceStreamsState,
         contentTitle = title,
         activeEpisodeTitle = activeEpisodeTitle,
-        activeSourceUrl = activeSourceUrl,
-        activeStreamTitle = activeStreamTitle,
+        currentStream = PlayerCurrentStream(
+            url = activeSourceUrl,
+            name = activeStreamTitle,
+            description = activeStreamSubtitle,
+            addonId = activeProviderAddonId,
+            infoHash = activeStream?.p2pInfoHash ?: activeTorrentInfoHash,
+            fileIdx = activeStream?.p2pFileIdx ?: activeTorrentFileIdx,
+            filename = activeSourceFilename,
+        ),
         showQualityPanel = showQualityPanel,
         playerQualityState = playerQualityState,
         selectedPlayerQualityId = selectedPlayerQualityId,

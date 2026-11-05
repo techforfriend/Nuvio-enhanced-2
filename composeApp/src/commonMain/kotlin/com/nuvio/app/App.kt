@@ -15,6 +15,7 @@ import coil3.svg.SvgDecoder
 import com.nuvio.app.core.poster.CustomPosterFallbackInterceptor
 import com.nuvio.app.core.ui.NativeProfileSwitcherController
 import com.nuvio.app.core.ui.NuvioTheme
+import com.nuvio.app.core.ui.background.AppBackgroundHost
 import com.nuvio.app.core.ui.configurePlatformImageLoader
 import com.nuvio.app.core.ui.platformProvidesImageLoader
 import com.nuvio.app.features.settings.ThemeSettingsRepository
@@ -70,7 +71,10 @@ fun App(
 }
 
 @Composable
-internal fun AppEnvironment(content: @Composable () -> Unit) {
+internal fun AppEnvironment(
+    drawAppBackground: Boolean = true,
+    content: @Composable () -> Unit,
+) {
     if (!platformProvidesImageLoader) {
         setSingletonImageLoaderFactory { context ->
             ImageLoader.Builder(context)
@@ -114,6 +118,12 @@ internal fun AppEnvironment(content: @Composable () -> Unit) {
         customSecond = customThemeSecondColor,
         amoled = amoledEnabled,
     ) {
-        content()
+        if (drawAppBackground) {
+            AppBackgroundHost {
+                content()
+            }
+        } else {
+            content()
+        }
     }
 }

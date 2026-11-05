@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Style
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -1014,6 +1015,7 @@ internal fun settingsSearchEntries(
         description = stringResource(Res.string.settings_playback_private_viewing_description),
         pageLabel = trackingPage,
         section = stringResource(Res.string.settings_tracking_privacy_section),
+        icon = Icons.Rounded.VisibilityOff,
     )
     addRow(
         page = SettingsPage.TraktAuthentication,
