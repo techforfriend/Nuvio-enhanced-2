@@ -883,7 +883,11 @@ private fun ExoPlayerSurface(
             override fun onVideoSizeChanged(videoSize: VideoSize) {
                 InAppLogger.info("ExoPlayer/Android", "videoSize=${videoSize.toLogSummary()}")
                 if (videoSize.width > 0 && videoSize.height > 0) {
-                    videoAspectRatio = videoSize.width.toFloat() / videoSize.height.toFloat()
+                    // Include anamorphic pixel width so fitted subtitle geometry follows
+                    // the display aspect ratio reported by Media3.
+                    videoAspectRatio = (
+                        videoSize.width.toFloat() * videoSize.pixelWidthHeightRatio
+                    ) / videoSize.height.toFloat()
                 }
                 dispatchExoPlayerSnapshot()
                 playerViewRef?.post {
@@ -1462,7 +1466,12 @@ private fun ExoPlayerSurface(
                 }
             },
         )
-        StyledSubtitleOverlay(subtitlePresenter.text, currentSubtitleStyle)
+        StyledSubtitleOverlay(
+            subtitlePresenter.text,
+            currentSubtitleStyle,
+            videoAspectRatio = videoAspectRatio,
+            videoResizeMode = resizeMode,
+        )
     }
 }
 
@@ -1825,7 +1834,14 @@ private fun LibmpvPlayerSurface(
                 view.releaseMpv()
             },
         )
-        playerViewRef?.let { view -> StyledSubtitleOverlay(view.subtitleText, view.subtitleStyle) }
+        playerViewRef?.let { view ->
+            StyledSubtitleOverlay(
+                view.subtitleText,
+                view.subtitleStyle,
+                videoAspectRatio = view.subtitleVideoAspectRatio,
+                videoResizeMode = resizeMode,
+            )
+        }
     }
 }
 
@@ -1855,6 +1871,16 @@ private class NuvioLibmpvView(
     private var currentExternalSubtitles: List<com.nuvio.app.features.streams.StreamSubtitle> = emptyList()
     @Volatile
     private var latestSnapshot = PlayerPlaybackSnapshot()
+
+    val subtitleVideoAspectRatio: Float
+        get() = latestSnapshot.let { snapshot ->
+            if (snapshot.videoWidth > 0 && snapshot.videoHeight > 0) {
+                snapshot.videoWidth.toFloat() / snapshot.videoHeight.toFloat()
+            } else {
+                0f
+            }
+        }
+
     @Volatile
     private var libmpvVolumeLevel = 1f
     @Volatile
@@ -1871,9 +1897,10 @@ private class NuvioLibmpvView(
 
     fun updateStyledSubtitle() {
         executeMpv {
-            val styled = appliedSubtitleStyle.usesStyledOverlay && SubtitleRendering.supportsTextOverlay(
-                mpv.getPropertyString("current-tracks/sub/codec").orEmpty(),
-            )
+            val styled = appliedSubtitleStyle.requiresComposeStyledOverlay &&
+                SubtitleRendering.supportsTextOverlay(
+                    mpv.getPropertyString("current-tracks/sub/codec").orEmpty(),
+                )
             if (styled != styledSubtitleVisible) {
                 mpv.setPropertyBoolean("sub-visibility", !styled)
                 styledSubtitleVisible = styled
@@ -2513,6 +2540,8 @@ private class NuvioLibmpvView(
                     mpv.setPropertyInt("sub-font-size", style.toMpvSubtitleFontSize())
                     mpv.setPropertyInt("sub-outline-size", style.toMpvSubtitleOutlineSize())
                     mpv.setPropertyInt("sub-border-size", style.toMpvSubtitleOutlineSize())
+                    // Use mpv/libass's native Gaussian border blur, matching Umbra's sub-blur path.
+                    mpv.setPropertyString("sub-blur", style.mpvNativeOutlineBlurLevel.toString())
                     mpv.setPropertyInt("sub-pos", (100 - style.bottomOffset / 10).coerceIn(0, 100))
                     mpv.setPropertyBoolean("sub-filter-sdh", style.stripSdh)
                     mpv.setPropertyBoolean("sub-filter-sdh-harder", style.stripSdh)
