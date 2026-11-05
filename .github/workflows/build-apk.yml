@@ -77,24 +77,20 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.6
-          name: "Nuvio Enhanced v0.6.6"
+          tag_name: v0.6.7
+          name: "Nuvio Enhanced v0.6.7"
           body: |
-            ## What's New in v0.6.6
-            **Nuvio Enhanced Official Release — version 0.6.6 (version code 149)**
+            ## What's New in v0.6.7
+            **Nuvio Enhanced Official Release — version 0.6.7 (version code 150)**
 
             ### 🆕 New in this version
-            - Compose Multiplatform rewrite (cmp-rewrite) from upstream — the underlying app rewrite
-            - Subtitle overhaul: new subtitle appearance (font, shadow, background) and subtitle size in 1sp steps
-            - Chapter skip intervals — skip intros, recaps and credits with merged skip regions
-            - Skip Intro: timing setting and auto-skip on resolved streams
-            - Night mode for libmpv (audio compressor) with a night mode button
-            - Offline playback fixes and translation updates
-
-            ### 🔧 Player settings — repaired in this build
-            - Chapters toggle (Exo chapters), legacy player top/bottom button layouts, and night mode settings are now wired to storage and applied — these were missing after the upstream sync and are fixed in this build
-            - Subtitle appearance settings (font, shadow, size) moved to the new subtitle system
-            - Auto-switch playback engine on error and libass render mode settings added
+            - Glass UI — frosted glass headers, cards and player controls with readable text over your background
+            - Subtitle outline blur — softer subtitle outlines, rendered natively
+            - Picture-in-Picture subtitles — subtitles now show in PiP and in the mini player
+            - Plugin settings fixed — plugin settings pages open correctly again
+            - Private Viewing moved — now under Settings → Tracking
+            - Simkl, WeTrakr and AutoSync fixes — related titles, watched badges and sync reliability
+            - VC-1 fix — VC-1 content no longer plays audio-only
           draft: false
           prerelease: false
           files: build-apks/*.apk
