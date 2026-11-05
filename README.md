@@ -2,7 +2,7 @@
 
   <img src="https://nuvio.tv/assets/nuvio-app-logo-wordmark.webp" alt="Nuvio Enhanced" width="320" />
 
-  <h1>Nuvio Enhanced 2</h1> 
+  <h1>Nuvio Enhanced 2.0</h1> 
 
   <p>
     An advanced, feature-packed fork of <a href="https://github.com/NuvioMedia/NuvioMobile">Nuvio Mobile</a> that keeps pace with upstream while introducing a pure <b>CloudStream 3 (CS3)</b> & <b>Stremio</b> engine, out-of-the-box tracking integrations, hardware volume boost, and deep platform polish.
