@@ -67,6 +67,20 @@ jobs:
             echo "org.gradle.parallel=false"
             echo "org.gradle.workers.max=1"
             echo "kotlin.native.disableCompilerDaemon=true"
+            # Hand-ported from upstream e0f7dfc8 (skip-both profile): the iOS
+            # Release link OOMs in DevirtualizationAnalysis on the hosted
+            # runner (run 41326358016). Skipping the two memory-hungry
+            # Kotlin/Native phases avoids the OOM; no workflow input exists
+            # here, so the skip-both default always applies.
+            case "${NUVIO_IOS_PHASE_PROFILE:-skip-both}" in
+              full) NUVIO_IOS_DISABLE_PHASES="" ;;
+              skip-static-init) NUVIO_IOS_DISABLE_PHASES="RemoveRedundantCallsToStaticInitializersPhase" ;;
+              skip-devirtualization) NUVIO_IOS_DISABLE_PHASES="DevirtualizationAnalysis,Devirtualization" ;;
+              *) NUVIO_IOS_DISABLE_PHASES="DevirtualizationAnalysis,Devirtualization,RemoveRedundantCallsToStaticInitializersPhase" ;;
+            esac
+            if [ -n "${NUVIO_IOS_DISABLE_PHASES}" ]; then
+              echo "nuvio.ios.releaseDisablePhases=${NUVIO_IOS_DISABLE_PHASES}"
+            fi
           } >> "${gradle_user_home}/gradle.properties"
           cat "${gradle_user_home}/gradle.properties"
 

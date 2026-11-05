@@ -245,6 +245,12 @@ val appVersionConfigFile = rootProject.file("iosApp/Configuration/Version.xcconf
 val releaseAppVersionName = providers.gradleProperty("nuvio.app.versionName").orNull
     ?: readXcconfigValue(appVersionConfigFile, "MARKETING_VERSION")
     ?: error("MARKETING_VERSION is missing from ${appVersionConfigFile.path}")
+// Hand-ported from upstream e0f7dfc8: the iOS Release link OOMs in
+// DevirtualizationAnalysis on the hosted runner (run 41326358016). The sync
+// skips this file (protected path), so the upstream fix never landed here.
+val iosReleaseDisabledPhases = providers.gradleProperty("nuvio.ios.releaseDisablePhases").orNull
+    ?.trim()
+    ?.takeIf { it.isNotEmpty() }
 val releaseAppVersionCode = readXcconfigValue(appVersionConfigFile, "CURRENT_PROJECT_VERSION")
     ?.toIntOrNull()
     ?: error("CURRENT_PROJECT_VERSION is missing or invalid in ${appVersionConfigFile.path}")
@@ -422,6 +428,11 @@ kotlin {
             baseName = "ComposeApp"
             isStatic = true
             freeCompilerArgs += listOf("-Xbinary=bundleId=$iosFrameworkBundleId")
+            iosReleaseDisabledPhases?.let { phases ->
+                if (buildType == org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType.RELEASE) {
+                    freeCompilerArgs += listOf("-Xdisable-phases=$phases")
+                }
+            }
 
             // Biometric authentication and the profile PIN cache use Apple Security,
             // LocalAuthentication, and CoreFoundation APIs on every iOS distribution.
