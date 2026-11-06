@@ -400,6 +400,8 @@ private fun ExoPlayerSurface(
             }
             .let { factory -> aiostreamsAss?.extractors(factory) ?: factory }
     }
+    val networkBytesRead = remember(playerSourceKey) { AtomicLong(0L) }
+    val networkSpeedSampler = remember(playerSourceKey) { ByteRateSampler() }
     val dataSourceFactory = remember(
         context,
         sourceUrl,
@@ -427,7 +429,7 @@ private fun ExoPlayerSurface(
                     }
                     .toSet()
             },
-        )
+        ).countingNetworkBytes(networkBytesRead)
     }
 
     LaunchedEffect(playerSourceKey) {
@@ -1061,6 +1063,9 @@ private fun ExoPlayerSurface(
                 override val playbackEngine = AndroidPlaybackEngine.ExoPlayer
 
                 private var lastAppliedVolume: Float? = null
+
+                override fun networkSpeedBytesPerSecond(): Long? =
+                    networkSpeedSampler.sample(networkBytesRead.get(), SystemClock.elapsedRealtime())
 
                 private val audioTrackCache = AudioTrackCache()
                 override fun play() {
@@ -2077,6 +2082,9 @@ private class NuvioLibmpvView(
         }
     }
 
+    @Volatile
+    private var cacheSpeedBytesPerSecond: Long? = null
+
     private var cachedChapters: List<PlayerChapter> = emptyList()
     private var cachedChaptersKey: String? = null
 
@@ -2087,6 +2095,9 @@ private class NuvioLibmpvView(
         val ended = mpv.getPropertyBoolean("eof-reached") ?: false
         val seeking = mpv.getPropertyBoolean("seeking") ?: false
         val cacheBufferingState = mpv.getPropertyInt("cache-buffering-state")
+        cacheSpeedBytesPerSecond = mpv.getPropertyInt("cache-speed")
+            ?.takeIf { it >= 0 }
+            ?.toLong()
         val durationMs = mpv.getPropertyDouble("duration").toMillis()
         val positionMs = mpv.getPropertyDouble("time-pos").toMillis()
         val cachePositionMs = mpv.getPropertyDouble("demuxer-cache-time").toMillis()
@@ -2326,6 +2337,8 @@ private class NuvioLibmpvView(
     ): PlayerEngineController =
         object : PlayerEngineController {
             override val playbackEngine = AndroidPlaybackEngine.Libmpv
+
+            override fun networkSpeedBytesPerSecond(): Long? = cacheSpeedBytesPerSecond
 
             private var lastAppliedVolume: Float? = null
             private var lastLoggedAudioTracks: String? = null
