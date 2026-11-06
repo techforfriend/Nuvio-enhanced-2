@@ -26,6 +26,10 @@ fun disposeRoute(route: AppRoute) {
     disposeRouteResources(route)
 }
 
+fun setPlayerParkedInPictureInPicture(parked: Boolean) {
+    com.nuvio.app.core.ui.background.AppBackgroundRepository.setPlayerParked(parked)
+}
+
 @OptIn(ExperimentalCoilApi::class)
 @Composable
 @Preview
