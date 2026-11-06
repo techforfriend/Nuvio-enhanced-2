@@ -732,6 +732,22 @@ object TmdbMetadataService {
         )
     }
 
+    suspend fun prefetchEnrichment(
+        type: String,
+        id: String,
+        settings: TmdbSettings,
+    ) {
+        if (!settings.enabled) return
+        val tmdbType = normalizeMetaType(type)
+        val tmdbId = TmdbService.ensureTmdbId(id, tmdbType) ?: return
+        fetchEnrichment(
+            tmdbId = tmdbId,
+            mediaType = tmdbType,
+            language = settings.language,
+            settings = settings,
+        )
+    }
+
     suspend fun fetchStandaloneMeta(
         type: String,
         id: String,
