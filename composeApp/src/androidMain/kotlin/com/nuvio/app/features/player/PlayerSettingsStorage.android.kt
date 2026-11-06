@@ -64,6 +64,13 @@ actual object PlayerSettingsStorage {
     private const val androidPlaybackEngineKey = "android_playback_engine"
     private const val autoSwitchPlaybackEngineOnErrorKey = "auto_switch_playback_engine_on_error"
     private const val androidExoChaptersEnabledKey = "android_exo_chapters_enabled"
+    private const val rememberAudioDelayPerDeviceKey = "remember_audio_delay_per_device"
+    private const val persistAudioAmplificationKey = "persist_audio_amplification"
+    private const val audioAmplificationDbKey = "audio_amplification_db"
+    private const val downmixEnabledKey = "downmix_enabled"
+    private const val audioOutputChannelsKey = "audio_output_channels"
+    private const val maintainOriginalAudioOnDownmixKey = "maintain_original_audio_on_downmix"
+    private const val centerMixLevelDbKey = "center_mix_level_db"
     private const val nightModeButtonEnabledKey = "night_mode_button_enabled"
     private const val nightModeEnabledKey = "night_mode_enabled"
     private const val legacyBottomButtonsKey = "legacy_player_bottom_buttons"
@@ -893,6 +900,118 @@ actual object PlayerSettingsStorage {
         preferences
             ?.edit()
             ?.putBoolean(ProfileScopedKey.of(androidExoChaptersEnabledKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadRememberAudioDelayPerDevice(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(rememberAudioDelayPerDeviceKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, false)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveRememberAudioDelayPerDevice(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(rememberAudioDelayPerDeviceKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadPersistAudioAmplification(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(persistAudioAmplificationKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, false)
+            } else {
+                null
+            }
+        }
+
+    actual fun savePersistAudioAmplification(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(persistAudioAmplificationKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadAudioAmplificationDb(): Int? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(audioAmplificationDbKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getInt(key, 0)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveAudioAmplificationDb(db: Int) {
+        preferences
+            ?.edit()
+            ?.putInt(ProfileScopedKey.of(audioAmplificationDbKey), db)
+            ?.apply()
+    }
+
+    actual fun loadDownmixEnabled(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(downmixEnabledKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, false)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveDownmixEnabled(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(downmixEnabledKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadAudioOutputChannels(): String? =
+        preferences?.getString(ProfileScopedKey.of(audioOutputChannelsKey), null)
+
+    actual fun saveAudioOutputChannels(value: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(audioOutputChannelsKey), value)
+            ?.apply()
+    }
+
+    actual fun loadMaintainOriginalAudioOnDownmix(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(maintainOriginalAudioOnDownmixKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, false)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveMaintainOriginalAudioOnDownmix(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(maintainOriginalAudioOnDownmixKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadCenterMixLevelDb(): Int? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(centerMixLevelDbKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getInt(key, 0)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveCenterMixLevelDb(db: Int) {
+        preferences
+            ?.edit()
+            ?.putInt(ProfileScopedKey.of(centerMixLevelDbKey), db)
             ?.apply()
     }
 

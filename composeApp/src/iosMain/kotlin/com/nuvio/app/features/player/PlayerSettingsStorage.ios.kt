@@ -62,6 +62,13 @@ actual object PlayerSettingsStorage {
     private const val androidPlaybackEngineKey = "android_playback_engine"
     private const val autoSwitchPlaybackEngineOnErrorKey = "auto_switch_playback_engine_on_error"
     private const val androidExoChaptersEnabledKey = "android_exo_chapters_enabled"
+    private const val rememberAudioDelayPerDeviceKey = "remember_audio_delay_per_device"
+    private const val persistAudioAmplificationKey = "persist_audio_amplification"
+    private const val audioAmplificationDbKey = "audio_amplification_db"
+    private const val downmixEnabledKey = "downmix_enabled"
+    private const val audioOutputChannelsKey = "audio_output_channels"
+    private const val maintainOriginalAudioOnDownmixKey = "maintain_original_audio_on_downmix"
+    private const val centerMixLevelDbKey = "center_mix_level_db"
     private const val nightModeButtonEnabledKey = "night_mode_button_enabled"
     private const val nightModeEnabledKey = "night_mode_enabled"
     private const val legacyBottomButtonsKey = "legacy_player_bottom_buttons"
@@ -670,6 +677,49 @@ actual object PlayerSettingsStorage {
 
     actual fun saveAndroidExoChaptersEnabled(enabled: Boolean) {
         saveBoolean(androidExoChaptersEnabledKey, enabled)
+    }
+
+    actual fun loadRememberAudioDelayPerDevice(): Boolean? = loadBoolean(rememberAudioDelayPerDeviceKey)
+
+    actual fun saveRememberAudioDelayPerDevice(enabled: Boolean) {
+        saveBoolean(rememberAudioDelayPerDeviceKey, enabled)
+    }
+
+    actual fun loadPersistAudioAmplification(): Boolean? = loadBoolean(persistAudioAmplificationKey)
+
+    actual fun savePersistAudioAmplification(enabled: Boolean) {
+        saveBoolean(persistAudioAmplificationKey, enabled)
+    }
+
+    actual fun loadAudioAmplificationDb(): Int? = loadInt(audioAmplificationDbKey)
+
+    actual fun saveAudioAmplificationDb(db: Int) {
+        saveInt(audioAmplificationDbKey, db)
+    }
+
+    actual fun loadDownmixEnabled(): Boolean? = loadBoolean(downmixEnabledKey)
+
+    actual fun saveDownmixEnabled(enabled: Boolean) {
+        saveBoolean(downmixEnabledKey, enabled)
+    }
+
+    actual fun loadAudioOutputChannels(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(audioOutputChannelsKey))
+
+    actual fun saveAudioOutputChannels(value: String) {
+        NSUserDefaults.standardUserDefaults.setObject(value, forKey = ProfileScopedKey.of(audioOutputChannelsKey))
+    }
+
+    actual fun loadMaintainOriginalAudioOnDownmix(): Boolean? = loadBoolean(maintainOriginalAudioOnDownmixKey)
+
+    actual fun saveMaintainOriginalAudioOnDownmix(enabled: Boolean) {
+        saveBoolean(maintainOriginalAudioOnDownmixKey, enabled)
+    }
+
+    actual fun loadCenterMixLevelDb(): Int? = loadInt(centerMixLevelDbKey)
+
+    actual fun saveCenterMixLevelDb(db: Int) {
+        saveInt(centerMixLevelDbKey, db)
     }
 
     actual fun loadNightModeButtonEnabled(): Boolean? = loadBoolean(nightModeButtonEnabledKey)

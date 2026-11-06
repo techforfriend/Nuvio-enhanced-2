@@ -74,6 +74,7 @@ import com.nuvio.app.core.ui.LocalVerticalBarPadding
 fun TabletDetailBackdrop(
     meta: MetaDetails,
     cinematic: Boolean,
+    backdropImage: ImageBitmap?,
     scrollOffsetPx: () -> Float,
     heroHeightPx: () -> Int,
     heroTrailerSourceUrl: String?,

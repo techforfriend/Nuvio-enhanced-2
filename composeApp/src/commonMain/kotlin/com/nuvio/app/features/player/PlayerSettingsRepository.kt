@@ -125,6 +125,13 @@ data class PlayerSettingsUiState(
     val iosSaturation: Int = 0,
     val iosGamma: Int = 0,
     val androidExoChaptersEnabled: Boolean = false,
+    val rememberAudioDelayPerDevice: Boolean = true,
+    val persistAudioAmplification: Boolean = false,
+    val audioAmplificationDb: Int = 0,
+    val downmixEnabled: Boolean = false,
+    val audioOutputChannels: AudioOutputChannels = AudioOutputChannels.default,
+    val maintainOriginalAudioOnDownmix: Boolean = true,
+    val centerMixLevelDb: Int = 0,
     val legacyBottomButtons: LegacyBottomButtonLayout = LegacyPlayerButtonLayouts.DefaultBottom,
     val legacyTopButtons: LegacyTopButtonLayout = LegacyPlayerButtonLayouts.DefaultTop,
     val nightModeButtonEnabled: Boolean = true,
@@ -215,6 +222,13 @@ object PlayerSettingsRepository {
     private var libassRenderScale = "FULL"
     private var libassRenderMode = "OVERLAY"
     private var androidExoChaptersEnabled = false
+    private var rememberAudioDelayPerDevice = true
+    private var persistAudioAmplification = false
+    private var audioAmplificationDb = 0
+    private var downmixEnabled = false
+    private var audioOutputChannels = AudioOutputChannels.default
+    private var maintainOriginalAudioOnDownmix = true
+    private var centerMixLevelDb = 0
     private var nightModeButtonEnabled = true
     private var nightModeEnabled = false
     private var iosVideoOutputPreset = IosVideoOutputPreset.NativeEdr
@@ -323,6 +337,13 @@ object PlayerSettingsRepository {
         libassRenderScale = "FULL"
         libassRenderMode = "OVERLAY"
         androidExoChaptersEnabled = false
+        rememberAudioDelayPerDevice = true
+        persistAudioAmplification = false
+        audioAmplificationDb = 0
+        downmixEnabled = false
+        audioOutputChannels = AudioOutputChannels.default
+        maintainOriginalAudioOnDownmix = true
+        centerMixLevelDb = 0
         nightModeButtonEnabled = true
         nightModeEnabled = false
         iosVideoOutputPreset = IosVideoOutputPreset.NativeEdr
@@ -489,6 +510,15 @@ object PlayerSettingsRepository {
         libassRenderScale = PlayerSettingsStorage.loadLibassRenderScale() ?: "FULL"
         libassRenderMode = PlayerSettingsStorage.loadLibassRenderMode() ?: "OVERLAY"
         androidExoChaptersEnabled = PlayerSettingsStorage.loadAndroidExoChaptersEnabled() ?: false
+        rememberAudioDelayPerDevice = PlayerSettingsStorage.loadRememberAudioDelayPerDevice() ?: true
+        persistAudioAmplification = PlayerSettingsStorage.loadPersistAudioAmplification() ?: false
+        audioAmplificationDb = (PlayerSettingsStorage.loadAudioAmplificationDb() ?: 0)
+            .coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
+        downmixEnabled = PlayerSettingsStorage.loadDownmixEnabled() ?: false
+        audioOutputChannels = AudioOutputChannels.fromSettingValue(PlayerSettingsStorage.loadAudioOutputChannels())
+        maintainOriginalAudioOnDownmix = PlayerSettingsStorage.loadMaintainOriginalAudioOnDownmix() ?: true
+        centerMixLevelDb = (PlayerSettingsStorage.loadCenterMixLevelDb() ?: 0)
+            .coerceIn(CENTER_MIX_LEVEL_MIN_DB, CENTER_MIX_LEVEL_MAX_DB)
         nightModeButtonEnabled = PlayerSettingsStorage.loadNightModeButtonEnabled() ?: true
         nightModeEnabled = PlayerSettingsStorage.loadNightModeEnabled() ?: false
         iosVideoOutputPreset = PlayerSettingsStorage.loadIosVideoOutputPreset()
@@ -877,6 +907,64 @@ object PlayerSettingsRepository {
         androidExoChaptersEnabled = enabled
         publish()
         PlayerSettingsStorage.saveAndroidExoChaptersEnabled(enabled)
+    }
+
+    fun setRememberAudioDelayPerDevice(enabled: Boolean) {
+        ensureLoaded()
+        if (rememberAudioDelayPerDevice == enabled) return
+        rememberAudioDelayPerDevice = enabled
+        publish()
+        PlayerSettingsStorage.saveRememberAudioDelayPerDevice(enabled)
+    }
+
+    fun setPersistAudioAmplification(enabled: Boolean) {
+        ensureLoaded()
+        if (persistAudioAmplification == enabled) return
+        persistAudioAmplification = enabled
+        publish()
+        PlayerSettingsStorage.savePersistAudioAmplification(enabled)
+    }
+
+    fun setAudioAmplificationDb(db: Int) {
+        ensureLoaded()
+        val clamped = db.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
+        if (audioAmplificationDb == clamped) return
+        audioAmplificationDb = clamped
+        publish()
+        PlayerSettingsStorage.saveAudioAmplificationDb(clamped)
+    }
+
+    fun setDownmixEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (downmixEnabled == enabled) return
+        downmixEnabled = enabled
+        publish()
+        PlayerSettingsStorage.saveDownmixEnabled(enabled)
+    }
+
+    fun setAudioOutputChannels(channels: AudioOutputChannels) {
+        ensureLoaded()
+        if (audioOutputChannels == channels) return
+        audioOutputChannels = channels
+        publish()
+        PlayerSettingsStorage.saveAudioOutputChannels(channels.settingValue)
+    }
+
+    fun setMaintainOriginalAudioOnDownmix(enabled: Boolean) {
+        ensureLoaded()
+        if (maintainOriginalAudioOnDownmix == enabled) return
+        maintainOriginalAudioOnDownmix = enabled
+        publish()
+        PlayerSettingsStorage.saveMaintainOriginalAudioOnDownmix(enabled)
+    }
+
+    fun setCenterMixLevelDb(db: Int) {
+        ensureLoaded()
+        val clamped = db.coerceIn(CENTER_MIX_LEVEL_MIN_DB, CENTER_MIX_LEVEL_MAX_DB)
+        if (centerMixLevelDb == clamped) return
+        centerMixLevelDb = clamped
+        publish()
+        PlayerSettingsStorage.saveCenterMixLevelDb(clamped)
     }
 
     fun setNightModeButtonEnabled(enabled: Boolean) {
@@ -1402,6 +1490,13 @@ object PlayerSettingsRepository {
             streamReuseLastLinkCacheHours = streamReuseLastLinkCacheHours,
             androidPlaybackEngine = androidPlaybackEngine,
             androidExoChaptersEnabled = androidExoChaptersEnabled,
+            rememberAudioDelayPerDevice = rememberAudioDelayPerDevice,
+            persistAudioAmplification = persistAudioAmplification,
+            audioAmplificationDb = audioAmplificationDb,
+            downmixEnabled = downmixEnabled,
+            audioOutputChannels = audioOutputChannels,
+            maintainOriginalAudioOnDownmix = maintainOriginalAudioOnDownmix,
+            centerMixLevelDb = centerMixLevelDb,
             nightModeButtonEnabled = nightModeButtonEnabled,
             nightModeEnabled = nightModeEnabled,
             autoSwitchPlaybackEngineOnError = autoSwitchPlaybackEngineOnError,
