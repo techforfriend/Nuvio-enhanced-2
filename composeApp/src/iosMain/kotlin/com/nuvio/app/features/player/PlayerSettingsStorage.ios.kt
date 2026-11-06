@@ -21,6 +21,7 @@ actual object PlayerSettingsStorage {
     private const val playbackBrightnessKey = "playback_brightness"
     private const val useLegacyPlayerLayoutKey = "use_legacy_player_layout"
     private const val toolbarLayoutKey = "toolbar_layout"
+    private const val showPlayerTitleLogoKey = "show_player_title_logo"
     private const val showLoadingOverlayKey = "show_loading_overlay"
     private const val showPlayerLoadingStatusKey = "show_player_loading_status"
     private const val pauseOverlayEnabledKey = "pause_overlay_enabled"
@@ -33,6 +34,8 @@ actual object PlayerSettingsStorage {
     private const val skipIntroOffsetSecondsKey = "skip_intro_offset_seconds"
     private const val touchGesturesEnabledKey = "touch_gestures_enabled"
     private const val swipeToSeekEnabledKey = "swipe_to_seek_enabled"
+    private const val playerControlGlassEnabledKey = "player_glass_effect_enabled"
+    private const val showSkipButtonsKey = "player_show_skip_buttons"
     private const val seekPreviewEnabledKey = "seek_preview_enabled"
     private const val movieRecommendationsEnabledKey = "movie_recommendations_enabled"
     private const val autoShowSubtitlesOnRewindEnabledKey = "auto_show_subtitles_on_rewind_enabled"
@@ -124,6 +127,7 @@ actual object PlayerSettingsStorage {
     private const val iosSaturationKey = "ios_saturation"
     private const val iosGammaKey = "ios_gamma"
     private val syncKeys = listOf(
+        showPlayerTitleLogoKey,
         showLoadingOverlayKey,
         showPlayerLoadingStatusKey,
         pauseOverlayEnabledKey,
@@ -239,6 +243,16 @@ actual object PlayerSettingsStorage {
 
     private fun saveInt(keyBase: String, value: Int) {
         NSUserDefaults.standardUserDefaults.setInteger(value.toLong(), forKey = ProfileScopedKey.of(keyBase))
+    }
+
+    actual fun loadShowPlayerTitleLogo(): Boolean? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(showPlayerTitleLogoKey)
+        return if (defaults.objectForKey(key) != null) defaults.boolForKey(key) else null
+    }
+
+    actual fun saveShowPlayerTitleLogo(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(showPlayerTitleLogoKey))
     }
 
     actual fun loadShowLoadingOverlay(): Boolean? {
@@ -387,6 +401,18 @@ actual object PlayerSettingsStorage {
 
     actual fun saveSwipeToSeekEnabled(enabled: Boolean) {
         saveBoolean(swipeToSeekEnabledKey, enabled)
+    }
+
+    actual fun loadPlayerControlGlassEnabled(): Boolean? = loadBoolean(playerControlGlassEnabledKey)
+
+    actual fun savePlayerControlGlassEnabled(enabled: Boolean) {
+        saveBoolean(playerControlGlassEnabledKey, enabled)
+    }
+
+    actual fun loadShowSkipButtons(): Boolean? = loadBoolean(showSkipButtonsKey)
+
+    actual fun saveShowSkipButtons(enabled: Boolean) {
+        saveBoolean(showSkipButtonsKey, enabled)
     }
 
     actual fun loadSeekPreviewEnabled(): Boolean? = loadBoolean(seekPreviewEnabledKey)

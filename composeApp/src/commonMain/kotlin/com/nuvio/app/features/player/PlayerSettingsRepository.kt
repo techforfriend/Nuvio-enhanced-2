@@ -34,6 +34,7 @@ fun snapToAllowedTimeout(value: Int): Int {
 
 data class PlayerSettingsUiState(
     val useLegacyPlayerLayout: Boolean = false,
+    val showPlayerTitleLogo: Boolean = false,
     val toolbarLayout: PlayerToolbarLayout = PlayerToolbarLayout.Default,
     val showLoadingOverlay: Boolean = true,
     val showPlayerLoadingStatus: Boolean = true,
@@ -46,6 +47,8 @@ data class PlayerSettingsUiState(
     val skipForwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
     val touchGesturesEnabled: Boolean = true,
     val swipeToSeekEnabled: Boolean = true,
+    val playerControlGlassEnabled: Boolean = true,
+    val showSkipButtons: Boolean = true,
     val seekPreviewEnabled: Boolean = true,
     val movieRecommendationsEnabled: Boolean = true,
     val autoShowSubtitlesOnRewindEnabled: Boolean = true,
@@ -147,6 +150,7 @@ object PlayerSettingsRepository {
     private var toolbarLayout = PlayerToolbarLayout.Default
     private var legacyBottomButtons = LegacyPlayerButtonLayouts.DefaultBottom
     private var legacyTopButtons = LegacyPlayerButtonLayouts.DefaultTop
+    private var showPlayerTitleLogo = false
     private var showLoadingOverlay = true
     private var showPlayerLoadingStatus = true
     private var pauseOverlayEnabled = true
@@ -158,6 +162,8 @@ object PlayerSettingsRepository {
     private var skipForwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
     private var touchGesturesEnabled = true
     private var swipeToSeekEnabled = true
+    private var playerControlGlassEnabled = true
+    private var showSkipButtons = true
     private var seekPreviewEnabled = true
     private var movieRecommendationsEnabled = true
     private var autoShowSubtitlesOnRewindEnabled = true
@@ -262,6 +268,7 @@ object PlayerSettingsRepository {
         toolbarLayout = PlayerToolbarLayout.Default
         legacyBottomButtons = LegacyPlayerButtonLayouts.DefaultBottom
         legacyTopButtons = LegacyPlayerButtonLayouts.DefaultTop
+        showPlayerTitleLogo = false
         showLoadingOverlay = true
         showPlayerLoadingStatus = true
         pauseOverlayEnabled = true
@@ -273,6 +280,8 @@ object PlayerSettingsRepository {
         skipForwardSeconds = PLAYER_SKIP_SECONDS_DEFAULT
         touchGesturesEnabled = true
         swipeToSeekEnabled = true
+        playerControlGlassEnabled = true
+        showSkipButtons = true
         seekPreviewEnabled = true
         movieRecommendationsEnabled = true
         autoShowSubtitlesOnRewindEnabled = true
@@ -370,6 +379,7 @@ object PlayerSettingsRepository {
         toolbarLayout = PlayerToolbarLayout.decode(PlayerSettingsStorage.loadToolbarLayout())
         legacyBottomButtons = LegacyPlayerButtonLayouts.decodeBottom(PlayerSettingsStorage.loadLegacyBottomButtons())
         legacyTopButtons = LegacyPlayerButtonLayouts.decodeTop(PlayerSettingsStorage.loadLegacyTopButtons())
+        showPlayerTitleLogo = PlayerSettingsStorage.loadShowPlayerTitleLogo() ?: false
         showLoadingOverlay = PlayerSettingsStorage.loadShowLoadingOverlay() ?: true
         showPlayerLoadingStatus = PlayerSettingsStorage.loadShowPlayerLoadingStatus() ?: true
         pauseOverlayEnabled = PlayerSettingsStorage.loadPauseOverlayEnabled() ?: true
@@ -383,6 +393,8 @@ object PlayerSettingsRepository {
         skipForwardSeconds = normalizePlayerSkipSeconds(PlayerSettingsStorage.loadSkipForwardSeconds())
         touchGesturesEnabled = PlayerSettingsStorage.loadTouchGesturesEnabled() ?: true
         swipeToSeekEnabled = PlayerSettingsStorage.loadSwipeToSeekEnabled() ?: true
+        playerControlGlassEnabled = PlayerSettingsStorage.loadPlayerControlGlassEnabled() ?: true
+        showSkipButtons = PlayerSettingsStorage.loadShowSkipButtons() ?: true
         seekPreviewEnabled = PlayerSettingsStorage.loadSeekPreviewEnabled() ?: true
         movieRecommendationsEnabled = PlayerSettingsStorage.loadMovieRecommendationsEnabled() ?: true
         autoShowSubtitlesOnRewindEnabled = PlayerSettingsStorage.loadAutoShowSubtitlesOnRewindEnabled() ?: true
@@ -565,6 +577,14 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveUseLegacyPlayerLayout(enabled)
     }
 
+    fun setShowPlayerTitleLogo(enabled: Boolean) {
+        ensureLoaded()
+        if (showPlayerTitleLogo == enabled) return
+        showPlayerTitleLogo = enabled
+        publish()
+        PlayerSettingsStorage.saveShowPlayerTitleLogo(enabled)
+    }
+
     fun setShowLoadingOverlay(enabled: Boolean) {
         ensureLoaded()
         if (showLoadingOverlay == enabled) return
@@ -654,6 +674,22 @@ object PlayerSettingsRepository {
         swipeToSeekEnabled = enabled
         publish()
         PlayerSettingsStorage.saveSwipeToSeekEnabled(enabled)
+    }
+
+    fun setPlayerControlGlassEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (playerControlGlassEnabled == enabled) return
+        playerControlGlassEnabled = enabled
+        publish()
+        PlayerSettingsStorage.savePlayerControlGlassEnabled(enabled)
+    }
+
+    fun setShowSkipButtons(enabled: Boolean) {
+        ensureLoaded()
+        if (showSkipButtons == enabled) return
+        showSkipButtons = enabled
+        publish()
+        PlayerSettingsStorage.saveShowSkipButtons(enabled)
     }
 
     fun setSeekPreviewEnabled(enabled: Boolean) {
@@ -1459,6 +1495,7 @@ object PlayerSettingsRepository {
     private fun publish() {
         _uiState.value = PlayerSettingsUiState(
             useLegacyPlayerLayout = useLegacyPlayerLayout,
+            showPlayerTitleLogo = showPlayerTitleLogo,
             toolbarLayout = toolbarLayout,
             legacyBottomButtons = legacyBottomButtons,
             legacyTopButtons = legacyTopButtons,
@@ -1473,6 +1510,8 @@ object PlayerSettingsRepository {
             skipForwardSeconds = skipForwardSeconds,
             touchGesturesEnabled = touchGesturesEnabled,
             swipeToSeekEnabled = swipeToSeekEnabled,
+            playerControlGlassEnabled = playerControlGlassEnabled,
+            showSkipButtons = showSkipButtons,
             seekPreviewEnabled = seekPreviewEnabled,
             movieRecommendationsEnabled = movieRecommendationsEnabled,
             autoShowSubtitlesOnRewindEnabled = autoShowSubtitlesOnRewindEnabled,

@@ -159,6 +159,7 @@ internal fun PlayerControlsShell(
     onSeekForward: () -> Unit,
     skipBackwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
     skipForwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
+    showSkipButtons: Boolean = true,
     onResizeModeClick: () -> Unit,
     onSpeedClick: (() -> Unit)? = null,
     speedPickerVisible: Boolean = false,
@@ -194,6 +195,8 @@ internal fun PlayerControlsShell(
     modifier: Modifier = Modifier,
     seekPreview: SeekPreviewController? = null,
     onTimelineTouchChange: (Boolean) -> Unit = {},
+    titleLogo: String? = null,
+    showTitleLogo: Boolean = false,
 ) {
     val density = LocalDensity.current
     var timelineHeight by remember { mutableStateOf(0.dp) }
@@ -265,6 +268,8 @@ internal fun PlayerControlsShell(
             if (useLegacyLayout) {
                 PlayerHeader(
                     title = title,
+                    titleLogo = titleLogo,
+                    showTitleLogo = showTitleLogo,
                     streamTitle = streamTitle,
                     providerName = providerName,
                     seasonNumber = seasonNumber,
@@ -362,6 +367,7 @@ internal fun PlayerControlsShell(
                         metrics = metrics,
                         skipBackwardSeconds = skipBackwardSeconds,
                         skipForwardSeconds = skipForwardSeconds,
+                        showSkipButtons = showSkipButtons,
                         onSeekBack = {
                             if (!useLegacyLayout) onInteraction()
                             onSeekBack()
@@ -426,6 +432,8 @@ internal fun PlayerControlsShell(
                     if (!hideDetails) {
                         PlayerTimelineDetails(
                             title = title,
+                            titleLogo = titleLogo,
+                            showTitleLogo = showTitleLogo,
                             seasonNumber = seasonNumber,
                             episodeNumber = episodeNumber,
                             episodeTitle = episodeTitle,
@@ -520,6 +528,8 @@ internal fun PlayerControlsShell(
 @Composable
 private fun PlayerHeader(
     title: String,
+    titleLogo: String? = null,
+    showTitleLogo: Boolean = false,
     streamTitle: String,
     providerName: String,
     seasonNumber: Int?,
@@ -576,16 +586,19 @@ private fun PlayerHeader(
                     modifier = Modifier.graphicsLayer { alpha = metadataAlpha },
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Text(
-                        text = title,
-                        style = typeScale.titleLg.copy(
+                    PlayerTitleArtwork(
+                        title = title,
+                        logoUrl = titleLogo,
+                        showLogo = showTitleLogo,
+                        textStyle = typeScale.titleLg.copy(
                             fontSize = metrics.titleSize,
                             lineHeight = metrics.titleSize * 1.16f,
                             fontWeight = FontWeight.Bold,
                         ),
-                        color = Color.White,
+                        textColor = Color.White,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                        maxLogoHeight = metrics.titleLogoMaxHeight,
+                        maxLogoWidth = metrics.logoMaxWidth,
                     )
                     if (seasonNumber != null && episodeNumber != null && !episodeTitle.isNullOrBlank()) {
                         val displayEpisodeTitle = localizedEpisodeTitle(episodeTitle, episodeNumber) ?: episodeTitle
@@ -825,13 +838,14 @@ private fun CenterControls(
     modifier: Modifier = Modifier,
     skipBackwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
     skipForwardSeconds: Int = PLAYER_SKIP_SECONDS_DEFAULT,
+    showSkipButtons: Boolean = true,
 ) {
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(metrics.centerGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SideControlButton(
+        if (showSkipButtons) SideControlButton(
             contentDescription = stringResource(Res.string.compose_player_seek_back_seconds, skipBackwardSeconds),
             metrics = metrics,
             onClick = onSeekBack,
@@ -842,7 +856,7 @@ private fun CenterControls(
             metrics = metrics,
             onClick = onTogglePlayback,
         )
-        SideControlButton(
+        if (showSkipButtons) SideControlButton(
             contentDescription = stringResource(Res.string.compose_player_seek_forward_seconds, skipForwardSeconds),
             metrics = metrics,
             onClick = onSeekForward,

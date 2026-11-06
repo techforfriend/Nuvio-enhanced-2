@@ -84,6 +84,8 @@ internal fun PlayerTimelineDetails(
     badges: List<StreamBadge> = emptyList(),
     qualityLabel: String? = null,
     onHeightChanged: (Dp) -> Unit = {},
+    titleLogo: String? = null,
+    showTitleLogo: Boolean = false,
 ) {
     val typeScale = MaterialTheme.nuvioTypeScale
     val density = LocalDensity.current
@@ -101,16 +103,19 @@ internal fun PlayerTimelineDetails(
             .onSizeChanged { size -> onHeightChanged(with(density) { size.height.toDp() }) },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(
-            text = title,
-            style = typeScale.titleLg.copy(
+        PlayerTitleArtwork(
+            title = title,
+            logoUrl = titleLogo,
+            showLogo = showTitleLogo,
+            textStyle = typeScale.titleLg.copy(
                 fontSize = metrics.titleSize,
                 lineHeight = metrics.titleSize * 1.16f,
                 fontWeight = FontWeight.ExtraBold,
             ),
-            color = Color.White,
+            textColor = Color.White,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            maxLogoHeight = metrics.timelineLogoMaxHeight,
+            maxLogoWidth = metrics.logoMaxWidth,
         )
         if (formatPills.isNotEmpty() || badges.isNotEmpty()) {
             Row(

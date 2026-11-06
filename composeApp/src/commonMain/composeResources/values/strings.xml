@@ -1390,8 +1390,14 @@
     <string name="settings_playback_section_subtitle_audio">SUBTITLE AND AUDIO</string>
     <string name="settings_playback_section_subtitle_rendering">SUBTITLE RENDERING</string>
     <string name="settings_playback_selected_count">%1$d selected</string>
+    <string name="settings_playback_control_glass">Glass Backgrounds on Controls</string>
+    <string name="settings_playback_control_glass_description">Show the translucent round and pill backgrounds behind player buttons, time pills and the bottom bar. Turn off for plain icons and text.</string>
     <string name="settings_playback_show_loading_overlay">Loading Overlay</string>
     <string name="settings_playback_show_loading_overlay_description">Show loading screen until first video frame appears.</string>
+    <string name="settings_playback_show_skip_buttons">Show Skip Buttons</string>
+    <string name="settings_playback_show_skip_buttons_description">Show the skip back and skip forward buttons next to play/pause. Double-tap seeking works either way.</string>
+    <string name="settings_playback_show_title_logo">Show title logo</string>
+    <string name="settings_playback_show_title_logo_description">Use title artwork in the player controls when available. The title text remains as a fallback.</string>
     <string name="settings_playback_pause_overlay">Pause Overlay</string>
     <string name="settings_playback_pause_overlay_description">Show details overlay after 5 seconds while paused.</string>
     <string name="settings_playback_parental_guide">Content Warnings</string>
