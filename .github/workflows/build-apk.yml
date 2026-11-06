@@ -77,20 +77,19 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.7
-          name: "Nuvio Enhanced v0.6.7"
+          tag_name: v0.6.8
+          name: "Nuvio Enhanced v0.6.8"
           body: |
-            ## What's New in v0.6.7
-            **Nuvio Enhanced Official Release — version 0.6.7 (version code 150)**
+            ## What's New in v0.6.8
+            **Nuvio Enhanced Official Release — version 0.6.8 (version code 151)**
 
             ### 🆕 New in this version
-            - Glass UI — frosted glass headers, cards and player controls with readable text over your background
-            - Subtitle outline blur — softer subtitle outlines, rendered natively
-            - Picture-in-Picture subtitles — subtitles now show in PiP and in the mini player
-            - Plugin settings fixed — plugin settings pages open correctly again
-            - Private Viewing moved — now under Settings → Tracking
-            - Simkl, WeTrakr and AutoSync fixes — related titles, watched badges and sync reliability
-            - VC-1 fix — VC-1 content no longer plays audio-only
+            - Audio controls in the player (Android) — downmix, center mix, amplification and audio delay
+            - Libmpv failover pinned to the current source; load failures now shown in the player UI
+            - Torrent stall resume — a closed torrent stream resumes at the stalled frame
+            - Live TV: Guide, Sports and On Demand sections, with grid/list toggle, search, recents and filter chips
+            - AutoSync: ASS/SSA subtitles synced via libass, with SRT/VTT fallback when no ASS subtitle fits
+            - Blur updates on streams and details
           draft: false
           prerelease: false
           files: build-apks/*.apk

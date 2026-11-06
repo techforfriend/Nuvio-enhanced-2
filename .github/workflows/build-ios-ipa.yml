@@ -3,7 +3,7 @@ name: Build iOS IPA
 # Separate from build-apk.yml on purpose: Android and iOS each have their
 # own workflow and their own release step. This one builds an UNSIGNED
 # Release IPA (sideload distribution via AltStore/SideStore, same model
-# as upstream) and attaches it to the v0.6.7 GitHub release without
+# as upstream) and attaches it to the v0.6.8 GitHub release without
 # touching the release body. It must stay in the sync script's workflow
 # allowlist or the next auto-sync will delete it.
 
@@ -118,9 +118,9 @@ jobs:
             echo "- Signing: unsigned (AltStore/SideStore sideload)"
           } >> "${GITHUB_STEP_SUMMARY}"
 
-      - name: Attach IPA to the v0.6.7 release
+      - name: Attach IPA to the v0.6.8 release
         # gh release upload only adds/replaces the asset; it never
-        # rewrites the release body, so the corrected v0.6.7 notes stay intact.
+        # rewrites the release body, so the corrected v0.6.8 notes stay intact.
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload v0.6.7 build/ios-ipa/*.ipa --clobber
+        run: gh release upload v0.6.8 build/ios-ipa/*.ipa --clobber
