@@ -1549,7 +1549,12 @@ private fun LibmpvPlayerSurface(
     }
 
     val audioFocus = remember(context) {
-        PlayerAudioFocus(context) { playerViewRef?.setPaused(true) }
+        PlayerAudioFocus(
+            context = context,
+            playWhenReady = { latestPlayWhenReady.value },
+            pause = { playerViewRef?.setPaused(true) },
+            resume = { playerViewRef?.setPaused(false) },
+        )
     }
 
     DisposableEffect(audioFocus) {
