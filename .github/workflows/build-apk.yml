@@ -77,19 +77,23 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.8
-          name: "Nuvio Enhanced v0.6.8"
+          tag_name: v0.6.9
+          name: "Nuvio Enhanced v0.6.9"
           body: |
-            ## What's New in v0.6.8
-            **Nuvio Enhanced Official Release — version 0.6.8 (version code 151)**
+            ## What's New in v0.6.9
+            **Nuvio Enhanced Official Release — version 0.6.9 (version code 152)**
 
             ### 🆕 New in this version
-            - Audio controls in the player (Android) — downmix, center mix, amplification and audio delay
-            - Libmpv failover pinned to the current source; load failures now shown in the player UI
-            - Torrent stall resume — a closed torrent stream resumes at the stalled frame
-            - Live TV: Guide, Sports and On Demand sections, with grid/list toggle, search, recents and filter chips
-            - AutoSync: ASS/SSA subtitles synced via libass, with SRT/VTT fallback when no ASS subtitle fits
-            - Blur updates on streams and details
+            - Ratings — star ratings for titles and episodes, a ratings source picker, and MDBList + SIMKL rating sync
+            - Tamil language support
+            - Cinematic backdrop — floating header over the backdrop, artwork fading into it, see-through chips and buttons, and smart framing for cropped backdrops
+            - Discover header search action; library search box now behind a search action
+            - Live TV header offset matched to the other tabs
+            - Player — playback locks to landscape on tablets; edge swipes left to the system back gesture; keeps playing during calls with YouTube-like audio focus
+            - Skip Intro — better Anime-Skip matching (Kitsu/MAL without an IntroDB mapping, no open-ended segments)
+            - iOS — app background kept while the player is parked in PiP; collection folders draw under the native navigation bar so Glass UI shows through
+            - Smoother scrolling on home, shelves and grids
+            - Translation updates: Vietnamese, Bengali, French
           draft: false
           prerelease: false
           files: build-apks/*.apk
