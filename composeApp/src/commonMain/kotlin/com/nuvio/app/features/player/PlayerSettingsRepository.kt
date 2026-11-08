@@ -69,6 +69,8 @@ data class PlayerSettingsUiState(
     val androidLibmpvVideoOutput: AndroidLibmpvVideoOutput = AndroidLibmpvVideoOutput.GpuNext,
     val androidLibmpvHardwareDecodingEnabled: Boolean = true,
     val androidLibmpvYuv420pEnabled: Boolean = false,
+    val androidAnimeUpscaleEnabled: Boolean = false,
+    val androidAnimeLineSharpenEnabled: Boolean = false,
     val decoderPriority: Int = 1,
     val mapDV7ToHevc: Boolean = false,
     val tunnelingEnabled: Boolean = false,
@@ -184,6 +186,8 @@ object PlayerSettingsRepository {
     private var androidLibmpvVideoOutput = AndroidLibmpvVideoOutput.GpuNext
     private var androidLibmpvHardwareDecodingEnabled = true
     private var androidLibmpvYuv420pEnabled = false
+    private var androidAnimeUpscaleEnabled = false
+    private var androidAnimeLineSharpenEnabled = false
     private var decoderPriority = 1
     private var mapDV7ToHevc = false
     private var tunnelingEnabled = false
@@ -302,6 +306,8 @@ object PlayerSettingsRepository {
         androidLibmpvVideoOutput = AndroidLibmpvVideoOutput.GpuNext
         androidLibmpvHardwareDecodingEnabled = true
         androidLibmpvYuv420pEnabled = false
+        androidAnimeUpscaleEnabled = false
+        androidAnimeLineSharpenEnabled = false
         decoderPriority = 1
         mapDV7ToHevc = false
         tunnelingEnabled = false
@@ -450,6 +456,8 @@ object PlayerSettingsRepository {
             ?: AndroidLibmpvVideoOutput.GpuNext
         androidLibmpvHardwareDecodingEnabled = PlayerSettingsStorage.loadAndroidLibmpvHardwareDecodingEnabled() ?: true
         androidLibmpvYuv420pEnabled = PlayerSettingsStorage.loadAndroidLibmpvYuv420pEnabled() ?: false
+        androidAnimeUpscaleEnabled = PlayerSettingsStorage.loadAndroidAnimeUpscaleEnabled() ?: false
+        androidAnimeLineSharpenEnabled = PlayerSettingsStorage.loadAndroidAnimeLineSharpenEnabled() ?: false
         decoderPriority = PlayerSettingsStorage.loadDecoderPriority() ?: 1
         mapDV7ToHevc = PlayerSettingsStorage.loadMapDV7ToHevc() ?: false
         tunnelingEnabled = PlayerSettingsStorage.loadTunnelingEnabled() ?: false
@@ -879,6 +887,22 @@ object PlayerSettingsRepository {
         androidLibmpvYuv420pEnabled = enabled
         publish()
         PlayerSettingsStorage.saveAndroidLibmpvYuv420pEnabled(enabled)
+    }
+
+    fun setAndroidAnimeUpscaleEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (androidAnimeUpscaleEnabled == enabled) return
+        androidAnimeUpscaleEnabled = enabled
+        publish()
+        PlayerSettingsStorage.saveAndroidAnimeUpscaleEnabled(enabled)
+    }
+
+    fun setAndroidAnimeLineSharpenEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (androidAnimeLineSharpenEnabled == enabled) return
+        androidAnimeLineSharpenEnabled = enabled
+        publish()
+        PlayerSettingsStorage.saveAndroidAnimeLineSharpenEnabled(enabled)
     }
 
     fun setDecoderPriority(priority: Int) {
@@ -1542,6 +1566,8 @@ object PlayerSettingsRepository {
             androidLibmpvVideoOutput = androidLibmpvVideoOutput,
             androidLibmpvHardwareDecodingEnabled = androidLibmpvHardwareDecodingEnabled,
             androidLibmpvYuv420pEnabled = androidLibmpvYuv420pEnabled,
+            androidAnimeUpscaleEnabled = androidAnimeUpscaleEnabled,
+            androidAnimeLineSharpenEnabled = androidAnimeLineSharpenEnabled,
             decoderPriority = decoderPriority,
             mapDV7ToHevc = mapDV7ToHevc,
             tunnelingEnabled = tunnelingEnabled,
