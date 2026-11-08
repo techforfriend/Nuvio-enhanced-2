@@ -2910,13 +2910,6 @@
     <string name="nuvio_enhanced_nuvio_read_title">Nuvio Read</string>
     <string name="nuvio_enhanced_nuvio_read_desc">Group key facts, ratings, and the story into the enhanced overview card on detail pages.</string>
     <string name="nuvio_read_rating_map">Rating Map</string>
-    <string name="nuvio_enhanced_cinematic_detail_header_title">Cinematic detail header</string>
-    <string name="nuvio_enhanced_cinematic_detail_header_desc">Use a horizontal backdrop, production branding, title, and tailored metadata above the existing actions.</string>
-    <string name="nuvio_enhanced_cinematic_header_content_title">Cinematic header content</string>
-    <string name="nuvio_enhanced_cinematic_header_content_desc">Choose production branding, regional streaming availability, or a clean header without logos.</string>
-    <string name="nuvio_enhanced_cinematic_header_content_productions">Productions</string>
-    <string name="nuvio_enhanced_cinematic_header_content_where_to_watch">Where to Watch</string>
-    <string name="nuvio_enhanced_cinematic_header_content_hidden">Hidden</string>
     <string name="details_where_to_watch_attribution">Availability by JustWatch</string>
     <string name="details_where_to_watch_tmdb_required">Enable TMDB to see streaming availability</string>
     <string name="settings_nuvio_enhanced_discord_description">Get support, report issues, and share feedback in the Nuvio Enhanced Discord.</string>

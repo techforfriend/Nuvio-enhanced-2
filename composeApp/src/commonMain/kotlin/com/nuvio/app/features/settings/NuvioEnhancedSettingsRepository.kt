@@ -21,8 +21,6 @@ internal data class NuvioEnhancedSettingsUiState(
     val streamSourcePinningEnabled: Boolean = false,
     val backgroundStreamPrefetchEnabled: Boolean = false,
     val nuvioReadEnabled: Boolean = false,
-    val cinematicDetailHeaderEnabled: Boolean = false,
-    val cinematicHeaderContentMode: CinematicHeaderContentMode = CinematicHeaderContentMode.Productions,
     val heroDisplayMode: NuvioHeroDisplayMode = NuvioHeroDisplayMode.Balanced,
     val heroArtworkSource: NuvioHeroArtworkSource = NuvioHeroArtworkSource.Poster,
     val posterArtHeroEnabled: Boolean = true,
@@ -94,12 +92,6 @@ internal enum class NuvioHeroArtworkSource {
     Poster,
 }
 
-internal enum class CinematicHeaderContentMode {
-    Productions,
-    WhereToWatch,
-    Hidden,
-}
-
 internal enum class NuvioReleaseRadarContentFilter {
     All,
     Episodes,
@@ -124,7 +116,6 @@ internal enum class NuvioEnhancedFeature(
     HeroControlsV2("hero_controls_v2"),
     DetailPresentationControlsV2("detail_presentation_controls_v2"),
     NuvioRead("nuvio_read_v1"),
-    CinematicDetailHeader("cinematic_detail_header_v1"),
     SmartResume2("smart_resume_2"),
     BackupImport("backup_import"),
     FeatureHighlights("feature_highlights"),
@@ -162,7 +153,6 @@ private val latestReleaseFeatureIds = setOf(
     NuvioEnhancedFeature.HeroControlsV2.id,
     NuvioEnhancedFeature.DetailPresentationControlsV2.id,
     NuvioEnhancedFeature.NuvioRead.id,
-    NuvioEnhancedFeature.CinematicDetailHeader.id,
     NuvioEnhancedFeature.AnimeTracking.id,
 )
 
@@ -181,8 +171,6 @@ private data class StoredNuvioEnhancedSettings(
     val streamSourcePinningEnabled: Boolean = false,
     val backgroundStreamPrefetchEnabled: Boolean = false,
     val nuvioReadEnabled: Boolean = false,
-    val cinematicDetailHeaderEnabled: Boolean = false,
-    val cinematicHeaderContentMode: CinematicHeaderContentMode = CinematicHeaderContentMode.Productions,
     val heroDisplayMode: NuvioHeroDisplayMode = NuvioHeroDisplayMode.Balanced,
     val heroArtworkSource: NuvioHeroArtworkSource = NuvioHeroArtworkSource.Poster,
     val posterArtHeroEnabled: Boolean = true,
@@ -269,7 +257,6 @@ internal object NuvioEnhancedSettingsRepository {
                     .let { decoded ->
                         val normalized = decoded.copy(
                             seenFeatureIds = decoded.seenFeatureIds + previouslyReleasedFeatureIds,
-                            nuvioReadEnabled = decoded.nuvioReadEnabled && !decoded.cinematicDetailHeaderEnabled,
                         )
                         if (normalized.heroOverviewUserConfigured) {
                             normalized
@@ -302,7 +289,6 @@ internal object NuvioEnhancedSettingsRepository {
             ?: return
         stored = decoded.copy(
             seenFeatureIds = decoded.seenFeatureIds + previouslyReleasedFeatureIds,
-            nuvioReadEnabled = decoded.nuvioReadEnabled && !decoded.cinematicDetailHeaderEnabled,
         )
         hasLoaded = true
         publish()
@@ -345,21 +331,7 @@ internal object NuvioEnhancedSettingsRepository {
     }
 
     fun setNuvioReadEnabled(enabled: Boolean) = update {
-        copy(
-            nuvioReadEnabled = enabled,
-            cinematicDetailHeaderEnabled = if (enabled) false else cinematicDetailHeaderEnabled,
-        )
-    }
-
-    fun setCinematicDetailHeaderEnabled(enabled: Boolean) = update {
-        copy(
-            cinematicDetailHeaderEnabled = enabled,
-            nuvioReadEnabled = if (enabled) false else nuvioReadEnabled,
-        )
-    }
-
-    fun setCinematicHeaderContentMode(mode: CinematicHeaderContentMode) = update {
-        copy(cinematicHeaderContentMode = mode)
+        copy(nuvioReadEnabled = enabled)
     }
 
     fun setHeroDisplayMode(mode: NuvioHeroDisplayMode) = update {
@@ -561,8 +533,6 @@ internal object NuvioEnhancedSettingsRepository {
             streamSourcePinningEnabled = stored.streamSourcePinningEnabled,
             backgroundStreamPrefetchEnabled = stored.backgroundStreamPrefetchEnabled,
             nuvioReadEnabled = stored.nuvioReadEnabled,
-            cinematicDetailHeaderEnabled = stored.cinematicDetailHeaderEnabled,
-            cinematicHeaderContentMode = stored.cinematicHeaderContentMode,
             heroDisplayMode = stored.heroDisplayMode,
             heroArtworkSource = stored.heroArtworkSource,
             posterArtHeroEnabled = stored.posterArtHeroEnabled,

@@ -2535,6 +2535,7 @@ private fun ConfiguredMetaSections(
                     meta = meta,
                     showOverallRatings = settings.showOverallRatings,
                     isMdbListActive = isMdbListActive,
+                    showRatingMap = settings.showRatingMap,
                     horizontalScrollPadding = horizontalScrollPadding,
                     episodeRatingsVisibility = settings.episodeRatingsVisibility,
                     isEpisodeWatched = { episode ->

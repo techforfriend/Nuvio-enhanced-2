@@ -433,6 +433,11 @@ internal fun LazyListScope.appearanceSettingsContent(
         }
     }
 
+    // Glass UI / app background picker (AppBackgroundSettingsSection). The section
+    // was never attached to any settings list, so glass, background and style
+    // could not be changed anywhere.
+    appBackgroundSettingsItem(isTablet)
+
     item {
         SettingsSection(
             title = stringResource(Res.string.settings_appearance_section_home),

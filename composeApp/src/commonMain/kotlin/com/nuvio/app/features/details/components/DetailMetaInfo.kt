@@ -101,6 +101,7 @@ fun DetailMetaInfo(
     showOverallRatings: Boolean = true,
     isMdbListActive: Boolean = false,
     showNuvioRead: Boolean? = null,
+    showRatingMap: Boolean = true,
     episodeImdbRatings: Map<Pair<Int, Int>, Double> = emptyMap(),
     episodeTmdbRatings: Map<Pair<Int, Int>, Double> = emptyMap(),
     episodeRatingsVisibility: EpisodeRatingsVisibility? = null,
@@ -184,6 +185,7 @@ fun DetailMetaInfo(
                 pills = overviewPills,
                 ratings = meta.externalRatings,
                 description = meta.description,
+                showRatingMap = showRatingMap,
                 episodeRatingsVisibility = episodeRatingsVisibility,
                 isEpisodeWatched = isEpisodeWatched,
                 onEpisodeClick = onEpisodeClick,
@@ -219,6 +221,7 @@ private fun DetailPremiumOverviewCard(
     pills: List<String>,
     ratings: List<MetaExternalRating>,
     description: String?,
+    showRatingMap: Boolean = true,
     episodeRatingsVisibility: EpisodeRatingsVisibility? = null,
     isEpisodeWatched: ((MetaVideo) -> Boolean)? = null,
     onEpisodeClick: ((MetaVideo) -> Unit)? = null,
@@ -226,11 +229,11 @@ private fun DetailPremiumOverviewCard(
     onRatingsClick: () -> Unit,
 ) {
     var ratingMapExpanded by remember { mutableStateOf(false) }
-    // On-demand map: show the arrow row only when a map actually exists
-    // and episode ratings are not hidden. It is deliberately NOT gated by
-    // the global showRatingMap toggle, so the map stays hidden until the
-    // user taps the arrow, instead of loading on every details page.
-    val showRatingMapRow = episodeRatingsVisibility != null &&
+    // On-demand map: show the arrow row only when the global Rating Map
+    // setting is on, a map actually exists, and episode ratings are not
+    // hidden. The map content itself still only composes when expanded.
+    val showRatingMapRow = showRatingMap &&
+        episodeRatingsVisibility != null &&
         episodeRatingsVisibility.showRatings &&
         isEpisodeWatched != null && onEpisodeClick != null && onEpisodeLongPress != null &&
         meta.hasEpisodeRatingMap()
