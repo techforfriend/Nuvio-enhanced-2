@@ -2909,11 +2909,10 @@ final class MPVPlayerBridgeCreator: NSObject, NuvioPlayerBridgeCreator {
     }
 
     func closeParkedPictureInPicture() {
-        let close = {
+        DispatchQueue.main.async {
             guard PlayerPictureInPictureParking.shared.hasParkedPlayer else { return }
             PlayerPictureInPictureParking.shared.closeParked()
         }
-        if Thread.isMainThread { close() } else { DispatchQueue.main.async(execute: close) }
     }
 }
 
