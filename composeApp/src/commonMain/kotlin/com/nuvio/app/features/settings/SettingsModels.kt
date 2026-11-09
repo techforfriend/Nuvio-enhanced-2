@@ -88,11 +88,6 @@ internal enum class SettingsPage(
         category = SettingsCategory.Account,
         parentPage = Root,
     ),
-    SupportersContributors(
-        titleRes = Res.string.compose_settings_page_supporters_contributors,
-        category = SettingsCategory.General,
-        parentPage = Root,
-    ),
     LicensesAttributions(
         titleRes = Res.string.compose_settings_page_licenses_attributions,
         category = SettingsCategory.General,

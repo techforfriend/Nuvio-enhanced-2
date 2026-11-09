@@ -111,7 +111,6 @@ internal fun LazyListScope.settingsRootContent(
     onNuvioEnhancedClick: () -> Unit,
     onIntegrationsClick: () -> Unit,
     onTrackingClick: () -> Unit,
-    onSupportersContributorsClick: () -> Unit,
     onLicensesAttributionsClick: () -> Unit,
     onWhatsNewClick: () -> Unit,
     onCheckForUpdatesClick: (() -> Unit)? = null,
@@ -124,7 +123,6 @@ internal fun LazyListScope.settingsRootContent(
     showGeneralSection: Boolean = true,
     showAboutSection: Boolean = true,
     showAdvancedSection: Boolean = true,
-    showSupportersContributorsPage: Boolean = true,
 ) {
     if (showAccountSection && onSwitchProfileClick != null) {
         item {

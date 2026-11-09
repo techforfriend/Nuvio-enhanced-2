@@ -214,7 +214,6 @@ class SettingsPagesTest {
                 entries = settingsSearchEntries(
                     isTablet = false,
                     pluginsEnabled = true,
-                    supportersContributorsPageEnabled = true,
                     accountDeletionEnabled = true,
                     personalMediaAddonCopyEnabled = true,
                     liquidGlassNativeTabBarSupported = true,

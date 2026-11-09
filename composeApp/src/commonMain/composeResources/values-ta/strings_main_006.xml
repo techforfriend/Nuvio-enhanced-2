@@ -24,7 +24,6 @@
     <string name="compose_settings_page_root">அமைப்புகள்</string>
     <string name="compose_settings_page_streams">ஸ்ட்ரீம்கள்</string>
     <string name="settings_appearance_section_streams">ஸ்ட்ரீம்கள்</string>
-    <string name="compose_settings_page_supporters_contributors">ஆதரவாளர்கள் மற்றும் பங்களிப்பாளர்கள்</string>
     <string name="compose_settings_page_tmdb_enrichment">TMDB கூடுதல் விவரங்கள்</string>
     <string name="compose_settings_page_trakt">Trakt</string>
     <string name="compose_settings_page_tracking">கண்காணிப்பு</string>

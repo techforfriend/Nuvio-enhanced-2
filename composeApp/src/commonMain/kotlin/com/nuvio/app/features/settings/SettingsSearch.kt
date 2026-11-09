@@ -19,7 +19,6 @@ import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Dns
 import androidx.compose.material.icons.rounded.Extension
-import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Language
@@ -85,7 +84,6 @@ internal data class SettingsSearchEntry(
 internal fun settingsSearchEntries(
     isTablet: Boolean,
     pluginsEnabled: Boolean,
-    supportersContributorsPageEnabled: Boolean,
     accountDeletionEnabled: Boolean,
     personalMediaAddonCopyEnabled: Boolean,
     liquidGlassNativeTabBarSupported: Boolean,
@@ -108,7 +106,6 @@ internal fun settingsSearchEntries(
     val streamsPage = stringResource(Res.string.compose_settings_page_streams)
     val integrationsPage = stringResource(Res.string.compose_settings_page_integrations)
     val notificationsPage = stringResource(Res.string.compose_settings_page_notifications)
-    val supportersPage = stringResource(Res.string.compose_settings_page_supporters_contributors)
     val licensesPage = stringResource(Res.string.compose_settings_page_licenses_attributions)
     val whatsNewPage = stringResource(Res.string.compose_settings_page_whats_new)
     val homeLayoutPage = stringResource(Res.string.compose_settings_page_homescreen)
@@ -292,16 +289,6 @@ internal fun settingsSearchEntries(
         description = stringResource(Res.string.compose_settings_root_notifications_description),
         icon = Icons.Rounded.Notifications,
     )
-    if (supportersContributorsPageEnabled) {
-        addPage(
-            page = SettingsPage.SupportersContributors,
-            key = "supporters",
-            title = supportersPage,
-            description = stringResource(Res.string.about_supporters_contributors_subtitle),
-            category = aboutCategory,
-            icon = Icons.Rounded.Favorite,
-        )
-    }
     addPage(
         page = SettingsPage.LicensesAttributions,
         key = "licenses-attributions",
@@ -358,7 +345,7 @@ internal fun settingsSearchEntries(
             key = "check-updates",
             title = stringResource(Res.string.compose_settings_root_check_updates_title),
             description = stringResource(Res.string.compose_settings_root_check_updates_description),
-            page = if (supportersContributorsPageEnabled) supportersPage else licensesPage,
+            page = licensesPage,
             section = stringResource(Res.string.compose_settings_root_about_section),
             category = aboutCategory,
             icon = Icons.Rounded.CloudDownload,

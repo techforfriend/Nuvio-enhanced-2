@@ -12,7 +12,6 @@
     <string name="compose_trakt_list_picker_subtitle">இந்தத் தலைப்பை Trakt-இல் எங்கு சேமிக்க வேண்டும் என்பதைத் தேர்ந்தெடுக்கவும்</string>
     <string name="compose_tracking_list_picker_loading">பட்டியல்களை ஏற்றுகிறது…</string>
     <string name="compose_tracking_list_picker_subtitle">இந்தத் தலைப்பை எங்கு சேமிக்க வேண்டும் என்பதைத் தேர்ந்தெடுக்கவும்</string>
-    <string name="action_donate">நன்கொடை</string>
     <string name="action_support_nuvio">Nuvio-வை ஆதரிக்கவும்</string>
     <string name="cw_action_go_to_details">விவரங்களுக்குச் செல்</string>
     <string name="cw_action_remove">அகற்று</string>

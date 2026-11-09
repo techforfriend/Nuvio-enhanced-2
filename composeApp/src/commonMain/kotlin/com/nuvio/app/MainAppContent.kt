@@ -171,7 +171,6 @@ import com.nuvio.app.features.settings.HomescreenSettingsScreen
 import com.nuvio.app.features.settings.LicensesAttributionsSettingsScreen
 import com.nuvio.app.features.settings.MetaScreenSettingsScreen
 import com.nuvio.app.features.settings.PluginsSettingsScreen
-import com.nuvio.app.features.settings.SupportersContributorsSettingsScreen
 import com.nuvio.app.features.settings.ThemeSettingsRepository
 import com.nuvio.app.features.whatsnew.WhatsNewSettingsScreen
 import com.nuvio.app.features.streams.BingeGroupCacheRepository
@@ -397,7 +396,6 @@ internal fun MainAppContent(
     val accountSettingsTitle = stringResource(Res.string.compose_settings_page_account)
     val editProfileTitle = stringResource(Res.string.profile_edit_edit_title)
     val pushEditProfile: () -> Unit = { navController.navigate(ProfileEditRoute(editProfileTitle)) }
-    val supportersSettingsTitle = stringResource(Res.string.compose_settings_page_supporters_contributors)
     val licensesSettingsTitle = stringResource(Res.string.compose_settings_page_licenses_attributions)
     val whatsNewSettingsTitle = stringResource(Res.string.compose_settings_page_whats_new)
     val collectionsTitle = stringResource(Res.string.collections_header)
@@ -1721,11 +1719,6 @@ internal fun MainAppContent(
                                     }
                                 },
                                 onAccountSettingsClick = { navController.navigate(AccountSettingsRoute(accountSettingsTitle)) },
-                                onSupportersContributorsSettingsClick = {
-                                    if (AppFeaturePolicy.supportersContributorsPageEnabled) {
-                                        navController.navigate(SupportersContributorsSettingsRoute(supportersSettingsTitle))
-                                    }
-                                },
                                 onLicensesAttributionsSettingsClick = {
                                     navController.navigate(LicensesAttributionsSettingsRoute(licensesSettingsTitle))
                                 },
@@ -1959,15 +1952,6 @@ internal fun MainAppContent(
                 entry<AccountSettingsRoute> { route ->
                     SettingsDestination(route, navController) { onBack ->
                         AccountSettingsScreen(onBack = onBack)
-                    }
-                }
-                entry<SupportersContributorsSettingsRoute> { route ->
-                    SettingsDestination(route, navController) { onBack ->
-                        if (AppFeaturePolicy.supportersContributorsPageEnabled) {
-                            SupportersContributorsSettingsScreen(onBack = onBack)
-                        } else {
-                            LaunchedEffect(Unit) { onBack() }
-                        }
                     }
                 }
                 entry<LicensesAttributionsSettingsRoute> { route ->

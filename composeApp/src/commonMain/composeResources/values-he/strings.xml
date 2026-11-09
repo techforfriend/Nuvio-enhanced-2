@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="about_licenses_attributions_subtitle">מקורות מידע, תודות ורישיונות Android</string>
-    <string name="about_supporters_contributors_subtitle">הכרה ציבורית וקרדיטים לפרויקט</string>
     <string name="action_back">חזרה</string>
     <string name="action_cancel">ביטול</string>
     <string name="action_close">סגור</string>
@@ -257,7 +256,6 @@
     <string name="compose_settings_page_plugins">פלאגינים</string>
     <string name="compose_settings_page_poster_customization">סגנון כרטיס פוסטר</string>
     <string name="compose_settings_page_root">הגדרות</string>
-    <string name="compose_settings_page_supporters_contributors">תומכים ותורמים</string>
     <string name="compose_settings_root_about_section">אודות</string>
     <string name="compose_settings_root_account_description">חשבון וסטטוס סנכרון</string>
     <string name="compose_settings_root_account_section">חשבון</string>
