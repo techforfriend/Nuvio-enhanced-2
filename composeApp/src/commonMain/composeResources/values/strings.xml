@@ -2925,10 +2925,9 @@
     <string name="details_where_to_watch_tmdb_required">Enable TMDB to see streaming availability</string>
     <string name="settings_nuvio_enhanced_discord_description">Get support, report issues, and share feedback in the Nuvio Enhanced Discord.</string>
     <string name="settings_nuvio_enhanced_donate_description">Support my work and the continued development of Nuvio Enhanced on Ko-fi.</string>
-    <string name="support_nuvio_title">Support Nuvio Enhanced</string>
-    <string name="support_nuvio_description">Help keep Nuvio Enhanced independent and support its continued development.</string>
-    <string name="support_nuvio_donate_kofi">Donate on Ko-fi</string>
-    <string name="support_nuvio_view_supporters">View supporters</string>
+    <string name="support_buymeacoffee_title">Support Nuvio Enhanced 2.0</string>
+    <string name="support_buymeacoffee_message">Every update of Nuvio Enhanced 2.0 comes from one person\'s free time — no team, no sponsors, no ads. A small coffee from you means this app stays free and keeps getting better.</string>
+    <string name="support_buymeacoffee_button">Buy Me a Coffee</string>
     <string name="compose_player_next_ep">Next Ep</string>
     <string name="player_next_episode_ready_via">Ready via %1$s</string>
     <string name="details_nuvio_library_action">Nuvio Library</string>

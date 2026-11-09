@@ -302,6 +302,11 @@ internal fun LazyListScope.settingsRootContent(
         }
     }
     item {
+        BuyMeACoffeeSupportCard(
+            modifier = Modifier.padding(horizontal = 20.dp),
+        )
+    }
+    item {
         androidx.compose.foundation.layout.Column(
             modifier = Modifier
                 .fillMaxWidth()

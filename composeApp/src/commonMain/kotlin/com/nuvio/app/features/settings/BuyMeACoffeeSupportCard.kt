@@ -17,7 +17,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,23 +28,21 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.NuvioTokens
-import com.nuvio.app.core.ui.appTheme
 import com.nuvio.app.core.ui.nuvio
 import nuvio.composeapp.generated.resources.Res
-import nuvio.composeapp.generated.resources.support_nuvio_description
-import nuvio.composeapp.generated.resources.support_nuvio_donate_kofi
-import nuvio.composeapp.generated.resources.support_nuvio_title
-import nuvio.composeapp.generated.resources.support_nuvio_view_supporters
+import nuvio.composeapp.generated.resources.support_buymeacoffee_button
+import nuvio.composeapp.generated.resources.support_buymeacoffee_message
+import nuvio.composeapp.generated.resources.support_buymeacoffee_title
 import org.jetbrains.compose.resources.stringResource
 
+private const val BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/raja_ji"
+
 @Composable
-internal fun DonationSupportCard(
+internal fun BuyMeACoffeeSupportCard(
     modifier: Modifier = Modifier,
-    onViewSupporters: (() -> Unit)? = null,
 ) {
     val tokens = MaterialTheme.nuvio
     val uriHandler = LocalUriHandler.current
-    val donateUrl = remember { CommunityConfig.DONATIONS_DONATE_URL.trim().removeSuffix("/") }
     val accentColors = listOf(tokens.colors.accent, tokens.colors.accent.copy(alpha = 0.6f))
     val backgroundBrush = remember(accentColors) {
         Brush.linearGradient(
@@ -81,43 +78,28 @@ internal fun DonationSupportCard(
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                MemberBrandWordmark(height = 28.dp)
                 Text(
-                    text = stringResource(Res.string.support_nuvio_title),
+                    text = stringResource(Res.string.support_buymeacoffee_title),
                     style = MaterialTheme.typography.titleLarge,
                     color = tokens.colors.textPrimary,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = stringResource(Res.string.support_nuvio_description),
+                    text = stringResource(Res.string.support_buymeacoffee_message),
                     style = MaterialTheme.typography.bodyMedium,
                     color = tokens.colors.textMuted,
                 )
-                Column(
+                Button(
+                    onClick = { uriHandler.openUri(BUY_ME_A_COFFEE_URL) },
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = tokens.colors.accent,
+                        contentColor = tokens.colors.onAccent,
+                    ),
                 ) {
-                    Button(
-                        onClick = { uriHandler.openUri(donateUrl) },
-                        enabled = donateUrl.isNotBlank(),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = tokens.colors.accent,
-                            contentColor = tokens.colors.onAccent,
-                        ),
-                    ) {
-                        Icon(Icons.Rounded.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(Res.string.support_nuvio_donate_kofi))
-                    }
-                    onViewSupporters?.let { action ->
-                        OutlinedButton(
-                            onClick = action,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(stringResource(Res.string.support_nuvio_view_supporters))
-                        }
-                    }
+                    Icon(Icons.Rounded.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(Res.string.support_buymeacoffee_button))
                 }
             }
         }
