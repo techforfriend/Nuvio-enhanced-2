@@ -120,8 +120,7 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
         showChaptersPanel = false
         episodeStreamsPanelState = EpisodeStreamsPanelState()
         PlayerStreamsRepository.clearEpisodeStreams()
-        SubtitleRepository.clear()
-        autoFetchedAddonSubtitlesForKey = null
+        resetAddonSubtitlesIfSourceChanged()
         WatchProgressRepository.ensureLoaded()
     }
 
