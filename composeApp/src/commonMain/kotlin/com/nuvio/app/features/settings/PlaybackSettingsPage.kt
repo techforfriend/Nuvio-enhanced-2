@@ -543,7 +543,6 @@ private fun PlaybackSettingsSection(
                     AutoSyncPlaybackSettingsRows( // AutoSync hook
                         isTablet = isTablet,
                         enabled = otherSubtitleOptionsEnabled,
-                        preferredSubtitleLanguage = preferredSubtitleLanguage,
                     )
                 }
                 SettingsGroupDivider(isTablet = isTablet)
