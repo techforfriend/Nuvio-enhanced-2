@@ -98,7 +98,7 @@ data class SubtitleStyleState(
     // subtitles, so 15 sits them slightly closer to the bottom edge.
     val bottomOffset: Int = 15,
     val stripSdh: Boolean = false,
-    val useForcedSubtitles: Boolean = false,
+    val useForcedSubtitles: Boolean = true,
     val showOnlyPreferredLanguages: Boolean = false,
     val appearance: SubtitleAppearance = SubtitleAppearance(),
 ) {
