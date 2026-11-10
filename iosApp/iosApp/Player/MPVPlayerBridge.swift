@@ -335,6 +335,10 @@ final class MPVPlayerViewController: UIViewController {
     private var pendingSurfaceLayoutWorkItems: [DispatchWorkItem] = []
     private var pendingLoadRequest: PendingLoadRequest?
     private var startupSubtitles: [PluginSubtitle] = []
+    /// mpv's sub-add needs a loaded file. An add-on subtitle selected before that (Nuvio restores
+    /// the remembered one as soon as add-ons answer, often while the stream still opens) waits here.
+    private var pendingSubtitleUrl: String?
+    private var isFileLoaded = false
     private var pendingLoadRetryWorkItem: DispatchWorkItem?
     var mpv: OpaquePointer?
     private var cachedNowPlayingMetadata: CachedNowPlayingMetadata?
@@ -1081,6 +1085,7 @@ final class MPVPlayerViewController: UIViewController {
         isPlayerEnded = false
         playbackStateGeneration &+= 1
         invalidateMediaInfoCache()
+        isFileLoaded = false
         startupSubtitles = request.subtitles
         command("loadfile", args: [request.urlString, "replace"])
         if let audioUrl = request.audioUrl, !audioUrl.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -1484,6 +1489,7 @@ final class MPVPlayerViewController: UIViewController {
         applyRequestHeaders(activeRequestHeaders)
         playbackStateGeneration &+= 1
         invalidateMediaInfoCache()
+        isFileLoaded = false
         let coreGeneration = mpvGeneration
         mpvQueue.async { [weak self] in
             guard let self, self.mpvGeneration == coreGeneration else { return }
@@ -1677,8 +1683,27 @@ final class MPVPlayerViewController: UIViewController {
     }
 
     func addSubtitleUrl(_ url: String) {
-        guard mpv != nil else { return }
-        command("sub-add", args: [url, "select"])
+        guard mpv != nil, isFileLoaded else {
+            // Upstream: an add-on subtitle picked before mpv has loaded the file is queued and
+            // added on MPV_EVENT_FILE_LOADED.
+            pendingSubtitleUrl = url
+            return
+        }
+        let coreGeneration = mpvGeneration
+        let headers = activeRequestHeaders
+        // Hebrew SRTs are often authored with sentence-final punctuation at the start
+        // of the line (for legacy LTR renderers). mpv lays Hebrew out RTL, so that
+        // punctuation shows at the start of the sentence. Fix the file off the main
+        // thread before handing it to mpv; fall back to the original URL otherwise.
+        MPVSubtitleRtlFix.prepare(url: url, headers: headers) { [weak self] localPath, title in
+            guard let self, self.mpvGeneration == coreGeneration else { return }
+            if let localPath {
+                InAppLogBridge.shared.info(tag: "MPV/SubRtl", message: "using RTL-fixed subtitle copy")
+                self.command("sub-add", args: [localPath, "select", title])
+            } else {
+                self.command("sub-add", args: [url, "select"])
+            }
+        }
     }
 
     /// Loads the local file at `path` in place of the external track loaded from `replacedUrl`,
@@ -1747,6 +1772,7 @@ final class MPVPlayerViewController: UIViewController {
     }
 
     func removeExternalSubtitles() {
+        pendingSubtitleUrl = nil
         guard mpv != nil else { return }
         let coreGeneration = mpvGeneration
         onMpvQueue { [weak self] in
@@ -1757,6 +1783,7 @@ final class MPVPlayerViewController: UIViewController {
     }
 
     func removeExternalSubtitlesAndSelect(_ trackId: Int) {
+        pendingSubtitleUrl = nil
         guard mpv != nil else { return }
         let coreGeneration = mpvGeneration
         onMpvQueue { [weak self] in
@@ -1876,6 +1903,8 @@ final class MPVPlayerViewController: UIViewController {
         pendingSurfaceLayoutWorkItems.removeAll(keepingCapacity: false)
         pendingLoadRequest = nil
         startupSubtitles = []
+        pendingSubtitleUrl = nil
+        isFileLoaded = false
         if !isEmbeddedPreviewMode {
             nowPlayingController.invalidate()
         }
@@ -2538,9 +2567,14 @@ final class MPVPlayerViewController: UIViewController {
                         self.isPlayerLoading = false
                         self.playbackStateGeneration &+= 1
                         self.invalidateMediaInfoCache()
+                        self.isFileLoaded = true
                         let subtitles = self.startupSubtitles
                         self.startupSubtitles = []
                         subtitles.forEach { self.addSubtitle($0, mode: "auto") }
+                        if let url = self.pendingSubtitleUrl {
+                            self.pendingSubtitleUrl = nil
+                            self.addSubtitleUrl(url)
+                        }
                         self.updateState()
                         if !self.isEmbeddedPreviewMode {
                             self.publishNowPlayingForPlaybackSession()
