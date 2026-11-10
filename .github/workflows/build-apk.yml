@@ -77,23 +77,22 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.9
-          name: "Nuvio Enhanced v0.6.9"
+          tag_name: v0.6.11
+          name: "Nuvio Enhanced v0.6.11"
           body: |
-            ## What's New in v0.6.9
-            **Nuvio Enhanced Official Release — version 0.6.9 (version code 152)**
+            ## What's New in v0.6.11
+            **Nuvio Enhanced Official Release — version 0.6.11 (version code 154)**
 
             ### 🆕 New in this version
-            - Ratings — star ratings for titles and episodes, a ratings source picker, and MDBList + SIMKL rating sync
-            - Tamil language support
-            - Cinematic backdrop — floating header over the backdrop, artwork fading into it, see-through chips and buttons, and smart framing for cropped backdrops
-            - Discover header search action; library search box now behind a search action
-            - Live TV header offset matched to the other tabs
-            - Player — playback locks to landscape on tablets; edge swipes left to the system back gesture; keeps playing during calls with YouTube-like audio focus
-            - Skip Intro — better Anime-Skip matching (Kitsu/MAL without an IntroDB mapping, no open-ended segments)
-            - iOS — app background kept while the player is parked in PiP; collection folders draw under the native navigation bar so Glass UI shows through
-            - Smoother scrolling on home, shelves and grids
-            - Translation updates: Vietnamese, Bengali, French
+            - Subtitles — shadow outline blur for subtitle text
+            - AutoSync — engine moved to shared code and enabled on iOS; forced subtitles and AutoSync now on by default; works even without a preferred subtitle language; restored-subtitle fallback improved
+            - MDBList — anime episodes remapped between addon and TMDB numbering; progress and watched lists reused until a remap changes them
+            - Player — mpv error details shown on the error screen; playback service starts as a normal service first; buffer start times capped; addon subtitles reset only when the source changes
+            - Backdrop & hero — smart framing for cropped backdrops, focused backdrop without slide, foreground separated from background; opening overlay centred on tall screens
+            - Stay signed in — session refresh failures no longer sign you out
+            - iOS — memory optimisation for long sessions and 4K HDR/Dolby Vision playback; lighter mpv setup; PiP close fix
+            - Support — new Buy Me a Coffee box on the Settings main page; all old donation and supporters UI removed
+            - Translation updates: French, Greek, Hebrew, Japanese, Vietnamese, Bulgarian
           draft: false
           prerelease: false
           files: build-apks/*.apk
