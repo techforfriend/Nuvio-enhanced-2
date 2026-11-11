@@ -80,6 +80,7 @@ internal fun PlayerScreenRuntime.lockPlayerControls() {
     showSourcesPanel = false
     showEpisodesPanel = false
     showChaptersPanel = false
+    showDiscTitlesPanel = false
     episodeStreamsPanelState = EpisodeStreamsPanelState()
     PlayerStreamsRepository.clearEpisodeStreams()
 }
