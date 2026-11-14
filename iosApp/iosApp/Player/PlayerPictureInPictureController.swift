@@ -15,7 +15,7 @@ final class PlayerPictureInPictureController: NSObject,
     private let enqueueFrame: (CMSampleBuffer) -> Void
     private let clearFrameRenderer: () -> Void
     private let frameLock = NSLock()
-    private var pendingFrame: (CVPixelBuffer, Double, Bool)?
+    private var pendingFrame: (CVPixelBuffer, Double, Bool, Data?)?
     private var subtitleText = ""
     private var subtitleBold = false
     private let subtitleComposer = PictureInPictureSubtitleComposer()
@@ -146,7 +146,7 @@ final class PlayerPictureInPictureController: NSObject,
         }
     }
 
-    func submit(_ buffer: CVPixelBuffer, pts: Double, isPictureInPictureFrame: Bool) {
+    func submit(_ buffer: CVPixelBuffer, pts: Double, isPictureInPictureFrame: Bool, doviMetadata: Data?) {
         frameLock.lock()
         guard acceptingFrames else { frameLock.unlock(); return }
         let now = ProcessInfo.processInfo.systemUptime
@@ -155,7 +155,7 @@ final class PlayerPictureInPictureController: NSObject,
             return
         }
         lastPrimeTime = now
-        pendingFrame = (buffer, pts, isPictureInPictureFrame)
+        pendingFrame = (buffer, pts, isPictureInPictureFrame, doviMetadata)
         let schedule = !drainScheduled
         drainScheduled = true
         frameLock.unlock()
@@ -174,9 +174,9 @@ final class PlayerPictureInPictureController: NSObject,
         let cueBold = subtitleBold
         let dolbyVision = convertsDolbyVision
         frameLock.unlock()
-        guard accepts, let (decodedBuffer, pts, isPictureInPictureFrame) = frame, pts.isFinite else { return }
+        guard accepts, let (decodedBuffer, pts, isPictureInPictureFrame, doviMetadata) = frame, pts.isFinite else { return }
         let sourceBuffer = dolbyVision
-            ? (dolbyVisionConverter.convert(decodedBuffer) ?? decodedBuffer)
+            ? (dolbyVisionConverter.convert(decodedBuffer, doviMetadata: doviMetadata) ?? decodedBuffer)
             : decodedBuffer
         let buffer = isPictureInPictureFrame && !cue.isEmpty
             ? (subtitleComposer.compose(sourceBuffer, text: cue, bold: cueBold) ?? sourceBuffer)
@@ -218,6 +218,9 @@ final class PlayerPictureInPictureController: NSObject,
         frameLock.lock()
         convertsDolbyVision = enabled
         frameLock.unlock()
+        if enabled {
+            frameQueue.async { [weak self] in self?.dolbyVisionConverter.warmUp() }
+        }
     }
 
     func setSubtitleText(_ text: String, bold: Bool) {
