@@ -19,6 +19,8 @@ final class PlayerPictureInPictureController: NSObject,
     private var subtitleText = ""
     private var subtitleBold = false
     private let subtitleComposer = PictureInPictureSubtitleComposer()
+    private let dolbyVisionConverter = PictureInPictureDolbyVisionConverter()
+    private var convertsDolbyVision = false
     private var drainScheduled = false
     private var acceptingFrames = true
     private var feedingRestoreTransition = false
@@ -170,8 +172,12 @@ final class PlayerPictureInPictureController: NSObject,
         let accepts = acceptingFrames
         let cue = subtitleText
         let cueBold = subtitleBold
+        let dolbyVision = convertsDolbyVision
         frameLock.unlock()
-        guard accepts, let (sourceBuffer, pts, isPictureInPictureFrame) = frame, pts.isFinite else { return }
+        guard accepts, let (decodedBuffer, pts, isPictureInPictureFrame) = frame, pts.isFinite else { return }
+        let sourceBuffer = dolbyVision
+            ? (dolbyVisionConverter.convert(decodedBuffer) ?? decodedBuffer)
+            : decodedBuffer
         let buffer = isPictureInPictureFrame && !cue.isEmpty
             ? (subtitleComposer.compose(sourceBuffer, text: cue, bold: cueBold) ?? sourceBuffer)
             : sourceBuffer
@@ -206,6 +212,12 @@ final class PlayerPictureInPictureController: NSObject,
             }
         }
         enqueueFrame(sample)
+    }
+
+    func setDolbyVisionColorspace(_ enabled: Bool) {
+        frameLock.lock()
+        convertsDolbyVision = enabled
+        frameLock.unlock()
     }
 
     func setSubtitleText(_ text: String, bold: Bool) {

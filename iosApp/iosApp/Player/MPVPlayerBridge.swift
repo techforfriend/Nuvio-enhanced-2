@@ -330,6 +330,15 @@ final class MPVPlayerViewController: UIViewController {
     private var pictureInPictureController: PlayerPictureInPictureController?
     var systemControlHandler: PlayerSystemControlHandler?
     var keepsPlaybackInBackground: Bool { pictureInPictureController?.keepsPlaybackAlive == true }
+
+    private var isDolbyVisionColorspace = false
+
+    private func setVideoColorMatrix(_ matrix: String?) {
+        let dolbyVision = matrix?.lowercased() == "dolbyvision"
+        guard dolbyVision != isDolbyVisionColorspace else { return }
+        isDolbyVisionColorspace = dolbyVision
+        pictureInPictureController?.setDolbyVisionColorspace(dolbyVision)
+    }
     private var lastAppliedDrawableSize: CGSize = .zero
     private var externallyManagedViewSize: CGSize?
     private var pendingSurfaceLayoutWorkItems: [DispatchWorkItem] = []
@@ -586,6 +595,7 @@ final class MPVPlayerViewController: UIViewController {
         }
         let pip = PlayerPictureInPictureController(owner: self, metalLayer: metalLayer)
         pictureInPictureController = pip
+        pip.setDolbyVisionColorspace(isDolbyVisionColorspace)
         if mpv != nil {
             pip.setSubtitleText(getString("sub-text") ?? "", bold: lastSubtitleStyle?.bold ?? false)
         }
@@ -836,6 +846,7 @@ final class MPVPlayerViewController: UIViewController {
         mpv_observe_property(mpv, 0, "track-list/count", MPV_FORMAT_INT64)
         mpv_observe_property(mpv, 0, "current-tracks/sub/id", MPV_FORMAT_INT64)
         mpv_observe_property(mpv, 0, "sub-text", MPV_FORMAT_STRING)
+        mpv_observe_property(mpv, 0, "video-params/colormatrix", MPV_FORMAT_STRING)
 
         mpv_set_wakeup_callback(mpv, { ctx in
             let vc = unsafeBitCast(ctx, to: MPVPlayerViewController.self)
@@ -2592,6 +2603,12 @@ final class MPVPlayerViewController: UIViewController {
                     let name = property?.pointee.name.map { String(cString: $0) }
                     if name == "sub-text" {
                         DispatchQueue.main.async { self.updateStyledSubtitle() }
+                    } else if name == "video-params/colormatrix" {
+                        let matrix = property?.pointee.format == MPV_FORMAT_STRING
+                            ? property?.pointee.data?.assumingMemoryBound(to: UnsafePointer<CChar>?.self).pointee
+                                .map { String(cString: $0) }
+                            : nil
+                        DispatchQueue.main.async { self.setVideoColorMatrix(matrix) }
                     } else {
                         DispatchQueue.main.async { self.updateState() }
                     }
