@@ -145,7 +145,7 @@ fun FolderDetailScreen(
         }
 
         if (useNativeNavigation) {
-            val nativeBarSpace = (platformPhysicalTopInset() + NativeNavigationBarHeight) *
+            val nativeBarSpace = maxOf(statusBarTop, platformPhysicalTopInset() + NativeNavigationBarHeight) *
                 if (coverImageUrl != null) heroCollapseFraction else 1f
             if (nativeBarSpace > 0.dp) Spacer(modifier = Modifier.height(nativeBarSpace))
         } else {
