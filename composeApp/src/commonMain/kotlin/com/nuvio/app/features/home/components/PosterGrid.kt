@@ -19,6 +19,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -35,6 +37,21 @@ import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.PosterShape
 import com.nuvio.app.features.watching.application.WatchingState
+
+@Composable
+internal fun rememberPosterGridColumnCount(availableWidth: Dp): Int {
+    val windowSize = LocalWindowInfo.current.containerSize
+    val density = LocalDensity.current
+    return remember(availableWidth, windowSize, density) {
+        val windowWidth = with(density) { windowSize.width.toDp() }
+        val windowHeight = with(density) { windowSize.height.toDp() }
+        when {
+            windowWidth <= windowHeight -> posterGridColumnCountForWidth(availableWidth)
+            minOf(windowWidth, windowHeight) >= 600.dp -> 7
+            else -> 6
+        }
+    }
+}
 
 internal fun posterGridColumnCountForWidth(screenWidth: Dp): Int =
     when {

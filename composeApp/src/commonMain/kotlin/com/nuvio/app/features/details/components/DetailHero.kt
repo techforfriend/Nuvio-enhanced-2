@@ -52,7 +52,6 @@ import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.focusedAlignment
 import com.nuvio.app.core.ui.rememberBackdropFocusState
 import com.nuvio.app.core.ui.revealAlpha
-import com.nuvio.app.core.ui.featherArtwork
 import com.nuvio.app.core.ui.heroStretchHeight
 import com.nuvio.app.core.ui.heroStretchZoom
 import com.nuvio.app.core.ui.platformPhysicalTopInset
@@ -128,7 +127,6 @@ fun DetailHero(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .then(if (cinematicBackground) Modifier.featherArtwork() else Modifier),
                 ) {
                     val imageUrl = meta.background ?: meta.poster
                     if (imageUrl != null) {
@@ -233,27 +231,25 @@ fun DetailHero(
                     }
                 }
 
-                if (!cinematicBackground) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(if (isTablet) 360.dp else 320.dp)
-                            .align(Alignment.BottomCenter)
-                            .background(
-                                Brush.verticalGradient(
-                                    colorStops = arrayOf(
-                                        0.00f to Color.Transparent,
-                                        0.16f to bottomGradientColor.copy(alpha = 0.04f),
-                                        0.32f to bottomGradientColor.copy(alpha = 0.14f),
-                                        0.50f to bottomGradientColor.copy(alpha = 0.34f),
-                                        0.68f to bottomGradientColor.copy(alpha = 0.62f),
-                                        0.84f to bottomGradientColor.copy(alpha = 0.84f),
-                                        1.00f to bottomGradientColor,
-                                    ),
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(if (isTablet) 360.dp else 320.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0.00f to Color.Transparent,
+                                    0.16f to bottomGradientColor.copy(alpha = 0.04f),
+                                    0.32f to bottomGradientColor.copy(alpha = 0.14f),
+                                    0.50f to bottomGradientColor.copy(alpha = 0.34f),
+                                    0.68f to bottomGradientColor.copy(alpha = 0.62f),
+                                    0.84f to bottomGradientColor.copy(alpha = 0.84f),
+                                    1.00f to bottomGradientColor,
                                 ),
                             ),
-                    )
-                }
+                        ),
+                )
 
                 Column(
                     modifier = Modifier

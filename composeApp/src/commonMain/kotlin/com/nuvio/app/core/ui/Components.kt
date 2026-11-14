@@ -185,6 +185,7 @@ fun NuvioScreenHeader(
     includeStatusBarPadding: Boolean = true,
     topPadding: Dp? = null,
     onBack: (() -> Unit)? = null,
+    coverAbove: Boolean = true,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val tokens = MaterialTheme.nuvio
@@ -220,7 +221,7 @@ fun NuvioScreenHeader(
         Row(
             modifier = Modifier
                 .matchParentSize()
-                .appBackgroundCover(tokens.colors.background)
+                .appBackgroundCover(tokens.colors.background, coverAbove = coverAbove)
                 .nuvioConsumePointerEvents(),
         ) {}
         Row(
@@ -338,8 +339,9 @@ fun NuvioBackButton(
     buttonSize: Dp = NuvioTokens.Space.s40,
     iconSize: Dp = NuvioTokens.Icon.md,
     contentDescription: String = stringResource(Res.string.action_back),
+    hiddenUnderNativeNavigation: Boolean = true,
 ) {
-    if (LocalUseNativeNavigation.current && !LocalNativeNavigationBarHidden.current) return
+    if (hiddenUnderNativeNavigation && LocalUseNativeNavigation.current && !LocalNativeNavigationBarHidden.current) return
 
     Box(
         modifier = modifier
