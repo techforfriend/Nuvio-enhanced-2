@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.NuvioPosterCard
 import com.nuvio.app.core.ui.NuvioPosterShape
+import com.nuvio.app.core.ui.platformPhysicalTopInset
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.nuvioSafeBottomPadding
 import com.nuvio.app.core.ui.withDuplicateSafeLazyKeys
@@ -144,7 +145,7 @@ fun FolderDetailScreen(
         }
 
         if (useNativeNavigation) {
-            val nativeBarSpace = (statusBarTop + NativeNavigationBarHeight) *
+            val nativeBarSpace = (platformPhysicalTopInset() + NativeNavigationBarHeight) *
                 if (coverImageUrl != null) heroCollapseFraction else 1f
             if (nativeBarSpace > 0.dp) Spacer(modifier = Modifier.height(nativeBarSpace))
         } else {
