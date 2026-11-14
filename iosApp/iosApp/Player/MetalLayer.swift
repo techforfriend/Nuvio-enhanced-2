@@ -120,12 +120,21 @@ class MetalLayer: CAMetalLayer {
         return isRenderingSuspended
     }
 
+    var preferredDrawableSize: CGSize?
+
+    var onPreferredDrawableSizeRestored: ((CGSize, CGSize) -> Void)?
+
     override var drawableSize: CGSize {
         get { return super.drawableSize }
         set {
-            if Int(newValue.width) > 1 && Int(newValue.height) > 1 {
-                super.drawableSize = newValue
+            guard Int(newValue.width) > 1 && Int(newValue.height) > 1 else { return }
+            if let preferred = preferredDrawableSize,
+               newValue.width < preferred.width || newValue.height < preferred.height {
+                super.drawableSize = preferred
+                onPreferredDrawableSizeRestored?(newValue, preferred)
+                return
             }
+            super.drawableSize = newValue
         }
     }
 

@@ -579,6 +579,13 @@ final class MPVPlayerViewController: UIViewController {
         metalLayer.wantsExtendedDynamicRangeContent = lastVideoOutputSettings?.extendedDynamicRange ?? true
         metalLayer.anchorPoint = CGPoint(x: 0, y: 0)
         metalLayer.position = .zero
+        metalLayer.onPreferredDrawableSizeRestored = { requested, preferred in
+            InAppLogBridge.shared.warn(
+                tag: "MPV/iOS",
+                message: "Drawable size \(Int(requested.width))x\(Int(requested.height)) below the view's " +
+                    "\(Int(preferred.width))x\(Int(preferred.height)); keeping the native size"
+            )
+        }
         metalLayer.onRenderingSuspensionChanged = { suspended, reason in
             if suspended {
                 InAppLogBridge.shared.warn(
@@ -772,7 +779,8 @@ final class MPVPlayerViewController: UIViewController {
         metalLayer.position = .zero
         metalLayer.bounds = CGRect(origin: .zero, size: bounds.size)
         pictureInPictureController?.displayLayer.frame = bounds
-        let drawableSizeChanged = drawableSize != lastAppliedDrawableSize
+        metalLayer.preferredDrawableSize = drawableSize
+        let drawableSizeChanged = drawableSize != lastAppliedDrawableSize || metalLayer.drawableSize != drawableSize
         if drawableSizeChanged {
             // mpv's moltenvk context polls drawableSize and resizes its swapchain.
             metalLayer.drawableSize = drawableSize
@@ -978,6 +986,7 @@ final class MPVPlayerViewController: UIViewController {
     }
 
     @objc private func didBecomeActive() {
+        layoutPlayerSurfaces()
         resumeRenderingAfterDeviceLossIfPossible(reason: "did-become-active")
         restoreHardwareDecodingIfLost()
     }
