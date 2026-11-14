@@ -108,7 +108,6 @@ import com.nuvio.app.core.ui.glass.isAmbientLiquidGlassActive
 import com.nuvio.app.core.ui.NuvioTokens
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.ui.graphics.compositeOver
 import com.nuvio.app.core.ui.glass.nuvioBackdropSource
 import com.nuvio.app.core.ui.glass.rememberNuvioBackdrop
 import com.nuvio.app.core.i18n.localizedEpisodeTitle
@@ -598,8 +597,9 @@ internal fun ResumeBanner(
             .clip(RoundedCornerShape(18.dp))
             .ambientLiquidGlass(
                 shape = RoundedCornerShape(18.dp),
-                tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                tint = StreamGlassTint,
                 fallback = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+                staticFromBackdrop = true,
             )
             .padding(horizontal = 14.dp, vertical = 10.dp),
     ) {
@@ -1495,10 +1495,11 @@ internal fun StreamSearchField(
             .clip(fieldShape)
             .ambientLiquidGlass(
                 shape = fieldShape,
-                tint = Color.White.copy(alpha = 0.05f).compositeOver(Color.Black.copy(alpha = StreamGlassTintAlpha)),
+                tint = StreamGlassTint,
                 fallback = tokens.colors.surfaceCard,
                 blurRadius = 14.dp,
                 refractionHeight = 8.dp,
+                staticFromBackdrop = true,
             ),
     ) {
         OutlinedTextField(

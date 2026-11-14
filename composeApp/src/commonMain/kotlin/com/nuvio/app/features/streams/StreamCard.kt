@@ -92,15 +92,17 @@ internal fun StreamCard(
                 shape = cardShape,
                 tint = if (isCurrent) {
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                        .compositeOver(Color.Black.copy(alpha = StreamGlassTintAlpha))
                 } else {
-                    Color.White.copy(alpha = 0.05f)
-                }.compositeOver(Color.Black.copy(alpha = StreamGlassTintAlpha)),
+                    StreamGlassTint
+                },
                 fallback = if (isCurrent) {
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                 } else {
                     Color.White.copy(alpha = 0.05f)
                 },
                 blurRadius = 18.dp,
+                staticFromBackdrop = true,
             )
             .then(
                 if (isCurrent || outlined) {
@@ -318,7 +320,10 @@ private fun CurrentStreamBadge(label: String) {
     }
 }
 
-internal const val StreamGlassTintAlpha = 0.55f
+internal const val StreamGlassTintAlpha = 0.45f
+
+internal val StreamGlassTint: Color = Color.White.copy(alpha = 0.05f)
+    .compositeOver(Color.Black.copy(alpha = StreamGlassTintAlpha))
 
 private val StreamGlassTextShadow = Shadow(
     color = Color.Black.copy(alpha = 0.6f),
