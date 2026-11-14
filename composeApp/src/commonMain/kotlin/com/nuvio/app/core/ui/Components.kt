@@ -185,6 +185,7 @@ fun NuvioScreenHeader(
     includeStatusBarPadding: Boolean = true,
     topPadding: Dp? = null,
     onBack: (() -> Unit)? = null,
+    coverAbove: Boolean = true,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val tokens = MaterialTheme.nuvio
@@ -220,7 +221,7 @@ fun NuvioScreenHeader(
         Row(
             modifier = Modifier
                 .matchParentSize()
-                .appBackgroundCover(tokens.colors.background)
+                .appBackgroundCover(tokens.colors.background, coverAbove = coverAbove)
                 .nuvioConsumePointerEvents(),
         ) {}
         Row(

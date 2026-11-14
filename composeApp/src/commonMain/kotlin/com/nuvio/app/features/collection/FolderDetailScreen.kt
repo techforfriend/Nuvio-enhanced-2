@@ -154,6 +154,7 @@ fun FolderDetailScreen(
                 includeStatusBarPadding = coverImageUrl == null,
                 topPadding = if (coverImageUrl != null) statusBarTop * heroCollapseFraction else null,
                 onBack = onBack,
+                coverAbove = coverImageUrl == null,
             )
         }
 
