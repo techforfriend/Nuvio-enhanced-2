@@ -338,8 +338,9 @@ fun NuvioBackButton(
     buttonSize: Dp = NuvioTokens.Space.s40,
     iconSize: Dp = NuvioTokens.Icon.md,
     contentDescription: String = stringResource(Res.string.action_back),
+    hiddenUnderNativeNavigation: Boolean = true,
 ) {
-    if (LocalUseNativeNavigation.current && !LocalNativeNavigationBarHidden.current) return
+    if (hiddenUnderNativeNavigation && LocalUseNativeNavigation.current && !LocalNativeNavigationBarHidden.current) return
 
     Box(
         modifier = modifier
