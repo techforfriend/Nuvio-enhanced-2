@@ -334,6 +334,8 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi(
                     initialPositionRequestKey = initialPositionRequestKey,
                     resizeMode = resizeMode,
                     playbackEngine = playbackEngineOverride ?: resolvedAutoEngine,
+                    discPlaybackEnabled = !isLiveTvPlayback,
+                    liveStream = isLiveTvPlayback,
                     onInitialPositionHandled = { key, handled ->
                         if (active.value && playbackKey == activePlaybackKey && key == currentInitialPositionRequestKey()) {
                             initialSeekApplied = handled
