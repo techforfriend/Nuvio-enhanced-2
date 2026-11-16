@@ -1581,3 +1581,24 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncInt(iosGammaKey)?.let(::saveIosGamma)
     }
 }
+
+internal actual object SubtitleDevicePreferencesStorage {
+    private const val keyPrefix = "subtitle_device_preferences_v1_"
+
+    actual fun load(profileId: Int): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey("$keyPrefix$profileId")
+
+    actual fun save(profileId: Int, value: String) {
+        NSUserDefaults.standardUserDefaults.setObject(value, forKey = "$keyPrefix$profileId")
+    }
+
+    actual fun saveForMigration(profileId: Int, value: String) {
+        val defaults = NSUserDefaults.standardUserDefaults
+        defaults.setObject(value, forKey = "$keyPrefix$profileId")
+        defaults.synchronize()
+    }
+
+    actual fun remove(profileId: Int) {
+        NSUserDefaults.standardUserDefaults.removeObjectForKey("$keyPrefix$profileId")
+    }
+}

@@ -232,6 +232,7 @@ actual object PlayerSettingsStorage {
     fun initialize(context: Context) {
         appContext = context.applicationContext
         preferences = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
+        SubtitleDevicePreferencesStorage.initialize(context.applicationContext)
     }
 
     internal fun applicationContext(): Context? = appContext
@@ -2245,5 +2246,33 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncInt(iosContrastKey)?.let(::saveIosContrast)
         payload.decodeSyncInt(iosSaturationKey)?.let(::saveIosSaturation)
         payload.decodeSyncInt(iosGammaKey)?.let(::saveIosGamma)
+    }
+}
+
+internal actual object SubtitleDevicePreferencesStorage {
+    private const val preferencesName = "nuvio_subtitle_device_preferences"
+    private const val keyPrefix = "subtitle_device_preferences_v1_"
+    private var preferences: SharedPreferences? = null
+
+    fun initialize(context: Context) {
+        preferences = context.applicationContext.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
+    }
+
+    actual fun load(profileId: Int): String? =
+        preferences?.getString("$keyPrefix$profileId", null)
+
+    actual fun save(profileId: Int, value: String) {
+        preferences?.edit()?.putString("$keyPrefix$profileId", value)?.apply()
+    }
+
+    actual fun saveForMigration(profileId: Int, value: String) {
+        val store = checkNotNull(preferences) { "Subtitle device preference storage is not initialized" }
+        check(store.edit().putString("$keyPrefix$profileId", value).commit()) {
+            "Unable to persist migrated subtitle preferences"
+        }
+    }
+
+    actual fun remove(profileId: Int) {
+        preferences?.edit()?.remove("$keyPrefix$profileId")?.apply()
     }
 }
