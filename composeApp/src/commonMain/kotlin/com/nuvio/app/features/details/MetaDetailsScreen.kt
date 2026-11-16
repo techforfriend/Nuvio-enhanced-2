@@ -109,6 +109,7 @@ import com.kyant.backdrop.Backdrop
 import com.nuvio.app.core.ui.glass.LocalLiquidGlassBackdrop
 import com.nuvio.app.core.ui.glass.nuvioBackdropSource
 import com.nuvio.app.core.ui.glass.rememberNuvioBackdrop
+import com.nuvio.app.features.downloads.DownloadItem
 import com.nuvio.app.features.downloads.DownloadsSettingsRepository
 import com.nuvio.app.features.settings.NuvioEnhancedSettingsRepository
 import com.nuvio.app.features.details.components.DetailActions
@@ -128,6 +129,7 @@ import com.nuvio.app.features.details.components.DetailProductionSection
 import com.nuvio.app.features.details.components.DetailSeriesContent
 import com.nuvio.app.features.details.components.EpisodeNavigatorState
 import com.nuvio.app.features.details.components.detailEpisodeListItems
+import com.nuvio.app.features.details.components.rememberEpisodeDownloadLookup
 import com.nuvio.app.features.details.components.rememberEpisodeNavigatorState
 import com.nuvio.app.features.details.components.DetailTrailersSection
 import com.nuvio.app.features.details.components.EpisodeWatchedActionSheet
@@ -1123,6 +1125,7 @@ fun MetaDetailsScreen(
                 }
                 val listState = rememberLazyListState()
                 val episodeNavigator = rememberEpisodeNavigatorState(meta.id)
+                val episodeDownloadFor = rememberEpisodeDownloadLookup(meta.id)
                 val heroStretchState = rememberHeroStretchState(listState)
                 val density = LocalDensity.current
                 val safeAreaTopPx = with(density) {
@@ -1434,6 +1437,9 @@ fun MetaDetailsScreen(
                                         sharedTransitionScope = sharedTransitionScope,
                                         animatedVisibilityScope = animatedVisibilityScope,
                                         episodeNavigator = episodeNavigator,
+                                        episodeDownloadFor = episodeDownloadFor,
+                                        selectedSeason = episodeNavigator.selectedSeason,
+                                        onSeasonSelected = episodeNavigator::selectSeason,
                                         listState = listState,
                                         leadingItemCount = 1,
                                         stickyBackground = heroGradientColor ?: colorScheme.background,
@@ -2203,9 +2209,12 @@ private fun LazyListScope.configuredMetaSectionItems(
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
     episodeNavigator: EpisodeNavigatorState? = null,
+    episodeDownloadFor: (MetaVideo) -> DownloadItem? = { null },
     listState: LazyListState? = null,
     leadingItemCount: Int = 0,
     stickyBackground: Color = Color.Unspecified,
+    selectedSeason: Int?,
+    onSeasonSelected: (Int) -> Unit,
 ) {
     val enabledItems = settings.items.filter { it.enabled }
     var emittedItemCount = 0
@@ -2319,6 +2328,7 @@ private fun LazyListScope.configuredMetaSectionItems(
             onEpisodeClick = onEpisodeClick,
             onEpisodeLongPress = onEpisodeLongPress,
             onSeasonLongPress = onSeasonLongPress,
+            episodeDownloadFor = episodeDownloadFor,
         )
         emittedItemCount += emitted
         return emitted > 0
@@ -2588,6 +2598,7 @@ private fun ConfiguredMetaSections(
                 if (hasEpisodes) {
                     DetailSeriesContent(
                         meta = meta,
+                        episodeDownloadFor = episodeDownloadFor,
                         showHeader = showHeader,
                         horizontalScrollPadding = horizontalScrollPadding,
                         preferredSeasonNumber = preferredEpisodeSeasonNumber,
@@ -2601,6 +2612,8 @@ private fun ConfiguredMetaSections(
                         onEpisodeClick = onEpisodeClick,
                         onEpisodeLongPress = onEpisodeLongPress,
                         onSeasonLongPress = onSeasonLongPress,
+                        selectedSeason = selectedSeason,
+                        onSeasonSelected = onSeasonSelected,
                     )
                 }
             }

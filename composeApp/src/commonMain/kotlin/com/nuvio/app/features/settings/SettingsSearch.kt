@@ -268,6 +268,7 @@ internal fun settingsSearchEntries(
         description = stringResource(Res.string.downloads_preferred_resolution_description),
         pageLabel = downloadsPage,
         section = downloadsPage,
+        icon = Icons.Rounded.CloudDownload,
     )
     addRow(
         page = SettingsPage.Downloads,
@@ -276,6 +277,7 @@ internal fun settingsSearchEntries(
         description = stringResource(Res.string.downloads_max_concurrent_description),
         pageLabel = downloadsPage,
         section = downloadsPage,
+        icon = Icons.Rounded.CloudDownload,
     )
     addRow(
         page = SettingsPage.Downloads,
@@ -284,6 +286,7 @@ internal fun settingsSearchEntries(
         description = stringResource(Res.string.downloads_max_series_episode_concurrent_description),
         pageLabel = downloadsPage,
         section = downloadsPage,
+        icon = Icons.Rounded.CloudDownload,
     )
     addRow(
         page = SettingsPage.Downloads,
@@ -292,6 +295,7 @@ internal fun settingsSearchEntries(
         description = stringResource(Res.string.downloads_max_concurrent_shows_description),
         pageLabel = downloadsPage,
         section = downloadsPage,
+        icon = Icons.Rounded.CloudDownload,
     )
     addPage(
         page = SettingsPage.Playback,

@@ -137,6 +137,7 @@ import com.nuvio.app.features.debrid.DebridProviders
 import com.nuvio.app.features.debrid.DebridSettingsRepository
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaVideo
+import com.nuvio.app.features.downloads.DownloadItem
 import com.nuvio.app.features.home.HomeCatalogSection
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.components.HomeEmptyStateCard
@@ -200,6 +201,7 @@ fun LibraryScreen(
     onPreviewClick: ((MetaPreview) -> Unit)? = null,
     onPreviewLongClick: ((MetaPreview) -> Unit)? = null,
     onDownloadsClick: (() -> Unit)? = null,
+    onOpenDownload: ((DownloadItem) -> Unit)? = null,
 ) {
     val uiState by remember {
         LibraryRepository.ensureLoaded()
@@ -3193,12 +3195,6 @@ private fun isoEpochDay(date: String): Long {
     val dayOfYear = (153L * adjustedMonth + 2L) / 5L + day - 1L
     val dayOfEra = yearOfEra * 365L + yearOfEra / 4L - yearOfEra / 100L + dayOfYear
     return era * 146_097L + dayOfEra - 719_468L
-}
-
-private enum class LibraryViewMode {
-    Saved,
-    Cloud,
-    Servers,
 }
 
 private const val LIBRARY_SECTION_PREVIEW_LIMIT = 18

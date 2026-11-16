@@ -1084,7 +1084,6 @@ internal fun MainAppContent(
             resumeProgressFraction: Float?,
             manualSelection: Boolean,
             startFromBeginning: Boolean,
-            downloadMode: Boolean = false,
             forceExternalPlayer: Boolean = false,
         ) {
             val targetResumePositionMs = if (startFromBeginning) 0L else (resumePositionMs ?: 0L)
@@ -1162,7 +1161,6 @@ internal fun MainAppContent(
                     resumeProgressFraction = targetResumeProgressFraction,
                     manualSelection = manualSelection,
                     startFromBeginning = startFromBeginning,
-                    downloadMode = downloadMode,
                     forceExternalPlayer = forceExternalPlayer,
                 ),
             )
@@ -1263,7 +1261,6 @@ internal fun MainAppContent(
                     resumeProgressFraction = null,
                     manualSelection = true,
                     startFromBeginning = false,
-                    downloadMode = true,
                 )
             }
 

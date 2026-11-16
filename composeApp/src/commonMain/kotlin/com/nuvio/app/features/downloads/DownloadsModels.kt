@@ -140,7 +140,10 @@ enum class DownloadEnqueueResult {
     Replaced,
     Queued,
     MissingUrl,
-    UnsupportedFormat;
+    UnsupportedFormat,
+    // Fork: returned when the user only allows Wi-Fi downloads and the
+    // device is on mobile data (see DownloadsRepository enqueue gate).
+    RequiresWifi;
 
     val isSuccess: Boolean
         get() = this == Started || this == Replaced || this == Queued
@@ -152,6 +155,7 @@ enum class DownloadEnqueueResult {
             Queued -> getString(Res.string.downloads_enqueue_queued)
             MissingUrl -> getString(Res.string.downloads_enqueue_missing_url)
             UnsupportedFormat -> getString(Res.string.downloads_enqueue_unsupported_format)
+            RequiresWifi -> getString(Res.string.downloads_enqueue_requires_wifi)
         }
     }
 }

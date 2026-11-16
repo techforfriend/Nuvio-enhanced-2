@@ -77,25 +77,17 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v0.6.13
-          name: "Nuvio Enhanced v0.6.13"
+          tag_name: v1.0.0
+          name: "Nuvio Enhanced v1.0.0"
           body: |
-            ## What's New in v0.6.13
-            **Nuvio Enhanced Official Release — version 0.6.13 (version code 156)**
+            ## What's New in v1.0.0
+            **Nuvio Enhanced Official Release — version 1.0.0 (version code 157)**
 
             ### 🆕 New in this version
-            - Chapters — chapters on iOS, and ExoPlayer reads them as NuvioTV does; chapters setting for both engines and a chapter title toggle
-            - Simkl — sign-in migrated to OAuth AUTH V2; More Like This source applied in details
-            - Player — each start-up step shown on the loading screen; ExoPlayer and libmpv errors worded the same way as NuvioTV; HTTP status shown when mpv fails to open a stream; audio clock used when mpv video time drops to 0; HLS streams get an SPS/PPS init segment when they lack one; DASH routing kept for explicit MIME hints; seekbar thumbnails load much faster
-            - Streams — falls back to the next matching source on failure; debrid cache checked once per source search; tokenized links kept for reuse and expired saved links refreshed; source list opens on the playing stream; addon filter change starts at the top; episode header artwork blends smoothly into the background; static glass shows the streams artwork backdrop
-            - Live TV — HLS quality chooser restored; endless buffering and black screen fix
-            - Continue Watching — choose what selecting an item opens; dismiss a next-up show by its content id
-            - Subtitles — preferences isolated per device; config export/import and profile removal for device subtitle prefs
-            - Grid — 6 posters per row in landscape, 7 on tablets; folders respect "Show catalog type"
-            - Player controls — up/down arrows change the volume; basic keyboard support; seek preview prefetch pauses while buffering
-            - Home & startup — fewer recompositions during startup; brand wordmark decoded off the main thread; hero shows only after its source catalogs load; trailer mute button in the top-right corner
-            - iOS — MPVKit bumped to the nuvio.7 artifacts; Dolby Vision RPU reshaping in Picture in Picture; Dolby Vision Profile 5 frames converted for PiP; HDR colours kept when drawing subtitles in PiP; mpv drawable at native resolution; toolbar fade extended to screen edges in landscape; collection header collapses under the native bar; back button in iPad settings sub-pages; hero trailer fix in the cinematic details background
-            - Translation updates: French, Vietnamese, Slovak, Dutch
+            - Downloads — season batch downloads: download a whole season at once, queued with per-show and total limits; pause, resume and cancel from the queue dialog; storage management with a storage bar, download location picker and delete confirmation
+            - More Like This — titles now looked up through the Simkl API client, falling back to TMDB when Simkl has no related titles; end-of-movie picks use the chosen More Like This source
+            - iOS — mpv renders at the screen's backing scale; the blurred strip across the top of pushed pages is removed
+            - Translation updates: Indonesian
           draft: false
           prerelease: false
           files: build-apks/*.apk
