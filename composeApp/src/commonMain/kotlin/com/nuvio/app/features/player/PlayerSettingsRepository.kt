@@ -66,6 +66,9 @@ data class PlayerSettingsUiState(
     val streamReuseLastLinkCacheHours: Int = 24,
     val androidPlaybackEngine: AndroidPlaybackEngine = AndroidPlaybackEngine.ExoPlayer,
     val autoSwitchPlaybackEngineOnError: Boolean = true,
+    val streamAutoPlayFallbackOnFailure: Boolean = false,
+    val streamAutoPlayFallbackMaxSources: Int = DEFAULT_SOURCE_FALLBACK_MAX_SOURCES,
+    val streamAutoPlayFallbackStartupTimeoutSeconds: Int = DEFAULT_SOURCE_STARTUP_TIMEOUT_SECONDS,
     val androidLibmpvVideoOutput: AndroidLibmpvVideoOutput = AndroidLibmpvVideoOutput.GpuNext,
     val androidLibmpvHardwareDecodingEnabled: Boolean = true,
     val androidLibmpvYuv420pEnabled: Boolean = false,
@@ -130,6 +133,7 @@ data class PlayerSettingsUiState(
     val iosSaturation: Int = 0,
     val iosGamma: Int = 0,
     val androidExoChaptersEnabled: Boolean = false,
+    val chapterTitleEnabled: Boolean = true,
     val rememberAudioDelayPerDevice: Boolean = true,
     val persistAudioAmplification: Boolean = false,
     val audioAmplificationDb: Int = 0,
@@ -142,6 +146,21 @@ data class PlayerSettingsUiState(
     val nightModeButtonEnabled: Boolean = true,
     val nightModeEnabled: Boolean = false,
 )
+
+const val DEFAULT_SOURCE_FALLBACK_MAX_SOURCES = 3
+val SOURCE_FALLBACK_MAX_SOURCES_RANGE = 1..10
+const val DEFAULT_SOURCE_STARTUP_TIMEOUT_SECONDS = 15
+val SOURCE_STARTUP_TIMEOUT_SECONDS_RANGE = 5..45
+const val SOURCE_STARTUP_TIMEOUT_SECONDS_STEP = 5
+
+/**
+ * Falling back to the next matching source applies only while auto source selection picks the
+ * stream and the internal player plays it.
+ */
+val PlayerSettingsUiState.streamAutoPlayFallbackActive: Boolean
+    get() = streamAutoPlayFallbackOnFailure &&
+        streamAutoPlayMode != StreamAutoPlayMode.MANUAL &&
+        !externalPlayerEnabled
 
 object PlayerSettingsRepository {
     private val _uiState = MutableStateFlow(PlayerSettingsUiState())
@@ -231,7 +250,11 @@ object PlayerSettingsRepository {
     private var libassRenderType = "OVERLAY_OPEN_GL"
     private var libassRenderScale = "FULL"
     private var libassRenderMode = "OVERLAY"
+    private var streamAutoPlayFallbackOnFailure = false
+    private var streamAutoPlayFallbackMaxSources = DEFAULT_SOURCE_FALLBACK_MAX_SOURCES
+    private var streamAutoPlayFallbackStartupTimeoutSeconds = DEFAULT_SOURCE_STARTUP_TIMEOUT_SECONDS
     private var androidExoChaptersEnabled = false
+    private var chapterTitleEnabled = true
     private var rememberAudioDelayPerDevice = true
     private var persistAudioAmplification = false
     private var audioAmplificationDb = 0
@@ -351,7 +374,11 @@ object PlayerSettingsRepository {
         libassRenderType = "OVERLAY_OPEN_GL"
         libassRenderScale = "FULL"
         libassRenderMode = "OVERLAY"
+        streamAutoPlayFallbackOnFailure = false
+        streamAutoPlayFallbackMaxSources = DEFAULT_SOURCE_FALLBACK_MAX_SOURCES
+        streamAutoPlayFallbackStartupTimeoutSeconds = DEFAULT_SOURCE_STARTUP_TIMEOUT_SECONDS
         androidExoChaptersEnabled = false
+        chapterTitleEnabled = true
         rememberAudioDelayPerDevice = true
         persistAudioAmplification = false
         audioAmplificationDb = 0
@@ -529,7 +556,15 @@ object PlayerSettingsRepository {
         libassRenderType = PlayerSettingsStorage.loadLibassRenderType() ?: "CUES"
         libassRenderScale = PlayerSettingsStorage.loadLibassRenderScale() ?: "FULL"
         libassRenderMode = PlayerSettingsStorage.loadLibassRenderMode() ?: "OVERLAY"
+        streamAutoPlayFallbackOnFailure = PlayerSettingsStorage.loadStreamAutoPlayFallbackOnFailure() ?: false
+        streamAutoPlayFallbackMaxSources = PlayerSettingsStorage.loadStreamAutoPlayFallbackMaxSources()
+            ?.coerceIn(SOURCE_FALLBACK_MAX_SOURCES_RANGE)
+            ?: DEFAULT_SOURCE_FALLBACK_MAX_SOURCES
+        streamAutoPlayFallbackStartupTimeoutSeconds = PlayerSettingsStorage.loadStreamAutoPlayFallbackStartupTimeoutSeconds()
+            ?.coerceIn(SOURCE_STARTUP_TIMEOUT_SECONDS_RANGE)
+            ?: DEFAULT_SOURCE_STARTUP_TIMEOUT_SECONDS
         androidExoChaptersEnabled = PlayerSettingsStorage.loadAndroidExoChaptersEnabled() ?: false
+        chapterTitleEnabled = PlayerSettingsStorage.loadChapterTitleEnabled() ?: true
         rememberAudioDelayPerDevice = PlayerSettingsStorage.loadRememberAudioDelayPerDevice() ?: true
         persistAudioAmplification = PlayerSettingsStorage.loadPersistAudioAmplification() ?: false
         audioAmplificationDb = (PlayerSettingsStorage.loadAudioAmplificationDb() ?: 0)
@@ -961,12 +996,46 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveLegacyTopButtons(LegacyPlayerButtonLayouts.encodeTop(layout))
     }
 
+    fun setStreamAutoPlayFallbackOnFailure(enabled: Boolean) {
+        ensureLoaded()
+        if (streamAutoPlayFallbackOnFailure == enabled) return
+        streamAutoPlayFallbackOnFailure = enabled
+        publish()
+        PlayerSettingsStorage.saveStreamAutoPlayFallbackOnFailure(enabled)
+    }
+
+    fun setStreamAutoPlayFallbackMaxSources(count: Int) {
+        ensureLoaded()
+        val normalized = count.coerceIn(SOURCE_FALLBACK_MAX_SOURCES_RANGE)
+        if (streamAutoPlayFallbackMaxSources == normalized) return
+        streamAutoPlayFallbackMaxSources = normalized
+        publish()
+        PlayerSettingsStorage.saveStreamAutoPlayFallbackMaxSources(normalized)
+    }
+
+    fun setStreamAutoPlayFallbackStartupTimeoutSeconds(seconds: Int) {
+        ensureLoaded()
+        val normalized = seconds.coerceIn(SOURCE_STARTUP_TIMEOUT_SECONDS_RANGE)
+        if (streamAutoPlayFallbackStartupTimeoutSeconds == normalized) return
+        streamAutoPlayFallbackStartupTimeoutSeconds = normalized
+        publish()
+        PlayerSettingsStorage.saveStreamAutoPlayFallbackStartupTimeoutSeconds(normalized)
+    }
+
     fun setAndroidExoChaptersEnabled(enabled: Boolean) {
         ensureLoaded()
         if (androidExoChaptersEnabled == enabled) return
         androidExoChaptersEnabled = enabled
         publish()
         PlayerSettingsStorage.saveAndroidExoChaptersEnabled(enabled)
+    }
+
+    fun setChapterTitleEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (chapterTitleEnabled == enabled) return
+        chapterTitleEnabled = enabled
+        publish()
+        PlayerSettingsStorage.saveChapterTitleEnabled(enabled)
     }
 
     fun setRememberAudioDelayPerDevice(enabled: Boolean) {
@@ -1553,6 +1622,7 @@ object PlayerSettingsRepository {
             streamReuseLastLinkCacheHours = streamReuseLastLinkCacheHours,
             androidPlaybackEngine = androidPlaybackEngine,
             androidExoChaptersEnabled = androidExoChaptersEnabled,
+            chapterTitleEnabled = chapterTitleEnabled,
             rememberAudioDelayPerDevice = rememberAudioDelayPerDevice,
             persistAudioAmplification = persistAudioAmplification,
             audioAmplificationDb = audioAmplificationDb,
@@ -1563,6 +1633,9 @@ object PlayerSettingsRepository {
             nightModeButtonEnabled = nightModeButtonEnabled,
             nightModeEnabled = nightModeEnabled,
             autoSwitchPlaybackEngineOnError = autoSwitchPlaybackEngineOnError,
+            streamAutoPlayFallbackOnFailure = streamAutoPlayFallbackOnFailure,
+            streamAutoPlayFallbackMaxSources = streamAutoPlayFallbackMaxSources,
+            streamAutoPlayFallbackStartupTimeoutSeconds = streamAutoPlayFallbackStartupTimeoutSeconds,
             androidLibmpvVideoOutput = androidLibmpvVideoOutput,
             androidLibmpvHardwareDecodingEnabled = androidLibmpvHardwareDecodingEnabled,
             androidLibmpvYuv420pEnabled = androidLibmpvYuv420pEnabled,

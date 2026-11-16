@@ -213,6 +213,7 @@ internal class PlayerScreenRuntime(
     var showSpeedPanel by mutableStateOf(false)
     var showEpisodesPanel by mutableStateOf(false)
     var showChaptersPanel by mutableStateOf(false)
+    var showDiscTitlesPanel by mutableStateOf(false)
     /** The file's chapters, sorted; empty when it has fewer than two. */
     var chapters by mutableStateOf<List<PlayerChapter>>(emptyList())
     /** The source whose chapters [chapters] holds, so a rebuffer does not read them again. */
@@ -330,6 +331,7 @@ internal class PlayerScreenRuntime(
         get() = showAudioModal ||
             showSubtitleModal ||
             showVideoSettingsModal ||
+            showDiscTitlesPanel ||
             showStreamInfoModal ||
             showStreamInfo ||
             showUserRatingSheet ||

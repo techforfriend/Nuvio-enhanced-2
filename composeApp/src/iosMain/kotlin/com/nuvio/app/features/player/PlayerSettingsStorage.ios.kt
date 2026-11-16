@@ -11,6 +11,7 @@ import com.nuvio.app.core.sync.encodeSyncInt
 import com.nuvio.app.core.sync.encodeSyncString
 import com.nuvio.app.core.sync.encodeSyncStringSet
 import com.nuvio.app.core.storage.ProfileScopedKey
+import com.nuvio.app.features.profiles.MAX_PROFILES
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -65,6 +66,10 @@ actual object PlayerSettingsStorage {
     private const val androidPlaybackEngineKey = "android_playback_engine"
     private const val autoSwitchPlaybackEngineOnErrorKey = "auto_switch_playback_engine_on_error"
     private const val androidExoChaptersEnabledKey = "android_exo_chapters_enabled"
+    private const val streamAutoPlayFallbackOnFailureKey = "stream_auto_play_fallback_on_failure"
+    private const val streamAutoPlayFallbackMaxSourcesKey = "stream_auto_play_fallback_max_sources"
+    private const val streamAutoPlayFallbackStartupTimeoutSecondsKey = "stream_auto_play_fallback_startup_timeout_seconds"
+    private const val chapterTitleEnabledKey = "chapter_title_enabled"
     private const val rememberAudioDelayPerDeviceKey = "remember_audio_delay_per_device"
     private const val persistAudioAmplificationKey = "persist_audio_amplification"
     private const val audioAmplificationDbKey = "audio_amplification_db"
@@ -707,6 +712,57 @@ actual object PlayerSettingsStorage {
         saveBoolean(androidExoChaptersEnabledKey, enabled)
     }
 
+    actual fun loadStreamAutoPlayFallbackOnFailure(): Boolean? = loadBoolean(streamAutoPlayFallbackOnFailureKey)
+
+    actual fun saveStreamAutoPlayFallbackOnFailure(enabled: Boolean) {
+        saveBoolean(streamAutoPlayFallbackOnFailureKey, enabled)
+    }
+
+    actual fun loadStreamAutoPlayFallbackMaxSources(): Int? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(streamAutoPlayFallbackMaxSourcesKey)
+        return if (defaults.objectForKey(key) != null) {
+            defaults.integerForKey(key).toInt()
+        } else {
+            null
+        }
+    }
+
+    actual fun saveStreamAutoPlayFallbackMaxSources(count: Int) {
+        NSUserDefaults.standardUserDefaults.setInteger(count.toLong(), forKey = ProfileScopedKey.of(streamAutoPlayFallbackMaxSourcesKey))
+    }
+
+    actual fun loadStreamAutoPlayFallbackStartupTimeoutSeconds(): Int? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(streamAutoPlayFallbackStartupTimeoutSecondsKey)
+        return if (defaults.objectForKey(key) != null) {
+            defaults.integerForKey(key).toInt()
+        } else {
+            null
+        }
+    }
+
+    actual fun saveStreamAutoPlayFallbackStartupTimeoutSeconds(seconds: Int) {
+        NSUserDefaults.standardUserDefaults.setInteger(
+            seconds.toLong(),
+            forKey = ProfileScopedKey.of(streamAutoPlayFallbackStartupTimeoutSecondsKey),
+        )
+    }
+
+    actual fun loadChapterTitleEnabled(): Boolean? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(chapterTitleEnabledKey)
+        return if (defaults.objectForKey(key) != null) {
+            defaults.boolForKey(key)
+        } else {
+            null
+        }
+    }
+
+    actual fun saveChapterTitleEnabled(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(chapterTitleEnabledKey))
+    }
+
     actual fun loadRememberAudioDelayPerDevice(): Boolean? = loadBoolean(rememberAudioDelayPerDeviceKey)
 
     actual fun saveRememberAudioDelayPerDevice(enabled: Boolean) {
@@ -1318,6 +1374,41 @@ actual object PlayerSettingsStorage {
 
     actual fun saveIosGamma(value: Int) {
         saveInt(iosGammaKey, value)
+    }
+
+    actual fun migrateLegacySubtitlePreferencesToDeviceStore() {
+        val defaults = NSUserDefaults.standardUserDefaults
+        (1..MAX_PROFILES).forEach { profileId ->
+            fun key(baseKey: String) = ProfileScopedKey.of(baseKey, profileId)
+            fun string(baseKey: String) = defaults.stringForKey(key(baseKey))
+            fun boolean(baseKey: String): Boolean? {
+                val scopedKey = key(baseKey)
+                return if (defaults.objectForKey(scopedKey) != null) defaults.boolForKey(scopedKey) else null
+            }
+            fun integer(baseKey: String): Int? {
+                val scopedKey = key(baseKey)
+                return if (defaults.objectForKey(scopedKey) != null) defaults.integerForKey(scopedKey).toInt() else null
+            }
+
+            val fallback = SubtitleStyleState.DEFAULT
+            val legacyStyle = SubtitleStyleState(
+                textColor = subtitleColorFromStorage(string(subtitleTextColorKey)) ?: fallback.textColor,
+                backgroundColor = subtitleColorFromStorage(string(subtitleBackgroundColorKey)) ?: fallback.backgroundColor,
+                outlineColor = subtitleColorFromStorage(string(subtitleOutlineColorKey)) ?: fallback.outlineColor,
+                outlineEnabled = boolean(subtitleOutlineEnabledKey) ?: fallback.outlineEnabled,
+                outlineWidth = integer(subtitleOutlineWidthKey) ?: fallback.outlineWidth,
+                bold = boolean(subtitleBoldKey) ?: fallback.bold,
+                fontSizeSp = integer(subtitleFontSizeSpKey) ?: fallback.fontSizeSp,
+                bottomOffset = integer(subtitleBottomOffsetKey) ?: fallback.bottomOffset,
+                stripSdh = boolean(subtitleStripSdhKey) ?: fallback.stripSdh,
+                useForcedSubtitles = boolean(subtitleUseForcedSubtitlesKey)
+                    ?: fallback.useForcedSubtitles,
+                showOnlyPreferredLanguages = boolean(subtitleShowOnlyPreferredLanguagesKey)
+                    ?: fallback.showOnlyPreferredLanguages,
+                appearance = decodeSubtitleAppearance(string(subtitleAppearanceKey)),
+            )
+            SubtitleDevicePreferencesRepository.migrateLegacy(profileId, legacyStyle)
+        }
     }
 
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {

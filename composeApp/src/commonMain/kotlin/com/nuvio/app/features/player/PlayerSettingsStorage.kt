@@ -238,6 +238,8 @@ internal expect object PlayerSettingsStorage {
     fun saveLegacyTopButtons(layout: String)
     fun loadAndroidExoChaptersEnabled(): Boolean?
     fun saveAndroidExoChaptersEnabled(enabled: Boolean)
+    fun loadChapterTitleEnabled(): Boolean?
+    fun saveChapterTitleEnabled(enabled: Boolean)
     fun loadRememberAudioDelayPerDevice(): Boolean?
     fun saveRememberAudioDelayPerDevice(enabled: Boolean)
     fun loadPersistAudioAmplification(): Boolean?
@@ -256,6 +258,7 @@ internal expect object PlayerSettingsStorage {
     fun saveNightModeButtonEnabled(enabled: Boolean)
     fun loadNightModeEnabled(): Boolean?
     fun saveNightModeEnabled(enabled: Boolean)
+    fun migrateLegacySubtitlePreferencesToDeviceStore()
     fun exportToSyncPayload(): JsonObject
     fun replaceFromSyncPayload(payload: JsonObject)
 }

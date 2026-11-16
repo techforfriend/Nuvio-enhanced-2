@@ -13,6 +13,7 @@ import com.nuvio.app.core.sync.encodeSyncInt
 import com.nuvio.app.core.sync.encodeSyncString
 import com.nuvio.app.core.sync.encodeSyncStringSet
 import com.nuvio.app.core.storage.ProfileScopedKey
+import com.nuvio.app.features.profiles.MAX_PROFILES
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -67,6 +68,10 @@ actual object PlayerSettingsStorage {
     private const val androidPlaybackEngineKey = "android_playback_engine"
     private const val autoSwitchPlaybackEngineOnErrorKey = "auto_switch_playback_engine_on_error"
     private const val androidExoChaptersEnabledKey = "android_exo_chapters_enabled"
+    private const val streamAutoPlayFallbackOnFailureKey = "stream_auto_play_fallback_on_failure"
+    private const val streamAutoPlayFallbackMaxSourcesKey = "stream_auto_play_fallback_max_sources"
+    private const val streamAutoPlayFallbackStartupTimeoutSecondsKey = "stream_auto_play_fallback_startup_timeout_seconds"
+    private const val chapterTitleEnabledKey = "chapter_title_enabled"
     private const val rememberAudioDelayPerDeviceKey = "remember_audio_delay_per_device"
     private const val persistAudioAmplificationKey = "persist_audio_amplification"
     private const val audioAmplificationDbKey = "audio_amplification_db"
@@ -957,6 +962,74 @@ actual object PlayerSettingsStorage {
         preferences
             ?.edit()
             ?.putBoolean(ProfileScopedKey.of(androidExoChaptersEnabledKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadStreamAutoPlayFallbackOnFailure(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(streamAutoPlayFallbackOnFailureKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, false)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveStreamAutoPlayFallbackOnFailure(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(streamAutoPlayFallbackOnFailureKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadStreamAutoPlayFallbackMaxSources(): Int? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(streamAutoPlayFallbackMaxSourcesKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getInt(key, 3)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveStreamAutoPlayFallbackMaxSources(count: Int) {
+        preferences
+            ?.edit()
+            ?.putInt(ProfileScopedKey.of(streamAutoPlayFallbackMaxSourcesKey), count)
+            ?.apply()
+    }
+
+    actual fun loadStreamAutoPlayFallbackStartupTimeoutSeconds(): Int? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(streamAutoPlayFallbackStartupTimeoutSecondsKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getInt(key, 15)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveStreamAutoPlayFallbackStartupTimeoutSeconds(seconds: Int) {
+        preferences
+            ?.edit()
+            ?.putInt(ProfileScopedKey.of(streamAutoPlayFallbackStartupTimeoutSecondsKey), seconds)
+            ?.apply()
+    }
+
+    actual fun loadChapterTitleEnabled(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(chapterTitleEnabledKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, true)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveChapterTitleEnabled(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(chapterTitleEnabledKey), enabled)
             ?.apply()
     }
 
@@ -1962,6 +2035,43 @@ actual object PlayerSettingsStorage {
 
     actual fun saveIosGamma(value: Int) {
         saveIosInt(iosGammaKey, value)
+    }
+
+    actual fun migrateLegacySubtitlePreferencesToDeviceStore() {
+        val store = preferences ?: return
+        (1..MAX_PROFILES).forEach { profileId ->
+            fun key(baseKey: String) = ProfileScopedKey.of(baseKey, profileId)
+            fun string(baseKey: String) = store.getString(key(baseKey), null)
+            fun boolean(baseKey: String, default: Boolean): Boolean? {
+                val scopedKey = key(baseKey)
+                return if (store.contains(scopedKey)) store.getBoolean(scopedKey, default) else null
+            }
+            fun integer(baseKey: String, default: Int): Int? {
+                val scopedKey = key(baseKey)
+                return if (store.contains(scopedKey)) store.getInt(scopedKey, default) else null
+            }
+
+            val defaults = SubtitleStyleState.DEFAULT
+            val legacyStyle = SubtitleStyleState(
+                textColor = subtitleColorFromStorage(string(subtitleTextColorKey)) ?: defaults.textColor,
+                backgroundColor = subtitleColorFromStorage(string(subtitleBackgroundColorKey)) ?: defaults.backgroundColor,
+                outlineColor = subtitleColorFromStorage(string(subtitleOutlineColorKey)) ?: defaults.outlineColor,
+                outlineEnabled = boolean(subtitleOutlineEnabledKey, defaults.outlineEnabled) ?: defaults.outlineEnabled,
+                outlineWidth = integer(subtitleOutlineWidthKey, defaults.outlineWidth) ?: defaults.outlineWidth,
+                bold = boolean(subtitleBoldKey, defaults.bold) ?: defaults.bold,
+                fontSizeSp = integer(subtitleFontSizeSpKey, defaults.fontSizeSp) ?: defaults.fontSizeSp,
+                bottomOffset = integer(subtitleBottomOffsetKey, defaults.bottomOffset) ?: defaults.bottomOffset,
+                stripSdh = boolean(subtitleStripSdhKey, defaults.stripSdh) ?: defaults.stripSdh,
+                useForcedSubtitles = boolean(subtitleUseForcedSubtitlesKey, defaults.useForcedSubtitles)
+                    ?: defaults.useForcedSubtitles,
+                showOnlyPreferredLanguages = boolean(
+                    subtitleShowOnlyPreferredLanguagesKey,
+                    defaults.showOnlyPreferredLanguages,
+                ) ?: defaults.showOnlyPreferredLanguages,
+                appearance = decodeSubtitleAppearance(string(subtitleAppearanceKey)),
+            )
+            SubtitleDevicePreferencesRepository.migrateLegacy(profileId, legacyStyle)
+        }
     }
 
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {
