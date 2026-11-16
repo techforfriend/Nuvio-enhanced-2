@@ -1,9 +1,8 @@
 name: "Sync Luqman Upstream"
 
 "on":
-  schedule:
-    # Runs every 6 hours
-    - cron: '0 */6 * * *'
+  # Auto schedule DISABLED 2026-11-16 on KING's instruction ("Luqman sync auto run bnd kro").
+  # Manual runs only via workflow_dispatch.
   workflow_dispatch:
 
 permissions:
