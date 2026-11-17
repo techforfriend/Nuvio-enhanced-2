@@ -156,7 +156,7 @@ enum class DownloadEnqueueResult {
             Queued -> getString(Res.string.downloads_enqueue_queued)
             MissingUrl -> getString(Res.string.downloads_enqueue_missing_url)
             UnsupportedFormat -> getString(Res.string.downloads_enqueue_unsupported_format)
-            RequiresWifi -> getString(downloads_enqueue_requires_wifi)
+            RequiresWifi -> getString(Res.string.downloads_enqueue_requires_wifi)
         }
     }
 }
