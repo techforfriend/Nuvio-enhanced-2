@@ -138,6 +138,16 @@ env NUVIO_IOS_DISTRIBUTION=full xcodebuild \
 
 ---
 
+## ☕ Support Nuvio Enhanced 2.0
+
+Every update of Nuvio Enhanced 2.0 comes from one person's free time — no team, no sponsors, no ads.
+
+If this app made your movie nights better, a small coffee from you means it stays free and keeps getting better.
+
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-raja__ji-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/raja_ji)
+
+---
+
 ## Credits
 
 Nuvio is built by [NuvioMedia](https://github.com/NuvioMedia) — all credit for the app itself belongs to them and its
