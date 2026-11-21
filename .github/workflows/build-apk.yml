@@ -77,17 +77,24 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v1.0.0
-          name: "Nuvio Enhanced v1.0.0"
+          tag_name: v1.1.0
+          name: "Nuvio Enhanced v1.1.0"
           body: |
-            ## What's New in v1.0.0
-            **Nuvio Enhanced Official Release — version 1.0.0 (version code 157)**
+            ## What's New in v1.1.0
+            **Nuvio Enhanced Official Release — version 1.1.0 (version code 159)**
 
             ### 🆕 New in this version
-            - Downloads — season batch downloads: download a whole season at once, queued with per-show and total limits; pause, resume and cancel from the queue dialog; storage management with a storage bar, download location picker and delete confirmation
-            - More Like This — titles now looked up through the Simkl API client, falling back to TMDB when Simkl has no related titles; end-of-movie picks use the chosen More Like This source
-            - iOS — mpv renders at the screen's backing scale; the blurred strip across the top of pushed pages is removed
-            - Translation updates: Indonesian
+            - Smart Streams — auto-play picks the best source for your screen, untagged releases count as English, live connection status while choosing
+            - Downloads — redesigned Downloads screen with a Downloaded section, download counts, pause/resume all and per-download speed; progress now shows a single percent sign
+            - Servers — Plex and Silo join the media servers
+            - Watched threshold — choose when a title counts as watched
+            - Library — filter rows for genre, year and watched status
+            - Home — pin rows top or bottom, hide rows, and a hidden-rows section; hero sources you choose
+            - Player — skip, next episode and recommendation card moved above the end time; hero trailers stay off while the mini player or parked PiP plays
+            - Collections — .gifv artwork plays as GIF and falls back to the static cover
+            - Tracking addons — a consent dialog before a tracking addon gets your watch activity
+            - Fixed — settings search and the download button no longer crash (missing default strings restored); CloudStream home now shows all catalogues instead of capping at 6
+            - iOS — legacy download mode that writes straight to the folder; downloads settings stay in the tab that opened them
           draft: false
           prerelease: false
           files: build-apks/*.apk
