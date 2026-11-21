@@ -2194,6 +2194,7 @@
     <string name="library_sort_title_desc">Title Z–A</string>
     <string name="library_sort_provider_order">Tracker order</string>
     <string name="library_source_cloud">Cloud</string>
+    <string name="library_source_downloaded">Downloaded</string>
     <string name="library_source_saved">Saved</string>
     <string name="library_title">Library</string>
     <string name="library_trakt_empty_message">Connect Trakt and save titles to your watchlist or personal lists.</string>
@@ -3762,6 +3763,8 @@
     <string name="downloads_action_pause_series">Pause series</string>
     <string name="downloads_action_queue">Queue download</string>
     <string name="downloads_action_resume_all">Resume All</string>
+    <string name="downloads_empty_library_title">No Downloads Yet</string>
+    <string name="downloads_empty_library_message">Movies and TV episodes you download for offline playback will appear here.</string>
     <string name="downloads_action_resume_count">Resume (%1$d)</string>
     <string name="downloads_action_resume_series">Resume series</string>
     <string name="downloads_badge_paused">Paused</string>

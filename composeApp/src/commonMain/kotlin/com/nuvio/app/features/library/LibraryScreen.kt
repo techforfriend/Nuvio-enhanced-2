@@ -65,6 +65,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.ViewAgenda
 import androidx.compose.material3.Icon
@@ -137,7 +138,12 @@ import com.nuvio.app.features.debrid.DebridProviders
 import com.nuvio.app.features.debrid.DebridSettingsRepository
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaVideo
+import com.nuvio.app.features.downloads.DownloadDeleteConfirmation
 import com.nuvio.app.features.downloads.DownloadItem
+import com.nuvio.app.features.downloads.DownloadsQueueDialog
+import com.nuvio.app.features.downloads.DownloadsRepository
+import com.nuvio.app.features.downloads.OpenDownloadsFolderButton
+import com.nuvio.app.features.downloads.formatDownloadPercent
 import com.nuvio.app.features.home.HomeCatalogSection
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.components.HomeEmptyStateCard
@@ -229,6 +235,12 @@ fun LibraryScreen(
         LibraryDisplaySettingsRepository.ensureLoaded()
         LibraryDisplaySettingsRepository.uiState
     }.collectAsStateWithLifecycle()
+    val downloadsUiState by remember {
+        DownloadsRepository.ensureLoaded()
+        DownloadsRepository.uiState
+    }.collectAsStateWithLifecycle()
+    var downloadPendingDeletionIds by remember { mutableStateOf<List<String>?>(null) }
+    var showActiveQueuedDialog by rememberSaveable { mutableStateOf(false) }
     val networkStatusUiState by NetworkStatusRepository.uiState.collectAsStateWithLifecycle()
     val unknownReleaseLabel = stringResource(Res.string.generic_unknown)
     var observedOfflineState by remember { mutableStateOf(false) }
@@ -238,12 +250,9 @@ fun LibraryScreen(
         ServerRepository.uiState
     }.collectAsStateWithLifecycle()
     val hasServers = serversUiState.connections.any { it.enabled }
-    var sourceModeName by rememberSaveable { mutableStateOf(LibraryViewMode.Saved.name) }
-    val sourceMode = remember(sourceModeName, hasServers) {
-        runCatching { LibraryViewMode.valueOf(sourceModeName) }.getOrDefault(LibraryViewMode.Saved)
-            .takeUnless { it == LibraryViewMode.Servers && !hasServers }
-            ?: LibraryViewMode.Saved
-    }
+    val sourceMode = displaySettings.viewMode
+        .takeUnless { it == LibraryViewMode.Servers && !hasServers }
+        ?: LibraryViewMode.Saved
     var showReleaseCalendar by rememberSaveable { mutableStateOf(false) }
     val releaseCalendarCacheState by LibraryReleaseCalendarCache.state.collectAsStateWithLifecycle()
     val releaseCalendarCacheKey = remember(uiState.items) {
@@ -296,17 +305,29 @@ fun LibraryScreen(
         selected = displaySettings.sortOption,
         sourceMode = uiState.sourceMode,
     )
-    val orderListKeys = if (sourceMode != LibraryViewMode.Saved) emptyList() else {
-        if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) uiState.sections.map { it.type }
-        else listOfNotNull(uiState.sections.firstOrNull { it.type == selectedLibrarySectionKey }?.type
-            ?: uiState.sections.firstOrNull()?.type)
+    val currentModeSections = remember(sourceMode, uiState.sections, uiState.items, downloadsUiState.items) {
+        if (sourceMode == LibraryViewMode.Downloaded) {
+            buildDownloadedSections(
+                savedSections = uiState.sections,
+                savedItems = uiState.items,
+                downloadItems = downloadsUiState.items,
+                offlineMetadataFor = DownloadsRepository::getOfflineMetadata,
+            )
+        } else {
+            uiState.sections
+        }
+    }
+    val orderListKeys = if (!sourceMode.showsLibrarySections) emptyList() else {
+        if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) currentModeSections.map { it.type }
+        else listOfNotNull(currentModeSections.firstOrNull { it.type == selectedLibrarySectionKey }?.type
+            ?: currentModeSections.firstOrNull()?.type)
     }
     val providerOrders = rememberLibraryProviderOrders(uiState.sourceMode, orderListKeys, effectiveSortOption)
     val visibleSortOption = if (providerOrders.failed) LibrarySortOption.DEFAULT else effectiveSortOption
-    val sortedSections = remember(uiState.sections, displaySettings, uiState.sourceMode, sourceMode, providerOrders) {
-        if (sourceMode == LibraryViewMode.Saved && displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
+    val sortedSections = remember(currentModeSections, displaySettings, uiState.sourceMode, sourceMode, providerOrders) {
+        if (sourceMode.showsLibrarySections && displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
             sortLibrarySections(
-                sections = uiState.sections,
+                sections = currentModeSections,
                 selected = visibleSortOption,
                 sourceMode = uiState.sourceMode,
                 providerOrders = providerOrders.ranks,
@@ -316,7 +337,7 @@ fun LibraryScreen(
         }
     }
     val verticalProjection = remember(
-        uiState.sections,
+        currentModeSections,
         uiState.sourceMode,
         selectedLibrarySectionKey,
         selectedLibraryType,
@@ -329,9 +350,9 @@ fun LibraryScreen(
         sourceMode,
         providerOrders,
     ) {
-        if (sourceMode == LibraryViewMode.Saved && displaySettings.layoutMode == LibraryLayoutMode.VERTICAL) {
+        if (sourceMode.showsLibrarySections && displaySettings.layoutMode == LibraryLayoutMode.VERTICAL) {
             buildLibraryVerticalProjection(
-                sections = uiState.sections,
+                sections = currentModeSections,
                 sourceMode = uiState.sourceMode,
                 selectedSectionKey = selectedLibrarySectionKey,
                 selectedType = selectedLibraryType,
@@ -409,9 +430,17 @@ fun LibraryScreen(
         }
     }
 
-    LaunchedEffect(sourceMode, uiState.items) {
-        if (sourceMode != LibraryViewMode.Saved) return@LaunchedEffect
-        val missingItems = uiState.items
+    val currentModeItems = remember(sourceMode, uiState.items, currentModeSections) {
+        if (sourceMode == LibraryViewMode.Downloaded) {
+            currentModeSections.flatMap { it.items }.distinctBy(LibraryItem::libraryReleaseInfoKey)
+        } else {
+            uiState.items
+        }
+    }
+
+    LaunchedEffect(sourceMode, currentModeItems) {
+        if (!sourceMode.showsLibrarySections) return@LaunchedEffect
+        val missingItems = currentModeItems
             .filter { item -> item.releaseInfo.isNullOrBlank() }
             .distinctBy(LibraryItem::libraryReleaseInfoKey)
         if (missingItems.isEmpty()) {
@@ -462,9 +491,9 @@ fun LibraryScreen(
 
     val disintegration = remember { LibraryDisintegrationHolder() }
     val librarySectionsDisplay = if (
-        sourceMode == LibraryViewMode.Saved &&
+        sourceMode.showsLibrarySections &&
         displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL &&
-        uiState.isLoaded &&
+        (uiState.isLoaded || sourceMode == LibraryViewMode.Downloaded) &&
         sortedSections.isNotEmpty()
     ) {
         disintegration.sync(
@@ -486,10 +515,9 @@ fun LibraryScreen(
                     .padding(LocalVerticalBarPadding.current),
             ) {
                 NuvioScreenHeader(
-                    title = if (sourceMode != LibraryViewMode.Saved) {
-                        stringResource(Res.string.library_title)
-                    } else {
-                        when (uiState.sourceMode) {
+                    title = when (sourceMode) {
+                        LibraryViewMode.Downloaded -> stringResource(Res.string.compose_settings_root_downloads_title)
+                        LibraryViewMode.Saved -> when (uiState.sourceMode) {
                             LibrarySourceMode.LOCAL -> stringResource(Res.string.library_title)
                             LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_title)
                             LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_title)
@@ -497,19 +525,20 @@ fun LibraryScreen(
                             LibrarySourceMode.ANILIST -> stringResource(Res.string.library_anilist_title)
                             LibrarySourceMode.WETRAKR -> stringResource(Res.string.library_wetrakr_title)
                         }
+                        else -> stringResource(Res.string.library_title)
                     },
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
                 LibrarySourceSwitch(
                     selectedMode = sourceMode,
                     showServers = hasServers,
-                    onModeSelected = { mode ->
-                        sourceModeName = mode.name
-                    },
+                    onModeSelected = LibraryDisplaySettingsRepository::setViewMode,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
-                    if (sourceMode == LibraryViewMode.Saved) {
-                        LibraryListManagementButton()
+                    if (sourceMode.showsLibrarySections) {
+                        if (sourceMode == LibraryViewMode.Saved) {
+                            LibraryListManagementButton()
+                        }
                         val targetLayout = if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
                             LibraryLayoutMode.VERTICAL
                         } else {
@@ -536,6 +565,22 @@ fun LibraryScreen(
                                     } else {
                                         stringResource(Res.string.library_layout_show_horizontal)
                                     },
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                    if (sourceMode == LibraryViewMode.Downloaded) {
+                        OpenDownloadsFolderButton()
+                        if (downloadsUiState.activeItems.isNotEmpty()) {
+                            IconButton(
+                                onClick = { showActiveQueuedDialog = true },
+                                modifier = Modifier.size(40.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Schedule,
+                                    contentDescription = stringResource(Res.string.downloads_show_active_queued),
+                                    modifier = Modifier.size(22.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -596,6 +641,49 @@ fun LibraryScreen(
                 )
             }
 
+            val effectivePosterClick: ((LibraryItem) -> Unit)? = if (sourceMode == LibraryViewMode.Downloaded) {
+                { item ->
+                    if (item.isSeries) {
+                        onPosterClick?.invoke(item)
+                    } else {
+                        onPosterClick?.invoke(item)
+                    }
+                }
+            } else {
+                onPosterClick
+            }
+
+            val effectivePosterLongClick: ((LibraryItem, LibrarySection) -> Unit)? = if (sourceMode == LibraryViewMode.Downloaded) {
+                { item, _ ->
+                    val matchingDownloads = downloadsUiState.items.filter {
+                        it.contentId == item.id
+                    }
+                    if (matchingDownloads.isNotEmpty()) {
+                        downloadPendingDeletionIds = matchingDownloads.map { it.id }
+                    }
+                }
+            } else {
+                onPosterLongClick
+            }
+
+            val activeDownloadItemFor: ((LibraryItem) -> ActiveDownloadCard?)? =
+                if (sourceMode == LibraryViewMode.Downloaded) {
+                    remember(downloadsUiState.items) {
+                        { item: LibraryItem -> activeDownloadShelfItem(item, downloadsUiState.items) }
+                    }
+                } else {
+                    null
+                }
+
+            val onActiveDownloadTogglePause: (ActiveDownloadCard) -> Unit = { activeItem ->
+                val movie = activeItem.movieDownload
+                if (movie != null) {
+                    DownloadsRepository.togglePause(movie.id)
+                } else {
+                    DownloadsRepository.toggleShowPause(activeItem.contentId)
+                }
+            }
+
             NuvioScreen(
                 modifier = Modifier.fillMaxSize(),
                 horizontalPadding = 0.dp,
@@ -652,7 +740,7 @@ fun LibraryScreen(
                 )
             } else {
                 when {
-                    !uiState.isLoaded || (uiState.isLoading && uiState.sections.isEmpty()) -> {
+                    sourceMode == LibraryViewMode.Saved && (!uiState.isLoaded || (uiState.isLoading && uiState.sections.isEmpty())) -> {
                         if (displaySettings.layoutMode == LibraryLayoutMode.VERTICAL) {
                             libraryVerticalSkeletonItems(gridColumns)
                         } else {
@@ -664,7 +752,7 @@ fun LibraryScreen(
                         }
                     }
 
-                    !uiState.errorMessage.isNullOrBlank() && uiState.sections.isEmpty() -> {
+                    sourceMode == LibraryViewMode.Saved && !uiState.errorMessage.isNullOrBlank() && uiState.sections.isEmpty() -> {
                         item {
                             if (networkStatusUiState.isOfflineLike) {
                                 NuvioNetworkOfflineCard(
@@ -691,25 +779,33 @@ fun LibraryScreen(
                         }
                     }
 
-                    uiState.sections.isEmpty() -> {
+                    currentModeSections.isEmpty() -> {
                         item {
                             HomeEmptyStateCard(
                                 modifier = Modifier.padding(horizontal = 16.dp),
-                                title = when (uiState.sourceMode) {
-                                    LibrarySourceMode.LOCAL -> stringResource(Res.string.library_empty_title)
-                                    LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_empty_title)
-                                    LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_empty_title)
-                                    LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_empty_title)
-                                    LibrarySourceMode.ANILIST -> stringResource(Res.string.library_anilist_empty_title)
-                                    LibrarySourceMode.WETRAKR -> stringResource(Res.string.library_wetrakr_empty_title)
+                                title = if (sourceMode == LibraryViewMode.Downloaded) {
+                                    stringResource(Res.string.downloads_empty_library_title)
+                                } else {
+                                    when (uiState.sourceMode) {
+                                        LibrarySourceMode.LOCAL -> stringResource(Res.string.library_empty_title)
+                                        LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_empty_title)
+                                        LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_empty_title)
+                                        LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_empty_title)
+                                        LibrarySourceMode.ANILIST -> stringResource(Res.string.library_anilist_empty_title)
+                                        LibrarySourceMode.WETRAKR -> stringResource(Res.string.library_wetrakr_empty_title)
+                                    }
                                 },
-                                message = when (uiState.sourceMode) {
-                                    LibrarySourceMode.LOCAL -> stringResource(Res.string.library_empty_message)
-                                    LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_empty_message)
-                                    LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_empty_message)
-                                    LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_empty_message)
-                                    LibrarySourceMode.ANILIST -> stringResource(Res.string.library_anilist_empty_message)
-                                    LibrarySourceMode.WETRAKR -> stringResource(Res.string.library_wetrakr_empty_message)
+                                message = if (sourceMode == LibraryViewMode.Downloaded) {
+                                    stringResource(Res.string.downloads_empty_library_message)
+                                } else {
+                                    when (uiState.sourceMode) {
+                                        LibrarySourceMode.LOCAL -> stringResource(Res.string.library_empty_message)
+                                        LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_empty_message)
+                                        LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_empty_message)
+                                        LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_empty_message)
+                                        LibrarySourceMode.ANILIST -> stringResource(Res.string.library_anilist_empty_message)
+                                        LibrarySourceMode.WETRAKR -> stringResource(Res.string.library_wetrakr_empty_message)
+                                    }
                                 },
                             )
                         }
@@ -717,7 +813,7 @@ fun LibraryScreen(
 
                     else -> {
                         stickyHeader(
-                            key = "library-saved-controls:${uiState.sourceMode}:" +
+                            key = "library-saved-controls:${sourceMode}:${uiState.sourceMode}:" +
                                 "${displaySettings.layoutMode}:$effectiveSortOption",
                         ) {
                             Box(modifier = Modifier.fillMaxWidth()) {
@@ -750,10 +846,12 @@ fun LibraryScreen(
                         }
                         when (displaySettings.layoutMode) {
                             LibraryLayoutMode.HORIZONTAL -> {
-                                libraryEnhancedSections(
-                                    content = enhancedLibraryContent,
-                                    onPosterClick = onPosterClick,
-                                )
+                                if (sourceMode != LibraryViewMode.Downloaded) {
+                                    libraryEnhancedSections(
+                                        content = enhancedLibraryContent,
+                                        onPosterClick = onPosterClick,
+                                    )
+                                }
                                 librarySections(
                                     displaySections = librarySectionsDisplay,
                                     releaseInfoFor = releaseInfoFor,
@@ -761,10 +859,12 @@ fun LibraryScreen(
                                     fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                                     sortOption = effectiveSortOption,
                                     posterPattern = effectivePosterPattern,
-                                    onPosterClick = onPosterClick,
-                                    onSectionViewAllClick = onSectionViewAllClick,
-                                    onPosterLongClick = onPosterLongClick,
+                                    onPosterClick = effectivePosterClick,
+                                    onSectionViewAllClick = if (sourceMode == LibraryViewMode.Downloaded) null else onSectionViewAllClick,
+                                    onPosterLongClick = effectivePosterLongClick,
                                     onDisintegrated = disintegration::onExited,
+                                    activeDownloadItemFor = activeDownloadItemFor,
+                                    onActiveDownloadTogglePause = onActiveDownloadTogglePause,
                                 )
                             }
                             LibraryLayoutMode.VERTICAL -> libraryVerticalContent(
@@ -774,8 +874,10 @@ fun LibraryScreen(
                                 watchedKeys = watchedUiState.watchedKeys,
                                 fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                                 posterPattern = effectivePosterPattern,
-                                onPosterClick = onPosterClick,
-                                onPosterLongClick = onPosterLongClick,
+                                onPosterClick = effectivePosterClick,
+                                onPosterLongClick = effectivePosterLongClick,
+                                activeDownloadItemFor = activeDownloadItemFor,
+                                onActiveDownloadTogglePause = onActiveDownloadTogglePause,
                             )
                         }
                     }
@@ -815,6 +917,25 @@ fun LibraryScreen(
         TorboxCloudConnectDialog(
             onDismiss = { showTorboxConnectDialog = false },
             onConnected = { selectedCloudItemKey = null },
+        )
+    }
+
+    if (showActiveQueuedDialog) {
+        DownloadsQueueDialog(
+            onDismissRequest = { showActiveQueuedDialog = false },
+            onOpenDownload = onOpenDownload,
+        )
+    }
+
+    val pendingDeletionIds = downloadPendingDeletionIds
+    if (!pendingDeletionIds.isNullOrEmpty()) {
+        DownloadDeleteConfirmation(
+            count = pendingDeletionIds.size,
+            onConfirm = {
+                DownloadsRepository.cancelDownloads(pendingDeletionIds)
+                downloadPendingDeletionIds = null
+            },
+            onDismiss = { downloadPendingDeletionIds = null },
         )
     }
 }
@@ -1071,6 +1192,11 @@ private fun LibrarySourceSwitch(
             label = stringResource(Res.string.library_source_saved),
             selected = selectedMode == LibraryViewMode.Saved,
             onClick = { onModeSelected(LibraryViewMode.Saved) },
+        )
+        LibraryChip(
+            label = stringResource(Res.string.library_source_downloaded),
+            selected = selectedMode == LibraryViewMode.Downloaded,
+            onClick = { onModeSelected(LibraryViewMode.Downloaded) },
         )
         LibraryChip(
             label = stringResource(Res.string.library_source_cloud),
@@ -1463,7 +1589,7 @@ private fun cloudLibraryStatusLine(item: CloudLibraryItem): String {
     return listOfNotNull(
         item.status?.toDisplayStatus(),
         item.sizeBytes?.let(::formatCloudBytes),
-        item.progressFraction?.let { "${(it * 100f).toInt()}%" },
+        item.progressFraction?.let { formatDownloadPercent(it) },
     ).joinToString(" • ").ifBlank { fallback }
 }
 
@@ -2056,6 +2182,8 @@ private fun LazyListScope.librarySections(
     onSectionViewAllClick: ((LibrarySection, LibrarySortOption) -> Unit)?,
     onPosterLongClick: ((LibraryItem, LibrarySection) -> Unit)?,
     onDisintegrated: (String) -> Unit,
+    activeDownloadItemFor: ((LibraryItem) -> ActiveDownloadCard?)? = null,
+    onActiveDownloadTogglePause: ((ActiveDownloadCard) -> Unit)? = null,
 ) {
     items(
         items = displaySections,
@@ -2075,6 +2203,7 @@ private fun LazyListScope.librarySections(
             animatePlacement = true,
         ) { entry ->
             val item = entry.item
+            val activeDownload = activeDownloadItemFor?.invoke(item)
             val posterItem = remember(item, posterPattern, releaseInfoFor) {
                 item.toMetaPreview()
                     .copy(releaseInfo = releaseInfoFor(item))
@@ -2085,20 +2214,29 @@ private fun LazyListScope.librarySections(
                 disintegrating = entry.exiting,
                 onDisintegrated = { onDisintegrated(entry.globalKey) },
             ) {
-                HomePosterCard(
-                    item = posterItem,
-                    isWatched = WatchingState.isPosterWatched(
-                        watchedKeys = watchedKeys,
+                if (activeDownload != null) {
+                    ActiveDownloadPosterCard(
+                        item = activeDownload,
+                        posterPattern = posterPattern,
+                        onClick = { if (!entry.exiting) onPosterClick?.invoke(item) },
+                        onTogglePause = onActiveDownloadTogglePause?.let { callback -> { callback(activeDownload) } },
+                    )
+                } else {
+                    HomePosterCard(
                         item = posterItem,
-                        fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-                    ),
-                    onClick = if (entry.exiting) null else onPosterClick?.let { { it(item) } },
-                    onLongClick = if (entry.exiting || entrySource == null) {
-                        null
-                    } else {
-                        onPosterLongClick?.let { { it(item, entrySource) } }
-                    },
-                )
+                        isWatched = WatchingState.isPosterWatched(
+                            watchedKeys = watchedKeys,
+                            item = posterItem,
+                            fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                        ),
+                        onClick = if (entry.exiting) null else onPosterClick?.let { { it(item) } },
+                        onLongClick = if (entry.exiting || entrySource == null) {
+                            null
+                        } else {
+                            onPosterLongClick?.let { { it(item, entrySource) } }
+                        },
+                    )
+                }
             }
         }
     }
