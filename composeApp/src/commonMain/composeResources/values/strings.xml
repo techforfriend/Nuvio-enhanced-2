@@ -3733,4 +3733,120 @@
     <string name="settings_playback_downmix_section">Downmix</string>
     <string name="settings_playback_remember_audio_delay">Remember Audio Delay per Device</string>
     <string name="settings_playback_remember_audio_delay_description">Restore the audio delay set in the player whenever the same output plays again, such as the phone speaker, wired headphones or each Bluetooth device</string>
+
+    <!-- Restored 2026-11-21: default-locale strings dropped by the 1.0.0 sync merge
+         (callers + locale copies survived, English defaults did not).
+         Verbatim from upstream Luqman 1.0.0 (057dc5c) values/strings.xml. -->
+    <plurals name="downloads_count">
+        <item quantity="one">%1$d download</item>
+        <item quantity="other">%1$d downloads</item>
+    </plurals>
+    <plurals name="downloads_episodes_count">
+        <item quantity="one">%1$d episode</item>
+        <item quantity="other">%1$d episodes</item>
+    </plurals>
+    <plurals name="downloads_shows_count">
+        <item quantity="one">%1$d show</item>
+        <item quantity="other">%1$d shows</item>
+    </plurals>
+    <plurals name="live_tv_category_channel_count">
+        <item quantity="one">%1$d channel</item>
+        <item quantity="other">%1$d channels</item>
+    </plurals>
+    <string name="batch_download_failed_multiple">%1$d episodes could not be queued</string>
+    <string name="batch_download_failed_single">%1$d episode could not be queued</string>
+    <string name="downloads_action_continue_source_selection">Continue to source selection</string>
+    <string name="downloads_action_deselect">Deselect</string>
+    <string name="downloads_action_pause_all">Pause All</string>
+    <string name="downloads_action_pause_count">Pause (%1$d)</string>
+    <string name="downloads_action_pause_series">Pause series</string>
+    <string name="downloads_action_queue">Queue download</string>
+    <string name="downloads_action_resume_all">Resume All</string>
+    <string name="downloads_action_resume_count">Resume (%1$d)</string>
+    <string name="downloads_action_resume_series">Resume series</string>
+    <string name="downloads_badge_paused">Paused</string>
+    <string name="downloads_connecting">Connecting…</string>
+    <string name="downloads_delete_selected_confirm">Delete %1$d selected downloads?</string>
+    <string name="downloads_deselect_all">Deselect all</string>
+    <string name="downloads_empty_active">No active or queued downloads</string>
+    <string name="downloads_enqueue_queued">Download has been queued</string>
+    <string name="downloads_episode_fallback_title">Episode %1$d</string>
+    <string name="downloads_episode_label">S%1$d:E%2$d • %3$s</string>
+    <string name="downloads_episodes_out_of_downloaded">Episode %1$d out of %2$d downloaded</string>
+    <string name="downloads_episodes_queued">%1$s %2$s</string>
+    <string name="downloads_episodes_selected">%1$d episodes selected</string>
+    <string name="downloads_episodes_selected_multi_season">%1$d episodes selected across %2$d seasons</string>
+    <string name="downloads_max_concurrent_description">Limit how many downloads run at the same time.</string>
+    <string name="downloads_max_concurrent_shows_description">Limit how many shows can download at the same time.</string>
+    <string name="downloads_max_concurrent_shows_title">Max concurrent shows</string>
+    <string name="downloads_max_concurrent_title">Maximum concurrent downloads</string>
+    <string name="downloads_max_series_episode_concurrent_description">Limit how many episodes download at once for the same series.</string>
+    <string name="downloads_max_series_episode_concurrent_title">Max episodes per series</string>
+    <string name="downloads_next_season">Next season</string>
+    <string name="downloads_override_source">Change</string>
+    <string name="downloads_preferred_resolution_description">Select the target resolution for season downloads.</string>
+    <string name="downloads_preferred_resolution_title">Preferred resolution</string>
+    <string name="downloads_progress_episodes">%1$d/%2$d eps</string>
+    <string name="downloads_progress_percent">%1$d%%</string>
+    <string name="downloads_resolution_1080p">1080p</string>
+    <string name="downloads_resolution_2160p">2160p (4K)</string>
+    <string name="downloads_resolution_720p">720p</string>
+    <string name="downloads_season_step_indicator">Season %1$d of %2$d</string>
+    <string name="downloads_section_active_queued">Active &amp; Queued</string>
+    <string name="downloads_select_all">Select all</string>
+    <string name="downloads_select_source_dialog_title">Select stream for E%1$d</string>
+    <string name="downloads_select_source_dialog_title_single">Select stream</string>
+    <string name="downloads_select_unwatched">Select unwatched</string>
+    <string name="downloads_selected_count">%1$d selected</string>
+    <string name="downloads_series_size_stats">Total: %1$s • Avg: %2$s • Median: %3$s</string>
+    <string name="downloads_series_size_total">Total: %1$s</string>
+    <string name="downloads_show_active_queued">Active &amp; Queued Downloads</string>
+    <string name="downloads_show_fallback_title">Show</string>
+    <string name="downloads_status_already_in_progress">Download already active or queued</string>
+    <string name="downloads_status_queued">Queued</string>
+    <string name="downloads_storage_app">Nuvio Downloads</string>
+    <string name="downloads_storage_free">Free Space</string>
+    <string name="downloads_storage_free_of_total">%1$s free of %2$s</string>
+    <string name="downloads_storage_legend_value">%1$s: %2$s</string>
+    <string name="downloads_storage_other">Other Apps &amp; System</string>
+    <string name="downloads_storage_title">Device Storage</string>
+    <string name="downloads_stream_fallback_title">Stream</string>
+    <string name="downloads_stream_selected">Stream selected</string>
+    <string name="downloads_summary_completed">%1$d completed</string>
+    <string name="downloads_summary_downloading">%1$d downloading</string>
+    <string name="downloads_summary_failed">%1$d failed</string>
+    <string name="downloads_summary_paused">%1$d paused</string>
+    <string name="downloads_summary_queued">%1$d queued</string>
+    <string name="downloads_view_empty">No downloads in this view</string>
+    <string name="season_download_already_downloaded">Already downloaded</string>
+    <string name="season_download_finding_source">Finding source…</string>
+    <string name="season_download_no_source_found">No stream found</string>
+    <string name="season_download_season_count">%1$s (%2$d)</string>
+    <string name="settings_continue_watching_click_action_description">What opens when you select a Continue Watching item</string>
+    <string name="settings_continue_watching_click_action_details">Open Details</string>
+    <string name="settings_continue_watching_click_action_details_desc">Open the details page of the title</string>
+    <string name="settings_continue_watching_click_action_details_upcoming">Details for Upcoming Only</string>
+    <string name="settings_continue_watching_click_action_details_upcoming_desc">Open details for episodes that have not aired yet, the stream for the rest</string>
+    <string name="settings_continue_watching_click_action_stream">Open Stream</string>
+    <string name="settings_continue_watching_click_action_stream_desc">Pick a source or resume playback</string>
+    <string name="settings_continue_watching_click_action_title">On Select</string>
+    <string name="settings_playback_auto_switch_engine_blocked_by_fallback">Turn off fallback to next matching source to use this.</string>
+    <string name="settings_playback_chapter_title">Show Chapter Title</string>
+    <string name="settings_playback_chapter_title_description">Show the name of the current chapter above the progress bar.</string>
+    <string name="settings_playback_fallback_max_sources">Sources to try on failure</string>
+    <string name="settings_playback_fallback_next_source">Fallback to next matching source on failure</string>
+    <string name="settings_playback_fallback_next_source_blocked_by_engine_switch">Turn off auto-switch engine on playback error to use this.</string>
+    <string name="settings_playback_fallback_next_source_description">If the auto-selected source fails or does not start in time, quietly try the next matching sources.</string>
+    <string name="settings_playback_fallback_startup_timeout">Time for a source to start</string>
+
+    <!-- Restored 2026-11-21: default-locale strings dropped by the 1.0.0 sync merge
+         (callers + locale copies survived, English defaults did not).
+         Verbatim from upstream Luqman 1.0.0 (057dc5c) values/strings.xml. -->
+    <string name="player_error_source_invalid_content">Source error: The stream source returned invalid or unplayable content. The link may have expired or the server returned an error page instead of video.\n\nTry a different source. [%1$s]</string>
+    <string name="player_error_stream_blocked">The stream source is blocked or restricted. Try a different source.</string>
+    <string name="player_error_stream_expired">The stream link has expired. Try a different source.</string>
+    <string name="player_error_stream_rate_limited">Too many requests to the stream source. Wait a moment and try again.</string>
+    <string name="player_error_stream_removed">The stream link has expired or been removed. Try a different source.</string>
+    <string name="player_error_stream_unavailable">The stream server is currently unavailable. Try a different source.</string>
+    <string name="player_error_unsupported_format">This stream uses a format your device may not support. Try a different source. [%1$s]</string>
 </resources>
