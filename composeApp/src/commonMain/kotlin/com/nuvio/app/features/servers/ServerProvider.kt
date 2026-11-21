@@ -85,6 +85,12 @@ interface ServerProvider {
         limit: Int,
     ): ServerPage<ServerIndexEntry> = unsupported()
 
+    suspend fun lookupTitle(
+        session: ServerSession,
+        library: ServerLibrary,
+        query: ServerTitleQuery,
+    ): List<ServerIndexEntry>? = null
+
     suspend fun findEpisode(
         session: ServerSession,
         seriesItemId: String,
