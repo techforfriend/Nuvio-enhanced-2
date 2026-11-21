@@ -669,12 +669,11 @@ object HomeRepository {
     ): CloudHomeSectionsResult {
         val sections = mutableListOf<HomeCatalogSection>()
         var firstError: String? = null
-        val scanPlugins = plugins.take(HOME_CLOUDSTREAM_PROVIDER_SCAN_LIMIT)
         withTimeoutOrNull(HOME_CLOUDSTREAM_TOTAL_PREVIEW_TIMEOUT_MS) {
             val gate = Semaphore(HOME_CLOUDSTREAM_PROVIDER_CONCURRENCY)
             val resultChannel = Channel<Pair<CloudStreamPluginItem, CloudHomeProviderResult>>(Channel.BUFFERED)
             coroutineScope {
-                scanPlugins.forEach { plugin ->
+                plugins.forEach { plugin ->
                     launch {
                         val result = gate.withPermit {
                             val mainPage = withTimeoutOrNull(HOME_CLOUDSTREAM_PROVIDER_TIMEOUT_MS) {
@@ -723,12 +722,9 @@ object HomeRepository {
                         resultChannel.send(plugin to result)
                     }
                 }
-                repeat(scanPlugins.size) {
+                repeat(plugins.size) {
                     val (_, result) = resultChannel.receive()
-                    if (sections.size < HOME_CLOUDSTREAM_SECTION_PREVIEW_LIMIT) {
-                        val remaining = HOME_CLOUDSTREAM_SECTION_PREVIEW_LIMIT - sections.size
-                        sections += result.sections.take(remaining)
-                    }
+                    sections += result.sections
                     if (firstError == null) firstError = result.errorMessage
                     if (sections.isNotEmpty() && activeRequestKey == requestKey) {
                         cachedCloudSections = sections.toList()
@@ -748,8 +744,6 @@ private const val HOME_COLLECTION_HERO_SOURCE_ITEM_LIMIT = 8
 private const val HOME_CATALOG_MAX_CONCURRENT_FETCHES = 6
 private const val HOME_CATALOG_FETCH_TIMEOUT_MS = 30_000L
 private const val HOME_CATALOG_PREVIEW_FETCH_LIMIT = 18
-private const val HOME_CLOUDSTREAM_PROVIDER_SCAN_LIMIT = 6
-private const val HOME_CLOUDSTREAM_SECTION_PREVIEW_LIMIT = 6
 private const val HOME_CLOUDSTREAM_PROVIDER_TIMEOUT_MS = 30_000L
 private const val HOME_CLOUDSTREAM_PROVIDER_CONCURRENCY = 2
 private const val HOME_CLOUDSTREAM_TOTAL_PREVIEW_TIMEOUT_MS = 35_000L
