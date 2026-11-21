@@ -18,6 +18,8 @@ import com.nuvio.app.core.ui.NuvioTheme
 import com.nuvio.app.core.ui.background.AppBackgroundHost
 import com.nuvio.app.core.ui.configurePlatformImageLoader
 import com.nuvio.app.core.ui.platformProvidesImageLoader
+import com.nuvio.app.features.servers.plex.PlexArtworkInterceptor
+import com.nuvio.app.features.servers.silo.SiloArtworkInterceptor
 import com.nuvio.app.features.settings.ThemeSettingsRepository
 import com.nuvio.app.navigation.AppRoute
 import com.nuvio.app.navigation.TabsRoute
@@ -28,6 +30,7 @@ fun disposeRoute(route: AppRoute) {
 
 fun setPlayerParkedInPictureInPicture(parked: Boolean) {
     com.nuvio.app.core.ui.background.AppBackgroundRepository.setPlayerParked(parked)
+    com.nuvio.app.features.player.MiniPlayerController.parkedInPictureInPicture = parked
 }
 
 @OptIn(ExperimentalCoilApi::class)
@@ -87,6 +90,8 @@ internal fun AppEnvironment(
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .components {
                     add(CustomPosterFallbackInterceptor())
+                    add(PlexArtworkInterceptor())
+                    add(SiloArtworkInterceptor())
                     add(SvgDecoder.Factory())
                     add(
                         coil3.network.ktor3.KtorNetworkFetcherFactory(
