@@ -257,7 +257,7 @@ object HomeRepository {
         }
     }
 
-    fun applyCurrentSettings() {
+    fun applyCurrentSettings(heroSourcesChanged: Boolean = false) {
         publishCurrentState(
             isLoading = _uiState.value.isLoading,
             requestKey = currentRequestKey,

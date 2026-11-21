@@ -29,9 +29,18 @@ data class HomeCatalogSettingsItem(
     val isCollection: Boolean = false,
     val collectionId: String? = null,
     val isPinnedToTop: Boolean = false,
+    val rowPlacement: HomeCatalogRowPlacement = HomeCatalogRowPlacement.NORMAL,
 ) {
     val displayTitle: String
         get() = customTitle.ifBlank { defaultTitle }
+}
+
+enum class HomeCatalogRowPlacement(val storageValue: String) {
+    NORMAL("normal"), PINNED_POSITION("pinned_position"), PINNED_TOP("pinned_top"), PINNED_BOTTOM("pinned_bottom");
+    companion object {
+        fun fromStorage(value: String?): HomeCatalogRowPlacement =
+            if (value == PINNED_POSITION.storageValue) NORMAL else values().firstOrNull { it.storageValue == value } ?: NORMAL
+    }
 }
 
 internal data class HomeCatalogSettingsUiState(
@@ -65,7 +74,7 @@ internal data class HomeCatalogSettingsUiState(
             append('|')
             append(
                 items.joinToString(separator = "|") { item ->
-                    "${item.key}:${item.order}:${item.enabled}:${item.heroSourceEnabled}:${item.customTitle}"
+                    "${item.key}:${item.order}:${item.enabled}:${item.heroSourceEnabled}:${item.customTitle}:${item.rowPlacement}"
                 }
             )
         }
@@ -110,6 +119,7 @@ internal data class HomeCatalogPreference(
     val enabled: Boolean,
     val heroSourceEnabled: Boolean,
     val order: Int,
+    val rowPlacement: HomeCatalogRowPlacement = HomeCatalogRowPlacement.NORMAL,
 )
 
 internal data class HomeCatalogSettingsSnapshot(
@@ -128,6 +138,7 @@ private data class StoredHomeCatalogPreference(
     val enabled: Boolean = true,
     val heroSourceEnabled: Boolean = true,
     val order: Int = 0,
+    val rowPlacement: String = HomeCatalogRowPlacement.NORMAL.storageValue,
 )
 
 @Serializable
@@ -141,6 +152,7 @@ private data class StoredHomeCatalogSettingsPayload(
     val hideUnreleasedContent: Boolean = false,
     val cloudStreamProviderId: String? = null,
     val items: List<StoredHomeCatalogPreference> = emptyList(),
+    val heroSourcesChosen: Boolean? = null,
 )
 
 object HomeCatalogSettingsRepository {
@@ -178,6 +190,7 @@ object HomeCatalogSettingsRepository {
     private var showCatalogType = true
     private var hideUnreleasedContent = false
     private var cloudStreamProviderId: String? = null
+    private var heroSourcesChosen = false
 
     fun onProfileChanged() {
         hasLoaded = false
@@ -190,6 +203,7 @@ object HomeCatalogSettingsRepository {
         showCatalogType = true
         hideUnreleasedContent = false
         cloudStreamProviderId = null
+        heroSourcesChosen = false
         definitions = emptyList()
         collectionDefinitions = emptyList()
         lastCatalogSync = null
@@ -212,6 +226,7 @@ object HomeCatalogSettingsRepository {
         showCatalogType = true
         hideUnreleasedContent = false
         cloudStreamProviderId = null
+        heroSourcesChosen = false
         _uiState.value = HomeCatalogSettingsUiState()
     }
 
@@ -266,6 +281,7 @@ object HomeCatalogSettingsRepository {
                     enabled = value.enabled,
                     heroSourceEnabled = value.heroSourceEnabled,
                     order = value.order,
+                    rowPlacement = HomeCatalogRowPlacement.fromStorage(value.rowPlacement),
                 )
             },
         )
@@ -355,7 +371,12 @@ object HomeCatalogSettingsRepository {
     }
 
     fun setHeroSourceEnabled(key: String, enabled: Boolean) {
-        updatePreference(key, pushRemote = false) { preference ->
+        ensureLoaded()
+        if (!heroSourcesChosen) {
+            heroSourcesChosen = true
+            persist()
+        }
+        updatePreference(key, pushRemote = false, heroSourcesChanged = true) { preference ->
             if (!enabled) {
                 preference.copy(heroSourceEnabled = false)
             } else if (selectedHeroSourceCount(excludingKey = key) >= HERO_SOURCE_SELECTION_LIMIT) {
@@ -364,6 +385,14 @@ object HomeCatalogSettingsRepository {
                 preference.copy(heroSourceEnabled = true)
             }
         }
+    }
+
+    fun setRowPlacement(key: String, placement: HomeCatalogRowPlacement) {
+        ensureLoaded()
+        val current = preferences[key] ?: defaultPreferenceForMissingKey(key) ?: return
+        val normalized = if (placement == HomeCatalogRowPlacement.PINNED_POSITION) HomeCatalogRowPlacement.NORMAL else placement
+        if (current.rowPlacement == normalized.storageValue) return
+        updatePreference(key, pushRemote = false) { it.copy(rowPlacement = normalized.storageValue) }
     }
 
     fun setEnabled(key: String, enabled: Boolean) {
@@ -388,6 +417,7 @@ object HomeCatalogSettingsRepository {
         showCatalogType = true
         hideUnreleasedContent = false
         cloudStreamProviderId = null
+        heroSourcesChosen = false
         preferences = emptyMap()
         normalizePreferences()
         publish()
@@ -404,13 +434,59 @@ object HomeCatalogSettingsRepository {
         move(key = key, direction = 1)
     }
 
+    fun moveByVisibilityIndex(fromIndex: Int, toIndex: Int, visible: Boolean) {
+        ensureLoaded()
+        val allItems = _uiState.value.items
+        val groupItems = allItems.filter { it.enabled == visible }
+        if (fromIndex !in groupItems.indices || toIndex !in groupItems.indices || fromIndex == toIndex) return
+        val fromItem = groupItems[fromIndex]
+        val toItem = groupItems[toIndex]
+
+        fun pinSection(item: HomeCatalogSettingsItem): HomeCatalogRowPlacement = when {
+            item.rowPlacement == HomeCatalogRowPlacement.PINNED_TOP ||
+                (item.isCollection && item.isPinnedToTop) -> HomeCatalogRowPlacement.PINNED_TOP
+            item.rowPlacement == HomeCatalogRowPlacement.PINNED_BOTTOM -> HomeCatalogRowPlacement.PINNED_BOTTOM
+            else -> HomeCatalogRowPlacement.NORMAL
+        }
+        val fromSection = pinSection(fromItem)
+        val toSection = pinSection(toItem)
+        if (fromSection != toSection) return
+        val start = minOf(fromIndex, toIndex)
+        val end = maxOf(fromIndex, toIndex)
+        if (groupItems.subList(start, end + 1).any { item ->
+            pinSection(item) != fromSection
+        }) return
+
+        val reorderedGroup = groupItems.toMutableList().apply { add(toIndex, removeAt(fromIndex)) }
+        val otherItems = allItems.filter { it.enabled != visible }
+        val orderedItems = if (visible) reorderedGroup + otherItems else otherItems + reorderedGroup
+        val updatedPreferences = preferences.toMutableMap()
+        orderedItems.forEachIndexed { index, item ->
+            val current = updatedPreferences[item.key] ?: return@forEachIndexed
+            updatedPreferences[item.key] = current.copy(order = index)
+        }
+        preferences = updatedPreferences
+        enforcePinnedCollectionsAtTop()
+        publish()
+        persist()
+        HomeRepository.applyCurrentSettings()
+        HomeCatalogSettingsSyncService.triggerPush()
+    }
+
+
     fun moveByIndex(fromIndex: Int, toIndex: Int) {
         ensureLoaded()
-        val allKeys = allOrderedKeys()
-        if (allKeys.isEmpty()) return
-        if (fromIndex !in allKeys.indices || toIndex !in allKeys.indices) return
-        if (fromIndex == toIndex) return
-        val orderedKeys = allKeys.toMutableList()
+        val items = _uiState.value.items
+        if (fromIndex !in items.indices || toIndex !in items.indices || fromIndex == toIndex) return
+        fun section(item: HomeCatalogSettingsItem) = when {
+            item.rowPlacement == HomeCatalogRowPlacement.PINNED_TOP || item.isPinnedToTop -> HomeCatalogRowPlacement.PINNED_TOP
+            item.rowPlacement == HomeCatalogRowPlacement.PINNED_BOTTOM -> HomeCatalogRowPlacement.PINNED_BOTTOM
+            else -> HomeCatalogRowPlacement.NORMAL
+        }
+        val fromSection = section(items[fromIndex])
+        if (fromSection != section(items[toIndex])) return
+        if (items.subList(minOf(fromIndex, toIndex), maxOf(fromIndex, toIndex) + 1).any { section(it) != fromSection }) return
+        val orderedKeys = items.map { it.key }.toMutableList()
         orderedKeys.add(toIndex, orderedKeys.removeAt(fromIndex))
         val updatedPreferences = preferences.toMutableMap()
         orderedKeys.forEachIndexed { index, itemKey ->
@@ -448,6 +524,7 @@ object HomeCatalogSettingsRepository {
             hideUnreleasedContent = parsedPayload.hideUnreleasedContent
             cloudStreamProviderId = parsedPayload.cloudStreamProviderId
             preferences = parsedPayload.items.associateBy { it.key }
+            heroSourcesChosen = parsedPayload.heroSourcesChosen ?: hasStoredHeroChoice(parsedPayload.items)
             publish()
             return
         }
@@ -457,8 +534,12 @@ object HomeCatalogSettingsRepository {
         }.getOrDefault(emptyList())
 
         preferences = legacyItems.associateBy { it.key }
+        heroSourcesChosen = hasStoredHeroChoice(legacyItems)
         publish()
     }
+
+    private fun hasStoredHeroChoice(items: List<StoredHomeCatalogPreference>): Boolean =
+        items.any { it.heroSourceEnabled && !it.key.startsWith("collection_") }
 
     private fun normalizePreferences() {
         val current = preferences
@@ -485,17 +566,32 @@ object HomeCatalogSettingsRepository {
         val normalized = current
             .filterKeys { it !in knownKeys }
             .toMutableMap()
-        var enabledHeroSourceCount = 0
+        val hasHeroChoice = !heroSourcesChosen ||
+            current.values.any { it.heroSourceEnabled && !it.key.startsWith("collection_") }
+        val chosenHeroKeys = if (heroSourcesChosen) {
+            orderedEntries
+                .filter { entry -> !entry.isCollection && current[entry.key]?.heroSourceEnabled == true }
+                .take(HERO_SOURCE_SELECTION_LIMIT)
+                .mapTo(mutableSetOf()) { it.key }
+        } else {
+            val catalogs = orderedEntries.filter { !it.isCollection }
+            catalogs.filter { current[it.key]?.enabled ?: true }
+                .ifEmpty { catalogs }
+                .take(HERO_SOURCE_SELECTION_LIMIT)
+                .mapTo(mutableSetOf()) { it.key }
+        }
+        var enabledHeroSourceCount = chosenHeroKeys.size
         orderedEntries.forEach { entry ->
             val stored = current[entry.key]
-            val heroSourceEnabled = if (entry.isCollection) {
-                false
-            } else {
-                (stored?.heroSourceEnabled ?: true) &&
-                    enabledHeroSourceCount < HERO_SOURCE_SELECTION_LIMIT
-            }
-            if (heroSourceEnabled) {
-                enabledHeroSourceCount += 1
+            val heroSourceEnabled = when {
+                entry.isCollection -> false
+                entry.key in chosenHeroKeys -> true
+                stored != null || hasHeroChoice -> false
+                enabledHeroSourceCount < HERO_SOURCE_SELECTION_LIMIT -> {
+                    enabledHeroSourceCount += 1
+                    true
+                }
+                else -> false
             }
             normalized[entry.key] = StoredHomeCatalogPreference(
                 key = entry.key,
@@ -503,6 +599,7 @@ object HomeCatalogSettingsRepository {
                 enabled = stored?.enabled ?: true,
                 heroSourceEnabled = heroSourceEnabled,
                 order = stored?.order ?: nextOrder++,
+                rowPlacement = stored?.rowPlacement ?: HomeCatalogRowPlacement.NORMAL.storageValue,
             )
         }
         preferences = normalized.toMap()
@@ -521,6 +618,7 @@ object HomeCatalogSettingsRepository {
                     enabled = preference?.enabled ?: true,
                     heroSourceEnabled = preference?.heroSourceEnabled ?: true,
                     order = preference?.order ?: 0,
+                    rowPlacement = HomeCatalogRowPlacement.fromStorage(preference?.rowPlacement),
                 )
             }
 
@@ -537,11 +635,11 @@ object HomeCatalogSettingsRepository {
                 isCollection = true,
                 collectionId = colDef.collectionId,
                 isPinnedToTop = colDef.isPinnedToTop,
+                rowPlacement = HomeCatalogRowPlacement.fromStorage(preference?.rowPlacement),
             )
         }
 
-        val items = (catalogItems + collectionItems)
-            .sortedBy { it.order }
+        val items = orderHomeCatalogSettingsItems(catalogItems + collectionItems)
 
         _uiState.value = HomeCatalogSettingsUiState(
             heroEnabled = heroEnabled,
@@ -569,6 +667,7 @@ object HomeCatalogSettingsRepository {
                     hideUnreleasedContent = hideUnreleasedContent,
                     cloudStreamProviderId = cloudStreamProviderId,
                     items = preferences.values.sortedBy { it.order },
+                    heroSourcesChosen = heroSourcesChosen,
                 ),
             ),
         )
@@ -577,6 +676,7 @@ object HomeCatalogSettingsRepository {
     private fun updatePreference(
         key: String,
         pushRemote: Boolean = true,
+        heroSourcesChanged: Boolean = false,
         transform: (StoredHomeCatalogPreference) -> StoredHomeCatalogPreference,
     ) {
         ensureLoaded()
@@ -586,7 +686,7 @@ object HomeCatalogSettingsRepository {
         preferences = preferences + (key to updated)
         publish()
         persist()
-        HomeRepository.applyCurrentSettings()
+        HomeRepository.applyCurrentSettings(heroSourcesChanged = heroSourcesChanged)
         if (pushRemote) {
             HomeCatalogSettingsSyncService.triggerPush()
         }
@@ -676,20 +776,23 @@ object HomeCatalogSettingsRepository {
         hideUnreleasedContent = payload.hideUnreleasedContent
         if (payload.items.isNotEmpty()) {
             val existingHeroState = preferences.mapValues { it.value.heroSourceEnabled }
+            val hasHeroChoice = existingHeroState.any { (key, enabled) -> enabled && !key.startsWith("collection_") }
             val remotePreferences = payload.items.associate { item ->
                 val key = item.preferenceKey()
                 key to StoredHomeCatalogPreference(
                     key = key,
                     customTitle = item.customTitle,
                     enabled = item.enabled,
-                    heroSourceEnabled = existingHeroState[key] ?: true,
+                    heroSourceEnabled = existingHeroState[key] ?: !hasHeroChoice,
                     order = item.order,
+                    rowPlacement = preferences[key]?.rowPlacement
+                        ?: HomeCatalogRowPlacement.NORMAL.storageValue,
                 )
             }
             val remoteKeys = remotePreferences.keys
             val knownKeys = knownPreferenceKeys()
             val preservedPreferences = preferences.filterKeys { key ->
-                key !in remoteKeys && (key in knownKeys || key.requiresExplicitSyncKey())
+                key !in remoteKeys && (knownKeys.isEmpty() || key in knownKeys || key.requiresExplicitSyncKey())
             }
             preferences = preservedPreferences + remotePreferences
             normalizePreferences()
@@ -745,6 +848,7 @@ object HomeCatalogSettingsRepository {
                 selectedHeroSourceCount(excludingKey = key) < HERO_SOURCE_SELECTION_LIMIT,
             order = _uiState.value.items.firstOrNull { it.key == key }?.order
                 ?: ((preferences.values.maxOfOrNull { it.order } ?: -1) + 1),
+            rowPlacement = HomeCatalogRowPlacement.NORMAL.storageValue,
         )
     }
 
@@ -801,3 +905,18 @@ private data class CatalogSyncInput(
     val locale: String,
     val serverRevision: Int,
 )
+
+
+internal fun orderHomeCatalogSettingsItems(items: List<HomeCatalogSettingsItem>): List<HomeCatalogSettingsItem> {
+    val ordered = items.withIndex().sortedWith(compareBy<IndexedValue<HomeCatalogSettingsItem>> { it.value.order }.thenBy { it.index }).map { it.value }
+    val top = ordered.filter { it.rowPlacement == HomeCatalogRowPlacement.PINNED_TOP || it.isPinnedToTop }
+    val bottom = ordered.filter { it.rowPlacement == HomeCatalogRowPlacement.PINNED_BOTTOM && it !in top }
+    return top + ordered.filterNot { it in top || it in bottom } + bottom
+}
+
+internal fun orderHomeCatalogDefinitions(definitions: List<HomeCatalogDefinition>, snapshot: HomeCatalogSettingsSnapshot): List<HomeCatalogDefinition> {
+    val ordered = definitions.withIndex().sortedWith(compareBy<IndexedValue<HomeCatalogDefinition>> { snapshot.preferences[it.value.key]?.order ?: Int.MAX_VALUE }.thenBy { it.index }).map { it.value }
+    val top = ordered.filter { snapshot.preferences[it.key]?.rowPlacement == HomeCatalogRowPlacement.PINNED_TOP }
+    val bottom = ordered.filter { snapshot.preferences[it.key]?.rowPlacement == HomeCatalogRowPlacement.PINNED_BOTTOM }
+    return top + ordered.filterNot { it in top || it in bottom } + bottom
+}
